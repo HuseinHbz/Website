@@ -1,49 +1,55 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useTranslations } from 'next-intl'
 import { staggerContainer, scaleIn } from '@/lib/motion'
 
 interface ProofBarProps {
   locale: string
 }
 
-interface StatItem {
-  valueKey: string
-  labelKey: string
-}
-
-const stats: StatItem[] = [
-  { valueKey: 'experienceValue', labelKey: 'experience' },
-  { valueKey: 'projectsValue', labelKey: 'projects' },
-  { valueKey: 'sectorsValue', labelKey: 'sectors' },
-  { valueKey: 'uptimeValue', labelKey: 'uptime' },
+const STATS = [
+  { value: '10+', label: 'Years Experience', icon: '🏆', color: '#6366f1' },
+  { value: '50+', label: 'Infrastructure Projects', icon: '🏗️', color: '#06b6d4' },
+  { value: '1000+', label: 'Managed Endpoints', icon: '🖧', color: '#10b981' },
+  { value: '99.9%', label: 'Average Uptime SLA', icon: '⏱️', color: '#f59e0b' },
 ]
 
 export function ProofBar({ locale }: ProofBarProps) {
-  const t = useTranslations('proof')
-
   return (
-    <section className="bg-surface border-y border-border" aria-label={locale === 'fa' ? 'آمار و دستاوردها' : 'Key metrics'}>
-      <div className="container-site py-10">
+    <section
+      className="relative border-y border-border overflow-hidden"
+      style={{ background: 'rgba(13,13,23,0.6)' }}
+    >
+      {/* Subtle top glow */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse 60% 100% at 50% 0%, rgba(99,102,241,0.06) 0%, transparent 70%)',
+      }} />
+
+      <div className="container-site relative z-10 py-8">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-50px' }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-0 md:divide-x md:divide-border rtl:divide-x-reverse"
+          className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-border"
         >
-          {stats.map((stat) => (
+          {STATS.map((stat) => (
             <motion.div
-              key={stat.labelKey}
+              key={stat.label}
               variants={scaleIn}
-              className="flex flex-col items-center text-center px-4 py-2"
+              className="flex flex-col items-center text-center px-6 py-4"
             >
-              <span className="text-3xl md:text-4xl font-bold text-text-primary mb-1 tabular-nums">
-                {t(stat.valueKey as Parameters<typeof t>[0])}
-              </span>
-              <span className="text-sm text-text-secondary">
-                {t(stat.labelKey as Parameters<typeof t>[0])}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">{stat.icon}</span>
+                <span
+                  className="text-3xl md:text-4xl font-bold tabular-nums"
+                  style={{ color: stat.color }}
+                >
+                  {stat.value}
+                </span>
+              </div>
+              <span className="text-xs text-text-muted uppercase tracking-wide font-medium">
+                {stat.label}
               </span>
             </motion.div>
           ))}

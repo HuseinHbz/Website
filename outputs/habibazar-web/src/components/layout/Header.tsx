@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { focusRing } from '@/lib/a11y'
 import { NAV_ITEMS } from '@/lib/navigation'
 import { SITE } from '@/lib/site'
-import { Button } from '@/components/ui/Button'
 
 interface HeaderProps {
   locale: string
@@ -18,20 +17,15 @@ export function Header({ locale }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
-  const t = useTranslations('nav')
-  const ta = useTranslations('a11y')
   const isRTL = locale === 'fa'
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
+    const handleScroll = () => setIsScrolled(window.scrollY > 40)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Close menu on route change
-  useEffect(() => {
-    setIsMenuOpen(false)
-  }, [pathname])
+  useEffect(() => { setIsMenuOpen(false) }, [pathname])
 
   function buildLocalizedPath(path: string) {
     if (locale === SITE.locale.default) return path
@@ -43,7 +37,6 @@ export function Header({ locale }: HeaderProps) {
   }
 
   function getAltLocalePath() {
-    // Strip current locale prefix if present
     const withoutLocale = pathname.replace(/^\/(fa|en)/, '') || '/'
     const altLocale = getAltLocale()
     if (altLocale === SITE.locale.default) return withoutLocale
@@ -59,42 +52,51 @@ export function Header({ locale }: HeaderProps) {
   return (
     <header
       className={cn(
-        'fixed top-0 inset-x-0 z-40 transition-all duration-300',
+        'fixed top-0 inset-x-0 z-40 transition-all duration-500',
         isScrolled
-          ? 'bg-background/95 backdrop-blur-md border-b border-border shadow-lg shadow-black/20'
+          ? 'bg-background/95 backdrop-blur-xl border-b border-border/60 shadow-xl shadow-black/30'
           : 'bg-transparent'
       )}
     >
       <div className="container-site">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo / Brand */}
           <Link
             href={buildLocalizedPath('/')}
-            className={cn(
-              'flex items-center gap-2 text-text-primary hover:text-accent transition-colors duration-200',
-              focusRing,
-              'rounded-md'
-            )}
+            className={cn('flex items-center gap-3 group', focusRing, 'rounded-md')}
           >
-            <span className="text-accent font-bold text-xl">
-              {isRTL ? SITE.nameFa : SITE.name}
-            </span>
+            {/* HBZ Logo Mark */}
+            <div className="relative">
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-base text-white tracking-tight"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                  boxShadow: '0 0 16px rgba(99,102,241,0.4)',
+                }}
+              >
+                HBZ
+              </div>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-success border-2 border-background" />
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">
+                Husein Habibazar
+              </div>
+              <div className="text-xs text-text-muted leading-none">Infrastructure Architect</div>
+            </div>
           </Link>
 
           {/* Desktop nav */}
-          <nav
-            className="hidden md:flex items-center gap-1"
-            aria-label={isRTL ? 'ناوبری اصلی' : 'Main navigation'}
-          >
+          <nav className="hidden lg:flex items-center gap-0.5" aria-label="Main navigation">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.key}
                 href={buildLocalizedPath(item.href)}
                 className={cn(
-                  'px-3 py-2 text-sm rounded-md transition-colors duration-150',
+                  'px-3.5 py-2 text-sm rounded-lg transition-all duration-150',
                   focusRing,
                   isActive(item.href)
-                    ? 'text-accent bg-accent/10'
+                    ? 'text-accent bg-accent/10 font-medium'
                     : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                 )}
               >
@@ -103,137 +105,114 @@ export function Header({ locale }: HeaderProps) {
             ))}
           </nav>
 
-          {/* Desktop right actions */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Language switcher */}
+          {/* Desktop right */}
+          <div className="hidden md:flex items-center gap-2">
+            {/* Lang */}
             <Link
               href={getAltLocalePath()}
               className={cn(
-                'text-xs font-medium px-2.5 py-1.5 rounded-md',
+                'text-xs font-semibold px-2.5 py-1.5 rounded-lg',
                 'text-text-muted hover:text-text-primary',
                 'border border-border hover:border-accent/40',
-                'transition-colors duration-150',
+                'transition-all duration-150',
                 focusRing
               )}
-              aria-label={ta('langSwitch')}
             >
               {locale === 'fa' ? 'EN' : 'FA'}
             </Link>
 
             {/* CTA */}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                window.location.href = buildLocalizedPath('/consultation')
-              }}
+            <Link
+              href={buildLocalizedPath('/consultation')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-200',
+                'hover:scale-105 hover:shadow-lg hover:shadow-accent/30',
+                focusRing
+              )}
+              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
             >
-              {t('bookConsultation')}
-            </Button>
+              Book Consultation
+            </Link>
           </div>
 
-          {/* Mobile: lang + hamburger */}
+          {/* Mobile hamburger */}
           <div className="flex md:hidden items-center gap-2">
             <Link
               href={getAltLocalePath()}
               className={cn(
-                'text-xs font-medium px-2 py-1 rounded',
-                'text-text-muted hover:text-text-primary',
-                'border border-border',
+                'text-xs font-medium px-2 py-1 rounded border border-border text-text-muted',
                 focusRing
               )}
-              aria-label={ta('langSwitch')}
             >
               {locale === 'fa' ? 'EN' : 'FA'}
             </Link>
             <button
               type="button"
-              aria-label={isMenuOpen ? ta('closeMenu') : ta('openMenu')}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
-              aria-controls="mobile-menu"
               onClick={() => setIsMenuOpen((v) => !v)}
               className={cn(
-                'p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-white/5',
+                'p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/5',
                 'transition-colors duration-150',
                 focusRing
               )}
             >
-              {isMenuOpen ? (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              )}
+              <motion.div animate={{ rotate: isMenuOpen ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                {isMenuOpen ? (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </motion.div>
             </button>
           </div>
         </div>
       </div>
 
       {/* Mobile menu */}
-      {isMenuOpen && (
-        <div
-          id="mobile-menu"
-          className="md:hidden border-t border-border bg-background/98 backdrop-blur-md"
-        >
-          <nav
-            className="container-site py-4 flex flex-col gap-1"
-            aria-label={isRTL ? 'ناوبری موبایل' : 'Mobile navigation'}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            id="mobile-menu"
+            className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl overflow-hidden"
           >
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.key}
-                href={buildLocalizedPath(item.href)}
-                className={cn(
-                  'px-4 py-3 text-sm rounded-lg transition-colors duration-150',
-                  focusRing,
-                  isActive(item.href)
-                    ? 'text-accent bg-accent/10'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
-                )}
-              >
-                {isRTL ? item.labelFa : item.labelEn}
-              </Link>
-            ))}
-            <div className="pt-2 mt-2 border-t border-border">
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth
-                onClick={() => {
-                  window.location.href = buildLocalizedPath('/consultation')
-                }}
-              >
-                {t('bookConsultation')}
-              </Button>
-            </div>
-          </nav>
-        </div>
-      )}
+            <nav className="container-site py-4 flex flex-col gap-1">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.key}
+                  href={buildLocalizedPath(item.href)}
+                  className={cn(
+                    'px-4 py-3 text-sm rounded-xl transition-colors duration-150',
+                    focusRing,
+                    isActive(item.href)
+                      ? 'text-accent bg-accent/10 font-medium'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                  )}
+                >
+                  {isRTL ? item.labelFa : item.labelEn}
+                </Link>
+              ))}
+              <div className="pt-3 mt-2 border-t border-border">
+                <Link
+                  href={buildLocalizedPath('/consultation')}
+                  className="flex items-center justify-center w-full px-5 py-3 rounded-xl text-sm font-semibold text-white"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+                >
+                  Book Free Consultation
+                </Link>
+              </div>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

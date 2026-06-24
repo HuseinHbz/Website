@@ -13,114 +13,92 @@
   },
   "nav": {
     "home": "Home",
+    "about": "About",
+    "services": "Services",
+    "projects": "Projects",
+    "blog": "Blog",
     "consultation": "Consultation",
     "introCall": "Intro Call",
     "bookConsultation": "Book Consultation"
   },
   "hero": {
-    "name": "Hossein Habibazar",
-    "role": "Enterprise Infrastructure Consultant",
-    "description": "With over a decade of experience in enterprise infrastructure, cloud, security, and networking, I translate complex technical challenges into actionable strategies that drive real business outcomes.",
-    "ctaPrimary": "Start Free Consultation",
-    "ctaSecondary": "Book Intro Call",
-    "available": "Available for New Engagements"
+    "name": "Husein Habibazar",
+    "brand": "HBZ",
+    "role": "Infrastructure Architect",
+    "roleSecondary": "Network & Security Consultant",
+    "mission": "Designing, Securing and Automating Modern Enterprise Infrastructure",
+    "description": "Trusted by CEOs, CIOs, and IT Managers. Delivering enterprise-grade infrastructure solutions across industries.",
+    "ctaPrimary": "View Projects",
+    "ctaSecondary": "Book Consultation",
+    "ctaTertiary": "Download Resume",
+    "available": "Available for Enterprise Engagements"
   },
   "proof": {
     "experience": "Years Experience",
-    "experienceValue": "12+",
-    "projects": "Enterprise Projects",
-    "projectsValue": "80+",
-    "sectors": "Industry Sectors",
-    "sectorsValue": "15+",
-    "uptime": "Infrastructure Uptime",
+    "experienceValue": "10+",
+    "projects": "Infrastructure Projects",
+    "projectsValue": "50+",
+    "endpoints": "Managed Endpoints",
+    "endpointsValue": "1000+",
+    "uptime": "Average Uptime SLA",
     "uptimeValue": "99.9%"
   },
   "services": {
-    "title": "Services",
-    "subtitle": "Core Specializations",
-    "cloud": {
-      "title": "Cloud Infrastructure",
-      "desc": "Design, migration, and optimization of enterprise cloud infrastructure — from IaaS to hybrid cloud architectures"
+    "title": "Enterprise Services",
+    "subtitle": "What HBZ Delivers",
+    "description": "End-to-end infrastructure consulting from design to deployment, monitoring to automation.",
+    "networkDesign": {
+      "title": "Network Design & Architecture",
+      "desc": "Enterprise LAN/WAN design with high availability, redundancy, and performance optimization."
     },
     "security": {
       "title": "Network Security",
-      "desc": "Assessment, hardening, and management of critical infrastructure security with a zero-trust approach"
+      "desc": "Multi-layer security architecture protecting your business against modern cyber threats."
     },
-    "consulting": {
-      "title": "Enterprise Consulting",
-      "desc": "IT strategy, capacity planning, and digital transformation guidance for senior executives"
+    "virtualization": {
+      "title": "Virtualization & Cloud",
+      "desc": "VMware, Proxmox, and Hyper-V environments that maximize hardware utilization."
     },
-    "network": {
-      "title": "Network Architecture",
-      "desc": "Scalable, resilient, and secure network architecture for large enterprises and distributed infrastructure"
+    "monitoring": {
+      "title": "Monitoring & Observability",
+      "desc": "End-to-end visibility with Zabbix, Grafana, and real-time alerting."
     },
-    "readMore": "Learn More"
+    "backup": {
+      "title": "Backup & Disaster Recovery",
+      "desc": "Comprehensive backup strategies and DR plans ensuring business continuity."
+    },
+    "automation": {
+      "title": "Infrastructure Automation",
+      "desc": "Ansible and scripting to reduce human error and accelerate operations."
+    },
+    "readMore": "Explore Service"
   },
-  "method": {
-    "title": "Our Method",
-    "subtitle": "A structured approach to complex challenges",
-    "discovery": {
-      "step": "1",
-      "title": "Discovery",
-      "desc": "Deep understanding of your challenges, business goals, and existing technical environment through structured interviews"
-    },
-    "analysis": {
-      "step": "2",
-      "title": "Analysis",
-      "desc": "Comprehensive technical assessment of the existing infrastructure, identifying risks, bottlenecks, and opportunities"
-    },
-    "solution": {
-      "step": "3",
-      "title": "Solution",
-      "desc": "Target architecture design, implementation roadmap, action prioritization, and cost-benefit analysis"
-    },
-    "implementation": {
-      "step": "4",
-      "title": "Implementation",
-      "desc": "Active support during deployment, knowledge transfer to internal teams, and ensuring long-term success"
-    }
-  },
-  "cases": {
+  "projects": {
     "title": "Case Studies",
-    "subtitle": "Successful Projects",
-    "viewAll": "View All",
-    "case1": {
-      "industry": "Manufacturing",
-      "challenge": "Modernizing the data center infrastructure of a major manufacturing company while reducing operational costs",
-      "outcome": "40% reduction in IT costs and improved availability to 99.9%"
-    },
-    "case2": {
-      "industry": "Financial Services",
-      "challenge": "Designing and implementing a zero-trust security architecture for a financial institution",
-      "outcome": "Significantly reduced attack surface and successful compliance audits"
-    },
-    "case3": {
-      "industry": "Telecommunications",
-      "challenge": "Migrating a telecom operator's infrastructure to hybrid cloud with zero downtime",
-      "outcome": "Successful migration with 100% uptime throughout the transition"
-    }
+    "subtitle": "Real Projects. Real Results.",
+    "description": "Infrastructure transformations across hospitality, holding companies, F&B, and industrial sectors.",
+    "viewAll": "View All Projects",
+    "viewCase": "View Case Study"
   },
-  "trust": {
-    "title": "Why Habibazar?",
-    "subtitle": "Experience, Integrity, Results",
-    "certs": "Professional Certifications",
-    "certsDesc": "Verified expertise in networking, security, and cloud from internationally recognized organizations",
-    "method": "Proven Methodology",
-    "methodDesc": "Structured methodology drawing from industry best practices to deliver measurable results",
-    "transparency": "Full Transparency",
-    "transparencyDesc": "Honest communication, regular reporting, and commitment to agreed objectives on every project"
+  "about": {
+    "title": "About",
+    "subtitle": "The Architect Behind The Infrastructure",
+    "bio": "Husein Habibazar (HBZ) is a Senior Infrastructure Architect and Network & Security Consultant with over 10 years of enterprise IT experience across diverse industries.",
+    "timeline": "Career Timeline",
+    "skills": "Skills Matrix",
+    "certs": "Certifications"
   },
   "aiTeaser": {
     "title": "AI Assistant",
-    "subtitle": "Have a technical question?",
-    "description": "My AI assistant is ready to answer questions about infrastructure, cloud, security, and networking. For more complex challenges, you'll be guided to a consultation session.",
+    "subtitle": "Have a Technical Question?",
+    "description": "Ask the HBZ AI assistant about infrastructure, network security, virtualization, and more. For complex challenges, book a consultation.",
     "cta": "Start Conversation"
   },
   "closingCta": {
-    "title": "Ready to transform your enterprise infrastructure?",
-    "subtitle": "Start with a free consultation. No commitment — just an honest conversation about your challenges.",
-    "ctaPrimary": "Free Consultation",
-    "ctaSecondary": "Intro Call"
+    "title": "Ready to Transform Your Enterprise Infrastructure?",
+    "subtitle": "Start with a free consultation. No commitment — just an honest conversation about your infrastructure challenges.",
+    "ctaPrimary": "Book Free Consultation",
+    "ctaSecondary": "30-Min Intro Call"
   },
   "consultation": {
     "title": "Free Consultation",
@@ -128,80 +106,83 @@
     "description": "In this session, we review your technical challenges and present a suggested path forward. This initial assessment is completely free.",
     "form": {
       "name": "Full Name",
-      "email": "Email",
+      "email": "Email Address",
       "phone": "Phone Number",
       "company": "Company Name (Optional)",
-      "message": "Brief Description of Your Challenge",
-      "messagePlaceholder": "Please briefly describe your technical challenge or primary need...",
-      "consent": "I agree to my information being used for marketing purposes",
-      "submit": "Submit Request",
-      "submitting": "Submitting...",
-      "success": "Your request has been received. We will contact you shortly.",
-      "error": "An error occurred. Please try again."
+      "message": "Describe Your Infrastructure Challenge",
+      "messagePlaceholder": "Tell us about your current infrastructure challenges, pain points, or goals...",
+      "consent": "I agree to be contacted regarding my inquiry",
+      "submit": "Send Request",
+      "submitting": "Sending...",
+      "success": "Your request has been received. We will contact you within 24 hours.",
+      "error": "An error occurred. Please try again or contact us directly."
     }
   },
   "introCall": {
     "title": "Intro Call",
-    "subtitle": "30-Minute Initial Meeting",
-    "description": "A short session to learn about your needs and explore the possibility of working together. This call is free.",
+    "subtitle": "30-Minute Discovery Session",
+    "description": "A focused session to understand your needs and explore how HBZ can help your organization.",
     "form": {
-      "preferredDate": "Preferred Date",
+      "preferredDate": "Preferred Date & Time",
       "preferredDatePlaceholder": "e.g., Next week, weekday morning"
     }
   },
   "ai": {
-    "button": "Chat with Assistant",
-    "title": "Habibazar AI Assistant",
-    "subtitle": "Infrastructure, Cloud, Security & Networking Questions",
+    "button": "Chat with HBZ AI",
+    "title": "HBZ Infrastructure Assistant",
+    "subtitle": "Network · Security · Virtualization · Monitoring",
     "intake": {
-      "title": "Start Conversation",
-      "description": "Please enter your basic information so I can assist you better.",
+      "title": "Start Your Consultation",
+      "description": "Please provide your contact information to get started.",
       "name": "Your Name",
       "namePlaceholder": "John Smith",
       "company": "Company",
       "companyPlaceholder": "Company name (optional)",
       "phone": "Phone Number",
-      "phonePlaceholder": "+1 (555) 000-0000",
+      "phonePlaceholder": "+98 912 000 0000",
       "submit": "Start Chat",
-      "phoneRequired": "Phone number is required for follow-up"
+      "phoneRequired": "Phone number is required for follow-up consultation"
     },
     "chat": {
-      "placeholder": "Ask your question...",
+      "placeholder": "Ask about infrastructure, security, networking...",
       "send": "Send",
       "thinking": "Processing..."
     },
-    "turnLimit": "You've reached the message limit. Please book an official consultation to continue.",
+    "turnLimit": "You have reached the message limit. Book an official consultation to continue.",
     "error": "Connection error. Please try again.",
     "bookConsultation": "Book Consultation",
-    "newChat": "New Chat"
+    "newChat": "New Conversation"
   },
   "footer": {
-    "tagline": "Enterprise Infrastructure at World-Class Standards",
+    "tagline": "Infrastructure Architect | Network & Security Consultant",
+    "mission": "Designing, Securing and Automating Modern Enterprise Infrastructure",
     "rights": "All rights reserved",
-    "links": "Links",
-    "contact": "Contact"
+    "links": "Quick Links",
+    "services": "Services",
+    "contact": "Contact",
+    "available": "Available for Projects"
   },
   "seo": {
-    "homeTitle": "Hossein Habibazar — Enterprise Infrastructure Consultant",
-    "homeDesc": "Senior enterprise infrastructure consultant for cloud, security, and networking at scale",
-    "consultationTitle": "Free Consultation — Habibazar",
-    "consultationDesc": "Free initial assessment of your enterprise infrastructure",
-    "introCallTitle": "Intro Call — Habibazar",
-    "introCallDesc": "Free 30-minute introductory meeting"
+    "homeTitle": "Husein Habibazar (HBZ) — Infrastructure Architect & Network Security Consultant",
+    "homeDesc": "Designing, Securing and Automating Modern Enterprise Infrastructure. 10+ years experience in network architecture, security, and IT consulting.",
+    "consultationTitle": "Book Free Consultation — HBZ Infrastructure Consulting",
+    "consultationDesc": "Free infrastructure assessment with Husein Habibazar. Discuss your network, security, and IT challenges.",
+    "introCallTitle": "30-Min Intro Call — HBZ",
+    "introCallDesc": "Free 30-minute discovery session with HBZ Infrastructure Consulting."
   },
   "errors": {
     "required": "This field is required",
-    "email": "Invalid email address",
-    "phone": "Invalid phone number",
+    "email": "Please enter a valid email address",
+    "phone": "Please enter a valid phone number",
     "minLength": "Minimum {min} characters required",
-    "generic": "An error occurred"
+    "generic": "An error occurred. Please try again."
   },
   "a11y": {
-    "skipToContent": "Skip to content",
-    "openMenu": "Open menu",
-    "closeMenu": "Close menu",
+    "skipToContent": "Skip to main content",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu",
     "langSwitch": "Switch language",
-    "openChat": "Open chat",
-    "closeChat": "Close chat"
+    "openChat": "Open AI assistant",
+    "closeChat": "Close AI assistant"
   }
 }

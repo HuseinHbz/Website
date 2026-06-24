@@ -1,113 +1,89 @@
+'use client'
+
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
-import { cn } from '@/lib/utils'
-import { NAV_ITEMS } from '@/lib/navigation'
 import { SITE } from '@/lib/site'
-import { focusRing } from '@/lib/a11y'
 
-interface FooterProps {
-  locale: string
+const FOOTER_LINKS = {
+  Services: [
+    { label: 'Network Design', href: '/services#network-design' },
+    { label: 'Network Security', href: '/services#network-security' },
+    { label: 'Virtualization', href: '/services#virtualization' },
+    { label: 'Monitoring', href: '/services#monitoring' },
+    { label: 'Infrastructure Automation', href: '/services#automation' },
+  ],
+  Company: [
+    { label: 'About HBZ', href: '/about' },
+    { label: 'Projects', href: '/projects' },
+    { label: 'Blog', href: '/blog' },
+    { label: 'Clients', href: '/#clients' },
+  ],
+  Contact: [
+    { label: 'Book Consultation', href: '/consultation' },
+    { label: 'Intro Call', href: '/consultation/intro-call' },
+    { label: 'LinkedIn', href: SITE.social.linkedin, external: true },
+  ],
 }
 
-function LinkedInIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={cn('w-5 h-5', className)}
-      aria-hidden="true"
-    >
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-    </svg>
-  )
-}
-
-export async function Footer({ locale }: FooterProps) {
-  const t = await getTranslations({ locale, namespace: 'footer' })
-  const isRTL = locale === 'fa'
+export function Footer({ locale }: { locale?: string }) {
   const currentYear = new Date().getFullYear()
 
-  function buildLocalizedPath(path: string) {
-    if (locale === SITE.locale.default) return path
-    return `/${locale}${path}`
-  }
-
   return (
-    <footer className="bg-surface border-t border-border">
-      <div className="container-site py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
+    <footer className="relative border-t border-border overflow-hidden">
+      <div className="absolute inset-0 grid-bg opacity-40" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+
+      <div className="container-site relative z-10">
+        <div className="py-16 grid md:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link
-              href={buildLocalizedPath('/')}
-              className={cn(
-                'text-xl font-bold text-text-primary hover:text-accent transition-colors',
-                focusRing,
-                'rounded inline-block mb-3'
-              )}
-            >
-              {isRTL ? SITE.nameFa : SITE.name}
-            </Link>
-            <p className="text-sm text-text-secondary leading-relaxed max-w-xs">
-              {t('tagline')}
-            </p>
-          </div>
-
-          {/* Navigation */}
-          <div>
-            <h3 className="text-sm font-semibold text-text-primary mb-4 uppercase tracking-wider">
-              {t('links')}
-            </h3>
-            <ul className="space-y-2.5">
-              {NAV_ITEMS.map((item) => (
-                <li key={item.key}>
-                  <Link
-                    href={buildLocalizedPath(item.href)}
-                    className={cn(
-                      'text-sm text-text-secondary hover:text-accent transition-colors duration-150',
-                      focusRing,
-                      'rounded'
-                    )}
-                  >
-                    {isRTL ? item.labelFa : item.labelEn}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Social */}
-          <div>
-            <h3 className="text-sm font-semibold text-text-primary mb-4 uppercase tracking-wider">
-              {t('contact')}
-            </h3>
-            <div className="flex items-center gap-3">
-              <a
-                href={SITE.social.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'p-2 rounded-lg text-text-muted hover:text-accent',
-                  'border border-border hover:border-accent/40',
-                  'transition-colors duration-150',
-                  focusRing
-                )}
-                aria-label="LinkedIn"
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)', boxShadow: '0 0 16px rgba(99,102,241,0.3)' }}
               >
-                <LinkedInIcon />
-              </a>
+                HBZ
+              </div>
+              <div>
+                <div className="text-sm font-bold text-text-primary">Husein Habibazar</div>
+                <div className="text-xs text-text-muted">Infrastructure Architect</div>
+              </div>
+            </div>
+            <p className="text-sm text-text-muted leading-relaxed mb-4">
+              Designing, Securing and Automating Modern Enterprise Infrastructure.
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs text-success font-medium">Available for Projects</span>
             </div>
           </div>
+
+          {Object.entries(FOOTER_LINKS).map(([title, links]) => (
+            <div key={title}>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4">{title}</h4>
+              <ul className="space-y-2">
+                {links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      target={'external' in link && link.external ? '_blank' : undefined}
+                      rel={'external' in link && link.external ? 'noopener noreferrer' : undefined}
+                      className="text-sm text-text-secondary hover:text-accent transition-colors duration-150"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="py-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-muted">
-            {currentYear} {isRTL ? `© ${SITE.nameFa}` : `© ${SITE.name}`} —{' '}
-            {t('rights')}
+            © {currentYear} Husein Habibazar (HBZ). All rights reserved.
           </p>
           <p className="text-xs text-text-muted">
-            {isRTL ? SITE.ownerFa : SITE.owner}
+            Infrastructure Architect · Network & Security Consultant
           </p>
         </div>
       </div>
