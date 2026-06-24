@@ -1,15 +1,18 @@
 # Habibazar Platform — Deployment Runbook
 
-This runbook covers a full production deployment of the Habibazar platform on a fresh Ubuntu 24.04 LTS VPS. The platform consists of:
+Production deployment guide for **Ubuntu 24.04 LTS**. The platform consists of:
 
-- **habibazar-web** — Next.js 15 marketing site (port 3000)
-- **habibazar-api** — Express + Prisma + pgvector API (port 4000)
-- **Nginx** — reverse proxy / TLS termination for all four hostnames
-- **PostgreSQL 16** — primary database with pgvector extension
-- **PM2** — process manager (cluster mode for API, fork for web)
-- **Cloudflare** — DNS, CDN, WAF, SSL (Full-strict mode)
+| App | Port | Description |
+|-----|------|-------------|
+| **habibazar-web** | 3000 | Next.js 15 marketing site (FA/EN) |
+| **habibazar-admin** | 3001 | Next.js 15 admin panel |
+| **habibazar-api** | 4000 | Express + Prisma + PostgreSQL API |
+| **Nginx** | 80/443 | Reverse proxy, TLS termination, Cloudflare real-IP |
+| **PostgreSQL 16** | 5432 | Primary database with pgvector extension |
+| **PM2** | — | Process manager (cluster for API, fork for web/admin) |
+| **Cloudflare** | — | DNS, CDN, WAF, SSL Full-strict |
 
-Estimated completion time for a fresh server: ~45 minutes.
+Estimated time on a fresh server: **~45 minutes**
 
 ---
 
@@ -19,18 +22,19 @@ Estimated completion time for a fresh server: ~45 minutes.
 2. [Server Provisioning](#2-server-provisioning)
 3. [PostgreSQL Setup](#3-postgresql-setup)
 4. [Node.js and PM2](#4-nodejs-and-pm2)
-5. [Repository Setup](#5-repository-setup)
+5. [Clone Repository](#5-clone-repository)
 6. [API Deployment](#6-api-deployment)
 7. [Web Deployment](#7-web-deployment)
-8. [PM2 Start](#8-pm2-start)
-9. [Nginx Setup](#9-nginx-setup)
-10. [SSL with Let's Encrypt](#10-ssl-with-lets-encrypt)
-11. [Cloudflare Configuration](#11-cloudflare-configuration)
-12. [Smoke Tests](#12-smoke-tests)
-13. [Monitoring Setup](#13-monitoring-setup)
-14. [Backup Configuration](#14-backup-configuration)
-15. [Updates (Zero-Downtime)](#15-updates-zero-downtime)
-16. [Rollback](#16-rollback)
+8. [Admin Deployment](#8-admin-deployment)
+9. [PM2 Start](#9-pm2-start)
+10. [Nginx Setup](#10-nginx-setup)
+11. [SSL with Let's Encrypt](#11-ssl-with-lets-encrypt)
+12. [Cloudflare Configuration](#12-cloudflare-configuration)
+13. [Smoke Tests](#13-smoke-tests)
+14. [Monitoring](#14-monitoring)
+15. [Backups](#15-backups)
+16. [Updates (Zero-Downtime)](#16-updates-zero-downtime)
+17. [Rollback](#17-rollback)
 
 ---
 
@@ -45,31 +49,22 @@ Estimated completion time for a fresh server: ~45 minutes.
 | Disk | 20 GB SSD | 40 GB SSD |
 | OS | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS |
 
-### DNS (must be done before SSL step)
+### DNS (configure in Cloudflare before step 11)
 
-Log into Cloudflare and create the following DNS records, all proxied (orange cloud):
+| Type | Name | Content | Proxy |
+|------|------|---------|-------|
+| A | habibazar.ir | `<server-ip>` | Proxied |
+| A | www | `<server-ip>` | Proxied |
+| A | admin | `<server-ip>` | Proxied |
+| A | api | `<server-ip>` | Proxied |
 
-| Type | Name | Content |
-|------|------|---------|
-| A | habibazar.ir | `<server-ip>` |
-| A | www | `<server-ip>` |
-| A | admin | `<server-ip>` |
-| A | api | `<server-ip>` |
-
-Set Cloudflare SSL/TLS mode to **Full (strict)** before issuing certificates. Until certificates are issued (step 10), temporarily set mode to **Full** to avoid redirect loops.
-
-### Local prerequisites
-
-- SSH access as root (or a sudoer) to the VPS
-- Git access to both repositories (`habibazar-web`, `habibazar-api`)
-- Filled-in `.env` files for both apps (based on the `.env.example` files)
-- Cloudflare account managing `habibazar.ir`
+Set Cloudflare SSL/TLS mode to **Full** (not strict) until certificates are issued, then switch to **Full (strict)**.
 
 ---
 
 ## 2. Server Provisioning
 
-### 2.1 Initial system update
+### 2.1 System update
 
 ```bash
 apt update && apt upgrade -y
@@ -77,7 +72,7 @@ apt install -y curl wget git unzip build-essential software-properties-common \
                ca-certificates gnupg lsb-release ufw
 ```
 
-### 2.2 Configure firewall
+### 2.2 Firewall
 
 ```bash
 ufw default deny incoming
@@ -86,40 +81,36 @@ ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw enable
-ufw status verbose
 ```
 
-> **Warning:** Make absolutely sure `allow OpenSSH` is set before running `ufw enable`, or you will lock yourself out.
+> **Warning:** Always allow OpenSSH before enabling UFW or you'll lock yourself out.
 
-### 2.3 Create deploy user
+### 2.3 Deploy user
 
 ```bash
 useradd -m -s /bin/bash deploy
 usermod -aG sudo deploy
 
-# Copy your SSH key so you can log in as deploy
 mkdir -p /home/deploy/.ssh
 cp /root/.ssh/authorized_keys /home/deploy/.ssh/
 chown -R deploy:deploy /home/deploy/.ssh
-chmod 700 /home/deploy/.ssh
-chmod 600 /home/deploy/.ssh/authorized_keys
+chmod 700 /home/deploy/.ssh && chmod 600 /home/deploy/.ssh/authorized_keys
 ```
 
-All subsequent commands in this runbook should be run as the `deploy` user unless otherwise noted.
+Switch to deploy user for all subsequent steps:
 
 ```bash
 su - deploy
 ```
 
-### 2.4 Create directory structure
+### 2.4 Directory structure
 
 ```bash
-sudo mkdir -p /var/www/habibazar/{web,api}
+sudo mkdir -p /var/www/habibazar/{web,admin,api}
 sudo mkdir -p /var/log/pm2
 sudo mkdir -p /var/www/certbot/.well-known/acme-challenge
 
-sudo chown -R deploy:deploy /var/www/habibazar
-sudo chown -R deploy:deploy /var/log/pm2
+sudo chown -R deploy:deploy /var/www/habibazar /var/log/pm2
 ```
 
 ---
@@ -131,32 +122,20 @@ sudo chown -R deploy:deploy /var/log/pm2
 ```bash
 sudo apt install -y postgresql postgresql-contrib
 sudo systemctl enable --now postgresql
+psql --version    # postgresql 16.x
 ```
 
-Verify the version:
-
-```bash
-psql --version
-# postgresql 16.x
-```
-
-### 3.2 Install pgvector extension
+### 3.2 Install pgvector
 
 ```bash
 sudo apt install -y postgresql-16-pgvector
+# If unavailable, build from source:
+# sudo apt install -y postgresql-server-dev-16
+# git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector
+# cd /tmp/pgvector && make && sudo make install
 ```
 
-Alternatively, build from source if the package is not available:
-
-```bash
-sudo apt install -y postgresql-server-dev-16
-git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector
-cd /tmp/pgvector
-make && sudo make install
-cd ~ && rm -rf /tmp/pgvector
-```
-
-### 3.3 Create database role and database
+### 3.3 Create database
 
 ```bash
 sudo -u postgres psql <<'SQL'
@@ -164,32 +143,15 @@ CREATE ROLE habibazar WITH LOGIN PASSWORD 'CHANGE_ME_STRONG_PASSWORD';
 CREATE DATABASE habibazar OWNER habibazar;
 GRANT ALL PRIVILEGES ON DATABASE habibazar TO habibazar;
 SQL
-```
 
-> **Warning:** Replace `CHANGE_ME_STRONG_PASSWORD` with a strong, randomly generated password. Store it in your password manager. Use the same value in the API's `DATABASE_URL` environment variable.
-
-### 3.4 Enable pgvector extension
-
-```bash
 sudo -u postgres psql -d habibazar -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 
-Verify:
+> Replace `CHANGE_ME_STRONG_PASSWORD` with a strong random password. Use it in `DATABASE_URL`.
 
-```bash
-sudo -u postgres psql -d habibazar -c "\dx"
-# Should list: vector | ... | pgvector
-```
-
-### 3.5 Tune PostgreSQL for production (optional but recommended)
+### 3.4 PostgreSQL tuning (4 GB RAM server)
 
 Edit `/etc/postgresql/16/main/postgresql.conf`:
-
-```bash
-sudo nano /etc/postgresql/16/main/postgresql.conf
-```
-
-Adjust these settings (tune for your RAM; values below assume 4 GB):
 
 ```conf
 max_connections = 100
@@ -198,9 +160,6 @@ effective_cache_size = 3GB
 maintenance_work_mem = 256MB
 checkpoint_completion_target = 0.9
 wal_buffers = 16MB
-default_statistics_target = 100
-random_page_cost = 1.1
-effective_io_concurrency = 200
 work_mem = 10485kB
 min_wal_size = 1GB
 max_wal_size = 4GB
@@ -214,305 +173,351 @@ sudo systemctl restart postgresql
 
 ## 4. Node.js and PM2
 
-### 4.1 Install Node.js 22 LTS via NodeSource
-
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
-node --version   # v22.x.x
-npm --version    # 10.x.x
-```
+node --version    # v22.x.x
 
-### 4.2 Install PM2 globally
-
-```bash
 sudo npm install -g pm2
 pm2 --version
 ```
 
-### 4.3 Create PM2 log directory
-
-```bash
-sudo mkdir -p /var/log/pm2
-sudo chown deploy:deploy /var/log/pm2
-```
-
 ---
 
-## 5. Repository Setup
+## 5. Clone Repository
 
-### 5.1 Clone repositories
+The entire platform lives in a single git repository. Clone it once:
 
 ```bash
 cd /var/www/habibazar
 
-# Replace with your actual git remote URLs
-git clone https://github.com/YOUR_ORG/habibazar-api.git api
-git clone https://github.com/YOUR_ORG/habibazar-web.git web
+git clone https://github.com/HuseinHbz/Website.git repo
+# Each app lives under repo/outputs/:
+#   repo/outputs/habibazar-web   → /var/www/habibazar/web
+#   repo/outputs/habibazar-admin → /var/www/habibazar/admin
+#   repo/outputs/habibazar-api   → /var/www/habibazar/api
+#   repo/outputs/habibazar-deploy → nginx.conf, ecosystem.config.js
+
+# Symlink or copy the app directories to the expected locations
+ln -s /var/www/habibazar/repo/outputs/habibazar-web   /var/www/habibazar/web
+ln -s /var/www/habibazar/repo/outputs/habibazar-admin /var/www/habibazar/admin
+ln -s /var/www/habibazar/repo/outputs/habibazar-api   /var/www/habibazar/api
 ```
 
-If using SSH keys:
+If you prefer copies instead of symlinks (safer for `npm ci`):
 
 ```bash
-# Ensure deploy user has an SSH key added to your git provider
-ssh-keygen -t ed25519 -C "deploy@habibazar.ir" -f /home/deploy/.ssh/id_ed25519 -N ""
-cat /home/deploy/.ssh/id_ed25519.pub
-# Add this public key to your git provider before cloning
-```
-
-### 5.2 Install dependencies
-
-```bash
-cd /var/www/habibazar/api && npm ci --omit=dev
-cd /var/www/habibazar/web && npm ci --omit=dev
+cp -r repo/outputs/habibazar-web   web
+cp -r repo/outputs/habibazar-admin admin
+cp -r repo/outputs/habibazar-api   api
 ```
 
 ---
 
 ## 6. API Deployment
 
-### 6.1 Copy environment file
+### 6.1 Environment file
 
 ```bash
-cp /path/to/your/api.env /var/www/habibazar/api/.env
-chmod 600 /var/www/habibazar/api/.env
-```
-
-The `.env` must contain all required variables from `.env.example`. Critical values to set:
-
-```env
+cat > /var/www/habibazar/api/.env <<'ENV'
 NODE_ENV=production
 PORT=4000
 DATABASE_URL=postgresql://habibazar:CHANGE_ME_STRONG_PASSWORD@127.0.0.1:5432/habibazar
-ACCESS_TOKEN_SECRET=<random 64-char string>
-REFRESH_TOKEN_SECRET=<random 64-char string>
-ENCRYPTION_KEY=<random 64 hex chars = 32 bytes>
+
+# JWT — generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+ACCESS_TOKEN_SECRET=<64-char-hex>
+REFRESH_TOKEN_SECRET=<64-char-hex>
+
+# AES key — must be exactly 64 hex chars (= 32 bytes)
+ENCRYPTION_KEY=<64-char-hex>
+
+ACCESS_TOKEN_TTL=900
+REFRESH_TOKEN_TTL=2592000
+
 CORS_ORIGINS=https://habibazar.ir,https://admin.habibazar.ir
 OWNER_EMAIL=hosseinhabibazar@live.com
+
+# Lead scoring
+SCORE_HOT=70
+SCORE_QUALIFIED=45
+SCORE_NURTURE_BELOW=20
+
+# AI provider: openai | anthropic | deepseek | ollama
+AI_PROVIDER=openai
+AI_MAX_TOKENS=800
+AI_TEMPERATURE=0.4
+AI_RATE_PER_MIN=10
+AI_HISTORY_LIMIT=12
+AI_MAX_TURNS=25
+AI_TIMEOUT_MS=60000
+AI_RETENTION_DAYS=180
+
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+
+# ANTHROPIC_API_KEY=sk-ant-...
+# ANTHROPIC_MODEL=claude-sonnet-4-6
+
+# SMTP (required — used for consultation confirmations and notifications)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user@example.com
+SMTP_PASS=password
+MAIL_FROM=noreply@habibazar.ir
+MAIL_NOTIFY_TO=hosseinhabibazar@live.com
+
+# Optional: Cloudflare R2 for database backups
+# R2_BUCKET=habibazar-backups
+# R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+# AWS_ACCESS_KEY_ID=...
+# AWS_SECRET_ACCESS_KEY=...
+ENV
+
+chmod 600 /var/www/habibazar/api/.env
 ```
 
-Generate secure secrets:
+Generate secrets:
 
 ```bash
-# ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET
+# ACCESS_TOKEN_SECRET / REFRESH_TOKEN_SECRET
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
-# ENCRYPTION_KEY (must be exactly 64 hex characters)
+# ENCRYPTION_KEY (exactly 64 hex chars)
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### 6.2 Run Prisma migrations
+### 6.2 Install dependencies
+
+```bash
+cd /var/www/habibazar/api
+npm ci --omit=dev
+```
+
+### 6.3 Generate Prisma client and apply schema
 
 ```bash
 cd /var/www/habibazar/api
 
-# Generate the Prisma client
+# Generate the Prisma client (creates typed query builder)
 npx prisma generate
 
-# Apply migrations to production database
-npx prisma migrate deploy
+# Apply the schema to the database
+# First deploy: use db push (no migrations directory exists yet)
+npx prisma db push
+
+# Subsequent deploys with schema changes: use migrate deploy after creating migrations locally
+# npx prisma migrate deploy
 ```
 
-> **Warning:** `prisma migrate deploy` applies pending migrations in order without prompting. Always test migrations on a staging database first if you have one. It is non-destructive on first run (creates all tables from scratch).
+> **Note:** `db push` is used on first deploy because this project ships without a `prisma/migrations/`
+> directory. Once you add migrations (`prisma migrate dev` locally), switch to `prisma migrate deploy`
+> for all subsequent server deploys.
 
-### 6.3 Apply database hardening
+### 6.4 Apply database hardening
+
+Run **after** `db push` has created all tables:
 
 ```bash
 cd /var/www/habibazar/api
 npm run db:hardening
+# Runs: psql $DATABASE_URL -f prisma/sql/hardening.sql
 ```
 
-This script (`prisma/sql/hardening.sql`) applies:
-- Partial unique indexes to support soft-delete slug reuse
+This applies:
+- Partial unique indexes (slug reuse after soft-delete)
 - Lead score range constraint (0–100)
-- pgvector HNSW index on `content_embeddings` for cosine similarity search
+- pgvector HNSW index on `content_embeddings`
 
-### 6.4 Seed initial data (first deploy only)
-
-If the project includes a seed script:
-
-```bash
-cd /var/www/habibazar/api
-npx prisma db seed
-```
-
-If there is no Prisma seed, create the initial admin role and user manually:
+### 6.5 Create initial superadmin role and user
 
 ```bash
 sudo -u postgres psql -d habibazar <<'SQL'
--- Create the superadmin role
+-- Superadmin role with wildcard permission
 INSERT INTO roles (id, name, permissions, "createdAt", "updatedAt")
 VALUES (
     gen_random_uuid(),
     'superadmin',
-    ARRAY['*'],
-    NOW(),
-    NOW()
+    ARRAY['lead:read','lead:write','lead:delete',
+          'consultation:read','consultation:write',
+          'engagement:read','engagement:write',
+          'content:read','content:write','content:delete',
+          'testimonial:approve','cert:verify','consent:write',
+          'user:read','user:write',
+          'role:read','role:write',
+          'settings:read','settings:write',
+          'audit:read',
+          'ai:read','ai:write'],
+    NOW(), NOW()
 ) ON CONFLICT (name) DO NOTHING;
 SQL
 ```
 
-The first admin user should be created through the API's registration endpoint or a dedicated seed command provided by the project.
+Then create the first admin user via the API:
 
-### 6.5 Build the API
+```bash
+# Start the API temporarily
+cd /var/www/habibazar/api && node dist/server.js &
+API_PID=$!
+
+sleep 2
+
+# Get the superadmin role ID
+ROLE_ID=$(psql $DATABASE_URL -t -c "SELECT id FROM roles WHERE name='superadmin';" | tr -d ' ')
+
+# Register first admin (adjust payload)
+curl -s -X POST http://127.0.0.1:4000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"hosseinhabibazar@live.com\",\"password\":\"CHANGE_ME\",\"name\":\"Admin\",\"roleId\":\"$ROLE_ID\"}"
+
+kill $API_PID
+```
+
+### 6.6 Build
 
 ```bash
 cd /var/www/habibazar/api
 npm run build
-```
 
-Verify the build output:
-
-```bash
 ls dist/
-# Should include: server.js and compiled route/controller files
+# server.js and compiled modules
 ```
-
-### 6.6 Quick smoke test (before PM2)
-
-```bash
-cd /var/www/habibazar/api
-node dist/server.js &
-sleep 2
-
-curl -s http://127.0.0.1:4000/health
-# Expected: {"status":"ok"} or similar
-
-curl -s http://127.0.0.1:4000/ready
-# Expected: {"status":"ready"} or similar
-
-kill %1
-```
-
-If either check fails, inspect logs before continuing.
 
 ---
 
 ## 7. Web Deployment
 
-### 7.1 Copy environment file
+### 7.1 Environment file
 
 ```bash
-cp /path/to/your/web.env /var/www/habibazar/web/.env.local
+cat > /var/www/habibazar/web/.env.local <<'ENV'
+NEXT_PUBLIC_SITE_URL=https://habibazar.ir
+NEXT_PUBLIC_API_URL=https://api.habibazar.ir
+ENV
+
 chmod 600 /var/www/habibazar/web/.env.local
 ```
 
-Minimum required values:
-
-```env
-NEXT_PUBLIC_SITE_URL=https://habibazar.ir
-NEXT_PUBLIC_API_URL=https://api.habibazar.ir
-```
-
-### 7.2 Build Next.js
+### 7.2 Install and build
 
 ```bash
 cd /var/www/habibazar/web
+npm ci --omit=dev
 npm run build
-```
 
-This runs `next build` and produces the `.next/` output directory. Expect this to take 1–3 minutes on first build.
-
-Verify:
-
-```bash
 ls .next/
-# Should contain: server/, static/, BUILD_ID, etc.
+# server/, static/, BUILD_ID, ...
 ```
 
 ---
 
-## 8. PM2 Start
+## 8. Admin Deployment
 
-### 8.1 Copy ecosystem config
+### 8.1 Environment file
 
 ```bash
-cp /path/to/habibazar-deploy/ecosystem.config.js /var/www/habibazar/ecosystem.config.js
+cat > /var/www/habibazar/admin/.env.local <<'ENV'
+NEXT_PUBLIC_API_URL=https://api.habibazar.ir
+NEXT_PUBLIC_SITE_URL=https://admin.habibazar.ir
+ENV
+
+chmod 600 /var/www/habibazar/admin/.env.local
 ```
 
-### 8.2 Start all apps
+### 8.2 Install and build
+
+```bash
+cd /var/www/habibazar/admin
+npm ci --omit=dev
+npm run build
+
+ls .next/
+# server/, static/, BUILD_ID, ...
+```
+
+---
+
+## 9. PM2 Start
+
+### 9.1 Copy ecosystem config
+
+```bash
+cp /var/www/habibazar/repo/outputs/habibazar-deploy/ecosystem.config.js \
+   /var/www/habibazar/ecosystem.config.js
+```
+
+### 9.2 Start all apps
 
 ```bash
 cd /var/www/habibazar
 pm2 start ecosystem.config.js --env production
+pm2 list
+# habibazar-web   online
+# habibazar-admin online
+# habibazar-api   online (2 instances)
 ```
 
-### 8.3 Verify processes are running
+Check logs for startup errors:
 
 ```bash
-pm2 list
-# Both habibazar-web and habibazar-api should show status: online
-
 pm2 logs --lines 50
-# Check for any startup errors
 ```
 
 Quick local health checks:
 
 ```bash
-curl -s http://127.0.0.1:3000/
-# Should return HTML (Next.js homepage)
-
-curl -s http://127.0.0.1:4000/health
-# Should return JSON health response
+curl -s http://127.0.0.1:3000/          # web HTML
+curl -s http://127.0.0.1:3001/          # admin HTML
+curl -s http://127.0.0.1:4000/health    # {"status":"ok",...}
+curl -s http://127.0.0.1:4000/ready     # {"status":"ready","db":"connected"}
 ```
 
-### 8.4 Save process list and configure startup
+### 9.3 Save and configure autostart
 
 ```bash
 pm2 save
 
-# Generate and enable the systemd startup script
 pm2 startup systemd -u deploy --hp /home/deploy
-# PM2 will print a command starting with `sudo env PATH=...`
-# Copy and run that command exactly as printed
+# Copy and run the sudo command it prints
 ```
 
 Verify:
 
 ```bash
 sudo systemctl status pm2-deploy
-# Should show: active (running)
+# active (running)
 ```
 
 ---
 
-## 9. Nginx Setup
+## 10. Nginx Setup
 
-### 9.1 Install Nginx
+### 10.1 Install Nginx
 
 ```bash
 sudo apt install -y nginx
 sudo systemctl enable nginx
 ```
 
-### 9.2 Copy the Nginx configuration
+### 10.2 Copy configuration
 
 ```bash
-sudo cp /path/to/habibazar-deploy/nginx.conf /etc/nginx/conf.d/habibazar.conf
-```
+sudo cp /var/www/habibazar/repo/outputs/habibazar-deploy/nginx.conf \
+        /etc/nginx/conf.d/habibazar.conf
 
-Remove the default site if present:
-
-```bash
+# Remove default site — this config uses conf.d only
 sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-enabled/habibazar   # remove if it exists
 sudo rm -f /etc/nginx/conf.d/default.conf
 ```
 
-### 9.3 Verify the main nginx.conf includes conf.d
-
-Check that `/etc/nginx/nginx.conf` contains:
+Verify the main nginx.conf includes conf.d:
 
 ```bash
-grep -n "conf.d" /etc/nginx/nginx.conf
-# Should show: include /etc/nginx/conf.d/*.conf;
+grep "conf.d" /etc/nginx/nginx.conf
+# include /etc/nginx/conf.d/*.conf;
 ```
 
-If it does not, add it inside the `http {}` block.
-
-### 9.4 Create placeholder certificates for syntax test
-
-Before real SSL certs exist, the nginx config references certificate paths that do not yet exist. Create self-signed placeholders so `nginx -t` can pass:
+### 10.3 Placeholder SSL certs (for nginx -t before Certbot)
 
 ```bash
 sudo mkdir -p /etc/letsencrypt/live/{habibazar.ir,admin.habibazar.ir,api.habibazar.ir}
@@ -521,85 +526,65 @@ for domain in habibazar.ir admin.habibazar.ir api.habibazar.ir; do
     sudo openssl req -x509 -nodes -newkey rsa:2048 \
         -keyout /etc/letsencrypt/live/$domain/privkey.pem \
         -out    /etc/letsencrypt/live/$domain/fullchain.pem \
-        -days   1 \
-        -subj   "/CN=$domain"
+        -days 1 -subj "/CN=$domain"
 done
 ```
 
-### 9.5 Test and reload Nginx
+### 10.4 Test and load
 
 ```bash
 sudo nginx -t
-# nginx: configuration file /etc/nginx/nginx.conf test is successful
-
 sudo systemctl reload nginx
 ```
 
-> **Warning:** If `nginx -t` reports errors, fix them before reloading. Do not run `nginx -s reload` on a broken config; it will take down the current live traffic.
-
 ---
 
-## 10. SSL with Let's Encrypt
+## 11. SSL with Let's Encrypt
 
-### 10.1 Install Certbot
+### 11.1 Install Certbot
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 ```
 
-### 10.2 Temporarily set Cloudflare SSL mode to "Full"
+### 11.2 Temporarily set Cloudflare SSL to "Full" (not strict)
 
-In the Cloudflare dashboard: **SSL/TLS → Overview → Full** (not Full strict). This allows Certbot's HTTP-01 challenge to reach the server over HTTP via Cloudflare's proxy.
+This allows the HTTP-01 ACME challenge to reach the origin through the Cloudflare proxy.
 
-Alternatively, disable Cloudflare proxying (grey cloud) for all four A records temporarily, issue the certificates, then re-enable.
-
-### 10.3 Issue certificates
+### 11.3 Issue certificates
 
 ```bash
 sudo certbot --nginx \
-    -d habibazar.ir \
-    -d www.habibazar.ir \
-    --non-interactive \
-    --agree-tos \
-    --email hosseinhabibazar@gmail.com \
-    --redirect
+    -d habibazar.ir -d www.habibazar.ir \
+    --non-interactive --agree-tos \
+    --email hosseinhabibazar@gmail.com --redirect
 
 sudo certbot --nginx \
     -d admin.habibazar.ir \
-    --non-interactive \
-    --agree-tos \
-    --email hosseinhabibazar@gmail.com \
-    --redirect
+    --non-interactive --agree-tos \
+    --email hosseinhabibazar@gmail.com --redirect
 
 sudo certbot --nginx \
     -d api.habibazar.ir \
-    --non-interactive \
-    --agree-tos \
-    --email hosseinhabibazar@gmail.com \
-    --redirect
+    --non-interactive --agree-tos \
+    --email hosseinhabibazar@gmail.com --redirect
 ```
 
-> **Note:** If Certbot modifies nginx.conf sections automatically, review the changes. The habibazar.conf already includes correct redirect and SSL blocks, so Certbot's modifications may be redundant and can be reverted after certificates are in place.
+> Certbot may modify nginx config blocks. Review and revert any unwanted changes
+> (our habibazar.conf already has correct SSL blocks).
 
-### 10.4 Verify auto-renewal
+### 11.4 Verify auto-renewal
 
 ```bash
 sudo certbot renew --dry-run
-# Should show: Congratulations, all simulated renewals succeeded
+sudo systemctl status certbot.timer   # active (waiting)
 ```
 
-Certbot installs a systemd timer automatically:
+### 11.5 Switch Cloudflare to Full (strict)
 
-```bash
-sudo systemctl status certbot.timer
-# Should show: active (waiting)
-```
+In Cloudflare dashboard: **SSL/TLS → Overview → Full (strict)**
 
-### 10.5 Switch Cloudflare back to Full (strict)
-
-In the Cloudflare dashboard: **SSL/TLS → Overview → Full (strict)**.
-
-### 10.6 Final Nginx reload
+### 11.6 Final nginx reload
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
@@ -607,285 +592,148 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ---
 
-## 11. Cloudflare Configuration
+## 12. Cloudflare Configuration
 
-### 11.1 DNS records
+### DNS
 
-Confirm all four A records are proxied (orange cloud):
+All four A records should be **Proxied** (orange cloud).
 
-| Type | Name | Content | Proxy |
-|------|------|---------|-------|
-| A | habibazar.ir | `<server-ip>` | Proxied |
-| A | www | `<server-ip>` | Proxied |
-| A | admin | `<server-ip>` | Proxied |
-| A | api | `<server-ip>` | Proxied |
-
-### 11.2 SSL/TLS settings
-
-Navigate to **SSL/TLS → Overview**:
+### SSL/TLS → Overview
 - Mode: **Full (strict)**
 
-Navigate to **SSL/TLS → Edge Certificates**:
+### SSL/TLS → Edge Certificates
 - Always Use HTTPS: **On**
-- HSTS: **Enabled**, Max Age: 6 months, Include subdomains: **On**, Preload: **On**
-- Minimum TLS Version: **TLS 1.2**
-- Opportunistic Encryption: **On**
+- HSTS: **On**, Max Age 6 months, Include subdomains, Preload
+- Minimum TLS: **TLS 1.2**
 - TLS 1.3: **On**
-- Automatic HTTPS Rewrites: **On**
 
-### 11.3 Speed settings
-
-Navigate to **Speed → Optimization**:
+### Speed → Optimization
 - Brotli: **On**
-- Rocket Loader: **Off** (can break Next.js hydration — leave off)
-- Minify (HTML/CSS/JS): **Off** (Next.js already minifies)
+- Rocket Loader: **Off** (breaks Next.js hydration)
+- Minify: **Off** (Next.js already minifies)
 - Early Hints: **On**
 
-### 11.4 Cache rules
+### Caching → Cache Rules
 
-Navigate to **Caching → Cache Rules** and create:
+| Rule | Match | Action |
+|------|-------|--------|
+| Next.js static | `http.request.uri.path contains "/_next/static/"` | Cache Everything, 1 year TTL |
+| API bypass | `http.host eq "api.habibazar.ir"` | Bypass cache |
+| Admin bypass | `http.host eq "admin.habibazar.ir"` | Bypass cache |
 
-**Rule 1: Cache Next.js static assets at edge**
-- Match: `(http.host contains "habibazar.ir") and (http.request.uri.path contains "/_next/static/")`
-- Cache Level: Cache Everything
-- Edge TTL: 1 year
-- Browser TTL: 1 year
+### Security → WAF → Rate Limiting
 
-**Rule 2: Bypass cache for API**
-- Match: `http.host eq "api.habibazar.ir"`
-- Cache Level: Bypass
+| Rule | Match | Rate | Action |
+|------|-------|------|--------|
+| Admin login | `host = admin.habibazar.ir AND path contains /login` | 5 req/60s | Block 10 min |
+| API general | `host = api.habibazar.ir` | 100 req/60s | Block 1 min |
 
-**Rule 3: Bypass cache for admin**
-- Match: `http.host eq "admin.habibazar.ir"`
-- Cache Level: Bypass
-
-### 11.5 WAF rules
-
-Navigate to **Security → WAF → Custom Rules**:
-
-**Rule 1: Block non-Cloudflare direct IP access** (optional, if you want to enforce all traffic goes through CF)
-- This is better enforced at the server level with UFW — allow 80/443 only from Cloudflare IPs.
-
-**Rule 2: Rate limit admin login**
-- Navigate to **Security → WAF → Rate Limiting Rules**
-- Match: `http.host eq "admin.habibazar.ir" and http.request.uri.path contains "/api/auth/login"`
-- Rate: 5 requests per 60 seconds per IP
-- Action: Block for 10 minutes
-
-**Rule 3: Rate limit API**
-- Match: `http.host eq "api.habibazar.ir"`
-- Rate: 100 requests per 60 seconds per IP
-- Action: Block for 1 minute
-
-### 11.6 Bot protection
-
-Navigate to **Security → Bots**:
+### Security → Bots
 - Bot Fight Mode: **On**
 
-### 11.7 (Optional) Restrict origin to Cloudflare IPs only
-
-To prevent direct IP access bypassing Cloudflare, allow only Cloudflare IPs on ports 80/443:
+### (Optional) Restrict origin to Cloudflare IPs only
 
 ```bash
-# Fetch current Cloudflare IPv4 list
 curl -s https://www.cloudflare.com/ips-v4 | while read cidr; do
-    sudo ufw allow from $cidr to any port 80
-    sudo ufw allow from $cidr to any port 443
+    sudo ufw allow from "$cidr" to any port 80
+    sudo ufw allow from "$cidr" to any port 443
 done
-
-# Remove the open 80/443 rules
 sudo ufw delete allow 80/tcp
 sudo ufw delete allow 443/tcp
-
 sudo ufw reload
 ```
 
-> **Warning:** Do this only after confirming everything works through Cloudflare. You will lose direct HTTPS access to the server.
-
 ---
 
-## 12. Smoke Tests
+## 13. Smoke Tests
 
-Run these after the full deployment to verify end-to-end functionality. All tests should be run against the public hostnames (via Cloudflare).
-
-### 12.1 Health and readiness endpoints
+Run after full deployment against the public hostnames:
 
 ```bash
 # API health
 curl -s https://api.habibazar.ir/health
-# Expected: {"status":"ok","timestamp":"..."}
+# {"status":"ok","timestamp":"..."}
 
-# API readiness (includes DB connection check)
 curl -s https://api.habibazar.ir/ready
-# Expected: {"status":"ready","db":"connected"}
+# {"status":"ready","db":"connected"}
 
-# Web homepage
-curl -sI https://habibazar.ir/ | head -5
-# Expected: HTTP/2 200
+# Web homepage (HTTP/2 200)
+curl -sI https://habibazar.ir/ | head -3
 
-# Admin panel
-curl -sI https://admin.habibazar.ir/ | head -5
-# Expected: HTTP/2 200
-```
+# Admin panel (HTTP/2 200)
+curl -sI https://admin.habibazar.ir/ | head -3
 
-### 12.2 Security headers
-
-```bash
-curl -sI https://habibazar.ir/ | grep -i "strict-transport\|x-frame\|x-content\|x-robots"
-# habibazar.ir: should show HSTS, X-Content-Type-Options
-# Note: X-Frame-Options DENY and X-Robots-Tag only on admin
-
-curl -sI https://admin.habibazar.ir/ | grep -i "strict-transport\|x-frame\|x-robots"
-# Expected: X-Frame-Options: DENY and X-Robots-Tag: noindex, nofollow
-
-curl -sI https://habibazar.ir/_next/static/chunks/main.js 2>/dev/null | grep -i "cache-control"
-# Expected: cache-control: public, max-age=31536000, immutable
-```
-
-### 12.3 HTTPS redirect
-
-```bash
+# HTTPS redirect
 curl -sI http://habibazar.ir/ | grep -i location
-# Expected: Location: https://habibazar.ir/
+# Location: https://habibazar.ir/
 
-curl -sI http://www.habibazar.ir/ | grep -i location
-# Expected: Location: https://www.habibazar.ir/ (then https://habibazar.ir/)
-```
+# www → canonical redirect
+curl -sI https://www.habibazar.ir/ | grep -i location
+# Location: https://habibazar.ir/
 
-### 12.4 Lead submission
+# Security headers on admin
+curl -sI https://admin.habibazar.ir/ | grep -i "x-frame\|x-robots"
+# X-Frame-Options: DENY
+# X-Robots-Tag: noindex, nofollow
 
-```bash
+# Next.js static asset cache
+curl -sI https://habibazar.ir/_next/static/chunks/main-*.js 2>/dev/null | grep -i cache-control
+# Cache-Control: public, max-age=31536000, immutable
+
+# Lead submission
 curl -s -X POST https://api.habibazar.ir/api/v1/leads \
     -H "Content-Type: application/json" \
-    -d '{"name":"Test Lead","email":"test@example.com","source":"WEBSITE"}' | jq .
-# Expected: {"id":"...","status":"NEW",...}
-```
+    -d '{"name":"Test","email":"test@example.com","source":"WEBSITE"}' | jq .
 
-### 12.5 AI assistant SSE stream
-
-```bash
-# Start a conversation (adjust endpoint to match your actual route)
-curl -s -X POST https://api.habibazar.ir/api/v1/ai/conversations \
+# AI SSE stream test
+CONV=$(curl -s -X POST https://api.habibazar.ir/api/v1/ai/start \
     -H "Content-Type: application/json" \
-    -d '{"locale":"FA"}' | jq .
+    -d '{"sessionRef":"test-smoke","locale":"FA"}' | jq -r '.data.id')
 
-# Stream a message (replace CONVERSATION_ID)
-curl -N -s https://api.habibazar.ir/api/v1/ai/conversations/CONVERSATION_ID/stream \
-    -X POST \
+curl -N -s -X POST "https://api.habibazar.ir/api/v1/ai/$CONV/chat" \
     -H "Content-Type: application/json" \
-    -d '{"message":"سلام"}' &
-
-sleep 5
-kill %1
-# Expected: one or more `data:` SSE lines printed to stdout
+    -d '{"message":"سلام","locale":"FA"}' &
+sleep 5 && kill %1
+# Should print SSE data: lines
 ```
-
-If the SSE test hangs or returns 504, check that `proxy_buffering off` and `proxy_read_timeout 300s` are active in the nginx config for the `/api/v1/ai/` location.
 
 ---
 
-## 13. Monitoring Setup
+## 14. Monitoring
 
-### 13.1 PM2 log rotation
+### PM2 log rotation
 
 ```bash
 pm2 install pm2-logrotate
-
 pm2 set pm2-logrotate:max_size 100M
 pm2 set pm2-logrotate:retain 7
 pm2 set pm2-logrotate:compress true
-pm2 set pm2-logrotate:dateFormat YYYY-MM-DD_HH-mm-ss
-pm2 set pm2-logrotate:workerInterval 3600
 pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
 ```
 
-### 13.2 PM2 monitoring dashboard
+### External uptime monitoring
 
-```bash
-pm2 monit
-# Press Ctrl+C to exit
-```
+Set up [UptimeRobot](https://uptimerobot.com) or [BetterStack](https://betterstack.com) for:
 
-### 13.3 External uptime monitoring
+| URL | Interval |
+|-----|----------|
+| `https://habibazar.ir/` | 1 min |
+| `https://api.habibazar.ir/health` | 1 min |
+| `https://admin.habibazar.ir/` | 5 min |
 
-Set up an uptime monitor (Uptime Robot, BetterStack, or similar) for:
-
-| URL | Check interval | Alert channel |
-|-----|----------------|---------------|
-| `https://habibazar.ir/` | 1 minute | Email / Telegram |
-| `https://api.habibazar.ir/health` | 1 minute | Email / Telegram |
-| `https://admin.habibazar.ir/` | 5 minutes | Email |
-
-### 13.4 Disk and memory alerts
-
-Install a lightweight system monitor:
-
-```bash
-sudo apt install -y sysstat
-
-# Configure daily reporting
-sudo systemctl enable --now sysstat
-```
-
-Add a cron entry to alert on low disk space:
+### Disk alert cron
 
 ```bash
 crontab -e
+# Add:
+*/15 * * * * df -h / | awk 'NR==2 {if (int($5) > 80) system("echo Disk " $5 " | mail -s DISK_ALERT hosseinhabibazar@gmail.com")}' 2>/dev/null || true
 ```
-
-Add:
-
-```cron
-# Alert if disk usage exceeds 80%
-*/15 * * * * df -h / | awk 'NR==2 {if (int($5) > 80) print "DISK ALERT: " $5 " used on " HOSTNAME}' | mail -s "Disk Alert" hosseinhabibazar@gmail.com 2>/dev/null || true
-```
-
-### 13.5 Cloudflare Analytics
-
-In the Cloudflare dashboard:
-- **Analytics → Traffic** — monitor requests, bandwidth, threats
-- **Analytics → Performance** — monitor cache hit rate (target > 80% for static assets)
-- **Analytics → Security** — review bot and threat activity
 
 ---
 
-## 14. Backup Configuration
+## 15. Backups
 
-### 14.1 Verify Cloudflare R2 credentials
-
-Ensure the API `.env` contains correct R2 values:
-
-```env
-R2_BUCKET=habibazar-backups
-R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-AWS_ACCESS_KEY_ID=<r2-access-key-id>
-AWS_SECRET_ACCESS_KEY=<r2-secret-access-key>
-BACKUP_RETENTION_DAYS=30
-```
-
-Test R2 connectivity:
-
-```bash
-# Install AWS CLI v2
-curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-unzip -q /tmp/awscliv2.zip -d /tmp/
-sudo /tmp/aws/install
-rm -rf /tmp/aws /tmp/awscliv2.zip
-
-# Configure with R2 credentials
-aws configure --profile r2
-# AWS Access Key ID: <r2-access-key-id>
-# AWS Secret Access Key: <r2-secret-access-key>
-# Default region name: auto
-# Default output format: json
-
-# Test listing the bucket
-aws s3 ls s3://habibazar-backups/ \
-    --endpoint-url https://<account-id>.r2.cloudflarestorage.com \
-    --profile r2
-```
-
-### 14.2 Create database backup script
+### Create backup script
 
 ```bash
 sudo tee /usr/local/bin/backup-habibazar.sh > /dev/null <<'SCRIPT'
@@ -894,131 +742,79 @@ set -euo pipefail
 
 BACKUP_DIR="/var/backups/habibazar"
 DATE=$(date +%Y-%m-%d_%H-%M-%S)
-DB_NAME="habibazar"
-DB_USER="habibazar"
-RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
-R2_BUCKET="${R2_BUCKET:-habibazar-backups}"
-R2_ENDPOINT="${R2_ENDPOINT:-}"
+DB_URL="${DATABASE_URL:-postgresql://habibazar:PASSWORD@127.0.0.1:5432/habibazar}"
 
 mkdir -p "$BACKUP_DIR"
 
-# Dump database
-DUMP_FILE="$BACKUP_DIR/${DB_NAME}_${DATE}.dump"
-pg_dump -U "$DB_USER" -Fc "$DB_NAME" -f "$DUMP_FILE"
-gzip "$DUMP_FILE"
+DUMP="$BACKUP_DIR/habibazar_${DATE}.dump"
+pg_dump "$DB_URL" -Fc -f "$DUMP"
+gzip "$DUMP"
 
-# Upload to R2 if configured
-if [[ -n "$R2_ENDPOINT" ]]; then
-    aws s3 cp "${DUMP_FILE}.gz" \
-        "s3://${R2_BUCKET}/db/${DB_NAME}_${DATE}.dump.gz" \
-        --endpoint-url "$R2_ENDPOINT" \
-        --profile r2
-    echo "Uploaded to R2: ${DB_NAME}_${DATE}.dump.gz"
+# Upload to Cloudflare R2 (optional)
+if [[ -n "${R2_ENDPOINT:-}" ]]; then
+    aws s3 cp "${DUMP}.gz" \
+        "s3://${R2_BUCKET}/db/habibazar_${DATE}.dump.gz" \
+        --endpoint-url "$R2_ENDPOINT" --profile r2
 fi
 
-# Remove local backups older than retention period
-find "$BACKUP_DIR" -name "*.dump.gz" -mtime +"$RETENTION_DAYS" -delete
-
-echo "Backup completed: ${DUMP_FILE}.gz"
+find "$BACKUP_DIR" -name "*.dump.gz" -mtime +"${BACKUP_RETENTION_DAYS:-30}" -delete
+echo "Backup done: ${DUMP}.gz"
 SCRIPT
-
 sudo chmod +x /usr/local/bin/backup-habibazar.sh
 ```
 
-### 14.3 Schedule daily backups
+### Schedule daily backup at 03:00 UTC
 
 ```bash
 crontab -e
-```
-
-Add:
-
-```cron
-# Daily database backup at 03:00 UTC
+# Add:
 0 3 * * * /usr/local/bin/backup-habibazar.sh >> /var/log/habibazar-backup.log 2>&1
 ```
 
-### 14.4 Test the backup
-
-```bash
-sudo -u deploy /usr/local/bin/backup-habibazar.sh
-ls -lh /var/backups/habibazar/
-```
-
-### 14.5 Verify backup integrity
-
-Periodically verify backups are restorable:
-
-```bash
-# Create a test database and restore into it
-sudo -u postgres createdb habibazar_restore_test
-pg_restore -U habibazar -d habibazar_restore_test /var/backups/habibazar/habibazar_LATEST.dump.gz
-sudo -u postgres dropdb habibazar_restore_test
-```
+> **Best practice:** Always run the backup script manually before any deployment that includes schema changes.
 
 ---
 
-## 15. Updates (Zero-Downtime)
+## 16. Updates (Zero-Downtime)
 
-Use this procedure for routine code updates to either the API or the web app. PM2 cluster mode for the API enables rolling restarts; the web app uses fork mode (brief restart).
-
-### 15.1 Pull latest code
+### Pull latest code
 
 ```bash
-cd /var/www/habibazar/api
-git pull origin main
-
-cd /var/www/habibazar/web
-git pull origin main
+cd /var/www/habibazar/repo
+git pull origin main    # or your production branch
 ```
 
-### 15.2 Update API
+### Update API
 
 ```bash
 cd /var/www/habibazar/api
-
-# Install any new dependencies
 npm ci --omit=dev
-
-# Apply any new database migrations
-npx prisma migrate deploy
-
-# Regenerate Prisma client if schema changed
 npx prisma generate
-
-# Rebuild TypeScript
+npx prisma migrate deploy    # only if new migrations exist
 npm run build
-
-# Reload API with zero-downtime rolling restart (cluster mode)
 pm2 reload habibazar-api --update-env
-
-# Verify
-pm2 list
 curl -s http://127.0.0.1:4000/health
 ```
 
-### 15.3 Update Web
+### Update Web
 
 ```bash
 cd /var/www/habibazar/web
-
-# Install any new dependencies
 npm ci --omit=dev
-
-# Rebuild Next.js
 npm run build
-
-# Restart web process (brief downtime ~1-2s; Nginx serves 502 during restart)
 pm2 restart habibazar-web --update-env
-
-# Verify
-pm2 list
-curl -s http://127.0.0.1:3000/
 ```
 
-> **Note:** For truly zero-downtime web deployments, consider a blue-green setup with two web instances on different ports and updating the Nginx upstream during deployment. For a personal/small-business site, the ~2 second restart gap is acceptable.
+### Update Admin
 
-### 15.4 Save updated PM2 state
+```bash
+cd /var/www/habibazar/admin
+npm ci --omit=dev
+npm run build
+pm2 restart habibazar-admin --update-env
+```
+
+### Save PM2 state
 
 ```bash
 pm2 save
@@ -1026,123 +822,76 @@ pm2 save
 
 ---
 
-## 16. Rollback
+## 17. Rollback
 
-If a deployment introduces a regression, follow these steps to roll back quickly.
-
-### 16.1 Identify the last good commit
+### Code rollback
 
 ```bash
-cd /var/www/habibazar/api   # or /web
+cd /var/www/habibazar/repo
 git log --oneline -10
+git checkout <LAST_GOOD_COMMIT>
+
+# Rebuild affected app
+cd /var/www/habibazar/api && npm run build && pm2 reload habibazar-api --update-env
+# or
+cd /var/www/habibazar/web && npm run build && pm2 restart habibazar-web --update-env
+# or
+cd /var/www/habibazar/admin && npm run build && pm2 restart habibazar-admin --update-env
 ```
 
-Note the commit hash of the last known-good version.
-
-### 16.2 Revert code
+### Database rollback (destructive — last resort)
 
 ```bash
-cd /var/www/habibazar/api
-git checkout <LAST_GOOD_COMMIT_HASH>
-
-# Reinstall deps matching the old lockfile state
-npm ci --omit=dev
-
-# Rebuild
-npm run build
-
-# Reload
-pm2 reload habibazar-api --update-env
-```
-
-Do the same for the web app if needed.
-
-### 16.3 Rollback database migrations (if needed)
-
-Prisma does not support automatic migration rollback. If the new migration made breaking changes:
-
-1. Restore the database from the most recent backup taken before the deployment:
-
-```bash
-# Drop and recreate the database (ALL DATA LOST — use only if backup is recent)
+# Restore from backup (all data after backup timestamp is lost)
 sudo -u postgres psql -c "DROP DATABASE habibazar;"
 sudo -u postgres psql -c "CREATE DATABASE habibazar OWNER habibazar;"
 sudo -u postgres psql -d habibazar -c "CREATE EXTENSION IF NOT EXISTS vector;"
-
-# Restore from backup
-pg_restore -U habibazar -d habibazar /var/backups/habibazar/habibazar_BACKUP_BEFORE_UPDATE.dump.gz
+pg_restore -U habibazar -d habibazar /var/backups/habibazar/habibazar_BACKUP.dump.gz
 ```
-
-> **Warning:** This is destructive. Any data written between the backup and the rollback will be lost. This is why it is critical to take a backup immediately before deploying migrations:
-
-```bash
-# Run this BEFORE every deployment that includes migrations
-/usr/local/bin/backup-habibazar.sh
-```
-
-2. After restoring, reset the Prisma migration history to the pre-deployment state:
-
-```bash
-cd /var/www/habibazar/api
-git checkout <LAST_GOOD_COMMIT_HASH>
-npx prisma migrate deploy   # re-applies only migrations that are in the checked-out version
-```
-
-### 16.4 Verify rollback
-
-```bash
-pm2 list
-curl -s https://api.habibazar.ir/health
-curl -sI https://habibazar.ir/ | head -3
-```
-
-If everything looks good, notify stakeholders and investigate the root cause before re-deploying.
 
 ---
 
-## Appendix: Quick Reference
+## Quick Reference
 
-### PM2 commands
-
-```bash
-pm2 list                          # Show all processes
-pm2 logs habibazar-api            # Tail API logs
-pm2 logs habibazar-web            # Tail web logs
-pm2 monit                         # Real-time dashboard
-pm2 reload habibazar-api          # Zero-downtime reload (cluster)
-pm2 restart habibazar-web         # Restart web (brief downtime)
-pm2 stop all                      # Stop all processes
-pm2 start ecosystem.config.js --env production  # Start from config
-```
-
-### Nginx commands
+### PM2
 
 ```bash
-sudo nginx -t                     # Test configuration
-sudo systemctl reload nginx       # Reload config (no downtime)
-sudo systemctl restart nginx      # Full restart
-sudo tail -f /var/log/nginx/error.log   # Watch error log
-sudo tail -f /var/log/nginx/access.log  # Watch access log
+pm2 list                                        # All processes + status
+pm2 logs habibazar-api --lines 100             # API logs
+pm2 logs habibazar-web --lines 50              # Web logs
+pm2 logs habibazar-admin --lines 50            # Admin logs
+pm2 monit                                       # Real-time dashboard
+pm2 reload habibazar-api --update-env          # Zero-downtime reload (cluster)
+pm2 restart habibazar-web --update-env         # Restart web (brief)
+pm2 restart habibazar-admin --update-env       # Restart admin (brief)
+pm2 start ecosystem.config.js --env production  # Start all from config
+pm2 save                                        # Persist process list
 ```
 
-### PostgreSQL commands
+### Nginx
 
 ```bash
-sudo -u postgres psql -d habibazar        # Enter psql as postgres
-psql $DATABASE_URL                        # Connect with env var
-sudo systemctl restart postgresql         # Restart DB
-sudo tail -f /var/log/postgresql/postgresql-16-main.log  # DB logs
+sudo nginx -t                                   # Test config
+sudo systemctl reload nginx                     # Reload (no downtime)
+sudo tail -f /var/log/nginx/error.log          # Error log
 ```
 
-### Certbot commands
+### PostgreSQL
 
 ```bash
-sudo certbot renew --dry-run              # Test renewal
-sudo certbot certificates                 # Show cert status
-sudo certbot renew --force-renewal        # Force renew all
+psql $DATABASE_URL                              # Connect
+sudo systemctl restart postgresql               # Restart DB
+sudo tail -f /var/log/postgresql/postgresql-16-main.log
 ```
 
-### Service status summary
+### Certbot
+
+```bash
+sudo certbot renew --dry-run                   # Test renewal
+sudo certbot certificates                       # Show cert expiry dates
+```
+
+### Service status
 
 ```bash
 sudo systemctl status nginx postgresql pm2-deploy

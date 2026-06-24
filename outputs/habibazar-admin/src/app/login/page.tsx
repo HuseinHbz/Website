@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
-  const [tempToken, setTempToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -21,44 +20,33 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      if (requiresTwoFactor && tempToken) {
-        // Submit 2FA code
-        const res = await fetch(`${API_URL}/api/v1/auth/2fa/verify`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: totpCode, tempToken }),
-        })
+      // Always POST to /login — include totpToken when 2FA step is shown
+      const body: Record<string, string> = { email, password }
+      if (requiresTwoFactor && totpCode) {
+        body['totpToken'] = totpCode
+      }
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data?.error?.message || 'Invalid 2FA code')
+      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        const msg: string = data?.error?.message ?? 'Login failed'
+        // API throws "Two-factor authentication code required" when TOTP is missing
+        if (msg.toLowerCase().includes('two-factor') && !requiresTwoFactor) {
+          setRequiresTwoFactor(true)
+          setError(null)
+        } else {
+          throw new Error(msg)
         }
-
+      } else {
         router.push('/dashboard')
         router.refresh()
-      } else {
-        // Login
-        const res = await fetch(`${API_URL}/api/v1/auth/login`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        })
-
-        const data = await res.json().catch(() => ({}))
-
-        if (!res.ok) {
-          throw new Error(data?.error?.message || 'Login failed')
-        }
-
-        if (data?.data?.requiresTwoFactor) {
-          setRequiresTwoFactor(true)
-          setTempToken(data?.data?.tempToken || null)
-        } else {
-          router.push('/dashboard')
-          router.refresh()
-        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -168,7 +156,6 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => {
                   setRequiresTwoFactor(false)
-                  setTempToken(null)
                   setTotpCode('')
                   setError(null)
                 }}
