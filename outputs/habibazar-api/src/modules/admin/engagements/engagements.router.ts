@@ -6,7 +6,7 @@ import { auditLog } from '../../../middleware/audit';
 import { ok, created, noContent, paginated } from '../../../lib/http';
 import { paginationSchema } from '../../../lib/validators';
 import * as engagementsService from './engagements.service';
-import { EngagementStage } from '@prisma/client';
+import { EngagementStage } from '../../../lib/enums';
 
 const router = Router();
 
@@ -20,7 +20,7 @@ router.get(
   validate(listQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit, stage } = req.query as z.infer<typeof listQuerySchema>;
+      const { page, limit, stage } = req.query as unknown as z.infer<typeof listQuerySchema>;
       const result = await engagementsService.listEngagements(page, limit, { stage });
       paginated(res, result.engagements, result.meta);
     } catch (err) {
@@ -34,7 +34,7 @@ router.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const engagement = await engagementsService.getEngagementById(req.params['id']!);
+      const engagement = await engagementsService.getEngagementById((req.params['id'] as string));
       ok(res, engagement);
     } catch (err) {
       next(err);
@@ -67,7 +67,7 @@ router.patch(
   auditLog('update', 'engagement'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const engagement = await engagementsService.updateEngagement(req.params['id']!, req.body);
+      const engagement = await engagementsService.updateEngagement((req.params['id'] as string), req.body);
       ok(res, engagement);
     } catch (err) {
       next(err);
@@ -82,7 +82,7 @@ router.delete(
   auditLog('delete', 'engagement'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await engagementsService.deleteEngagement(req.params['id']!);
+      await engagementsService.deleteEngagement((req.params['id'] as string));
       noContent(res);
     } catch (err) {
       next(err);

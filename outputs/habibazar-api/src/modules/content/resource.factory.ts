@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { ZodSchema, z } from 'zod';
-import { PrismaClient, ContentStatus } from '@prisma/client';
+import { ContentStatus } from '../../lib/enums';
 import prisma from '../../db/prisma';
 import { validate } from '../../middleware/validate';
 import { authorize } from '../../middleware/authorize';
@@ -11,19 +11,7 @@ import { buildPaginationMeta, buildPrismaSkipTake } from '../../lib/pagination';
 import { NotFoundError } from '../../lib/errors';
 import { Permission } from '../../lib/rbac';
 
-type PrismaModelName = keyof Omit<
-  PrismaClient,
-  | '$connect'
-  | '$disconnect'
-  | '$on'
-  | '$transaction'
-  | '$queryRaw'
-  | '$executeRaw'
-  | '$queryRawUnsafe'
-  | '$executeRawUnsafe'
-  | '$extends'
-  | symbol
->;
+type PrismaModelName = string;
 
 interface ContentFactoryOptions {
   softDelete?: boolean;
@@ -68,7 +56,7 @@ export function createContentRouter(
     validate(listQuerySchema, 'query'),
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { page, limit, status, search, featured } = req.query as z.infer<typeof listQuerySchema>;
+        const { page, limit, status, search, featured } = req.query as unknown as z.infer<typeof listQuerySchema>;
 
         const where: Record<string, unknown> = {};
         if (softDelete) where['deletedAt'] = null;

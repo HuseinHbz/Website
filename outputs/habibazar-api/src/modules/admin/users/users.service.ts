@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserStatus } from '@prisma/client';
+import { UserStatus } from '../../../lib/enums';
 import prisma from '../../../db/prisma';
 import { hashPassword, generateToken } from '../../../lib/crypto';
 import { NotFoundError, ConflictError } from '../../../lib/errors';
@@ -11,7 +11,7 @@ const createUserSchema = z.object({
   password: passwordSchema,
   name: z.string().min(1).max(255),
   roleId: z.string().uuid(),
-  status: z.nativeEnum(UserStatus).default('ACTIVE'),
+  status: z.nativeEnum(UserStatus).default(UserStatus.ACTIVE),
 });
 
 const updateUserSchema = z.object({

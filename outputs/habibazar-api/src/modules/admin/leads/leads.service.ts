@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LeadStatus, LeadSource } from '@prisma/client';
+import { LeadStatus, LeadSource } from '../../../lib/enums';
 import prisma from '../../../db/prisma';
 import { NotFoundError } from '../../../lib/errors';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';

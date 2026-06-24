@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { ConsultationKind, ContentStatus } from '@prisma/client';
+import { ConsultationKind, ContentStatus } from '../../lib/enums';
 import { validate } from '../../middleware/validate';
 import { publicLimiter } from '../../middleware/rateLimit';
 import { ok, created, paginated } from '../../lib/http';
@@ -107,7 +107,7 @@ router.get(
   validate(paginationSchema.extend({ locale: z.enum(['FA', 'EN']).optional() }), 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page = 1, limit = 20 } = req.query as { page: number; limit: number };
+      const { page = 1, limit = 20 } = req.query as unknown as { page: number; limit: number };
       const cacheKey = `services:${page}:${limit}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);
@@ -164,7 +164,7 @@ router.get(
   validate(paginationSchema.extend({ featured: z.coerce.boolean().optional() }), 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page = 1, limit = 20, featured } = req.query as { page: number; limit: number; featured?: boolean };
+      const { page = 1, limit = 20, featured } = req.query as unknown as { page: number; limit: number; featured?: boolean };
       const cacheKey = `case-studies:${page}:${limit}:${featured}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);
@@ -225,7 +225,7 @@ router.get(
   validate(paginationSchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page = 1, limit = 20 } = req.query as { page: number; limit: number };
+      const { page = 1, limit = 20 } = req.query as unknown as { page: number; limit: number };
       const cacheKey = `posts:${page}:${limit}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);
@@ -289,7 +289,7 @@ router.get(
   validate(paginationSchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page = 1, limit = 50 } = req.query as { page: number; limit: number };
+      const { page = 1, limit = 50 } = req.query as unknown as { page: number; limit: number };
       const cacheKey = `glossary:${page}:${limit}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);

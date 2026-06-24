@@ -1,5 +1,5 @@
 import prisma from '../../../db/prisma';
-import { LeadStatus, ConsultationStatus } from '@prisma/client';
+import { LeadStatus, ConsultationStatus } from '../../../lib/enums';
 
 export async function getDashboardStats() {
   const now = new Date();

@@ -22,7 +22,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { page, limit, resource, userId, action, dateFrom, dateTo } =
-        req.query as z.infer<typeof listQuerySchema>;
+        req.query as unknown as z.infer<typeof listQuerySchema>;
 
       const result = await auditService.listAuditLogs(page, limit, {
         resource,

@@ -1,4 +1,4 @@
-import { AssistantCategory, Locale } from '@prisma/client';
+import { AssistantCategory, Locale } from '../../../lib/enums';
 import prisma from '../../../db/prisma';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
 import { NotFoundError } from '../../../lib/errors';
@@ -105,13 +105,13 @@ export async function getAiAnalytics() {
   ]);
 
   return {
-    byCategory: byCategory.map((c) => ({ category: c.category, count: c._count.id })),
-    byLocale: byLocale.map((c) => ({ locale: c.locale, count: c._count.id })),
+    byCategory: byCategory.map((c: { category: string | null; _count: { id: number } }) => ({ category: c.category, count: c._count.id })),
+    byLocale: byLocale.map((c: { locale: string | null; _count: { id: number } }) => ({ locale: c.locale, count: c._count.id })),
     totals: {
       conversations: avgTurns._count.id,
       totalTurns: avgTurns._sum.turnCount ?? 0,
       avgTurns: avgTurns._avg.turnCount ?? 0,
     },
-    daily: dailyCounts.map((d) => ({ date: d.date, count: Number(d.count) })),
+    daily: dailyCounts.map((d: { date: string; count: bigint }) => ({ date: d.date, count: Number(d.count) })),
   };
 }

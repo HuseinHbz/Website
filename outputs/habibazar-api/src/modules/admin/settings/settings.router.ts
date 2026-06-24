@@ -34,7 +34,7 @@ router.put(
   auditLog('upsert', 'setting'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { key } = req.params;
+      const key = req.params['key'] as string;
       const { value } = req.body as z.infer<typeof upsertSchema>;
       const setting = await settingsService.upsertSetting(key!, value);
       ok(res, setting);

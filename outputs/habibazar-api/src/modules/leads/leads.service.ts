@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LeadSource, ConsultationKind } from '@prisma/client';
+import { LeadSource, ConsultationKind } from '../../lib/enums';
 import prisma from '../../db/prisma';
 import { sendLeadNotification, sendLeadAcknowledgement } from '../../services/mailer';
 import { env } from '../../config/env';
@@ -10,7 +10,7 @@ const createLeadSchema = z.object({
   email: z.string().email().toLowerCase().optional(),
   phone: z.string().max(50).optional(),
   company: z.string().max(255).optional(),
-  source: z.nativeEnum(LeadSource).default('WEBSITE'),
+  source: z.nativeEnum(LeadSource).default(LeadSource.WEBSITE),
   notes: z.string().max(2000).optional(),
   marketingConsent: z.boolean().default(false),
   serviceInterest: z.string().max(255).optional(),
@@ -25,7 +25,7 @@ const createConsultationSchema = z.object({
   name: z.string().min(1).max(255),
   email: z.string().email().toLowerCase(),
   phone: z.string().max(50).optional(),
-  kind: z.nativeEnum(ConsultationKind).default('INTRO_CALL'),
+  kind: z.nativeEnum(ConsultationKind).default(ConsultationKind.INTRO_CALL),
   message: z.string().max(2000).optional(),
   preferredDate: z.string().datetime().optional().transform(v => v ? new Date(v) : undefined),
   marketingConsent: z.boolean().default(false),
@@ -150,7 +150,7 @@ export async function createConsultationRequest(
       name: data.name,
       email: data.email,
       phone: data.phone,
-      source: 'WEBSITE',
+      source: LeadSource.WEBSITE,
       marketingConsent: data.marketingConsent,
       notes: data.message,
     });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EngagementStage } from '@prisma/client';
+import { EngagementStage } from '../../../lib/enums';
 import prisma from '../../../db/prisma';
 import { NotFoundError } from '../../../lib/errors';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';

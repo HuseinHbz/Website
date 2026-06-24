@@ -1,4 +1,4 @@
-import { MessageRole } from '@prisma/client';
+import { MessageRole } from '../../lib/enums';
 import { createHash } from 'crypto';
 import prisma from '../../db/prisma';
 import { env } from '../../config/env';
@@ -10,7 +10,7 @@ import { streamDeepSeek } from './providers/deepseek.provider';
 import { streamOllama } from './providers/ollama.provider';
 import { IntakeInput } from './ai.schemas';
 import logger from '../../lib/logger';
-import { LeadSource } from '@prisma/client';
+import { LeadSource } from '../../lib/enums';
 
 function hashSessionRef(sessionRef: string): string {
   return createHash('sha256').update(sessionRef).digest('hex');
@@ -45,7 +45,7 @@ export async function startConversation(intake: IntakeInput) {
           marketingConsent: false,
           metadata: { aiSessionRef: sessionRefHash.slice(0, 8) },
         },
-      }).catch((err) => logger.error({ err }, 'Failed to create lead from AI intake'));
+      }).catch((err: unknown) => logger.error({ err }, 'Failed to create lead from AI intake'));
     }
   }
 
@@ -108,7 +108,7 @@ export async function* chat(
   const systemPrompt = getSystemPrompt(locale);
   const chatMessages: ChatHistoryMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...history.map((m) => ({
+    ...history.map((m: { role: string; content: string }) => ({
       role: m.role === MessageRole.USER ? 'user' as const : 'assistant' as const,
       content: m.content,
     })),
@@ -121,7 +121,10 @@ export async function* chat(
   let stream: AsyncGenerator<string>;
 
   if (provider === 'anthropic') {
-    stream = streamAnthropic(systemPrompt, chatMessages.filter(m => m.role !== 'system'));
+    stream = streamAnthropic(
+      systemPrompt,
+      chatMessages.filter(m => m.role !== 'system') as Array<{ role: 'user' | 'assistant'; content: string }>,
+    );
   } else if (provider === 'deepseek') {
     stream = streamDeepSeek(chatMessages);
   } else if (provider === 'ollama') {

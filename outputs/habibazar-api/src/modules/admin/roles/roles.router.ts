@@ -25,7 +25,7 @@ router.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const role = await rolesService.getRoleById(req.params['id']!);
+      const role = await rolesService.getRoleById((req.params['id'] as string));
       ok(res, role);
     } catch (err) {
       next(err);
@@ -58,7 +58,7 @@ router.patch(
   auditLog('update', 'role'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const role = await rolesService.updateRole(req.params['id']!, req.body);
+      const role = await rolesService.updateRole((req.params['id'] as string), req.body);
       ok(res, role);
     } catch (err) {
       next(err);
@@ -73,7 +73,7 @@ router.delete(
   auditLog('delete', 'role'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await rolesService.deleteRole(req.params['id']!);
+      await rolesService.deleteRole((req.params['id'] as string));
       noContent(res);
     } catch (err) {
       next(err);

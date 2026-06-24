@@ -12,7 +12,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../lib
 import { generateSecret, generateQrUri, verifyToken as totpVerify } from '../../lib/totp';
 import { UnauthorizedError, NotFoundError, ConflictError, ForbiddenError } from '../../lib/errors';
 import { env } from '../../config/env';
-import { UserStatus } from '@prisma/client';
+import { UserStatus } from '../../lib/enums';
 import logger from '../../lib/logger';
 
 interface LoginResult {
