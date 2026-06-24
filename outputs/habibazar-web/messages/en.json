@@ -1,0 +1,207 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "required": "Required",
+    "optional": "Optional"
+  },
+  "nav": {
+    "home": "Home",
+    "consultation": "Consultation",
+    "introCall": "Intro Call",
+    "bookConsultation": "Book Consultation"
+  },
+  "hero": {
+    "name": "Hossein Habibazar",
+    "role": "Enterprise Infrastructure Consultant",
+    "description": "With over a decade of experience in enterprise infrastructure, cloud, security, and networking, I translate complex technical challenges into actionable strategies that drive real business outcomes.",
+    "ctaPrimary": "Start Free Consultation",
+    "ctaSecondary": "Book Intro Call",
+    "available": "Available for New Engagements"
+  },
+  "proof": {
+    "experience": "Years Experience",
+    "experienceValue": "12+",
+    "projects": "Enterprise Projects",
+    "projectsValue": "80+",
+    "sectors": "Industry Sectors",
+    "sectorsValue": "15+",
+    "uptime": "Infrastructure Uptime",
+    "uptimeValue": "99.9%"
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "Core Specializations",
+    "cloud": {
+      "title": "Cloud Infrastructure",
+      "desc": "Design, migration, and optimization of enterprise cloud infrastructure — from IaaS to hybrid cloud architectures"
+    },
+    "security": {
+      "title": "Network Security",
+      "desc": "Assessment, hardening, and management of critical infrastructure security with a zero-trust approach"
+    },
+    "consulting": {
+      "title": "Enterprise Consulting",
+      "desc": "IT strategy, capacity planning, and digital transformation guidance for senior executives"
+    },
+    "network": {
+      "title": "Network Architecture",
+      "desc": "Scalable, resilient, and secure network architecture for large enterprises and distributed infrastructure"
+    },
+    "readMore": "Learn More"
+  },
+  "method": {
+    "title": "Our Method",
+    "subtitle": "A structured approach to complex challenges",
+    "discovery": {
+      "step": "1",
+      "title": "Discovery",
+      "desc": "Deep understanding of your challenges, business goals, and existing technical environment through structured interviews"
+    },
+    "analysis": {
+      "step": "2",
+      "title": "Analysis",
+      "desc": "Comprehensive technical assessment of the existing infrastructure, identifying risks, bottlenecks, and opportunities"
+    },
+    "solution": {
+      "step": "3",
+      "title": "Solution",
+      "desc": "Target architecture design, implementation roadmap, action prioritization, and cost-benefit analysis"
+    },
+    "implementation": {
+      "step": "4",
+      "title": "Implementation",
+      "desc": "Active support during deployment, knowledge transfer to internal teams, and ensuring long-term success"
+    }
+  },
+  "cases": {
+    "title": "Case Studies",
+    "subtitle": "Successful Projects",
+    "viewAll": "View All",
+    "case1": {
+      "industry": "Manufacturing",
+      "challenge": "Modernizing the data center infrastructure of a major manufacturing company while reducing operational costs",
+      "outcome": "40% reduction in IT costs and improved availability to 99.9%"
+    },
+    "case2": {
+      "industry": "Financial Services",
+      "challenge": "Designing and implementing a zero-trust security architecture for a financial institution",
+      "outcome": "Significantly reduced attack surface and successful compliance audits"
+    },
+    "case3": {
+      "industry": "Telecommunications",
+      "challenge": "Migrating a telecom operator's infrastructure to hybrid cloud with zero downtime",
+      "outcome": "Successful migration with 100% uptime throughout the transition"
+    }
+  },
+  "trust": {
+    "title": "Why Habibazar?",
+    "subtitle": "Experience, Integrity, Results",
+    "certs": "Professional Certifications",
+    "certsDesc": "Verified expertise in networking, security, and cloud from internationally recognized organizations",
+    "method": "Proven Methodology",
+    "methodDesc": "Structured methodology drawing from industry best practices to deliver measurable results",
+    "transparency": "Full Transparency",
+    "transparencyDesc": "Honest communication, regular reporting, and commitment to agreed objectives on every project"
+  },
+  "aiTeaser": {
+    "title": "AI Assistant",
+    "subtitle": "Have a technical question?",
+    "description": "My AI assistant is ready to answer questions about infrastructure, cloud, security, and networking. For more complex challenges, you'll be guided to a consultation session.",
+    "cta": "Start Conversation"
+  },
+  "closingCta": {
+    "title": "Ready to transform your enterprise infrastructure?",
+    "subtitle": "Start with a free consultation. No commitment — just an honest conversation about your challenges.",
+    "ctaPrimary": "Free Consultation",
+    "ctaSecondary": "Intro Call"
+  },
+  "consultation": {
+    "title": "Free Consultation",
+    "subtitle": "Initial Infrastructure Assessment",
+    "description": "In this session, we review your technical challenges and present a suggested path forward. This initial assessment is completely free.",
+    "form": {
+      "name": "Full Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "company": "Company Name (Optional)",
+      "message": "Brief Description of Your Challenge",
+      "messagePlaceholder": "Please briefly describe your technical challenge or primary need...",
+      "consent": "I agree to my information being used for marketing purposes",
+      "submit": "Submit Request",
+      "submitting": "Submitting...",
+      "success": "Your request has been received. We will contact you shortly.",
+      "error": "An error occurred. Please try again."
+    }
+  },
+  "introCall": {
+    "title": "Intro Call",
+    "subtitle": "30-Minute Initial Meeting",
+    "description": "A short session to learn about your needs and explore the possibility of working together. This call is free.",
+    "form": {
+      "preferredDate": "Preferred Date",
+      "preferredDatePlaceholder": "e.g., Next week, weekday morning"
+    }
+  },
+  "ai": {
+    "button": "Chat with Assistant",
+    "title": "Habibazar AI Assistant",
+    "subtitle": "Infrastructure, Cloud, Security & Networking Questions",
+    "intake": {
+      "title": "Start Conversation",
+      "description": "Please enter your basic information so I can assist you better.",
+      "name": "Your Name",
+      "namePlaceholder": "John Smith",
+      "company": "Company",
+      "companyPlaceholder": "Company name (optional)",
+      "phone": "Phone Number",
+      "phonePlaceholder": "+1 (555) 000-0000",
+      "submit": "Start Chat",
+      "phoneRequired": "Phone number is required for follow-up"
+    },
+    "chat": {
+      "placeholder": "Ask your question...",
+      "send": "Send",
+      "thinking": "Processing..."
+    },
+    "turnLimit": "You've reached the message limit. Please book an official consultation to continue.",
+    "error": "Connection error. Please try again.",
+    "bookConsultation": "Book Consultation",
+    "newChat": "New Chat"
+  },
+  "footer": {
+    "tagline": "Enterprise Infrastructure at World-Class Standards",
+    "rights": "All rights reserved",
+    "links": "Links",
+    "contact": "Contact"
+  },
+  "seo": {
+    "homeTitle": "Hossein Habibazar — Enterprise Infrastructure Consultant",
+    "homeDesc": "Senior enterprise infrastructure consultant for cloud, security, and networking at scale",
+    "consultationTitle": "Free Consultation — Habibazar",
+    "consultationDesc": "Free initial assessment of your enterprise infrastructure",
+    "introCallTitle": "Intro Call — Habibazar",
+    "introCallDesc": "Free 30-minute introductory meeting"
+  },
+  "errors": {
+    "required": "This field is required",
+    "email": "Invalid email address",
+    "phone": "Invalid phone number",
+    "minLength": "Minimum {min} characters required",
+    "generic": "An error occurred"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "langSwitch": "Switch language",
+    "openChat": "Open chat",
+    "closeChat": "Close chat"
+  }
+}
