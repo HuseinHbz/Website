@@ -21,10 +21,10 @@ export default async function HomePage({ params }: Props) {
       <JsonLd schema={siteGraphSchema()} />
       <Hero locale={locale} />
       <ProofBar locale={locale} />
-      <ServicesSection />
-      <ProjectsSection />
-      <AboutSection />
-      <CompanyPortfolio />
+      <ServicesSection locale={locale} />
+      <ProjectsSection locale={locale} />
+      <AboutSection locale={locale} />
+      <CompanyPortfolio locale={locale} />
       <AiTeaser locale={locale} />
       <ClosingCta locale={locale} />
     </>

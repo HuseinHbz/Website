@@ -3,14 +3,20 @@ import { ClosingCta } from '@/components/sections/ClosingCta'
 import { SITE } from '@/lib/site'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'Enterprise IT Services — Network, Security & Infrastructure | HBZ',
-  description: 'Comprehensive infrastructure consulting services: network design, security, virtualization, monitoring, backup & DR, Linux, Microsoft, VoIP, and automation.',
-  openGraph: {
-    title: 'Enterprise IT Services by HBZ',
-    description: 'End-to-end infrastructure consulting from design to deployment for enterprise clients.',
-    url: `${SITE.url}/services`,
-  },
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params
+  const isRTL = locale === 'fa'
+  return {
+    title: isRTL
+      ? 'خدمات IT سازمانی — شبکه، امنیت و زیرساخت | HBZ'
+      : 'Enterprise IT Services — Network, Security & Infrastructure | HBZ',
+    description: isRTL
+      ? 'خدمات جامع مشاوره زیرساخت: طراحی شبکه، امنیت، مجازی‌سازی، پایش، پشتیبان‌گیری، لینوکس، مایکروسافت، VoIP و خودکارسازی.'
+      : 'Comprehensive infrastructure consulting services: network design, security, virtualization, monitoring, backup & DR, Linux, Microsoft, VoIP, and automation.',
+    openGraph: {
+      url: `${SITE.url}/${locale === SITE.locale.default ? '' : locale + '/'}services`,
+    },
+  }
 }
 
 interface Props {
@@ -22,7 +28,7 @@ export default async function ServicesPage({ params }: Props) {
 
   return (
     <div className="pt-16">
-      <ServicesSection />
+      <ServicesSection locale={locale} />
       <ClosingCta locale={locale} />
     </div>
   )

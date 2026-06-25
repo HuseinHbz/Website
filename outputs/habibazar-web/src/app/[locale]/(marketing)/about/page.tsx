@@ -5,14 +5,20 @@ import { personSchema } from '@/lib/schema'
 import { SITE } from '@/lib/site'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'About Husein Habibazar — Infrastructure Architect | HBZ',
-  description: 'Learn about Husein Habibazar (HBZ): 10+ years of enterprise infrastructure, network architecture, and security consulting experience across Iran.',
-  openGraph: {
-    title: 'About Husein Habibazar — Infrastructure Architect',
-    description: 'Senior Infrastructure Architect with 10+ years building enterprise-grade networks, security systems, and automated infrastructure.',
-    url: `${SITE.url}/about`,
-  },
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params
+  const isRTL = locale === 'fa'
+  return {
+    title: isRTL
+      ? 'درباره حسین حبیب‌آذر — معمار زیرساخت | HBZ'
+      : 'About Husein Habibazar — Infrastructure Architect | HBZ',
+    description: isRTL
+      ? 'آشنایی با حسین حبیب‌آذر (HBZ): بیش از ۱۰ سال تجربه در زیرساخت سازمانی، معماری شبکه و مشاوره امنیت.'
+      : 'Learn about Husein Habibazar (HBZ): 10+ years of enterprise infrastructure, network architecture, and security consulting experience.',
+    openGraph: {
+      url: `${SITE.url}/${locale === SITE.locale.default ? '' : locale + '/'}about`,
+    },
+  }
 }
 
 interface Props {
@@ -26,7 +32,7 @@ export default async function AboutPage({ params }: Props) {
     <>
       <JsonLd schema={personSchema()} />
       <div className="pt-16">
-        <AboutSection />
+        <AboutSection locale={locale} />
         <ClosingCta locale={locale} />
       </div>
     </>
