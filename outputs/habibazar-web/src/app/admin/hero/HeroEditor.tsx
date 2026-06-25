@@ -1,0 +1,127 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Card, Btn, Input, SectionDivider, PageHeader, useToast } from '@/components/admin/ui'
+
+type HeroData = {
+  locale: string
+  badge: string
+  headline: string
+  headlineHighlight: string
+  subheadline: string
+  ctaPrimary: string
+  ctaPrimaryHref: string
+  ctaSecondary: string
+  ctaSecondaryHref: string
+  ctaTertiary: string
+  ctaTertiaryHref: string
+  stat1Label: string; stat1Value: string
+  stat2Label: string; stat2Value: string
+  stat3Label: string; stat3Value: string
+  stat4Label: string; stat4Value: string
+}
+
+const EMPTY: HeroData = {
+  locale: 'en', badge: '', headline: '', headlineHighlight: '', subheadline: '',
+  ctaPrimary: '', ctaPrimaryHref: '', ctaSecondary: '', ctaSecondaryHref: '',
+  ctaTertiary: '', ctaTertiaryHref: '',
+  stat1Label: '', stat1Value: '', stat2Label: '', stat2Value: '',
+  stat3Label: '', stat3Value: '', stat4Label: '', stat4Value: '',
+}
+
+export function HeroEditor() {
+  const [locale, setLocale] = useState<'en' | 'fa'>('en')
+  const [data, setData] = useState<Record<string, HeroData>>({})
+  const [saving, setSaving] = useState(false)
+  const { toast, ToastContainer } = useToast()
+
+  useEffect(() => {
+    fetch('/api/admin/hero')
+      .then((r) => r.json())
+      .then((rows: HeroData[]) => {
+        const map: Record<string, HeroData> = {}
+        for (const r of rows) map[r.locale] = r
+        setData(map)
+      })
+  }, [])
+
+  const current = data[locale] || { ...EMPTY, locale }
+  function set(k: keyof HeroData, v: string) {
+    setData((d) => ({ ...d, [locale]: { ...(d[locale] || { ...EMPTY, locale }), [k]: v } }))
+  }
+
+  async function save() {
+    setSaving(true)
+    const res = await fetch('/api/admin/hero', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(current),
+    })
+    setSaving(false)
+    toast(res.ok ? 'Hero content saved' : 'Save failed', res.ok ? 'success' : 'error')
+  }
+
+  return (
+    <>
+      <ToastContainer />
+      <PageHeader
+        title="Hero Section"
+        subtitle="Manage the main hero banner for both English and Persian locales"
+        action={
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-lg bg-[#0c0c14] border border-[#2a2a3e] overflow-hidden">
+              {(['en', 'fa'] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <Btn onClick={save} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Btn>
+          </div>
+        }
+      />
+
+      <div className="space-y-6">
+        <Card className="p-6 space-y-4">
+          <SectionDivider label="Badge & Headline" />
+          <Input label="Status Badge" value={current.badge || ''} onChange={(v) => set('badge', v)} placeholder="Available for Enterprise Projects" />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Headline" value={current.headline || ''} onChange={(v) => set('headline', v)} placeholder="Infrastructure" />
+            <Input label="Headline Highlight (gradient)" value={current.headlineHighlight || ''} onChange={(v) => set('headlineHighlight', v)} placeholder="Architect" />
+          </div>
+          <Input label="Subheadline" value={current.subheadline || ''} onChange={(v) => set('subheadline', v)} multiline rows={3} placeholder="Designing, securing and automating..." />
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <SectionDivider label="Call to Action Buttons" />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Primary CTA Label" value={current.ctaPrimary || ''} onChange={(v) => set('ctaPrimary', v)} placeholder="View Projects" />
+            <Input label="Primary CTA URL" value={current.ctaPrimaryHref || ''} onChange={(v) => set('ctaPrimaryHref', v)} placeholder="/projects" />
+            <Input label="Secondary CTA Label" value={current.ctaSecondary || ''} onChange={(v) => set('ctaSecondary', v)} placeholder="Book Consultation" />
+            <Input label="Secondary CTA URL" value={current.ctaSecondaryHref || ''} onChange={(v) => set('ctaSecondaryHref', v)} placeholder="/consultation" />
+            <Input label="Tertiary CTA Label" value={current.ctaTertiary || ''} onChange={(v) => set('ctaTertiary', v)} placeholder="Download Resume" />
+            <Input label="Tertiary CTA URL" value={current.ctaTertiaryHref || ''} onChange={(v) => set('ctaTertiaryHref', v)} placeholder="/resume.pdf" />
+          </div>
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <SectionDivider label="Statistics" />
+          <div className="grid grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="grid grid-cols-2 gap-2">
+                <Input label={`Stat ${n} Value`} value={(current as never)[`stat${n}Value`] || ''} onChange={(v) => set(`stat${n}Value` as keyof HeroData, v)} placeholder="10+" />
+                <Input label={`Stat ${n} Label`} value={(current as never)[`stat${n}Label`] || ''} onChange={(v) => set(`stat${n}Label` as keyof HeroData, v)} placeholder="Years Experience" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </>
+  )
+}

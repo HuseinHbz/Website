@@ -1,0 +1,29 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { signIn } from '@/lib/admin/auth'
+import { runMigrations } from '@/lib/db/migrate'
+import { seedDatabase } from '@/lib/db/seed'
+
+let initialized = false
+
+async function ensureInit() {
+  if (!initialized) {
+    runMigrations()
+    await seedDatabase()
+    initialized = true
+  }
+}
+
+export async function POST(req: NextRequest) {
+  await ensureInit()
+  const { email, password } = await req.json()
+  if (!email || !password) {
+    return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
+  }
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
+  const ua = req.headers.get('user-agent') || undefined
+  const result = await signIn(email, password, ip ?? undefined, ua)
+  if (result.error) {
+    return NextResponse.json({ error: result.error }, { status: 401 })
+  }
+  return NextResponse.json({ user: result.user })
+}

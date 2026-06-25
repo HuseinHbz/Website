@@ -25,3 +25,11 @@ next-env.d.ts
 # Misc
 .DS_Store
 *.pem
+
+# Database
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Uploads
+public/uploads/

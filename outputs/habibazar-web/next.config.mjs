@@ -53,4 +53,9 @@ const nextConfig = {
   },
 }
 
-export default withNextIntl(withMDX(nextConfig))
+// Admin routes bypass next-intl — only apply intl plugin for non-admin routes
+export default withNextIntl(withMDX({
+  ...nextConfig,
+  // Allow server-only modules in API routes
+  serverExternalPackages: ['better-sqlite3', 'bcryptjs'],
+}))
