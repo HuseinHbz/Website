@@ -38,7 +38,7 @@ info "Checking prerequisites..."
 command -v node  >/dev/null || err "node not found. Run: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs"
 command -v npm   >/dev/null || err "npm not found"
 command -v pm2   >/dev/null || err "pm2 not found. Run: sudo npm install -g pm2"
-command -v psql  >/dev/null || err "psql not found. Run: sudo apt install -y postgresql-client"
+command -v psql  >/dev/null || err "psql not found. Run: sudo apt install -y postgresql-client-17"
 command -v nginx >/dev/null || err "nginx not found. Run: sudo apt install -y nginx"
 
 NODE_VER=$(node -e "process.exit(parseInt(process.version.slice(1)) < 20 ? 1 : 0)" 2>/dev/null) || err "Node 20+ required. Current: $(node --version)"
