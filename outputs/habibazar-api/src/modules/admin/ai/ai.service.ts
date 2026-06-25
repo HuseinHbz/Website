@@ -15,15 +15,16 @@ export async function listConversations(
   limit: number,
   filters: ConversationFilters,
 ) {
-  const where: Parameters<typeof prisma.conversation.findMany>[0]['where'] = {};
-
-  if (filters.category) where.category = filters.category;
-  if (filters.locale) where.locale = filters.locale;
-  if (filters.dateFrom || filters.dateTo) {
-    where.createdAt = {};
-    if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;
-    if (filters.dateTo) where.createdAt.lte = filters.dateTo;
-  }
+  const where: Record<string, unknown> = {
+    ...(filters.category !== undefined && { category: filters.category }),
+    ...(filters.locale !== undefined && { locale: filters.locale }),
+    ...((filters.dateFrom || filters.dateTo) && {
+      createdAt: {
+        ...(filters.dateFrom && { gte: filters.dateFrom }),
+        ...(filters.dateTo && { lte: filters.dateTo }),
+      },
+    }),
+  };
 
   const [total, conversations] = await Promise.all([
     prisma.conversation.count({ where }),

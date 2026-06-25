@@ -14,16 +14,17 @@ export async function listAuditLogs(
   limit: number,
   filters: AuditFilters,
 ) {
-  const where: Parameters<typeof prisma.auditLog.findMany>[0]['where'] = {};
-
-  if (filters.resource) where.resource = filters.resource;
-  if (filters.userId) where.userId = filters.userId;
-  if (filters.action) where.action = filters.action;
-  if (filters.dateFrom || filters.dateTo) {
-    where.createdAt = {};
-    if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;
-    if (filters.dateTo) where.createdAt.lte = filters.dateTo;
-  }
+  const where: Record<string, unknown> = {
+    ...(filters.resource !== undefined && { resource: filters.resource }),
+    ...(filters.userId !== undefined && { userId: filters.userId }),
+    ...(filters.action !== undefined && { action: filters.action }),
+    ...((filters.dateFrom || filters.dateTo) && {
+      createdAt: {
+        ...(filters.dateFrom && { gte: filters.dateFrom }),
+        ...(filters.dateTo && { lte: filters.dateTo }),
+      },
+    }),
+  };
 
   const [total, logs] = await Promise.all([
     prisma.auditLog.count({ where }),

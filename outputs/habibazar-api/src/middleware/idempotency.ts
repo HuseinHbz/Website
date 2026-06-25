@@ -49,11 +49,13 @@ export async function idempotency(
             where: { key },
             create: {
               key,
-              response: { status: res.statusCode, body },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              response: { status: res.statusCode, body } as any,
               expiresAt,
             },
             update: {
-              response: { status: res.statusCode, body },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              response: { status: res.statusCode, body } as any,
               expiresAt,
             },
           })

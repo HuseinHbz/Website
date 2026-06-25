@@ -320,13 +320,18 @@ Run **after** `db push` has created all tables:
 ```bash
 cd /var/www/habibazar/api
 npm run db:hardening
-# Runs: psql $DATABASE_URL -f prisma/sql/hardening.sql
+# Loads .env automatically via Node --env-file, then runs psql against DATABASE_URL
 ```
 
 This applies:
-- Partial unique indexes (slug reuse after soft-delete)
+- Partial unique indexes on `slug` columns where `"deletedAt" IS NULL` (allows slug reuse after soft-delete)
 - Lead score range constraint (0–100)
 - pgvector HNSW index on `content_embeddings`
+
+> **Requires Node 20.6+** (the `--env-file` flag). Node 22.x (recommended) always works.
+> If you're on Node 18, export `DATABASE_URL` first: `export $(grep -v '^#' .env | xargs)` then run the script.
+
+The indexes use `IF NOT EXISTS` and the constraint uses `ADD CONSTRAINT IF NOT EXISTS` semantics (via the PostgreSQL `ADD CONSTRAINT ... IF NOT EXISTS` pattern from Postgres 9.5+), so re-running is safe.
 
 ### 6.5 Create initial superadmin role and user
 

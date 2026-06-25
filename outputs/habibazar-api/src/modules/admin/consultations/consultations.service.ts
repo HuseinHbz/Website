@@ -18,12 +18,12 @@ export async function listConsultations(
     kind?: ConsultationKind;
   },
 ) {
-  const where: Parameters<typeof prisma.consultationRequest.findMany>[0]['where'] = {
+  const where: Record<string, unknown> = {
     deletedAt: null,
   };
 
-  if (filters.status) where.status = filters.status;
-  if (filters.kind) where.kind = filters.kind;
+  if (filters.status) where['status'] = filters.status;
+  if (filters.kind) where['kind'] = filters.kind;
 
   const [total, consultations] = await Promise.all([
     prisma.consultationRequest.count({ where }),

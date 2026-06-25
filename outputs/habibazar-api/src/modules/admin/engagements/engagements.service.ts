@@ -24,8 +24,8 @@ export async function listEngagements(
   limit: number,
   filters: { stage?: EngagementStage },
 ) {
-  const where: Parameters<typeof prisma.engagement.findMany>[0]['where'] = {};
-  if (filters.stage) where.stage = filters.stage;
+  const where: Record<string, unknown> = {};
+  if (filters.stage) where['stage'] = filters.stage;
 
   const [total, engagements] = await Promise.all([
     prisma.engagement.count({ where }),

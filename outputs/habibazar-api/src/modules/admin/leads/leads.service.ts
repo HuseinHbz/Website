@@ -26,14 +26,14 @@ export async function listLeads(
     search?: string;
   },
 ) {
-  const where: Parameters<typeof prisma.lead.findMany>[0]['where'] = {
+  const where: Record<string, unknown> = {
     deletedAt: null,
   };
 
-  if (filters.status) where.status = filters.status;
-  if (filters.source) where.source = filters.source;
+  if (filters.status) where['status'] = filters.status;
+  if (filters.source) where['source'] = filters.source;
   if (filters.search) {
-    where.OR = [
+    where['OR'] = [
       { name: { contains: filters.search, mode: 'insensitive' } },
       { email: { contains: filters.search, mode: 'insensitive' } },
       { company: { contains: filters.search, mode: 'insensitive' } },
@@ -120,7 +120,7 @@ export async function addLeadEvent(
     data: {
       leadId,
       event: data.event,
-      metadata: data.metadata ?? null,
+      metadata: data.metadata,
     },
   });
 }
