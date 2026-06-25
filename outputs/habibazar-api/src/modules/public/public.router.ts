@@ -136,7 +136,7 @@ router.get(
   '/services/:slug',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { slug } = req.params;
+      const slug = req.params['slug'] as string;
       const cacheKey = `service:${slug}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);
@@ -196,7 +196,7 @@ router.get(
   '/case-studies/:slug',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { slug } = req.params;
+      const slug = req.params['slug'] as string;
       const cacheKey = `case-study:${slug}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);
@@ -260,7 +260,7 @@ router.get(
   '/posts/:slug',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { slug } = req.params;
+      const slug = req.params['slug'] as string;
       const cacheKey = `post:${slug}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);
@@ -318,7 +318,7 @@ router.get(
   '/glossary/:slug',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { slug } = req.params;
+      const slug = req.params['slug'] as string;
       const cacheKey = `glossary-term:${slug}`;
       const cached = getCached(cacheKey);
       if (cached) return ok(res, cached);

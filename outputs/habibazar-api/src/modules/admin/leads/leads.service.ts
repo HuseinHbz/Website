@@ -120,7 +120,8 @@ export async function addLeadEvent(
     data: {
       leadId,
       event: data.event,
-      metadata: data.metadata,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      metadata: data.metadata as any,
     },
   });
 }
