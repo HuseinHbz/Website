@@ -20,7 +20,7 @@ hr()   { echo -e "${BOLD}──────────────────�
 
 # ── Config ───────────────────────────────────────────────────
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-BRANCH="${DEPLOY_BRANCH:-main}"
+BRANCH="${DEPLOY_BRANCH:-claude/habibazar-production-master-p3dm3l}"
 BASE="/var/www/habibazar"
 REPO="$BASE/repo"
 API="$BASE/api"
@@ -49,9 +49,9 @@ ok "Node $(node --version)"
 [[ -f "$WEB/.env.local" ]] || warn "Web .env.local not found — using defaults"
 [[ -f "$ADMIN/.env.local" ]] || warn "Admin .env.local not found — using defaults"
 
-# ── Step 1: Directories ──────────────────────────────────────
+# ── Step 1: Base directories only (not app dirs — those become symlinks) ────
 hr; info "Creating directory structure..."
-sudo mkdir -p "$BASE"/{web,admin,api} /var/log/pm2 /var/www/certbot/.well-known/acme-challenge
+sudo mkdir -p "$BASE"/repo /var/log/pm2 /var/www/certbot/.well-known/acme-challenge
 sudo chown -R "$(whoami):$(whoami)" "$BASE" /var/log/pm2
 ok "Directories ready"
 
@@ -67,10 +67,19 @@ else
     ok "Cloned repository"
 fi
 
-# Link app directories (idempotent)
-[[ -L "$WEB"   || -d "$WEB/_next" ]]   || ln -sf "$REPO/outputs/habibazar-web"   "$WEB"
-[[ -L "$ADMIN" || -d "$ADMIN/_next" ]] || ln -sf "$REPO/outputs/habibazar-admin" "$ADMIN"
-[[ -L "$API"   || -d "$API/dist" ]]    || ln -sf "$REPO/outputs/habibazar-api"   "$API"
+# Link app directories — remove stale real dirs first, then symlink
+for pair in "web:$REPO/outputs/habibazar-web" "admin:$REPO/outputs/habibazar-admin" "api:$REPO/outputs/habibazar-api"; do
+    name="${pair%%:*}"; target="${pair##*:}"
+    dest="$BASE/$name"
+    if [[ -L "$dest" ]]; then
+        [[ "$(readlink "$dest")" == "$target" ]] && continue
+        rm "$dest"
+    elif [[ -d "$dest" ]]; then
+        rm -rf "$dest"
+    fi
+    ln -sf "$target" "$dest"
+    ok "Linked $name -> $target"
+done
 
 # Copy .env files if they were created alongside the script
 for f in api.env web.env.local admin.env.local; do
