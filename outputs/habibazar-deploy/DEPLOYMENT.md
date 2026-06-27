@@ -312,7 +312,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### 6.2 Run Prisma migrations
+### 6.2 Create database tables
 
 ```bash
 cd /var/www/habibazar/api
@@ -320,11 +320,11 @@ cd /var/www/habibazar/api
 # Generate the Prisma client
 npx prisma generate
 
-# Apply migrations to production database
-npx prisma migrate deploy
+# Push schema to database (creates all tables on first deploy)
+npx prisma db push
 ```
 
-> **Warning:** `prisma migrate deploy` applies pending migrations in order without prompting. Always test migrations on a staging database first if you have one. It is non-destructive on first run (creates all tables from scratch).
+> **Note:** `prisma migrate deploy` requires a committed `prisma/migrations/` directory. Since no migration files are committed, use `prisma db push` instead — it reads `schema.prisma` and creates all tables directly. On future deploys where you add schema changes, run `prisma db push` again; it applies only the diff.
 
 ### 6.3 Apply database hardening
 
@@ -1103,8 +1103,8 @@ cd /var/www/habibazar/api
 # Install any new dependencies
 npm install --omit=dev
 
-# Apply any new database migrations
-npx prisma migrate deploy
+# Apply schema changes (if any)
+npx prisma db push
 
 # Regenerate Prisma client if schema changed
 npx prisma generate
@@ -1170,8 +1170,8 @@ Note the commit hash of the last known-good version.
 cd /var/www/habibazar/api
 git checkout <LAST_GOOD_COMMIT_HASH>
 
-# Reinstall deps matching the old lockfile state
-npm ci --omit=dev
+# Reinstall deps
+npm install --omit=dev
 
 # Rebuild
 npm run build
@@ -1182,11 +1182,11 @@ pm2 reload habibazar-api --update-env
 
 Do the same for the web app if needed.
 
-### 16.3 Rollback database migrations
+### 16.3 Rollback database schema
 
 #### PostgreSQL (API)
 
-Prisma does not support automatic migration rollback. If the new migration made breaking changes:
+Since the project uses `prisma db push` (no migration files), schema rollback means restoring from backup:
 
 ```bash
 # Drop and recreate the database (ALL DATA LOST — use only if backup is recent)
