@@ -2,10 +2,13 @@
 
 This runbook covers a full production deployment of the Habibazar platform on a fresh Ubuntu 24.04 LTS VPS. The platform consists of:
 
-- **habibazar-web** — Next.js 15 marketing site (port 3000)
+- **habibazar-web** — Next.js 15 portfolio site + built-in admin panel (port 3000)
+  - i18n: Farsi (default) and English via `next-intl`
+  - Admin panel at `/admin` with JWT auth and SQLite database
+  - SQLite (better-sqlite3 + drizzle-orm) — no external DB required
 - **habibazar-api** — Express + Prisma + pgvector API (port 4000)
-- **Nginx** — reverse proxy / TLS termination for all four hostnames
-- **PostgreSQL 16** — primary database with pgvector extension
+- **Nginx** — reverse proxy / TLS termination
+- **PostgreSQL 16** — database for the API (pgvector extension)
 - **PM2** — process manager (cluster mode for API, fork for web)
 - **Cloudflare** — DNS, CDN, WAF, SSL (Full-strict mode)
 
@@ -53,8 +56,9 @@ Log into Cloudflare and create the following DNS records, all proxied (orange cl
 |------|------|---------|
 | A | habibazar.ir | `<server-ip>` |
 | A | www | `<server-ip>` |
-| A | admin | `<server-ip>` |
 | A | api | `<server-ip>` |
+
+> **Note:** The admin panel is served from `habibazar.ir/admin` — no separate `admin` subdomain is needed.
 
 Set Cloudflare SSL/TLS mode to **Full (strict)** before issuing certificates. Until certificates are issued (step 10), temporarily set mode to **Full** to avoid redirect loops.
 
@@ -62,7 +66,7 @@ Set Cloudflare SSL/TLS mode to **Full (strict)** before issuing certificates. Un
 
 - SSH access as root (or a sudoer) to the VPS
 - Git access to both repositories (`habibazar-web`, `habibazar-api`)
-- Filled-in `.env` files for both apps (based on the `.env.example` files)
+- Filled-in `.env` files for both apps (based on the examples in this runbook)
 - Cloudflare account managing `habibazar.ir`
 
 ---
@@ -115,6 +119,7 @@ su - deploy
 
 ```bash
 sudo mkdir -p /var/www/habibazar/{web,api}
+sudo mkdir -p /var/www/habibazar/web/data   # SQLite database directory
 sudo mkdir -p /var/log/pm2
 sudo mkdir -p /var/www/certbot/.well-known/acme-challenge
 
@@ -125,6 +130,8 @@ sudo chown -R deploy:deploy /var/log/pm2
 ---
 
 ## 3. PostgreSQL Setup
+
+> **Note:** PostgreSQL is only required for **habibazar-api**. The web app uses its own embedded SQLite database stored at `/var/www/habibazar/web/data/habibazar.db`.
 
 ### 3.1 Install PostgreSQL 16
 
@@ -287,7 +294,7 @@ DATABASE_URL=postgresql://habibazar:CHANGE_ME_STRONG_PASSWORD@127.0.0.1:5432/hab
 ACCESS_TOKEN_SECRET=<random 64-char string>
 REFRESH_TOKEN_SECRET=<random 64-char string>
 ENCRYPTION_KEY=<random 64 hex chars = 32 bytes>
-CORS_ORIGINS=https://habibazar.ir,https://admin.habibazar.ir
+CORS_ORIGINS=https://habibazar.ir,https://www.habibazar.ir
 OWNER_EMAIL=hosseinhabibazar@live.com
 ```
 
@@ -397,21 +404,62 @@ cp /path/to/your/web.env /var/www/habibazar/web/.env.local
 chmod 600 /var/www/habibazar/web/.env.local
 ```
 
-Minimum required values:
+Required values:
 
 ```env
+NODE_ENV=production
 NEXT_PUBLIC_SITE_URL=https://habibazar.ir
 NEXT_PUBLIC_API_URL=https://api.habibazar.ir
+ADMIN_JWT_SECRET=<random 64-char string — must be kept secret>
 ```
 
-### 7.2 Build Next.js
+Generate `ADMIN_JWT_SECRET`:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+> **Warning:** `ADMIN_JWT_SECRET` signs the admin session tokens for the built-in `/admin` panel. If it is leaked, anyone can forge a valid admin token. Change it immediately on any suspected compromise and restart the web process.
+
+### 7.2 Initialize the SQLite database (first deploy only)
+
+The web app creates and migrates its SQLite database automatically on first request via `src/lib/db/migrate.ts`. However, you should initialize it explicitly before starting PM2 so the `data/` directory is created with the correct permissions and the seed data is loaded:
+
+```bash
+cd /var/www/habibazar/web
+
+# Run the migration + seed in a one-off Node script
+node -e "
+const { runMigrations } = require('./src/lib/db/migrate');
+const { seedDatabase } = require('./src/lib/db/seed');
+runMigrations();
+seedDatabase().then(() => { console.log('DB ready'); process.exit(0); });
+"
+```
+
+> **Note:** If the above fails because TypeScript source is not compiled, run `npm run build` first (step 7.3) and then re-run using the compiled output, or simply start the app — it self-initializes on first request.
+
+Verify the database file was created:
+
+```bash
+ls -lh /var/www/habibazar/web/data/habibazar.db
+# Should show a non-zero .db file
+```
+
+Default super-admin credentials created by the seed:
+- Email: `admin@habibazar.com`
+- Password: `HBZ@Admin2025!`
+
+**Change the password immediately** after first login at `https://habibazar.ir/admin/settings`.
+
+### 7.3 Build Next.js
 
 ```bash
 cd /var/www/habibazar/web
 npm run build
 ```
 
-This runs `next build` and produces the `.next/` output directory. Expect this to take 1–3 minutes on first build.
+This runs `next build` and produces the `.next/` output directory. Expect this to take 1–3 minutes on first build. The build statically generates 62 pages covering all FA/EN routes and the admin panel.
 
 Verify:
 
@@ -419,6 +467,15 @@ Verify:
 ls .next/
 # Should contain: server/, static/, BUILD_ID, etc.
 ```
+
+### 7.4 Ensure SQLite data directory is writable
+
+```bash
+chmod 750 /var/www/habibazar/web/data
+chmod 640 /var/www/habibazar/web/data/habibazar.db
+```
+
+PM2 runs as the `deploy` user, so ownership should already be correct. If PM2 runs as a different user, adjust accordingly.
 
 ---
 
@@ -451,7 +508,7 @@ Quick local health checks:
 
 ```bash
 curl -s http://127.0.0.1:3000/
-# Should return HTML (Next.js homepage)
+# Should return HTML (Next.js homepage in Farsi, RTL)
 
 curl -s http://127.0.0.1:4000/health
 # Should return JSON health response
@@ -515,9 +572,9 @@ If it does not, add it inside the `http {}` block.
 Before real SSL certs exist, the nginx config references certificate paths that do not yet exist. Create self-signed placeholders so `nginx -t` can pass:
 
 ```bash
-sudo mkdir -p /etc/letsencrypt/live/{habibazar.ir,admin.habibazar.ir,api.habibazar.ir}
+sudo mkdir -p /etc/letsencrypt/live/{habibazar.ir,api.habibazar.ir}
 
-for domain in habibazar.ir admin.habibazar.ir api.habibazar.ir; do
+for domain in habibazar.ir api.habibazar.ir; do
     sudo openssl req -x509 -nodes -newkey rsa:2048 \
         -keyout /etc/letsencrypt/live/$domain/privkey.pem \
         -out    /etc/letsencrypt/live/$domain/fullchain.pem \
@@ -551,7 +608,7 @@ sudo apt install -y certbot python3-certbot-nginx
 
 In the Cloudflare dashboard: **SSL/TLS → Overview → Full** (not Full strict). This allows Certbot's HTTP-01 challenge to reach the server over HTTP via Cloudflare's proxy.
 
-Alternatively, disable Cloudflare proxying (grey cloud) for all four A records temporarily, issue the certificates, then re-enable.
+Alternatively, disable Cloudflare proxying (grey cloud) for all A records temporarily, issue the certificates, then re-enable.
 
 ### 10.3 Issue certificates
 
@@ -559,13 +616,6 @@ Alternatively, disable Cloudflare proxying (grey cloud) for all four A records t
 sudo certbot --nginx \
     -d habibazar.ir \
     -d www.habibazar.ir \
-    --non-interactive \
-    --agree-tos \
-    --email hosseinhabibazar@gmail.com \
-    --redirect
-
-sudo certbot --nginx \
-    -d admin.habibazar.ir \
     --non-interactive \
     --agree-tos \
     --email hosseinhabibazar@gmail.com \
@@ -611,13 +661,12 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 11.1 DNS records
 
-Confirm all four A records are proxied (orange cloud):
+Confirm all A records are proxied (orange cloud):
 
 | Type | Name | Content | Proxy |
 |------|------|---------|-------|
 | A | habibazar.ir | `<server-ip>` | Proxied |
 | A | www | `<server-ip>` | Proxied |
-| A | admin | `<server-ip>` | Proxied |
 | A | api | `<server-ip>` | Proxied |
 
 ### 11.2 SSL/TLS settings
@@ -655,8 +704,12 @@ Navigate to **Caching → Cache Rules** and create:
 - Match: `http.host eq "api.habibazar.ir"`
 - Cache Level: Bypass
 
-**Rule 3: Bypass cache for admin**
-- Match: `http.host eq "admin.habibazar.ir"`
+**Rule 3: Bypass cache for admin panel**
+- Match: `(http.host eq "habibazar.ir") and (http.request.uri.path contains "/admin")`
+- Cache Level: Bypass
+
+**Rule 4: Bypass cache for API routes**
+- Match: `(http.host eq "habibazar.ir") and (http.request.uri.path contains "/api/")`
 - Cache Level: Bypass
 
 ### 11.5 WAF rules
@@ -668,7 +721,7 @@ Navigate to **Security → WAF → Custom Rules**:
 
 **Rule 2: Rate limit admin login**
 - Navigate to **Security → WAF → Rate Limiting Rules**
-- Match: `http.host eq "admin.habibazar.ir" and http.request.uri.path contains "/api/auth/login"`
+- Match: `(http.host eq "habibazar.ir") and (http.request.uri.path eq "/api/admin/auth/login")`
 - Rate: 5 requests per 60 seconds per IP
 - Action: Block for 10 minutes
 
@@ -719,30 +772,47 @@ curl -s https://api.habibazar.ir/health
 curl -s https://api.habibazar.ir/ready
 # Expected: {"status":"ready","db":"connected"}
 
-# Web homepage
+# Web homepage (Farsi, RTL)
 curl -sI https://habibazar.ir/ | head -5
 # Expected: HTTP/2 200
 
-# Admin panel
-curl -sI https://admin.habibazar.ir/ | head -5
+# Web English version
+curl -sI https://habibazar.ir/en | head -5
 # Expected: HTTP/2 200
+
+# Admin login page
+curl -sI https://habibazar.ir/admin/login | head -5
+# Expected: HTTP/2 200
+
+# Admin panel redirect (unauthenticated → login)
+curl -sI https://habibazar.ir/admin | head -5
+# Expected: HTTP/2 307 → /admin/login
 ```
 
-### 12.2 Security headers
+### 12.2 Admin panel login
 
 ```bash
-curl -sI https://habibazar.ir/ | grep -i "strict-transport\|x-frame\|x-content\|x-robots"
-# habibazar.ir: should show HSTS, X-Content-Type-Options
-# Note: X-Frame-Options DENY and X-Robots-Tag only on admin
+# Attempt login with seed credentials
+curl -s -X POST https://habibazar.ir/api/admin/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@habibazar.com","password":"HBZ@Admin2025!"}' | jq .
+# Expected: {"user":{"id":"...","name":"Husein Habibazar","role":"super_admin",...}}
+```
 
-curl -sI https://admin.habibazar.ir/ | grep -i "strict-transport\|x-frame\|x-robots"
-# Expected: X-Frame-Options: DENY and X-Robots-Tag: noindex, nofollow
+### 12.3 Security headers
+
+```bash
+curl -sI https://habibazar.ir/ | grep -i "strict-transport\|x-frame\|x-content\|content-security"
+# Expected: HSTS, X-Content-Type-Options, Content-Security-Policy
+
+curl -sI https://habibazar.ir/admin/login | grep -i "x-frame\|x-robots"
+# Expected: X-Frame-Options: DENY, X-Robots-Tag: noindex (admin pages are noindex)
 
 curl -sI https://habibazar.ir/_next/static/chunks/main.js 2>/dev/null | grep -i "cache-control"
 # Expected: cache-control: public, max-age=31536000, immutable
 ```
 
-### 12.3 HTTPS redirect
+### 12.4 HTTPS redirect
 
 ```bash
 curl -sI http://habibazar.ir/ | grep -i location
@@ -752,7 +822,22 @@ curl -sI http://www.habibazar.ir/ | grep -i location
 # Expected: Location: https://www.habibazar.ir/ (then https://habibazar.ir/)
 ```
 
-### 12.4 Lead submission
+### 12.5 i18n routing
+
+```bash
+# Default locale (fa) served at /
+curl -sI https://habibazar.ir/ | grep -i "content-language\|lang"
+
+# English locale
+curl -s https://habibazar.ir/en | grep -o 'lang="en"'
+# Expected: lang="en"
+
+# Farsi redirect from /fa → /
+curl -sI https://habibazar.ir/fa | grep location
+# Expected: location: /
+```
+
+### 12.6 Lead submission (API)
 
 ```bash
 curl -s -X POST https://api.habibazar.ir/api/v1/leads \
@@ -761,10 +846,10 @@ curl -s -X POST https://api.habibazar.ir/api/v1/leads \
 # Expected: {"id":"...","status":"NEW",...}
 ```
 
-### 12.5 AI assistant SSE stream
+### 12.7 AI assistant SSE stream
 
 ```bash
-# Start a conversation (adjust endpoint to match your actual route)
+# Start a conversation
 curl -s -X POST https://api.habibazar.ir/api/v1/ai/conversations \
     -H "Content-Type: application/json" \
     -d '{"locale":"FA"}' | jq .
@@ -814,7 +899,7 @@ Set up an uptime monitor (Uptime Robot, BetterStack, or similar) for:
 |-----|----------------|---------------|
 | `https://habibazar.ir/` | 1 minute | Email / Telegram |
 | `https://api.habibazar.ir/health` | 1 minute | Email / Telegram |
-| `https://admin.habibazar.ir/` | 5 minutes | Email |
+| `https://habibazar.ir/admin/login` | 5 minutes | Email |
 
 ### 13.4 Disk and memory alerts
 
@@ -840,7 +925,25 @@ Add:
 */15 * * * * df -h / | awk 'NR==2 {if (int($5) > 80) print "DISK ALERT: " $5 " used on " HOSTNAME}' | mail -s "Disk Alert" hosseinhabibazar@gmail.com 2>/dev/null || true
 ```
 
-### 13.5 Cloudflare Analytics
+### 13.5 SQLite database size monitoring
+
+The web app SQLite file grows as content, blog posts, analytics events, and audit logs accumulate. Monitor its size:
+
+```bash
+# Add to crontab
+0 * * * * du -sh /var/www/habibazar/web/data/habibazar.db >> /var/log/habibazar-db-size.log
+```
+
+If it exceeds a few hundred MB, consider periodically purging `analytics_events` and `audit_logs` older than 90 days:
+
+```bash
+sqlite3 /var/www/habibazar/web/data/habibazar.db \
+    "DELETE FROM analytics_events WHERE created_at < datetime('now', '-90 days');
+     DELETE FROM audit_logs WHERE created_at < datetime('now', '-90 days');
+     VACUUM;"
+```
+
+### 13.6 Cloudflare Analytics
 
 In the Cloudflare dashboard:
 - **Analytics → Traffic** — monitor requests, bandwidth, threats
@@ -851,7 +954,9 @@ In the Cloudflare dashboard:
 
 ## 14. Backup Configuration
 
-### 14.1 Verify Cloudflare R2 credentials
+### 14.1 PostgreSQL backup (API database)
+
+#### Verify Cloudflare R2 credentials
 
 Ensure the API `.env` contains correct R2 values:
 
@@ -885,7 +990,7 @@ aws s3 ls s3://habibazar-backups/ \
     --profile r2
 ```
 
-### 14.2 Create database backup script
+#### Create database backup script
 
 ```bash
 sudo tee /usr/local/bin/backup-habibazar.sh > /dev/null <<'SCRIPT'
@@ -896,36 +1001,45 @@ BACKUP_DIR="/var/backups/habibazar"
 DATE=$(date +%Y-%m-%d_%H-%M-%S)
 DB_NAME="habibazar"
 DB_USER="habibazar"
+SQLITE_PATH="/var/www/habibazar/web/data/habibazar.db"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 R2_BUCKET="${R2_BUCKET:-habibazar-backups}"
 R2_ENDPOINT="${R2_ENDPOINT:-}"
 
 mkdir -p "$BACKUP_DIR"
 
-# Dump database
-DUMP_FILE="$BACKUP_DIR/${DB_NAME}_${DATE}.dump"
-pg_dump -U "$DB_USER" -Fc "$DB_NAME" -f "$DUMP_FILE"
-gzip "$DUMP_FILE"
+# ── PostgreSQL dump (API database) ─────────────────────────────────────────
+PG_DUMP="$BACKUP_DIR/${DB_NAME}_pg_${DATE}.dump"
+pg_dump -U "$DB_USER" -Fc "$DB_NAME" -f "$PG_DUMP"
+gzip "$PG_DUMP"
 
-# Upload to R2 if configured
+# ── SQLite dump (web admin database) ───────────────────────────────────────
+SQLITE_DUMP="$BACKUP_DIR/${DB_NAME}_sqlite_${DATE}.db"
+sqlite3 "$SQLITE_PATH" ".backup '$SQLITE_DUMP'"
+gzip "$SQLITE_DUMP"
+
+# ── Upload both to R2 ───────────────────────────────────────────────────────
 if [[ -n "$R2_ENDPOINT" ]]; then
-    aws s3 cp "${DUMP_FILE}.gz" \
-        "s3://${R2_BUCKET}/db/${DB_NAME}_${DATE}.dump.gz" \
-        --endpoint-url "$R2_ENDPOINT" \
-        --profile r2
-    echo "Uploaded to R2: ${DB_NAME}_${DATE}.dump.gz"
+    aws s3 cp "${PG_DUMP}.gz" \
+        "s3://${R2_BUCKET}/pg/${DB_NAME}_${DATE}.dump.gz" \
+        --endpoint-url "$R2_ENDPOINT" --profile r2
+    aws s3 cp "${SQLITE_DUMP}.gz" \
+        "s3://${R2_BUCKET}/sqlite/${DB_NAME}_${DATE}.db.gz" \
+        --endpoint-url "$R2_ENDPOINT" --profile r2
+    echo "Uploaded both backups to R2"
 fi
 
-# Remove local backups older than retention period
+# ── Remove old local backups ────────────────────────────────────────────────
 find "$BACKUP_DIR" -name "*.dump.gz" -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "*.db.gz"   -mtime +"$RETENTION_DAYS" -delete
 
-echo "Backup completed: ${DUMP_FILE}.gz"
+echo "Backup completed: $DATE"
 SCRIPT
 
 sudo chmod +x /usr/local/bin/backup-habibazar.sh
 ```
 
-### 14.3 Schedule daily backups
+#### Schedule daily backups
 
 ```bash
 crontab -e
@@ -934,26 +1048,31 @@ crontab -e
 Add:
 
 ```cron
-# Daily database backup at 03:00 UTC
+# Daily backup at 03:00 UTC
 0 3 * * * /usr/local/bin/backup-habibazar.sh >> /var/log/habibazar-backup.log 2>&1
 ```
 
-### 14.4 Test the backup
+#### Test the backup
 
 ```bash
 sudo -u deploy /usr/local/bin/backup-habibazar.sh
 ls -lh /var/backups/habibazar/
 ```
 
-### 14.5 Verify backup integrity
+### 14.2 Verify backup integrity
 
 Periodically verify backups are restorable:
 
 ```bash
-# Create a test database and restore into it
+# PostgreSQL restore test
 sudo -u postgres createdb habibazar_restore_test
-pg_restore -U habibazar -d habibazar_restore_test /var/backups/habibazar/habibazar_LATEST.dump.gz
+pg_restore -U habibazar -d habibazar_restore_test /var/backups/habibazar/habibazar_pg_LATEST.dump.gz
 sudo -u postgres dropdb habibazar_restore_test
+
+# SQLite restore test
+gunzip -c /var/backups/habibazar/habibazar_sqlite_LATEST.db.gz > /tmp/test_restore.db
+sqlite3 /tmp/test_restore.db "SELECT COUNT(*) FROM users;"
+rm /tmp/test_restore.db
 ```
 
 ---
@@ -1005,7 +1124,7 @@ cd /var/www/habibazar/web
 # Install any new dependencies
 npm ci --omit=dev
 
-# Rebuild Next.js
+# Rebuild Next.js (also runs SQLite migrations on first request after restart)
 npm run build
 
 # Restart web process (brief downtime ~1-2s; Nginx serves 502 during restart)
@@ -1015,6 +1134,8 @@ pm2 restart habibazar-web --update-env
 pm2 list
 curl -s http://127.0.0.1:3000/
 ```
+
+> **Note:** If the update includes SQLite schema changes (new columns or tables in `src/lib/db/migrate.ts`), the migration runs automatically on the first request after restart. No manual step is required.
 
 > **Note:** For truly zero-downtime web deployments, consider a blue-green setup with two web instances on different ports and updating the Nginx upstream during deployment. For a personal/small-business site, the ~2 second restart gap is acceptable.
 
@@ -1057,11 +1178,11 @@ pm2 reload habibazar-api --update-env
 
 Do the same for the web app if needed.
 
-### 16.3 Rollback database migrations (if needed)
+### 16.3 Rollback database migrations
+
+#### PostgreSQL (API)
 
 Prisma does not support automatic migration rollback. If the new migration made breaking changes:
-
-1. Restore the database from the most recent backup taken before the deployment:
 
 ```bash
 # Drop and recreate the database (ALL DATA LOST — use only if backup is recent)
@@ -1070,22 +1191,29 @@ sudo -u postgres psql -c "CREATE DATABASE habibazar OWNER habibazar;"
 sudo -u postgres psql -d habibazar -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
 # Restore from backup
-pg_restore -U habibazar -d habibazar /var/backups/habibazar/habibazar_BACKUP_BEFORE_UPDATE.dump.gz
+pg_restore -U habibazar -d habibazar /var/backups/habibazar/habibazar_pg_BACKUP_BEFORE_UPDATE.dump.gz
 ```
 
-> **Warning:** This is destructive. Any data written between the backup and the rollback will be lost. This is why it is critical to take a backup immediately before deploying migrations:
+> **Warning:** This is destructive. Any data written between the backup and the rollback will be lost. Always take a backup immediately before deploying migrations:
+>
+> ```bash
+> /usr/local/bin/backup-habibazar.sh
+> ```
+
+#### SQLite (Web)
+
+To roll back the SQLite database:
 
 ```bash
-# Run this BEFORE every deployment that includes migrations
-/usr/local/bin/backup-habibazar.sh
-```
+# Stop the web process
+pm2 stop habibazar-web
 
-2. After restoring, reset the Prisma migration history to the pre-deployment state:
+# Restore from backup
+gunzip -c /var/backups/habibazar/habibazar_sqlite_BACKUP_BEFORE_UPDATE.db.gz \
+    > /var/www/habibazar/web/data/habibazar.db
 
-```bash
-cd /var/www/habibazar/api
-git checkout <LAST_GOOD_COMMIT_HASH>
-npx prisma migrate deploy   # re-applies only migrations that are in the checked-out version
+# Restart
+pm2 start habibazar-web
 ```
 
 ### 16.4 Verify rollback
@@ -1134,6 +1262,22 @@ sudo systemctl restart postgresql         # Restart DB
 sudo tail -f /var/log/postgresql/postgresql-16-main.log  # DB logs
 ```
 
+### SQLite commands (web admin database)
+
+```bash
+# Open interactive shell
+sqlite3 /var/www/habibazar/web/data/habibazar.db
+
+# Useful queries
+.tables                                   # List all tables
+SELECT * FROM users;                      # List admin users
+SELECT COUNT(*) FROM analytics_events;    # Event count
+SELECT COUNT(*) FROM audit_logs;          # Audit log count
+
+# Manual backup
+sqlite3 /var/www/habibazar/web/data/habibazar.db ".backup '/tmp/manual_backup.db'"
+```
+
 ### Certbot commands
 
 ```bash
@@ -1147,3 +1291,14 @@ sudo certbot renew --force-renewal        # Force renew all
 ```bash
 sudo systemctl status nginx postgresql pm2-deploy
 ```
+
+### Admin panel
+
+| Item | Value |
+|------|-------|
+| URL | `https://habibazar.ir/admin` |
+| Login | `https://habibazar.ir/admin/login` |
+| Default email | `admin@habibazar.com` |
+| Default password | `HBZ@Admin2025!` ← **change on first login** |
+| JWT secret env var | `ADMIN_JWT_SECRET` in `.env.local` |
+| SQLite path | `/var/www/habibazar/web/data/habibazar.db` |
