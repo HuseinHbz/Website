@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LeadStatus, LeadSource } from '@prisma/client';
+import { LeadStatus, LeadSource, Prisma } from '@prisma/client';
 import prisma from '../../../db/prisma';
 import { NotFoundError } from '../../../lib/errors';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
@@ -26,7 +26,7 @@ export async function listLeads(
     search?: string;
   },
 ) {
-  const where: Parameters<typeof prisma.lead.findMany>[0]['where'] = {
+  const where: Prisma.LeadWhereInput = {
     deletedAt: null,
   };
 
@@ -120,7 +120,7 @@ export async function addLeadEvent(
     data: {
       leadId,
       event: data.event,
-      metadata: data.metadata ?? null,
+      metadata: data.metadata ?? Prisma.JsonNull,
     },
   });
 }

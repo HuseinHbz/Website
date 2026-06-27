@@ -68,7 +68,7 @@ export function createContentRouter(
     validate(listQuerySchema, 'query'),
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { page, limit, status, search, featured } = req.query as z.infer<typeof listQuerySchema>;
+        const { page, limit, status, search, featured } = req.query as unknown as z.infer<typeof listQuerySchema>;
 
         const where: Record<string, unknown> = {};
         if (softDelete) where['deletedAt'] = null;

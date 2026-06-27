@@ -23,7 +23,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { page, limit, category, locale, dateFrom, dateTo } =
-        req.query as z.infer<typeof listQuerySchema>;
+        req.query as unknown as z.infer<typeof listQuerySchema>;
 
       const result = await aiAdminService.listConversations(page, limit, {
         category,
@@ -43,7 +43,7 @@ router.get(
   '/conversations/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const conversation = await aiAdminService.getConversationById(req.params['id']!);
+      const conversation = await aiAdminService.getConversationById(req.params.id as string);
       ok(res, conversation);
     } catch (err) {
       next(err);
@@ -57,7 +57,7 @@ router.delete(
   authorize('ai:write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await aiAdminService.deleteConversation(req.params['id']!);
+      await aiAdminService.deleteConversation(req.params.id as string);
       noContent(res);
     } catch (err) {
       next(err);

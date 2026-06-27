@@ -45,7 +45,7 @@ export async function startConversation(intake: IntakeInput) {
           marketingConsent: false,
           metadata: { aiSessionRef: sessionRefHash.slice(0, 8) },
         },
-      }).catch((err) => logger.error({ err }, 'Failed to create lead from AI intake'));
+      }).catch((err: unknown) => logger.error({ err }, 'Failed to create lead from AI intake'));
     }
   }
 
@@ -65,6 +65,11 @@ export async function startConversation(intake: IntakeInput) {
 
 interface ChatHistoryMessage {
   role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
   content: string;
 }
 
@@ -108,7 +113,7 @@ export async function* chat(
   const systemPrompt = getSystemPrompt(locale);
   const chatMessages: ChatHistoryMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...history.map((m) => ({
+    ...history.map((m: any) => ({
       role: m.role === MessageRole.USER ? 'user' as const : 'assistant' as const,
       content: m.content,
     })),
@@ -121,7 +126,7 @@ export async function* chat(
   let stream: AsyncGenerator<string>;
 
   if (provider === 'anthropic') {
-    stream = streamAnthropic(systemPrompt, chatMessages.filter(m => m.role !== 'system'));
+    stream = streamAnthropic(systemPrompt, chatMessages.filter((m): m is ChatMessage => m.role !== 'system'));
   } else if (provider === 'deepseek') {
     stream = streamDeepSeek(chatMessages);
   } else if (provider === 'ollama') {
@@ -196,7 +201,7 @@ export async function updateConversationProfile(
       ...(profile.name && { name: profile.name }),
       ...(profile.company && { company: profile.company }),
       ...(profile.phone && { phone: profile.phone }),
-      ...(profile.category && { category: profile.category as Parameters<typeof prisma.conversation.update>[0]['data']['category'] }),
+      ...(profile.category && { category: profile.category as any }),
     },
   });
 }

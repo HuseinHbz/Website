@@ -36,7 +36,7 @@ router.put(
     try {
       const { key } = req.params;
       const { value } = req.body as z.infer<typeof upsertSchema>;
-      const setting = await settingsService.upsertSetting(key!, value);
+      const setting = await settingsService.upsertSetting(req.params.key as string, value);
       ok(res, setting);
     } catch (err) {
       next(err);

@@ -1,4 +1,4 @@
-import { AssistantCategory, Locale } from '@prisma/client';
+import { AssistantCategory, Locale, Prisma } from '@prisma/client';
 import prisma from '../../../db/prisma';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
 import { NotFoundError } from '../../../lib/errors';
@@ -15,7 +15,7 @@ export async function listConversations(
   limit: number,
   filters: ConversationFilters,
 ) {
-  const where: Parameters<typeof prisma.conversation.findMany>[0]['where'] = {};
+  const where: Prisma.ConversationWhereInput = {};
 
   if (filters.category) where.category = filters.category;
   if (filters.locale) where.locale = filters.locale;
@@ -105,13 +105,13 @@ export async function getAiAnalytics() {
   ]);
 
   return {
-    byCategory: byCategory.map((c) => ({ category: c.category, count: c._count.id })),
-    byLocale: byLocale.map((c) => ({ locale: c.locale, count: c._count.id })),
+    byCategory: byCategory.map((c: any) => ({ category: c.category, count: c._count.id })),
+    byLocale: byLocale.map((c: any) => ({ locale: c.locale, count: c._count.id })),
     totals: {
       conversations: avgTurns._count.id,
       totalTurns: avgTurns._sum.turnCount ?? 0,
       avgTurns: avgTurns._avg.turnCount ?? 0,
     },
-    daily: dailyCounts.map((d) => ({ date: d.date, count: Number(d.count) })),
+    daily: dailyCounts.map((d: any) => ({ date: d.date, count: Number(d.count) })),
   };
 }

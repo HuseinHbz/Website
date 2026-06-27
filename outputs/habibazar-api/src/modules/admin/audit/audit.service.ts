@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import prisma from '../../../db/prisma';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
 
@@ -14,7 +15,7 @@ export async function listAuditLogs(
   limit: number,
   filters: AuditFilters,
 ) {
-  const where: Parameters<typeof prisma.auditLog.findMany>[0]['where'] = {};
+  const where: Prisma.AuditLogWhereInput = {};
 
   if (filters.resource) where.resource = filters.resource;
   if (filters.userId) where.userId = filters.userId;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LeadSource, ConsultationKind } from '@prisma/client';
+import { LeadSource, ConsultationKind, Prisma } from '@prisma/client';
 import prisma from '../../db/prisma';
 import { sendLeadNotification, sendLeadAcknowledgement } from '../../services/mailer';
 import { env } from '../../config/env';
@@ -85,7 +85,7 @@ export async function createLead(data: z.infer<typeof createLeadSchema>) {
       score,
       notes: data.notes ?? null,
       marketingConsent: data.marketingConsent,
-      metadata: data.serviceInterest ? { serviceInterest: data.serviceInterest } : null,
+      metadata: data.serviceInterest ? { serviceInterest: data.serviceInterest } : Prisma.JsonNull,
     },
   });
 

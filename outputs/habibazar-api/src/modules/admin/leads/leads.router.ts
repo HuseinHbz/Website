@@ -22,7 +22,7 @@ router.get(
   validate(listQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit, status, source, search } = req.query as z.infer<typeof listQuerySchema>;
+      const { page, limit, status, source, search } = req.query as unknown as z.infer<typeof listQuerySchema>;
       const { leads, meta } = await leadsService.listLeads(page, limit, { status, source, search });
       paginated(res, leads, meta);
     } catch (err) {
@@ -36,7 +36,7 @@ router.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const lead = await leadsService.getLeadById(req.params['id']!);
+      const lead = await leadsService.getLeadById(req.params.id as string);
       ok(res, lead);
     } catch (err) {
       next(err);
@@ -52,7 +52,7 @@ router.patch(
   auditLog('update', 'lead'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const lead = await leadsService.updateLead(req.params['id']!, req.body);
+      const lead = await leadsService.updateLead(req.params.id as string, req.body);
       ok(res, lead);
     } catch (err) {
       next(err);
@@ -67,7 +67,7 @@ router.delete(
   auditLog('delete', 'lead'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await leadsService.softDeleteLead(req.params['id']!);
+      await leadsService.softDeleteLead(req.params.id as string);
       noContent(res);
     } catch (err) {
       next(err);
@@ -82,7 +82,7 @@ router.post(
   validate(leadsService.leadEventSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const event = await leadsService.addLeadEvent(req.params['id']!, req.body);
+      const event = await leadsService.addLeadEvent(req.params.id as string, req.body);
       created(res, event);
     } catch (err) {
       next(err);

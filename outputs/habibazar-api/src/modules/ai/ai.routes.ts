@@ -54,7 +54,7 @@ router.post(
     };
 
     try {
-      const stream = aiService.chat(id!, message, locale ?? 'FA');
+      const stream = aiService.chat(req.params.id as string, message, locale ?? 'FA');
 
       for await (const chunk of stream) {
         sendEvent({ type: 'delta', content: chunk });

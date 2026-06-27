@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EngagementStage } from '@prisma/client';
+import { EngagementStage, Prisma } from '@prisma/client';
 import prisma from '../../../db/prisma';
 import { NotFoundError } from '../../../lib/errors';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
@@ -24,7 +24,7 @@ export async function listEngagements(
   limit: number,
   filters: { stage?: EngagementStage },
 ) {
-  const where: Parameters<typeof prisma.engagement.findMany>[0]['where'] = {};
+  const where: Prisma.EngagementWhereInput = {};
   if (filters.stage) where.stage = filters.stage;
 
   const [total, engagements] = await Promise.all([

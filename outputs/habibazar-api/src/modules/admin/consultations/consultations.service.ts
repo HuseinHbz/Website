@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ConsultationStatus, ConsultationKind } from '@prisma/client';
+import { ConsultationStatus, ConsultationKind, Prisma } from '@prisma/client';
 import prisma from '../../../db/prisma';
 import { NotFoundError } from '../../../lib/errors';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
@@ -18,7 +18,7 @@ export async function listConsultations(
     kind?: ConsultationKind;
   },
 ) {
-  const where: Parameters<typeof prisma.consultationRequest.findMany>[0]['where'] = {
+  const where: Prisma.ConsultationRequestWhereInput = {
     deletedAt: null,
   };
 
