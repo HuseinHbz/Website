@@ -270,7 +270,7 @@ cat /home/deploy/.ssh/id_ed25519.pub
 ### 5.2 Install dependencies
 
 ```bash
-cd /var/www/habibazar/api && npm install --omit=dev
+cd /var/www/habibazar/api && npm install
 cd /var/www/habibazar/web && npm install --omit=dev
 ```
 
@@ -1065,8 +1065,8 @@ git pull origin main
 ```bash
 cd /var/www/habibazar/api
 
-# Install any new dependencies
-npm install --omit=dev
+# Install all dependencies (including devDependencies for tsc)
+npm install
 
 # Apply schema changes (if any)
 npx prisma db push
