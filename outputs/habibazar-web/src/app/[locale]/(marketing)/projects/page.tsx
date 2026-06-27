@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? 'پروژه‌های واقعی زیرساخت: رستوران کنزو، هلدینگ پاپ‌کورن، گروه رستوران سنسو و پروژه‌های صنعتی توسط حسین حبیب‌آذر.'
       : 'Real-world infrastructure case studies: Kenzo Restaurant, Popcorn Holding, Senso Restaurant Group, and industrial enterprise projects by Husein Habibazar.',
     openGraph: {
-      url: `${SITE.url}/${locale === SITE.locale.default ? '' : locale + '/'}projects`,
+      url: `${SITE.url}/${locale}/projects`,
     },
   }
 }

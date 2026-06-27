@@ -90,9 +90,6 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-600 mt-4">
-          Default: admin@habibazar.com / HBZ@Admin2025!
-        </p>
       </div>
     </div>
   )

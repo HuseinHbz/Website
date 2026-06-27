@@ -519,9 +519,7 @@ export function AiAssistant({ locale }: AiAssistantProps) {
                     size="sm"
                     onClick={() => {
                       window.location.href =
-                        locale === SITE.locale.default
-                          ? '/consultation'
-                          : `/${locale}/consultation`
+                        `/${locale}/consultation`
                     }}
                   >
                     {t('bookConsultation')}

@@ -21,14 +21,14 @@ interface Edge {
 }
 
 const NODES: Node[] = [
-  { id: 'cisco',      label: 'Cisco',      x: 50,  y: 18,  icon: '🔷', color: '#1ba0d7', size: 40, delay: 0 },
-  { id: 'mikrotik',  label: 'MikroTik',   x: 20,  y: 42,  icon: '🌐', color: '#c03030', size: 36, delay: 0.15 },
-  { id: 'linux',     label: 'Linux',      x: 75,  y: 40,  icon: '🐧', color: '#f59e0b', size: 36, delay: 0.3 },
-  { id: 'vmware',    label: 'VMware',     x: 38,  y: 68,  icon: '🖥️', color: '#60b6e0', size: 34, delay: 0.45 },
-  { id: 'security',  label: 'Security',   x: 12,  y: 72,  icon: '🛡️', color: '#10b981', size: 34, delay: 0.6 },
-  { id: 'cloud',     label: 'Cloud',      x: 85,  y: 65,  icon: '☁️', color: '#6366f1', size: 38, delay: 0.75 },
-  { id: 'monitoring',label: 'Monitor',    x: 62,  y: 82,  icon: '📊', color: '#f59e0b', size: 32, delay: 0.9 },
-  { id: 'automation',label: 'Automation', x: 30,  y: 88,  icon: '⚙️', color: '#818cf8', size: 32, delay: 1.05 },
+  { id: 'cisco',      label: 'Cisco',      x: 50,  y: 26,  icon: '🔷', color: '#1ba0d7', size: 40, delay: 0 },
+  { id: 'mikrotik',  label: 'MikroTik',   x: 18,  y: 44,  icon: '🌐', color: '#c03030', size: 36, delay: 0.15 },
+  { id: 'linux',     label: 'Linux',      x: 78,  y: 42,  icon: '🐧', color: '#f59e0b', size: 36, delay: 0.3 },
+  { id: 'vmware',    label: 'VMware',     x: 36,  y: 62,  icon: '🖥️', color: '#60b6e0', size: 34, delay: 0.45 },
+  { id: 'security',  label: 'Security',   x: 10,  y: 65,  icon: '🛡️', color: '#10b981', size: 34, delay: 0.6 },
+  { id: 'cloud',     label: 'Cloud',      x: 84,  y: 60,  icon: '☁️', color: '#6366f1', size: 38, delay: 0.75 },
+  { id: 'monitoring',label: 'Monitor',    x: 60,  y: 72,  icon: '📊', color: '#f59e0b', size: 32, delay: 0.9 },
+  { id: 'automation',label: 'Automation', x: 28,  y: 76,  icon: '⚙️', color: '#818cf8', size: 32, delay: 1.05 },
 ]
 
 const EDGES: Edge[] = [

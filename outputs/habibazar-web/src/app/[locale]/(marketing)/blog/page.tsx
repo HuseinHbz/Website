@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? 'مقالات تخصصی درباره میکروتیک، سیسکو، لینوکس، VMware، Proxmox، امنیت شبکه، پایش، خودکارسازی توسط حسین حبیب‌آذر.'
       : 'Expert articles on MikroTik, Cisco, Linux, VMware, Proxmox, network security, monitoring, automation, and DevOps by Husein Habibazar.',
     openGraph: {
-      url: `${SITE.url}/${locale === SITE.locale.default ? '' : locale + '/'}blog`,
+      url: `${SITE.url}/${locale}/blog`,
     },
   }
 }

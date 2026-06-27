@@ -58,8 +58,7 @@ export function Footer({ locale = 'en' }: FooterProps) {
   const LINKS = isRTL ? LINKS_FA : LINKS_EN
 
   function buildLocalizedPath(path: string) {
-    if (locale === SITE.locale.default) return path
-    return `/${locale}${path}`
+    return `/${locale}${path === '/' ? '' : path}`
   }
 
   return (

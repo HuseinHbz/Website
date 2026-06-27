@@ -62,7 +62,6 @@ export function ServicesSnapshot({ locale }: ServicesSnapshotProps) {
   const isRTL = locale === 'fa'
 
   function buildPath(path: string) {
-    if (locale === SITE.locale.default) return path
     return `/${locale}${path}`
   }
 

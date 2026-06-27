@@ -9,4 +9,5 @@ export const { Link, redirect, usePathname, useRouter, getPathname } =
   createNavigation({
     locales,
     defaultLocale,
+    localePrefix: 'always',
   })

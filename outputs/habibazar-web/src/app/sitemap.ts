@@ -23,10 +23,7 @@ interface SitemapEntry {
 const locales = ['fa', 'en'] as const
 
 function buildUrl(path: string, locale: string) {
-  if (locale === SITE.locale.default) {
-    return `${SITE.url}${path}`
-  }
-  return `${SITE.url}/${locale}${path}`
+  return `${SITE.url}/${locale}${path === '/' ? '' : path}`
 }
 
 const routes: Array<{
@@ -52,23 +49,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       languages[locale] = buildUrl(route.path, locale)
     }
 
-    // Default locale (fa) as canonical
-    entries.push({
-      url: buildUrl(route.path, SITE.locale.default),
-      lastModified: new Date(),
-      changeFrequency: route.changeFrequency,
-      priority: route.priority,
-      alternates: { languages },
-    })
-
-    // Non-default locales
     for (const locale of locales) {
-      if (locale === SITE.locale.default) continue
       entries.push({
         url: buildUrl(route.path, locale),
         lastModified: new Date(),
         changeFrequency: route.changeFrequency,
-        priority: route.priority * 0.9,
+        priority: locale === SITE.locale.default ? route.priority : route.priority * 0.9,
         alternates: { languages },
       })
     }

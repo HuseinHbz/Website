@@ -8,7 +8,8 @@ const defaultLocale = 'fa'
 const intlMiddleware = createIntlMiddleware({
   locales,
   defaultLocale,
-  localePrefix: 'as-needed',
+  localePrefix: 'always',
+  localeDetection: false,
 })
 
 const JWT_SECRET = new TextEncoder().encode(

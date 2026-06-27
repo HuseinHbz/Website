@@ -14,8 +14,7 @@ interface HeroProps {
 }
 
 function buildPath(locale: string, path: string) {
-  if (locale === SITE.locale.default) return path
-  return `/${locale}${path}`
+  return `/${locale}${path === '/' ? '' : path}`
 }
 
 export function Hero({ locale }: HeroProps) {

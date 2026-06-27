@@ -28,8 +28,7 @@ export function Header({ locale }: HeaderProps) {
   useEffect(() => { setIsMenuOpen(false) }, [pathname])
 
   function buildLocalizedPath(path: string) {
-    if (locale === SITE.locale.default) return path
-    return `/${locale}${path}`
+    return `/${locale}${path === '/' ? '' : path}`
   }
 
   function getAltLocale() {
@@ -37,10 +36,8 @@ export function Header({ locale }: HeaderProps) {
   }
 
   function getAltLocalePath() {
-    const withoutLocale = pathname.replace(/^\/(fa|en)/, '') || '/'
-    const altLocale = getAltLocale()
-    if (altLocale === SITE.locale.default) return withoutLocale
-    return `/${altLocale}${withoutLocale}`
+    const withoutLocale = pathname.replace(/^\/(fa|en)/, '')
+    return `/${getAltLocale()}${withoutLocale}`
   }
 
   function isActive(href: string) {

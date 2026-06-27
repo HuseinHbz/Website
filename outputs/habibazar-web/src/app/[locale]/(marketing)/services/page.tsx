@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? 'خدمات جامع مشاوره زیرساخت: طراحی شبکه، امنیت، مجازی‌سازی، پایش، پشتیبان‌گیری، لینوکس، مایکروسافت، VoIP و خودکارسازی.'
       : 'Comprehensive infrastructure consulting services: network design, security, virtualization, monitoring, backup & DR, Linux, Microsoft, VoIP, and automation.',
     openGraph: {
-      url: `${SITE.url}/${locale === SITE.locale.default ? '' : locale + '/'}services`,
+      url: `${SITE.url}/${locale}/services`,
     },
   }
 }

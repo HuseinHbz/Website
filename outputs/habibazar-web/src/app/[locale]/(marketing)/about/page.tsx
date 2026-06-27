@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? 'آشنایی با حسین حبیب‌آذر (HBZ): بیش از ۱۰ سال تجربه در زیرساخت سازمانی، معماری شبکه و مشاوره امنیت.'
       : 'Learn about Husein Habibazar (HBZ): 10+ years of enterprise infrastructure, network architecture, and security consulting experience.',
     openGraph: {
-      url: `${SITE.url}/${locale === SITE.locale.default ? '' : locale + '/'}about`,
+      url: `${SITE.url}/${locale}/about`,
     },
   }
 }
