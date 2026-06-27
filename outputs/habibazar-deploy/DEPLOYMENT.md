@@ -333,10 +333,12 @@ cd /var/www/habibazar/api
 npm run db:hardening
 ```
 
-This script (`prisma/sql/hardening.sql`) applies:
-- Partial unique indexes to support soft-delete slug reuse
+This script loads `.env` automatically and runs `prisma/sql/hardening.sql` which applies:
+- Partial unique indexes on `slug` columns (soft-delete safe)
 - Lead score range constraint (0–100)
 - pgvector HNSW index on `content_embeddings` for cosine similarity search
+
+If you see `ALTER TABLE` and `CREATE INDEX` in the output with no errors, hardening succeeded.
 
 ### 6.4 Seed initial data (first deploy only)
 
@@ -425,38 +427,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 > **Warning:** `ADMIN_JWT_SECRET` signs the admin session tokens for the built-in `/admin` panel. If it is leaked, anyone can forge a valid admin token. Change it immediately on any suspected compromise and restart the web process.
 
-### 7.2 Initialize the SQLite database (first deploy only)
-
-The web app creates and migrates its SQLite database automatically on first request via `src/lib/db/migrate.ts`. However, you should initialize it explicitly before starting PM2 so the `data/` directory is created with the correct permissions and the seed data is loaded:
-
-```bash
-cd /var/www/habibazar/web
-
-# Run the migration + seed in a one-off Node script
-node -e "
-const { runMigrations } = require('./src/lib/db/migrate');
-const { seedDatabase } = require('./src/lib/db/seed');
-runMigrations();
-seedDatabase().then(() => { console.log('DB ready'); process.exit(0); });
-"
-```
-
-> **Note:** If the above fails because TypeScript source is not compiled, run `npm run build` first (step 7.3) and then re-run using the compiled output, or simply start the app — it self-initializes on first request.
-
-Verify the database file was created:
-
-```bash
-ls -lh /var/www/habibazar/web/data/habibazar.db
-# Should show a non-zero .db file
-```
-
-Default super-admin credentials created by the seed:
-- Email: `admin@habibazar.com`
-- Password: `HBZ@Admin2025!`
-
-**Change the password immediately** after first login at `https://habibazar.ir/admin/settings`.
-
-### 7.3 Build Next.js
+### 7.2 Build Next.js
 
 ```bash
 cd /var/www/habibazar/web
@@ -472,14 +443,23 @@ ls .next/
 # Should contain: server/, static/, BUILD_ID, etc.
 ```
 
-### 7.4 Ensure SQLite data directory is writable
+### 7.3 Initialize the SQLite database (first deploy only)
+
+The web app auto-creates and seeds its SQLite database on the **first incoming request** — no manual step is required. After starting PM2 (step 8), make a single request to trigger it:
 
 ```bash
-chmod 750 /var/www/habibazar/web/data
-chmod 640 /var/www/habibazar/web/data/habibazar.db
+# Start PM2 first (step 8), then run this to trigger DB init
+curl -s http://127.0.0.1:3000/ > /dev/null
+sleep 2
+ls -lh /var/www/habibazar/web/data/habibazar.db
+# Should show a non-zero .db file
 ```
 
-PM2 runs as the `deploy` user, so ownership should already be correct. If PM2 runs as a different user, adjust accordingly.
+Default super-admin credentials created by the seed:
+- Email: `admin@habibazar.com`
+- Password: `HBZ@Admin2025!`
+
+**Change the password immediately** after first login at `https://habibazar.ir/admin/settings`.
 
 ---
 
@@ -488,8 +468,10 @@ PM2 runs as the `deploy` user, so ownership should already be correct. If PM2 ru
 ### 8.1 Copy ecosystem config
 
 ```bash
-cp /path/to/habibazar-deploy/ecosystem.config.js /var/www/habibazar/ecosystem.config.js
+cp /var/www/habibazar/api/ecosystem.config.js /var/www/habibazar/ecosystem.config.js
 ```
+
+> **Note:** `ecosystem.config.js` lives inside the cloned `api` repo. Copy it one level up so PM2 can manage both apps from a single config.
 
 ### 8.2 Start all apps
 
@@ -513,9 +495,17 @@ Quick local health checks:
 ```bash
 curl -s http://127.0.0.1:3000/
 # Should return HTML (Next.js homepage in Farsi, RTL)
+# This first request also triggers SQLite database init and seed
 
 curl -s http://127.0.0.1:4000/health
 # Should return JSON health response
+```
+
+After the first request to port 3000, verify the SQLite DB was created:
+
+```bash
+ls -lh /var/www/habibazar/web/data/habibazar.db
+# Should show a non-zero .db file (typically ~200KB after seed)
 ```
 
 ### 8.4 Save process list and configure startup
@@ -550,8 +540,10 @@ sudo systemctl enable nginx
 ### 9.2 Copy the Nginx configuration
 
 ```bash
-sudo cp /path/to/habibazar-deploy/nginx.conf /etc/nginx/conf.d/habibazar.conf
+sudo cp /var/www/habibazar/api/nginx.conf /etc/nginx/conf.d/habibazar.conf
 ```
+
+> **Note:** `nginx.conf` is included in the `habibazar-api` repository under the root directory.
 
 Remove the default site if present:
 
