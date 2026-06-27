@@ -298,6 +298,12 @@ const T: Record<string, { fa: string; en: string }> = {
   recentActivity:    { fa: 'فعالیت‌های اخیر', en: 'Recent Activity' },
   noAnalytics:       { fa: 'داده آماری وجود ندارد — ردیاب را روی صفحات عمومی نصب کنید', en: 'No analytics data yet — install the tracker on public pages' },
   noActivity:        { fa: 'فعالیتی ثبت نشده', en: 'No activity yet' },
+  resyncTitle:       { fa: 'همگام‌سازی محتوای عمومی با دیتابیس', en: 'Sync Public Content to Database' },
+  resyncDesc:        { fa: 'داده‌های پروژه‌ها، خدمات، مهارت‌ها، تایم‌لاین و مشتریان سایت را وارد دیتابیس کنید', en: 'Import projects, services, skills, timeline and clients data into the database' },
+  resyncBtn:         { fa: 'همگام‌سازی', en: 'Sync Now' },
+  resyncConfirm:     { fa: 'این عمل داده‌های موجود در دیتابیس را با داده‌های عمومی سایت جایگزین می‌کند. ادامه می‌دهید؟', en: 'This will replace existing database records with the public site data. Continue?' },
+  resyncDone:        { fa: 'همگام‌سازی با موفقیت انجام شد!', en: 'Sync completed successfully!' },
+  syncing:           { fa: 'در حال همگام‌سازی...', en: 'Syncing...' },
   noTopPages:        { fa: 'داده‌ای وجود ندارد', en: 'No page data yet' },
 }
 

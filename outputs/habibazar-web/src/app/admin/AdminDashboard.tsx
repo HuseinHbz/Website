@@ -39,6 +39,19 @@ export function AdminDashboard() {
   const t = useT()
   const [data, setData] = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
+
+  async function resyncContent() {
+    if (!confirm(t('resyncConfirm'))) return
+    setSyncing(true)
+    setSyncMsg('')
+    const res = await fetch('/api/admin/resync', { method: 'POST' })
+    const d = await res.json().catch(() => ({}))
+    setSyncing(false)
+    setSyncMsg(res.ok ? t('resyncDone') : (d.error || t('failed')))
+    setTimeout(() => setSyncMsg(''), 5000)
+  }
 
   useEffect(() => {
     fetch('/api/admin/dashboard')
@@ -150,6 +163,22 @@ export function AdminDashboard() {
           <p className="text-sm text-slate-600 text-center py-8">{t('noActivity')}</p>
         )}
       </Card>
+
+      {/* Sync public content button */}
+      <div className="flex items-center gap-4 p-4 bg-[#0c0c14] border border-[#2a2a3e] rounded-xl">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-white">{t('resyncTitle')}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{t('resyncDesc')}</p>
+          {syncMsg && <p className="text-xs text-green-400 mt-1">{syncMsg}</p>}
+        </div>
+        <button
+          onClick={resyncContent}
+          disabled={syncing}
+          className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+        >
+          {syncing ? t('syncing') : t('resyncBtn')}
+        </button>
+      </div>
 
       {/* Quick Links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
