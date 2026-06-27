@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../db/prisma';
 import logger from '../lib/logger';
 
@@ -49,11 +50,11 @@ export async function idempotency(
             where: { key },
             create: {
               key,
-              response: { status: res.statusCode, body: body as Record<string, unknown> },
+              response: { status: res.statusCode, body } as unknown as Prisma.InputJsonValue,
               expiresAt,
             },
             update: {
-              response: { status: res.statusCode, body: body as Record<string, unknown> },
+              response: { status: res.statusCode, body } as unknown as Prisma.InputJsonValue,
               expiresAt,
             },
           })
