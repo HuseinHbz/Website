@@ -14,7 +14,7 @@ router.get(
   validate(paginationSchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { page, limit } = req.query as { page: number; limit: number };
+      const { page, limit } = req.query as unknown as { page: number; limit: number };
       const result = await usersService.listUsers(page, limit);
       paginated(res, result.users, result.meta);
     } catch (err) {
@@ -28,7 +28,7 @@ router.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = await usersService.getUserById(req.params['id']!);
+      const user = await usersService.getUserById((req.params['id'] as string));
       ok(res, user);
     } catch (err) {
       next(err);
@@ -61,7 +61,7 @@ router.patch(
   auditLog('update', 'user'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = await usersService.updateUser(req.params['id']!, req.body);
+      const user = await usersService.updateUser((req.params['id'] as string), req.body);
       ok(res, user);
     } catch (err) {
       next(err);
@@ -76,7 +76,7 @@ router.delete(
   auditLog('delete', 'user'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await usersService.softDeleteUser(req.params['id']!);
+      await usersService.softDeleteUser((req.params['id'] as string));
       noContent(res);
     } catch (err) {
       next(err);
@@ -91,7 +91,7 @@ router.post(
   auditLog('reset-password', 'user'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await usersService.resetPassword(req.params['id']!);
+      const result = await usersService.resetPassword((req.params['id'] as string));
       ok(res, result);
     } catch (err) {
       next(err);

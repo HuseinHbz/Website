@@ -15,7 +15,7 @@ export function auditLog(action: string, resource: string) {
 
       // Fire and forget audit log
       const resourceId =
-        req.params['id'] || (res.locals['createdId'] as string | undefined);
+        (req.params['id'] as string | undefined) || (res.locals['createdId'] as string | undefined);
 
       prisma.auditLog
         .create({

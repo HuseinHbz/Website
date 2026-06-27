@@ -21,7 +21,7 @@ export async function listRoles() {
     },
   });
 
-  return roles.map((r) => ({
+  return roles.map((r: { id: string; name: string; permissions: string[]; _count: { users: number }; createdAt: Date; updatedAt: Date }) => ({
     id: r.id,
     name: r.name,
     permissions: r.permissions,

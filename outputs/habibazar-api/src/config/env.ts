@@ -53,13 +53,13 @@ const envSchema = z.object({
   OLLAMA_BASE_URL: z.string().url().default('http://localhost:11434'),
   OLLAMA_MODEL: z.string().default('llama3.1'),
 
-  // SMTP
-  SMTP_HOST: z.string(),
+  // SMTP (optional — if not configured, email sending is skipped gracefully)
+  SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_USER: z.string(),
-  SMTP_PASS: z.string(),
-  MAIL_FROM: z.string().email(),
-  MAIL_NOTIFY_TO: z.string().email(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().email().optional(),
+  MAIL_NOTIFY_TO: z.string().email().optional(),
 
   // R2 / Backup
   R2_BUCKET: z.string().optional(),

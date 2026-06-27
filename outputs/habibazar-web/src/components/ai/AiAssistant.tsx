@@ -185,7 +185,8 @@ export function AiAssistant({ locale }: AiAssistantProps) {
         throw new Error(`HTTP ${res.status}`)
       }
 
-      const data = await res.json() as { id: string; greeting?: string }
+      const json = await res.json()
+      const data = (json.data ?? json) as { id: string; greeting?: string }
       setConversationId(data.id)
 
       // Add greeting if provided
@@ -246,7 +247,7 @@ export function AiAssistant({ locale }: AiAssistantProps) {
             'Content-Type': 'application/json',
             Accept: 'text/event-stream',
           },
-          body: JSON.stringify({ content, locale: chatLocale }),
+          body: JSON.stringify({ message: content, locale: chatLocale }),
         }
       )
 

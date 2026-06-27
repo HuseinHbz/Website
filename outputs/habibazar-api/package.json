@@ -7,7 +7,7 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "test": "node --test tests/**/*.test.ts",
-    "db:hardening": "psql $DATABASE_URL -f prisma/sql/hardening.sql",
+    "db:hardening": "node --env-file=.env -e \"const {execFileSync}=require('child_process');execFileSync('psql',[process.env.DATABASE_URL,'-f','prisma/sql/hardening.sql'],{stdio:'inherit'})\"",
     "db:cleanup": "tsx src/jobs/cleanup.ts"
   },
   "dependencies": {

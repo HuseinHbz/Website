@@ -11,6 +11,10 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function isSmtpConfigured(): boolean {
+  return !!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.MAIL_FROM && env.MAIL_NOTIFY_TO);
+}
+
 function createTransport() {
   return nodemailer.createTransport({
     host: env.SMTP_HOST,
@@ -37,6 +41,10 @@ export interface LeadData {
 }
 
 export async function sendLeadNotification(lead: LeadData): Promise<void> {
+  if (!isSmtpConfigured()) {
+    logger.warn({ leadId: lead.id }, 'SMTP not configured — skipping lead notification email');
+    return;
+  }
   const transport = createTransport();
 
   const html = `
@@ -70,6 +78,10 @@ export async function sendLeadNotification(lead: LeadData): Promise<void> {
 
 export async function sendLeadAcknowledgement(lead: LeadData): Promise<void> {
   if (!lead.email || !lead.marketingConsent) return;
+  if (!isSmtpConfigured()) {
+    logger.warn({ leadId: lead.id }, 'SMTP not configured — skipping lead acknowledgement email');
+    return;
+  }
 
   const transport = createTransport();
 
@@ -111,6 +123,10 @@ export async function sendConsultationConfirmation(data: {
   kind: string;
   preferredDate?: Date | null;
 }): Promise<void> {
+  if (!isSmtpConfigured()) {
+    logger.warn('SMTP not configured — skipping consultation confirmation email');
+    return;
+  }
   const transport = createTransport();
 
   const html = `

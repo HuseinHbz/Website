@@ -36,7 +36,7 @@ router.post(
   aiLimiter,
   validate(chatMessageSchema),
   async (req: Request, res: Response, next: NextFunction) => {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const { message, locale } = req.body as { message: string; locale: 'FA' | 'EN' };
 
     // Set up SSE headers

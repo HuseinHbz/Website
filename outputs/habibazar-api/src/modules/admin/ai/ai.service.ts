@@ -1,4 +1,4 @@
-import { AssistantCategory, Locale } from '@prisma/client';
+import { AssistantCategory, Locale } from '../../../lib/enums';
 import prisma from '../../../db/prisma';
 import { buildPaginationMeta, buildPrismaSkipTake } from '../../../lib/pagination';
 import { NotFoundError } from '../../../lib/errors';
@@ -15,15 +15,16 @@ export async function listConversations(
   limit: number,
   filters: ConversationFilters,
 ) {
-  const where: Parameters<typeof prisma.conversation.findMany>[0]['where'] = {};
-
-  if (filters.category) where.category = filters.category;
-  if (filters.locale) where.locale = filters.locale;
-  if (filters.dateFrom || filters.dateTo) {
-    where.createdAt = {};
-    if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;
-    if (filters.dateTo) where.createdAt.lte = filters.dateTo;
-  }
+  const where: Record<string, unknown> = {
+    ...(filters.category !== undefined && { category: filters.category }),
+    ...(filters.locale !== undefined && { locale: filters.locale }),
+    ...((filters.dateFrom || filters.dateTo) && {
+      createdAt: {
+        ...(filters.dateFrom && { gte: filters.dateFrom }),
+        ...(filters.dateTo && { lte: filters.dateTo }),
+      },
+    }),
+  };
 
   const [total, conversations] = await Promise.all([
     prisma.conversation.count({ where }),
@@ -105,13 +106,13 @@ export async function getAiAnalytics() {
   ]);
 
   return {
-    byCategory: byCategory.map((c) => ({ category: c.category, count: c._count.id })),
-    byLocale: byLocale.map((c) => ({ locale: c.locale, count: c._count.id })),
+    byCategory: byCategory.map((c: { category: string | null; _count: { id: number } }) => ({ category: c.category, count: c._count.id })),
+    byLocale: byLocale.map((c: { locale: string | null; _count: { id: number } }) => ({ locale: c.locale, count: c._count.id })),
     totals: {
       conversations: avgTurns._count.id,
       totalTurns: avgTurns._sum.turnCount ?? 0,
       avgTurns: avgTurns._avg.turnCount ?? 0,
     },
-    daily: dailyCounts.map((d) => ({ date: d.date, count: Number(d.count) })),
+    daily: dailyCounts.map((d: { date: string; count: bigint }) => ({ date: d.date, count: Number(d.count) })),
   };
 }

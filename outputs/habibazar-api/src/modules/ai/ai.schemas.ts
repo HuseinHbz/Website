@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AssistantCategory } from '@prisma/client';
+import { AssistantCategory } from '../../lib/enums';
 
 export const intakeSchema = z.object({
   name: z.string().min(1).max(255).optional(),

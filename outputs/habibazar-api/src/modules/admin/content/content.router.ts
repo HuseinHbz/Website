@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { ContentStatus } from '@prisma/client';
+import { ContentStatus } from '../../../lib/enums';
 import { createContentRouter } from '../../content/resource.factory';
 import { authorize } from '../../../middleware/authorize';
 import { auditLog } from '../../../middleware/audit';
@@ -18,7 +18,7 @@ const serviceCreateSchema = z.object({
   descriptionFa: z.string().min(1),
   descriptionEn: z.string().min(1),
   icon: z.string().max(255).optional(),
-  status: z.nativeEnum(ContentStatus).default('DRAFT'),
+  status: z.nativeEnum(ContentStatus).default(ContentStatus.DRAFT),
   sortOrder: z.number().int().default(0),
 });
 const serviceUpdateSchema = serviceCreateSchema.partial();
@@ -35,7 +35,7 @@ const caseStudyCreateSchema = z.object({
   coverImage: z.string().url().optional(),
   clientName: z.string().max(255).optional(),
   industry: z.string().max(255).optional(),
-  status: z.nativeEnum(ContentStatus).default('DRAFT'),
+  status: z.nativeEnum(ContentStatus).default(ContentStatus.DRAFT),
   featured: z.boolean().default(false),
   publishedAt: z.string().datetime().optional().transform(v => v ? new Date(v) : undefined),
 });
@@ -52,7 +52,7 @@ const postCreateSchema = z.object({
   bodyEn: z.string().min(1),
   coverImage: z.string().url().optional(),
   authorId: z.string().uuid().optional(),
-  status: z.nativeEnum(ContentStatus).default('DRAFT'),
+  status: z.nativeEnum(ContentStatus).default(ContentStatus.DRAFT),
   publishedAt: z.string().datetime().optional().transform(v => v ? new Date(v) : undefined),
 });
 const postUpdateSchema = postCreateSchema.partial();
@@ -64,7 +64,7 @@ const pageCreateSchema = z.object({
   titleEn: z.string().min(1).max(255),
   bodyFa: z.string().min(1),
   bodyEn: z.string().min(1),
-  status: z.nativeEnum(ContentStatus).default('DRAFT'),
+  status: z.nativeEnum(ContentStatus).default(ContentStatus.DRAFT),
 });
 const pageUpdateSchema = pageCreateSchema.partial();
 
@@ -180,11 +180,11 @@ testimonialRouter.patch(
   auditLog('approve', 'testimonial'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const testimonial = await prisma.testimonial.findFirst({ where: { id: req.params['id'] } });
+      const testimonial = await prisma.testimonial.findFirst({ where: { id: req.params['id'] as string } });
       if (!testimonial) throw new NotFoundError('Testimonial');
 
       const updated = await prisma.testimonial.update({
-        where: { id: req.params['id'] },
+        where: { id: req.params['id'] as string },
         data: { approved: true },
       });
       ok(res, updated);
@@ -215,9 +215,9 @@ router.delete(
   auditLog('delete', 'media'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const asset = await prisma.mediaAsset.findFirst({ where: { id: req.params['id'] } });
+      const asset = await prisma.mediaAsset.findFirst({ where: { id: req.params['id'] as string } });
       if (!asset) throw new NotFoundError('MediaAsset');
-      await prisma.mediaAsset.delete({ where: { id: req.params['id'] } });
+      await prisma.mediaAsset.delete({ where: { id: req.params['id'] as string } });
       res.status(204).send();
     } catch (err) {
       next(err);

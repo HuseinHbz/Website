@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../lib/jwt';
 import { UnauthorizedError } from '../lib/errors';
 import prisma from '../db/prisma';
-import { UserStatus } from '@prisma/client';
+import { UserStatus } from '../lib/enums';
 
 // Extend Express Request type
 declare global {
