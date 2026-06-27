@@ -8,7 +8,7 @@ This runbook covers a full production deployment of the Habibazar platform on a 
   - SQLite (better-sqlite3 + drizzle-orm) — no external DB required
 - **habibazar-api** — Express + Prisma + pgvector API (port 4000)
 - **Nginx** — reverse proxy / TLS termination
-- **PostgreSQL 16** — database for the API (pgvector extension)
+- **PostgreSQL 17** — database for the API (pgvector extension)
 - **PM2** — process manager (cluster mode for API, fork for web)
 - **Cloudflare** — DNS, CDN, WAF, SSL (Full-strict mode)
 
@@ -133,7 +133,7 @@ sudo chown -R deploy:deploy /var/log/pm2
 
 > **Note:** PostgreSQL is only required for **habibazar-api**. The web app uses its own embedded SQLite database stored at `/var/www/habibazar/web/data/habibazar.db`.
 
-### 3.1 Install PostgreSQL 16
+### 3.1 Install PostgreSQL 17
 
 ```bash
 sudo apt install -y postgresql postgresql-contrib
@@ -144,19 +144,19 @@ Verify the version:
 
 ```bash
 psql --version
-# postgresql 16.x
+# postgresql 17.x
 ```
 
 ### 3.2 Install pgvector extension
 
 ```bash
-sudo apt install -y postgresql-16-pgvector
+sudo apt install -y postgresql-17-pgvector
 ```
 
 Alternatively, build from source if the package is not available:
 
 ```bash
-sudo apt install -y postgresql-server-dev-16
+sudo apt install -y postgresql-server-dev-17
 git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector
 cd /tmp/pgvector
 make && sudo make install
@@ -190,10 +190,10 @@ sudo -u postgres psql -d habibazar -c "\dx"
 
 ### 3.5 Tune PostgreSQL for production (optional but recommended)
 
-Edit `/etc/postgresql/16/main/postgresql.conf`:
+Edit `/etc/postgresql/17/main/postgresql.conf`:
 
 ```bash
-sudo nano /etc/postgresql/16/main/postgresql.conf
+sudo nano /etc/postgresql/17/main/postgresql.conf
 ```
 
 Adjust these settings (tune for your RAM; values below assume 4 GB):
@@ -1263,7 +1263,7 @@ sudo tail -f /var/log/nginx/access.log  # Watch access log
 sudo -u postgres psql -d habibazar        # Enter psql as postgres
 psql $DATABASE_URL                        # Connect with env var
 sudo systemctl restart postgresql         # Restart DB
-sudo tail -f /var/log/postgresql/postgresql-16-main.log  # DB logs
+sudo tail -f /var/log/postgresql/postgresql-17-main.log  # DB logs
 ```
 
 ### SQLite commands (web admin database)
