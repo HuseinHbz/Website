@@ -157,6 +157,7 @@ export function ProjectsSection({ locale = 'en' }: ProjectsSectionProps) {
                 onClick={() => setSelectedProject(project)}
                 whileHover={{ y: -4 }}
                 transition={{ duration: 0.2 }}
+                dir={isRTL ? 'rtl' : 'ltr'}
               >
                 <div
                   className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
@@ -196,10 +197,13 @@ export function ProjectsSection({ locale = 'en' }: ProjectsSectionProps) {
                     </span>
                   ))}
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                  <div className="flex gap-1">
+                <div
+                  className="flex items-center justify-between gap-2 pt-3 border-t border-border/50"
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                >
+                  <div className="flex flex-wrap gap-1 min-w-0">
                     {project.technologies.slice(0, 3).map((tech) => (
-                      <span key={tech} className="px-2 py-0.5 text-xs bg-surface border border-border rounded-md font-mono">
+                      <span key={tech} className="px-2 py-0.5 text-xs bg-surface border border-border rounded-md font-mono whitespace-nowrap">
                         {tech}
                       </span>
                     ))}
@@ -209,8 +213,8 @@ export function ProjectsSection({ locale = 'en' }: ProjectsSectionProps) {
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-accent font-medium group-hover:text-accent-hover transition-colors">
-                    {isRTL ? 'مشاهده مطالعه موردی ←' : 'View Case Study →'}
+                  <span className="text-xs text-accent font-medium group-hover:text-accent-hover transition-colors whitespace-nowrap flex-shrink-0">
+                    {isRTL ? '← مشاهده موردی' : 'View Case Study →'}
                   </span>
                 </div>
               </motion.div>
