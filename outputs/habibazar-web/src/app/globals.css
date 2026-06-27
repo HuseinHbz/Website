@@ -200,3 +200,14 @@
   stroke-dasharray: 6 4;
   animation: dashFlow 1.5s linear infinite;
 }
+
+/* Marquee / ticker animations */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marqueeReverse {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
