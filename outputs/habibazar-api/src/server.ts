@@ -1,3 +1,7 @@
+import { config as loadEnv } from 'dotenv';
+import path from 'path';
+loadEnv({ path: path.resolve(__dirname, '../.env') });
+
 import app from './app';
 import { env } from './config/env';
 import logger from './lib/logger';
