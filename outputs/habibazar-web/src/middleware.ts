@@ -25,6 +25,9 @@ export async function middleware(request: NextRequest) {
 
   // ── Admin API routes (/api/admin/*) ──────────────────────────────────────
   if (pathname.startsWith('/api/admin')) {
+    // Login endpoint is public — it creates the token
+    if (pathname === '/api/admin/auth/login') return NextResponse.next()
+
     const token = request.cookies.get('admin_token')?.value
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
