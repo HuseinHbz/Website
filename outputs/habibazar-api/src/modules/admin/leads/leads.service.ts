@@ -120,7 +120,7 @@ export async function addLeadEvent(
     data: {
       leadId,
       event: data.event,
-      metadata: data.metadata ?? Prisma.JsonNull,
+      metadata: (data.metadata ?? null) as Prisma.InputJsonValue | null,
     },
   });
 }

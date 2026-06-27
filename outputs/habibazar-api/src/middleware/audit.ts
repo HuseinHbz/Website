@@ -23,7 +23,7 @@ export function auditLog(action: string, resource: string) {
             userId: req.user?.id ?? null,
             action,
             resource,
-            resourceId: resourceId ?? null,
+            resourceId: Array.isArray(resourceId) ? (resourceId[0] ?? null) : (resourceId ?? null),
             metadata: {
               method: req.method,
               path: req.path,

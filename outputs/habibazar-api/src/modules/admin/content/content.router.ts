@@ -180,11 +180,11 @@ testimonialRouter.patch(
   auditLog('approve', 'testimonial'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const testimonial = await prisma.testimonial.findFirst({ where: { id: req.params['id'] } });
+      const testimonial = await prisma.testimonial.findFirst({ where: { id: req.params.id as string } });
       if (!testimonial) throw new NotFoundError('Testimonial');
 
       const updated = await prisma.testimonial.update({
-        where: { id: req.params['id'] },
+        where: { id: req.params.id as string },
         data: { approved: true },
       });
       ok(res, updated);
@@ -215,9 +215,9 @@ router.delete(
   auditLog('delete', 'media'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const asset = await prisma.mediaAsset.findFirst({ where: { id: req.params['id'] } });
+      const asset = await prisma.mediaAsset.findFirst({ where: { id: req.params.id as string } });
       if (!asset) throw new NotFoundError('MediaAsset');
-      await prisma.mediaAsset.delete({ where: { id: req.params['id'] } });
+      await prisma.mediaAsset.delete({ where: { id: req.params.id as string } });
       res.status(204).send();
     } catch (err) {
       next(err);

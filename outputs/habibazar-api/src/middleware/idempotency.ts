@@ -49,11 +49,11 @@ export async function idempotency(
             where: { key },
             create: {
               key,
-              response: { status: res.statusCode, body },
+              response: { status: res.statusCode, body: body as Record<string, unknown> },
               expiresAt,
             },
             update: {
-              response: { status: res.statusCode, body },
+              response: { status: res.statusCode, body: body as Record<string, unknown> },
               expiresAt,
             },
           })
