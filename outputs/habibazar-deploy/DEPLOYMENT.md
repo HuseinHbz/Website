@@ -283,30 +283,32 @@ cd /var/www/habibazar/web && npm install --omit=dev
 ### 6.1 Copy environment file
 
 ```bash
-cp /path/to/your/api.env /var/www/habibazar/api/.env
+cp /var/www/habibazar/api/.env.example /var/www/habibazar/api/.env
 chmod 600 /var/www/habibazar/api/.env
+nano /var/www/habibazar/api/.env
 ```
 
-The `.env` must contain all required variables from `.env.example`. Critical values to set:
+Fill in every value marked below. Leave optional AI providers blank if not used.
 
-```env
-NODE_ENV=production
-PORT=4000
-DATABASE_URL=postgresql://habibazar:CHANGE_ME_STRONG_PASSWORD@127.0.0.1:5432/habibazar
-ACCESS_TOKEN_SECRET=<random 64-char string>
-REFRESH_TOKEN_SECRET=<random 64-char string>
-ENCRYPTION_KEY=<random 64 hex chars = 32 bytes>
-CORS_ORIGINS=https://habibazar.ir,https://www.habibazar.ir
-OWNER_EMAIL=hosseinhabibazar@live.com
-```
+| Variable | Action required |
+|----------|----------------|
+| `DATABASE_URL` | Replace `PASSWORD` with the PostgreSQL password from step 3.3 |
+| `ACCESS_TOKEN_SECRET` | Replace with a random 64-char hex string (see below) |
+| `REFRESH_TOKEN_SECRET` | Replace with a different random 64-char hex string |
+| `ENCRYPTION_KEY` | Replace with exactly 64 hex characters (32 bytes) |
+| `CORS_ORIGINS` | Set to `https://habibazar.ir,https://www.habibazar.ir` |
+| `OPENAI_API_KEY` | Your OpenAI key, or leave blank and set `AI_PROVIDER=anthropic` |
+| `ANTHROPIC_API_KEY` | Your Anthropic key if using Claude as AI provider |
+| `SMTP_HOST/USER/PASS` | Your mail server credentials |
+| `R2_BUCKET/ENDPOINT` | Cloudflare R2 credentials for backups |
 
 Generate secure secrets:
 
 ```bash
-# ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET
+# ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET (run twice, use different outputs)
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
-# ENCRYPTION_KEY (must be exactly 64 hex characters)
+# ENCRYPTION_KEY (must be exactly 64 hex characters = 32 bytes)
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
@@ -402,17 +404,17 @@ If either check fails, inspect logs before continuing.
 ### 7.1 Copy environment file
 
 ```bash
-cp /path/to/your/web.env /var/www/habibazar/web/.env.local
+cp /var/www/habibazar/web/.env.example /var/www/habibazar/web/.env.local
 chmod 600 /var/www/habibazar/web/.env.local
+nano /var/www/habibazar/web/.env.local
 ```
 
-Required values:
+The example file contains two variables. Add `ADMIN_JWT_SECRET` which is required but not in the example:
 
 ```env
-NODE_ENV=production
 NEXT_PUBLIC_SITE_URL=https://habibazar.ir
 NEXT_PUBLIC_API_URL=https://api.habibazar.ir
-ADMIN_JWT_SECRET=<random 64-char string — must be kept secret>
+ADMIN_JWT_SECRET=<random 64-char hex string — generate below>
 ```
 
 Generate `ADMIN_JWT_SECRET`:
