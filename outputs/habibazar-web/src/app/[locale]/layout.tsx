@@ -5,6 +5,7 @@ import { getMessages, getTranslations } from 'next-intl/server'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { cn } from '@/lib/utils'
 import { SITE } from '@/lib/site'
+import { AnalyticsTracker } from '@/components/AnalyticsTracker'
 import '../globals.css'
 
 const inter = Inter({
@@ -135,6 +136,7 @@ export default async function RootLayout({ children, params }: Props) {
           {isRTL ? 'رفتن به محتوا' : 'Skip to content'}
         </a>
         <NextIntlClientProvider messages={messages}>
+          <AnalyticsTracker locale={locale} />
           {children}
         </NextIntlClientProvider>
       </body>

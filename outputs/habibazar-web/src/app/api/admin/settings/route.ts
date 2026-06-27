@@ -6,25 +6,31 @@ import { getAdminUser } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
-  const db = getDb()
-  const rows = await db.select().from(siteSettings).all()
-  const obj: Record<string, string> = {}
-  for (const r of rows) obj[r.key] = r.value ?? ''
-  return NextResponse.json(obj)
+  try {      const db = getDb()
+      const rows = await db.select().from(siteSettings).all()
+      const obj: Record<string, string> = {}
+      for (const r of rows) obj[r.key] = r.value ?? ''
+      return NextResponse.json(obj)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+  }
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await getAdminUser()
-  const body = await req.json() as Record<string, string>
-  const db = getDb()
-  for (const [key, value] of Object.entries(body)) {
-    const existing = await db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
-    if (existing) {
-      await db.update(siteSettings).set({ value, updatedAt: new Date().toISOString(), updatedBy: user?.id }).where(eq(siteSettings.key, key))
-    } else {
-      await db.insert(siteSettings).values({ key, value, updatedBy: user?.id })
-    }
+  try {      const user = await getAdminUser()
+      const body = await req.json() as Record<string, string>
+      const db = getDb()
+      for (const [key, value] of Object.entries(body)) {
+        const existing = await db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
+        if (existing) {
+          await db.update(siteSettings).set({ value, updatedAt: new Date().toISOString(), updatedBy: user?.id }).where(eq(siteSettings.key, key))
+        } else {
+          await db.insert(siteSettings).values({ key, value, updatedBy: user?.id })
+        }
+      }
+      await logAction(user, 'UPDATE', 'site_settings', undefined, undefined, body)
+      return NextResponse.json({ ok: true })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
   }
-  await logAction(user, 'UPDATE', 'site_settings', undefined, undefined, body)
-  return NextResponse.json({ ok: true })
 }

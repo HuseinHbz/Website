@@ -4,6 +4,7 @@ import { analyticsEvents, contactRequests, consultationRequests, blogPosts, proj
 import { sql, eq, gte, desc } from 'drizzle-orm'
 
 export async function GET() {
+  try {
   const db = getDb()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -62,4 +63,7 @@ export async function GET() {
     topPages,
     recentActivity: recentLogs,
   })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+  }
 }
