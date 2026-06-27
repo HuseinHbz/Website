@@ -270,9 +270,11 @@ cat /home/deploy/.ssh/id_ed25519.pub
 ### 5.2 Install dependencies
 
 ```bash
-cd /var/www/habibazar/api && npm ci --omit=dev
-cd /var/www/habibazar/web && npm ci --omit=dev
+cd /var/www/habibazar/api && npm install --omit=dev
+cd /var/www/habibazar/web && npm install --omit=dev
 ```
+
+> **Note:** `npm ci` requires a committed `package-lock.json`. Use `npm install` instead — it installs from `package.json` and generates the lock file on first run. On subsequent deploys you can use `npm ci` if the lock file was committed.
 
 ---
 
@@ -1097,7 +1099,7 @@ git pull origin main
 cd /var/www/habibazar/api
 
 # Install any new dependencies
-npm ci --omit=dev
+npm install --omit=dev
 
 # Apply any new database migrations
 npx prisma migrate deploy
@@ -1122,7 +1124,7 @@ curl -s http://127.0.0.1:4000/health
 cd /var/www/habibazar/web
 
 # Install any new dependencies
-npm ci --omit=dev
+npm install --omit=dev
 
 # Rebuild Next.js (also runs SQLite migrations on first request after restart)
 npm run build
