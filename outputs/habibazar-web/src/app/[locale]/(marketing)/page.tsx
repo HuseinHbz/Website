@@ -8,6 +8,14 @@ import { AiTeaser } from '@/components/sections/AiTeaser'
 import { ClosingCta } from '@/components/sections/ClosingCta'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { siteGraphSchema } from '@/lib/schema'
+import {
+  getPublicProjects,
+  getPublicServices,
+  getPublicSkills,
+  getPublicCerts,
+  getPublicClients,
+  getPublicTimeline,
+} from '@/lib/publicData'
 
 interface Props {
   params: Promise<{ locale: string }>
@@ -16,15 +24,24 @@ interface Props {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
 
+  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline] = await Promise.all([
+    getPublicProjects(),
+    getPublicServices(),
+    getPublicSkills(),
+    getPublicCerts(),
+    getPublicClients(),
+    getPublicTimeline(),
+  ])
+
   return (
     <>
       <JsonLd schema={siteGraphSchema()} />
       <Hero locale={locale} />
       <ProofBar locale={locale} />
-      <ServicesSection locale={locale} />
-      <ProjectsSection locale={locale} />
-      <AboutSection locale={locale} />
-      <CompanyPortfolio locale={locale} />
+      <ServicesSection locale={locale} dbServices={dbServices} />
+      <ProjectsSection locale={locale} dbProjects={dbProjects} />
+      <AboutSection locale={locale} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
+      <CompanyPortfolio locale={locale} dbClients={dbClients} />
       <AiTeaser locale={locale} />
       <ClosingCta locale={locale} />
     </>

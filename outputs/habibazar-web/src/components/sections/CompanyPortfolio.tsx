@@ -3,8 +3,11 @@
 import { motion } from 'framer-motion'
 import { staggerContainer, slideUp, fadeIn } from '@/lib/motion'
 
+interface DbClient { nameEn: string; nameFa: string; typeEn: string | null; typeFa: string | null; isTechPartner: boolean; logoUrl?: string | null }
+
 interface CompanyPortfolioProps {
   locale?: string
+  dbClients?: DbClient[]
 }
 
 const CLIENTS = [
@@ -88,9 +91,17 @@ function MarqueeRow({ items, reverse = false, speed = 30, isRTL = false }: {
   )
 }
 
-export function CompanyPortfolio({ locale = 'en' }: CompanyPortfolioProps) {
+export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioProps) {
   const isRTL = locale === 'fa'
   const STATS = isRTL ? STATS_FA : STATS_EN
+
+  const regularClients = (dbClients && dbClients.length > 0)
+    ? dbClients.filter(c => !c.isTechPartner).map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, icon: '🏢', typeEn: c.typeEn || '', typeFa: c.typeFa || '' }))
+    : CLIENTS
+
+  const techPartners = (dbClients && dbClients.length > 0)
+    ? dbClients.filter(c => c.isTechPartner).map(c => ({ name: c.nameEn, icon: '🔧', color: '#6366f1' }))
+    : TECH_PARTNERS
 
   return (
     <section className="section-padding relative overflow-hidden" id="clients">
@@ -125,8 +136,8 @@ export function CompanyPortfolio({ locale = 'en' }: CompanyPortfolioProps) {
       <div className="space-y-4 relative">
         <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background: 'linear-gradient(90deg, #07070d, transparent)' }} />
         <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background: 'linear-gradient(270deg, #07070d, transparent)' }} />
-        <MarqueeRow items={CLIENTS} speed={35} isRTL={isRTL} />
-        <MarqueeRow items={TECH_PARTNERS} reverse speed={28} isRTL={isRTL} />
+        <MarqueeRow items={regularClients} speed={35} isRTL={isRTL} />
+        <MarqueeRow items={techPartners} reverse speed={28} isRTL={isRTL} />
       </div>
 
       {/* Stats */}

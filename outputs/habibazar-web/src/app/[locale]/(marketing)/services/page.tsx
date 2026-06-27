@@ -1,6 +1,7 @@
 import { ServicesSection } from '@/components/sections/ServicesSection'
 import { ClosingCta } from '@/components/sections/ClosingCta'
 import { SITE } from '@/lib/site'
+import { getPublicServices } from '@/lib/publicData'
 import type { Metadata } from 'next'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -25,10 +26,11 @@ interface Props {
 
 export default async function ServicesPage({ params }: Props) {
   const { locale } = await params
+  const dbServices = await getPublicServices()
 
   return (
     <div className="pt-16">
-      <ServicesSection locale={locale} />
+      <ServicesSection locale={locale} dbServices={dbServices} />
       <ClosingCta locale={locale} />
     </div>
   )

@@ -19,8 +19,15 @@ interface ServiceData {
   technologies: string[]
 }
 
+interface DbService {
+  id: number; slug: string; titleEn: string; titleFa: string; categoryEn: string; categoryFa: string
+  shortDescEn: string | null; shortDescFa: string | null; featuresEn: string | null; featuresFa: string | null
+  icon: string | null; color: string | null
+}
+
 interface ServicesSectionProps {
   locale?: string
+  dbServices?: DbService[]
 }
 
 const SERVICES: ServiceData[] = [
@@ -155,16 +162,40 @@ const SERVICES: ServiceData[] = [
 const CATEGORIES_EN = ['All', 'Infrastructure', 'Security', 'Operations', 'Systems', 'Communications', 'DevOps']
 const CATEGORIES_FA = ['همه', 'زیرساخت', 'امنیت', 'عملیات', 'سیستم', 'ارتباطات', 'دواپس']
 
-export function ServicesSection({ locale = 'en' }: ServicesSectionProps) {
+function parseArr(v: string | null | undefined): string[] {
+  if (!v) return []
+  try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+}
+
+export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionProps) {
   const isRTL = locale === 'fa'
   const [activeCategory, setActiveCategory] = useState(isRTL ? 'همه' : 'All')
   const [expandedService, setExpandedService] = useState<string | null>(null)
 
-  const CATEGORIES = isRTL ? CATEGORIES_FA : CATEGORIES_EN
+  const SERVICES_DATA: ServiceData[] = (dbServices && dbServices.length > 0)
+    ? dbServices.map((s) => ({
+        id: s.slug,
+        icon: s.icon || '🔧',
+        titleEn: s.titleEn,
+        titleFa: s.titleFa,
+        categoryEn: s.categoryEn,
+        categoryFa: s.categoryFa,
+        color: s.color || '#6366f1',
+        shortDescEn: s.shortDescEn || '',
+        shortDescFa: s.shortDescFa || '',
+        featuresEn: parseArr(s.featuresEn),
+        featuresFa: parseArr(s.featuresFa),
+        technologies: [],
+      }))
+    : SERVICES
+
+  const allCatsEn = ['All', ...Array.from(new Set(SERVICES_DATA.map(s => s.categoryEn)))]
+  const allCatsFa = ['همه', ...Array.from(new Set(SERVICES_DATA.map(s => s.categoryFa)))]
+  const CATEGORIES = isRTL ? allCatsFa : allCatsEn
 
   const filtered = (activeCategory === 'All' || activeCategory === 'همه')
-    ? SERVICES
-    : SERVICES.filter(s => (isRTL ? s.categoryFa : s.categoryEn) === activeCategory)
+    ? SERVICES_DATA
+    : SERVICES_DATA.filter(s => (isRTL ? s.categoryFa : s.categoryEn) === activeCategory)
 
   return (
     <section className="section-padding relative overflow-hidden" id="services">

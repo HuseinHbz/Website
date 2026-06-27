@@ -1,6 +1,7 @@
 import { ProjectsSection } from '@/components/sections/ProjectsSection'
 import { ClosingCta } from '@/components/sections/ClosingCta'
 import { SITE } from '@/lib/site'
+import { getPublicProjects } from '@/lib/publicData'
 import type { Metadata } from 'next'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -25,10 +26,11 @@ interface Props {
 
 export default async function ProjectsPage({ params }: Props) {
   const { locale } = await params
+  const dbProjects = await getPublicProjects()
 
   return (
     <div className="pt-16">
-      <ProjectsSection locale={locale} />
+      <ProjectsSection locale={locale} dbProjects={dbProjects} />
       <ClosingCta locale={locale} />
     </div>
   )

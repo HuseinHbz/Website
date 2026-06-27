@@ -4,8 +4,15 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
 
+interface DbTimeline { year: string; titleEn: string; titleFa: string; descEn: string | null; descFa: string | null; color: string | null }
+interface DbSkill { nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number }
+interface DbCert { nameEn: string; nameFa: string; color: string | null }
+
 interface AboutSectionProps {
   locale?: string
+  dbTimeline?: DbTimeline[]
+  dbSkills?: DbSkill[]
+  dbCerts?: DbCert[]
 }
 
 interface TimelineItem {
@@ -131,8 +138,20 @@ function SkillBar({ skill, isRTL, index }: { skill: SkillItem; isRTL: boolean; i
   )
 }
 
-export function AboutSection({ locale = 'en' }: AboutSectionProps) {
+export function AboutSection({ locale = 'en', dbTimeline, dbSkills, dbCerts }: AboutSectionProps) {
   const isRTL = locale === 'fa'
+
+  const TIMELINE_DATA: TimelineItem[] = (dbTimeline && dbTimeline.length > 0)
+    ? dbTimeline.map(t => ({ year: t.year, titleEn: t.titleEn, titleFa: t.titleFa, descEn: t.descEn || '', descFa: t.descFa || '', color: t.color || '#6366f1' }))
+    : TIMELINE
+
+  const SKILLS_DATA: SkillItem[] = (dbSkills && dbSkills.length > 0)
+    ? dbSkills.map(s => ({ nameEn: s.nameEn, nameFa: s.nameFa, categoryEn: s.categoryEn, categoryFa: s.categoryFa, level: s.level }))
+    : SKILLS
+
+  const CERTS_DATA: CertItem[] = (dbCerts && dbCerts.length > 0)
+    ? dbCerts.map(c => ({ name: c.nameEn, icon: '🏅', color: c.color || '#6366f1' }))
+    : CERTS
 
   const BIO_FA = `حسین حبیب‌آذر (HBZ) معمار ارشد زیرساخت و مشاور امنیت شبکه با بیش از ۱۰ سال تجربه سازمانی در صنایع مختلف ایران است.`
   const BIO_DETAIL_FA = `او در طراحی معماری شبکه‌های مقاوم، پیاده‌سازی چارچوب‌های امنیتی چندلایه و ساخت پایپ‌لاین‌های خودکار زیرساخت تخصص دارد که هزینه‌های عملیاتی را کاهش داده و قابلیت اطمینان را افزایش می‌دهد.`
@@ -201,7 +220,7 @@ export function AboutSection({ locale = 'en' }: AboutSectionProps) {
                   {isRTL ? 'گواهینامه‌ها' : 'Certifications'}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {CERTS.map((cert) => (
+                  {CERTS_DATA.map((cert) => (
                     <span
                       key={cert.name}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
@@ -227,7 +246,7 @@ export function AboutSection({ locale = 'en' }: AboutSectionProps) {
               {isRTL ? 'مسیر شغلی' : 'Career Timeline'}
             </h3>
             <div className="space-y-8">
-              {TIMELINE.map((item, i) => (
+              {TIMELINE_DATA.map((item, i) => (
                 <motion.div
                   key={item.year}
                   initial={{ opacity: 0, y: 20 }}
@@ -277,7 +296,7 @@ export function AboutSection({ locale = 'en' }: AboutSectionProps) {
           </div>
           <div className="glass-card p-8">
             <div className="grid md:grid-cols-2 gap-6">
-              {SKILLS.map((skill, i) => (
+              {SKILLS_DATA.map((skill, i) => (
                 <SkillBar key={skill.nameEn} skill={skill} isRTL={isRTL} index={i} />
               ))}
             </div>

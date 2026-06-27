@@ -4,8 +4,16 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
 
+interface DbProject {
+  id: number; slug: string; nameEn: string; nameFa: string; industryEn: string | null; industryFa: string | null
+  clientEn: string | null; clientFa: string | null; challengeEn: string | null; challengeFa: string | null
+  solutionEn: string | null; solutionFa: string | null; resultsEn: string | null; resultsFa: string | null
+  tagsEn: string | null; tagsFa: string | null; coverImage: string | null; color: string | null; year: string | null; featured: boolean
+}
+
 interface ProjectsSectionProps {
   locale?: string
+  dbProjects?: DbProject[]
 }
 
 interface Project {
@@ -112,8 +120,37 @@ const PROJECTS: Project[] = [
   },
 ]
 
-export function ProjectsSection({ locale = 'en' }: ProjectsSectionProps) {
+function parseJsonArray(v: string | null | undefined): string[] {
+  if (!v) return []
+  try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+}
+
+export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionProps) {
   const isRTL = locale === 'fa'
+
+  const PROJECTS_DATA: Project[] = (dbProjects && dbProjects.length > 0)
+    ? dbProjects.map((p) => ({
+        id: p.slug,
+        nameEn: p.nameEn,
+        nameFa: p.nameFa,
+        client: p.clientEn || p.nameEn,
+        industryEn: p.industryEn || '',
+        industryFa: p.industryFa || '',
+        year: p.year || '',
+        color: p.color || '#6366f1',
+        icon: '🏗️',
+        challengeEn: p.challengeEn || '',
+        challengeFa: p.challengeFa || '',
+        solutionEn: p.solutionEn || '',
+        solutionFa: p.solutionFa || '',
+        technologies: parseJsonArray(p.tagsEn),
+        resultsEn: parseJsonArray(p.resultsEn),
+        resultsFa: parseJsonArray(p.resultsFa),
+        tagsEn: parseJsonArray(p.tagsEn),
+        tagsFa: parseJsonArray(p.tagsFa),
+      }))
+    : PROJECTS
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   return (
@@ -144,7 +181,7 @@ export function ProjectsSection({ locale = 'en' }: ProjectsSectionProps) {
         </motion.div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {PROJECTS.map((project, i) => (
+          {PROJECTS_DATA.map((project, i) => (
             <motion.div
               key={project.id}
               initial={{ opacity: 0, y: 30 }}
