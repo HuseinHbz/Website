@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, SectionDivider, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 const PAGES = ['home', 'about', 'services', 'projects', 'blog', 'consultation']
 

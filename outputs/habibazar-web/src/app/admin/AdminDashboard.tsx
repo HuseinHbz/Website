@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { StatCard, Card } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 
 interface DashData {
@@ -35,6 +36,7 @@ const ACTION_COLORS: Record<string, string> = {
 }
 
 export function AdminDashboard() {
+  const t = useT()
   const [data, setData] = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -63,20 +65,20 @@ export function AdminDashboard() {
     <div className="space-y-6">
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Page Views" value={s?.totalViews ?? 0} icon="◉" color="#6366f1" />
-        <StatCard label="Views This Week" value={s?.weeklyViews ?? 0} icon="↑" color="#06b6d4" delta="+last 7 days" />
-        <StatCard label="New Contacts" value={s?.newContacts ?? 0} icon="✉" color="#f59e0b" />
-        <StatCard label="Consultations" value={s?.newConsultations ?? 0} icon="◎" color="#10b981" />
-        <StatCard label="Blog Posts" value={s?.publishedPosts ?? 0} icon="▣" color="#818cf8" />
-        <StatCard label="Active Projects" value={s?.activeProjects ?? 0} icon="◆" color="#ef4444" />
-        <StatCard label="Active Services" value={s?.activeServices ?? 0} icon="◈" color="#f59e0b" />
-        <StatCard label="Uptime" value="99.9%" icon="▲" color="#10b981" />
+        <StatCard label={t('totalViews')} value={s?.totalViews ?? 0} icon="◉" color="#6366f1" />
+        <StatCard label={t('weeklyViews')} value={s?.weeklyViews ?? 0} icon="↑" color="#06b6d4" delta={t('last7Days')} />
+        <StatCard label={t('newContactsLbl')} value={s?.newContacts ?? 0} icon="✉" color="#f59e0b" />
+        <StatCard label={t('consultLbl')} value={s?.newConsultations ?? 0} icon="◎" color="#10b981" />
+        <StatCard label={t('blogPostsLbl')} value={s?.publishedPosts ?? 0} icon="▣" color="#818cf8" />
+        <StatCard label={t('activeProjects')} value={s?.activeProjects ?? 0} icon="◆" color="#ef4444" />
+        <StatCard label={t('activeServices')} value={s?.activeServices ?? 0} icon="◈" color="#f59e0b" />
+        <StatCard label={t('uptime')} value="99.9%" icon="▲" color="#10b981" />
       </div>
 
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Page Views — Last 30 Days</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t('viewsChart')}</h3>
           {data?.dailyViews && data.dailyViews.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={data.dailyViews}>
@@ -98,13 +100,13 @@ export function AdminDashboard() {
             </ResponsiveContainer>
           ) : (
             <div className="h-48 flex items-center justify-center text-slate-600 text-sm">
-              No analytics data yet — install the tracker on public pages
+              {t('noAnalytics')}
             </div>
           )}
         </Card>
 
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Top Pages</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t('topPages')}</h3>
           {data?.topPages && data.topPages.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={data.topPages.slice(0, 8)} layout="vertical">
@@ -118,14 +120,14 @@ export function AdminDashboard() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-48 flex items-center justify-center text-slate-600 text-sm">No page data yet</div>
+            <div className="h-48 flex items-center justify-center text-slate-600 text-sm">{t('noTopPages')}</div>
           )}
         </Card>
       </div>
 
       {/* Recent Activity */}
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">Recent Activity</h3>
+        <h3 className="text-sm font-semibold text-white mb-4">{t('recentActivity')}</h3>
         {data?.recentActivity && data.recentActivity.length > 0 ? (
           <div className="space-y-2">
             {data.recentActivity.map((log) => (
@@ -145,7 +147,7 @@ export function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-600 text-center py-8">No activity yet</p>
+          <p className="text-sm text-slate-600 text-center py-8">{t('noActivity')}</p>
         )}
       </Card>
 

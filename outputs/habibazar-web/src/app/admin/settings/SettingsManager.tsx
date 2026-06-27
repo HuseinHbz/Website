@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, SectionDivider, PageHeader, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Settings = Record<string, string>
 

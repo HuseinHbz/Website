@@ -25,12 +25,19 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser()
-  const body = await req.json()
-  const db = getDb()
-  const result = await db.insert(blogPosts).values({ ...body, updatedBy: user?.id }).returning()
-  await logAction(user, 'CREATE', 'blog_posts', result[0]?.id, null, body)
-  return NextResponse.json(result[0])
+  try {
+    const user = await getAdminUser()
+    const body = await req.json()
+    // strip id if accidentally sent
+    const { id: _id, views: _v, ...data } = body
+    const db = getDb()
+    const result = await db.insert(blogPosts).values({ ...data, updatedBy: user?.id }).returning()
+    await logAction(user, 'CREATE', 'blog_posts', result[0]?.id, null, data)
+    return NextResponse.json(result[0])
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Unknown error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
 
 export async function PUT(req: NextRequest) {

@@ -1,12 +1,23 @@
 import type { Metadata } from 'next'
 import '../globals.css'
+import { runMigrations } from '@/lib/db/migrate'
+import { seedDatabase } from '@/lib/db/seed'
 
 export const metadata: Metadata = {
   title: 'Admin Panel | HBZ',
   robots: { index: false, follow: false },
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+let _initialized = false
+async function ensureInit() {
+  if (_initialized) return
+  runMigrations()
+  await seedDatabase()
+  _initialized = true
+}
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await ensureInit()
   return (
     <html lang="en">
       <body className="bg-[#080810] text-white antialiased font-sans">

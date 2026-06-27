@@ -2,28 +2,31 @@
 
 import { useState, useEffect } from 'react'
 import { Card, PageHeader, Table, TR, TD, Badge } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Log = { id: number; userEmail: string; action: string; resource: string; resourceId: string; createdAt: string; ipAddress: string }
 const ACTION_COLOR: Record<string, string> = { CREATE: 'green', UPDATE: 'blue', DELETE: 'red', LOGIN: 'yellow', UPLOAD: 'indigo' }
 
 export function AuditView() {
+  const t = useT()
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/admin/audit-logs?limit=200')
       .then((r) => r.json())
-      .then((d) => { setLogs(d); setLoading(false) })
+      .then((d) => { setLogs(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [])
 
   return (
     <>
-      <PageHeader title="Audit Logs" subtitle="Complete history of all admin actions" />
+      <PageHeader title={t('auditTitle')} subtitle="Complete history of all admin actions" />
       <Card>
         {loading ? (
-          <div className="text-center py-12 text-slate-500">Loading...</div>
+          <div className="text-center py-12 text-slate-500">{t('loading')}</div>
         ) : (
-          <Table headers={['Timestamp', 'User', 'Action', 'Resource', 'ID', 'IP']}>
+          <Table headers={[t('createdAt'), t('email'), t('action'), t('resource'), 'ID', t('ipAddress')]}>
             {logs.map((log) => (
               <TR key={log.id}>
                 <TD className="text-xs text-slate-500 whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</TD>
@@ -37,7 +40,7 @@ export function AuditView() {
           </Table>
         )}
         {!loading && logs.length === 0 && (
-          <div className="text-center py-12 text-slate-600">No audit logs yet</div>
+          <div className="text-center py-12 text-slate-600">{t('noLogs')}</div>
         )}
       </Card>
     </>

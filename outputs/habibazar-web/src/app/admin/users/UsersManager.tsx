@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type User = { id: string; name: string; email: string; role: string; active: boolean; createdAt: string; lastLogin: string }
 const EMPTY = { name: '', email: '', password: '', role: 'editor' }
@@ -12,9 +13,10 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<typeof EMPTY & { id?: string }>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const t = useT()
   const { toast, ToastContainer } = useToast()
 
-  async function load() { const r = await fetch('/api/admin/users'); setUsers(await r.json()) }
+  async function load() { const r = await fetch('/api/admin/users'); const d = await r.json(); setUsers(Array.isArray(d) ? d : []) }
   useEffect(() => { load() }, [])
 
   async function save() {

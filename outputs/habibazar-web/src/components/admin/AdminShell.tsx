@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
+import { AdminLocaleProvider } from '@/lib/admin/locale'
 import type { AdminUser } from '@/lib/admin/auth'
 
 interface Props {
@@ -45,7 +46,9 @@ export function AdminShell({ user, title, children }: Props) {
       >
         <AdminHeader user={user} title={title} locale={locale} onToggleLocale={toggleLocale} />
         <main className="flex-1 overflow-auto p-6">
-          {children}
+          <AdminLocaleProvider locale={locale}>
+            {children}
+          </AdminLocaleProvider>
         </main>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Item = { id?: number; title: string; type: 'document' | 'faq' | 'snippet' | 'url'; content: string; fileUrl: string; sourceUrl: string; tags: string; locale: string; active: boolean; priority: number }
 const EMPTY: Item = { title: '', type: 'snippet', content: '', fileUrl: '', sourceUrl: '', tags: '', locale: 'both', active: true, priority: 0 }
@@ -11,9 +12,10 @@ export function AiKbManager() {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Item>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const t = useT()
   const { toast, ToastContainer } = useToast()
 
-  async function load() { const r = await fetch('/api/admin/ai-kb'); setItems(await r.json()) }
+  async function load() { const r = await fetch('/api/admin/ai-kb'); const d = await r.json(); setItems(Array.isArray(d) ? d : []) }
   useEffect(() => { load() }, [])
 
   async function save() {

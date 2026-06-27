@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Btn, PageHeader, Badge, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type MediaFile = { id: number; filename: string; originalName: string; mimeType: string; size: number; url: string; folder: string; alt: string; uploadedAt: string }
 
