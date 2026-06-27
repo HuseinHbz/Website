@@ -340,34 +340,7 @@ This script loads `.env` automatically and runs `prisma/sql/hardening.sql` which
 
 If you see `ALTER TABLE` and `CREATE INDEX` in the output with no errors, hardening succeeded.
 
-### 6.4 Seed initial data (first deploy only)
-
-If the project includes a seed script:
-
-```bash
-cd /var/www/habibazar/api
-npx prisma db seed
-```
-
-If there is no Prisma seed, create the initial admin role and user manually:
-
-```bash
-sudo -u postgres psql -d habibazar <<'SQL'
--- Create the superadmin role
-INSERT INTO roles (id, name, permissions, "createdAt", "updatedAt")
-VALUES (
-    gen_random_uuid(),
-    'superadmin',
-    ARRAY['*'],
-    NOW(),
-    NOW()
-) ON CONFLICT (name) DO NOTHING;
-SQL
-```
-
-The first admin user should be created through the API's registration endpoint or a dedicated seed command provided by the project.
-
-### 6.5 Build the API
+### 6.4 Build the API
 
 ```bash
 cd /var/www/habibazar/api
@@ -381,7 +354,7 @@ ls dist/
 # Should include: server.js and compiled route/controller files
 ```
 
-### 6.6 Quick smoke test (before PM2)
+### 6.5 Quick smoke test (before PM2)
 
 ```bash
 cd /var/www/habibazar/api
