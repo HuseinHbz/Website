@@ -75,9 +75,9 @@ function MarqueeRow({ items, reverse = false, speed = 30, isRTL = false }: {
             className="flex items-center gap-3 px-5 py-3 rounded-xl flex-shrink-0 hover:border-accent/40 transition-colors duration-200 cursor-default"
             style={{ background: 'rgba(13,13,23,0.8)', border: '1px solid rgba(26,26,46,0.8)', backdropFilter: 'blur(8px)' }}
           >
-            {'logoUrl' in item && item.logoUrl
+            {'logoUrl' in item && typeof item.logoUrl === 'string' && item.logoUrl
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={item.logoUrl} alt={('nameEn' in item ? item.nameEn : item.name)} className="w-8 h-8 object-contain" />
+              ? <img src={item.logoUrl as string} alt={('nameEn' in item ? item.nameEn : item.name)} className="w-8 h-8 object-contain" />
               : <span className="text-xl">{item.icon}</span>
             }
             <div>
