@@ -32,9 +32,9 @@ export function resyncPublicContent() {
   for (const r of timeline) insTimeline.run(...r)
 
   // ── Skills ──────────────────────────────────────────────────────────────────
-  db.prepare('DELETE FROM skills').run()
+  // Use INSERT OR IGNORE so admin's active/hidden settings are preserved on resync
   const insSkill = db.prepare(`
-    INSERT INTO skills (name_en, name_fa, category_en, category_fa, level, color, sort_order)
+    INSERT OR IGNORE INTO skills (name_en, name_fa, category_en, category_fa, level, color, sort_order)
     VALUES (?,?,?,?,?,?,?)
   `)
   const skills = [
@@ -54,9 +54,9 @@ export function resyncPublicContent() {
   for (const r of skills) insSkill.run(...r)
 
   // ── Certifications ──────────────────────────────────────────────────────────
-  db.prepare('DELETE FROM certifications').run()
+  // INSERT OR IGNORE preserves admin's active/hidden settings
   const insCert = db.prepare(`
-    INSERT INTO certifications (name_en, name_fa, issuer, color, sort_order)
+    INSERT OR IGNORE INTO certifications (name_en, name_fa, issuer, color, sort_order)
     VALUES (?,?,?,?,?)
   `)
   const certs = [

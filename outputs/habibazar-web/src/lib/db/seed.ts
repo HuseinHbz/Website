@@ -32,6 +32,7 @@ export async function seedDatabase() {
     ['social_linkedin', 'https://linkedin.com/in/huseinhabibazar', 'social'],
     ['social_github', '', 'social'],
     ['social_twitter', '', 'social'],
+    ['social_instagram', '', 'social'],
     ['smtp_host', '', 'email'],
     ['smtp_port', '587', 'email'],
     ['smtp_user', '', 'email'],

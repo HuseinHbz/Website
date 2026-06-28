@@ -39,6 +39,7 @@ const SECTIONS = [
       { key: 'social_linkedin', label: 'LinkedIn URL' },
       { key: 'social_github', label: 'GitHub URL' },
       { key: 'social_twitter', label: 'Twitter/X URL' },
+      { key: 'social_instagram', label: 'Instagram URL' },
     ],
   },
   {
