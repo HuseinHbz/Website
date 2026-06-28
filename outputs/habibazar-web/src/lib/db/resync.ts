@@ -32,42 +32,63 @@ export function resyncPublicContent() {
   for (const r of timeline) insTimeline.run(...r)
 
   // ── Skills ──────────────────────────────────────────────────────────────────
-  // Use INSERT OR IGNORE so admin's active/hidden settings are preserved on resync
+  // Preserve admin's active/hidden settings: read first, then DELETE + re-INSERT
+  const existingSkillActive = new Map<string, boolean>()
+  const existingSkillIcons = new Map<string, string | null>()
+  for (const s of db.prepare('SELECT name_en, active, icon FROM skills').all() as { name_en: string; active: number; icon: string | null }[]) {
+    existingSkillActive.set(s.name_en, s.active === 1)
+    existingSkillIcons.set(s.name_en, s.icon)
+  }
+  db.prepare('DELETE FROM skills').run()
   const insSkill = db.prepare(`
-    INSERT OR IGNORE INTO skills (name_en, name_fa, category_en, category_fa, level, color, sort_order)
-    VALUES (?,?,?,?,?,?,?)
+    INSERT INTO skills (name_en, name_fa, category_en, category_fa, level, color, icon, sort_order, active)
+    VALUES (?,?,?,?,?,?,?,?,?)
   `)
-  const skills = [
-    ['Network Architecture', 'معماری شبکه', 'Networking', 'شبکه', 95, '#6366f1', 1],
-    ['MikroTik RouterOS', 'میکروتیک RouterOS', 'Networking', 'شبکه', 92, '#c03030', 2],
-    ['Cisco IOS/IOS-XE', 'سیسکو IOS', 'Networking', 'شبکه', 88, '#1ba0d7', 3],
-    ['Fortigate / Sophos', 'فورتیگیت / سوفوس', 'Security', 'امنیت', 90, '#ee3124', 4],
-    ['Network Security', 'امنیت شبکه', 'Security', 'امنیت', 88, '#ef4444', 5],
-    ['VMware vSphere', 'VMware vSphere', 'Virtualization', 'مجازی‌سازی', 85, '#60b6e0', 6],
-    ['Proxmox VE', 'Proxmox VE', 'Virtualization', 'مجازی‌سازی', 82, '#e57000', 7],
-    ['Linux Server Admin', 'مدیریت سرور لینوکس', 'Systems', 'سیستم', 90, '#f59e0b', 8],
-    ['Zabbix / Grafana', 'زابیکس / گرافانا', 'Monitoring', 'پایش', 85, '#f59e0b', 9],
-    ['Infrastructure Automation', 'خودکارسازی زیرساخت', 'Automation', 'خودکارسازی', 78, '#06b6d4', 10],
-    ['Veeam Backup & DR', 'Veeam پشتیبان‌گیری', 'Operations', 'عملیات', 85, '#00b336', 11],
-    ['VoIP Solutions', 'راه‌حل‌های VoIP', 'Communications', 'ارتباطات', 80, '#818cf8', 12],
+  const skills: [string, string, string, string, number, string, string, number, number][] = [
+    ['Network Architecture', 'معماری شبکه', 'Networking', 'شبکه', 95, '#6366f1', '/uploads/logos/mikrotik.svg', 1, 1],
+    ['MikroTik RouterOS', 'میکروتیک RouterOS', 'Networking', 'شبکه', 92, '#c03030', '/uploads/logos/mikrotik.svg', 2, 1],
+    ['Cisco IOS/IOS-XE', 'سیسکو IOS', 'Networking', 'شبکه', 88, '#1ba0d7', '/uploads/logos/cisco.svg', 3, 1],
+    ['Fortigate / Sophos', 'فورتیگیت / سوفوس', 'Security', 'امنیت', 90, '#ee3124', '/uploads/logos/fortinet.svg', 4, 1],
+    ['Network Security', 'امنیت شبکه', 'Security', 'امنیت', 88, '#ef4444', '/uploads/logos/fortinet.svg', 5, 1],
+    ['VMware vSphere', 'VMware vSphere', 'Virtualization', 'مجازی‌سازی', 85, '#60b6e0', '/uploads/logos/vmware.svg', 6, 1],
+    ['Proxmox VE', 'Proxmox VE', 'Virtualization', 'مجازی‌سازی', 82, '#e57000', '/uploads/logos/proxmox.svg', 7, 1],
+    ['Linux Server Admin', 'مدیریت سرور لینوکس', 'Systems', 'سیستم', 90, '#f59e0b', '/uploads/logos/linux.svg', 8, 1],
+    ['Zabbix / Grafana', 'زابیکس / گرافانا', 'Monitoring', 'پایش', 85, '#f59e0b', '/uploads/logos/zabbix.svg', 9, 1],
+    ['Infrastructure Automation', 'خودکارسازی زیرساخت', 'Automation', 'خودکارسازی', 78, '#06b6d4', '/uploads/logos/ansible.svg', 10, 1],
+    ['Veeam Backup & DR', 'Veeam پشتیبان‌گیری', 'Operations', 'عملیات', 85, '#00b336', '/uploads/logos/windows-server.svg', 11, 1],
+    ['VoIP Solutions', 'راه‌حل‌های VoIP', 'Communications', 'ارتباطات', 80, '#818cf8', '/uploads/logos/linux.svg', 12, 1],
   ]
-  for (const r of skills) insSkill.run(...r)
+  for (const r of skills) {
+    const nameEn = r[0]
+    const active = existingSkillActive.has(nameEn) ? (existingSkillActive.get(nameEn) ? 1 : 0) : r[8]
+    const icon = existingSkillIcons.has(nameEn) && existingSkillIcons.get(nameEn) ? existingSkillIcons.get(nameEn)! : r[6]
+    insSkill.run(r[0], r[1], r[2], r[3], r[4], r[5], icon, r[7], active)
+  }
 
   // ── Certifications ──────────────────────────────────────────────────────────
-  // INSERT OR IGNORE preserves admin's active/hidden settings
+  // Preserve admin's active/hidden settings: read first, then DELETE + re-INSERT
+  const existingCertActive = new Map<string, boolean>()
+  for (const c of db.prepare('SELECT name_en, active FROM certifications').all() as { name_en: string; active: number }[]) {
+    existingCertActive.set(c.name_en, c.active === 1)
+  }
+  db.prepare('DELETE FROM certifications').run()
   const insCert = db.prepare(`
-    INSERT OR IGNORE INTO certifications (name_en, name_fa, issuer, color, sort_order)
-    VALUES (?,?,?,?,?)
+    INSERT INTO certifications (name_en, name_fa, issuer, color, sort_order, active)
+    VALUES (?,?,?,?,?,?)
   `)
-  const certs = [
-    ['MikroTik MTCNA', 'میکروتیک MTCNA', 'MikroTik', '#c03030', 1],
-    ['MikroTik MTCRE', 'میکروتیک MTCRE', 'MikroTik', '#c03030', 2],
-    ['Fortinet NSE', 'فورتینت NSE', 'Fortinet', '#ee3124', 3],
-    ['VMware VCP', 'VMware VCP', 'VMware', '#60b6e0', 4],
-    ['Linux LPIC', 'لینوکس LPIC', 'Linux Professional Institute', '#f59e0b', 5],
-    ['Cisco CCNA', 'سیسکو CCNA', 'Cisco', '#1ba0d7', 6],
+  const certs: [string, string, string, string, number, number][] = [
+    ['MikroTik MTCNA', 'میکروتیک MTCNA', 'MikroTik', '#c03030', 1, 1],
+    ['MikroTik MTCRE', 'میکروتیک MTCRE', 'MikroTik', '#c03030', 2, 1],
+    ['Fortinet NSE', 'فورتینت NSE', 'Fortinet', '#ee3124', 3, 1],
+    ['VMware VCP', 'VMware VCP', 'VMware', '#60b6e0', 4, 1],
+    ['Linux LPIC', 'لینوکس LPIC', 'Linux Professional Institute', '#f59e0b', 5, 1],
+    ['Cisco CCNA', 'سیسکو CCNA', 'Cisco', '#1ba0d7', 6, 1],
   ]
-  for (const r of certs) insCert.run(...r)
+  for (const r of certs) {
+    const nameEn = r[0]
+    const active = existingCertActive.has(nameEn) ? (existingCertActive.get(nameEn) ? 1 : 0) : r[5]
+    insCert.run(r[0], r[1], r[2], r[3], r[4], active)
+  }
 
   // ── Services ────────────────────────────────────────────────────────────────
   db.prepare('DELETE FROM services').run()
@@ -188,32 +209,32 @@ export function resyncPublicContent() {
   // ── Clients ─────────────────────────────────────────────────────────────────
   db.prepare('DELETE FROM clients').run()
   const insClient = db.prepare(`
-    INSERT INTO clients (name_en, name_fa, type_en, type_fa, is_tech_partner, sort_order)
-    VALUES (?,?,?,?,?,?)
+    INSERT INTO clients (name_en, name_fa, type_en, type_fa, logo_url, is_tech_partner, sort_order)
+    VALUES (?,?,?,?,?,?,?)
   `)
   const clientsData = [
-    ['Kenzo Restaurant', 'رستوران کنزو', 'Hospitality', 'هتلداری', 0, 1],
-    ['Popcorn Holding', 'هلدینگ پاپ‌کورن', 'Holding', 'هلدینگ', 0, 2],
-    ['Senso Group', 'گروه سنسو', 'Food & Beverage', 'غذا و نوشیدنی', 0, 3],
-    ['Industrial Co.', 'شرکت صنعتی', 'Industrial', 'صنعتی', 0, 4],
-    ['Retail Chain', 'زنجیره خرده‌فروشی', 'Retail', 'خرده‌فروشی', 0, 5],
-    ['Tech Startup', 'استارت‌آپ فناوری', 'Technology', 'فناوری', 0, 6],
-    ['Medical Center', 'مرکز پزشکی', 'Healthcare', 'بهداشت', 0, 7],
-    ['Logistics Firm', 'شرکت لجستیک', 'Logistics', 'لجستیک', 0, 8],
-    ['Finance Group', 'گروه مالی', 'Finance', 'مالی', 0, 9],
-    ['Education Institute', 'موسسه آموزشی', 'Education', 'آموزش', 0, 10],
-    ['MikroTik', 'میکروتیک', 'Technology Partner', 'شریک فناوری', 1, 11],
-    ['Cisco', 'سیسکو', 'Technology Partner', 'شریک فناوری', 1, 12],
-    ['Fortigate', 'فورتی‌گیت', 'Technology Partner', 'شریک فناوری', 1, 13],
-    ['VMware', 'VMware', 'Technology Partner', 'شریک فناوری', 1, 14],
-    ['Ubiquiti', 'Ubiquiti', 'Technology Partner', 'شریک فناوری', 1, 15],
-    ['Zabbix', 'Zabbix', 'Technology Partner', 'شریک فناوری', 1, 16],
-    ['Proxmox', 'Proxmox', 'Technology Partner', 'شریک فناوری', 1, 17],
-    ['Sophos', 'Sophos', 'Technology Partner', 'شریک فناوری', 1, 18],
-    ['Veeam', 'Veeam', 'Technology Partner', 'شریک فناوری', 1, 19],
-    ['Grafana', 'Grafana', 'Technology Partner', 'شریک فناوری', 1, 20],
-    ['Linux', 'لینوکس', 'Technology Partner', 'شریک فناوری', 1, 21],
-    ['Ansible', 'Ansible', 'Technology Partner', 'شریک فناوری', 1, 22],
+    ['Kenzo Restaurant', 'رستوران کنزو', 'Hospitality', 'هتلداری', '/uploads/general/restaurant-chain.svg', 0, 1],
+    ['Popcorn Holding', 'هلدینگ پاپ‌کورن', 'Holding', 'هلدینگ', '/uploads/general/enterprise.svg', 0, 2],
+    ['Senso Group', 'گروه سنسو', 'Food & Beverage', 'غذا و نوشیدنی', '/uploads/general/restaurant-chain.svg', 0, 3],
+    ['Industrial Co.', 'شرکت صنعتی', 'Industrial', 'صنعتی', '/uploads/general/industrial.svg', 0, 4],
+    ['Retail Chain', 'زنجیره خرده‌فروشی', 'Retail', 'خرده‌فروشی', '/uploads/general/enterprise.svg', 0, 5],
+    ['Tech Startup', 'استارت‌آپ فناوری', 'Technology', 'فناوری', '/uploads/general/datacenter.svg', 0, 6],
+    ['Medical Center', 'مرکز پزشکی', 'Healthcare', 'بهداشت', '/uploads/general/hospital.svg', 0, 7],
+    ['Logistics Firm', 'شرکت لجستیک', 'Logistics', 'لجستیک', '/uploads/general/network-co.svg', 0, 8],
+    ['Finance Group', 'گروه مالی', 'Finance', 'مالی', '/uploads/general/government.svg', 0, 9],
+    ['Education Institute', 'موسسه آموزشی', 'Education', 'آموزش', '/uploads/general/university.svg', 0, 10],
+    ['MikroTik', 'میکروتیک', 'Technology Partner', 'شریک فناوری', '/uploads/logos/mikrotik.svg', 1, 11],
+    ['Cisco', 'سیسکو', 'Technology Partner', 'شریک فناوری', '/uploads/logos/cisco.svg', 1, 12],
+    ['Fortigate', 'فورتی‌گیت', 'Technology Partner', 'شریک فناوری', '/uploads/logos/fortinet.svg', 1, 13],
+    ['VMware', 'VMware', 'Technology Partner', 'شریک فناوری', '/uploads/logos/vmware.svg', 1, 14],
+    ['Ubiquiti', 'Ubiquiti', 'Technology Partner', 'شریک فناوری', '/uploads/logos/cisco.svg', 1, 15],
+    ['Zabbix', 'Zabbix', 'Technology Partner', 'شریک فناوری', '/uploads/logos/zabbix.svg', 1, 16],
+    ['Proxmox', 'Proxmox', 'Technology Partner', 'شریک فناوری', '/uploads/logos/proxmox.svg', 1, 17],
+    ['Sophos', 'Sophos', 'Technology Partner', 'شریک فناوری', '/uploads/logos/fortinet.svg', 1, 18],
+    ['Veeam', 'Veeam', 'Technology Partner', 'شریک فناوری', '/uploads/logos/windows-server.svg', 1, 19],
+    ['Grafana', 'Grafana', 'Technology Partner', 'شریک فناوری', '/uploads/logos/grafana.svg', 1, 20],
+    ['Linux', 'لینوکس', 'Technology Partner', 'شریک فناوری', '/uploads/logos/linux.svg', 1, 21],
+    ['Ansible', 'Ansible', 'Technology Partner', 'شریک فناوری', '/uploads/logos/ansible.svg', 1, 22],
   ]
   for (const r of clientsData) insClient.run(...r)
 

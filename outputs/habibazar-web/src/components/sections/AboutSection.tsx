@@ -4,8 +4,8 @@ import { motion } from 'framer-motion'
 import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
 
 interface DbTimeline { year: string; titleEn: string; titleFa: string; descEn: string | null; descFa: string | null; color: string | null }
-interface DbSkill { nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number }
-interface DbCert { nameEn: string; nameFa: string; color: string | null }
+interface DbSkill { nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number; color?: string | null; icon?: string | null }
+interface DbCert { nameEn: string; nameFa: string; issuer?: string | null; color: string | null }
 interface DbAbout { bio: string | null; photoUrl: string | null; resumeUrl: string | null; headline: string | null; subheadline: string | null }
 
 interface AboutSectionProps {
@@ -31,109 +31,169 @@ interface SkillItem {
   categoryEn: string
   categoryFa: string
   level: number
+  color: string
+  icon: string | null
 }
 
 interface CertItem {
-  name: string
-  icon: string
+  nameEn: string
+  nameFa: string
+  issuer: string
   color: string
 }
 
 const TIMELINE: TimelineItem[] = [
-  {
-    year: '2013',
-    titleEn: 'Technical Technician',
-    titleFa: 'تکنسین فنی',
-    descEn: 'Started career in IT support, hardware maintenance and basic network administration.',
-    descFa: 'آغاز فعالیت در پشتیبانی IT، تعمیر سخت‌افزار و مدیریت پایه شبکه.',
-    color: '#6366f1',
-  },
-  {
-    year: '2017',
-    titleEn: 'IT Specialist',
-    titleFa: 'متخصص IT',
-    descEn: 'Expanded into system administration, server management, and enterprise networking.',
-    descFa: 'توسعه تخصص به مدیریت سیستم، سرور و شبکه‌های سازمانی.',
-    color: '#818cf8',
-  },
-  {
-    year: '2021',
-    titleEn: 'Network Operations Engineer',
-    titleFa: 'مهندس عملیات شبکه',
-    descEn: 'Designed and implemented complex LAN/WAN infrastructures, VPN solutions and security systems.',
-    descFa: 'طراحی و پیاده‌سازی زیرساخت‌های پیچیده LAN/WAN، راه‌حل‌های VPN و سیستم‌های امنیتی.',
-    color: '#06b6d4',
-  },
-  {
-    year: '2024',
-    titleEn: 'Senior Infrastructure Engineer',
-    titleFa: 'مهندس ارشد زیرساخت',
-    descEn: 'Led enterprise-scale virtualization, cloud integration, and infrastructure automation projects.',
-    descFa: 'رهبری پروژه‌های مجازی‌سازی سازمانی، یکپارچه‌سازی ابر و خودکارسازی زیرساخت.',
-    color: '#10b981',
-  },
-  {
-    year: '2025',
-    titleEn: 'Network Operations Supervisor',
-    titleFa: 'سرپرست عملیات شبکه',
-    descEn: 'Overseeing multi-site infrastructure operations, mentoring teams and driving digital transformation.',
-    descFa: 'نظارت بر عملیات زیرساخت چند سایته، راهنمایی تیم‌ها و هدایت تحول دیجیتال.',
-    color: '#f59e0b',
-  },
+  { year: '2013', titleEn: 'Technical Technician', titleFa: 'تکنسین فنی', descEn: 'Started career in IT support, hardware maintenance and basic network administration.', descFa: 'آغاز فعالیت در پشتیبانی IT، تعمیر سخت‌افزار و مدیریت پایه شبکه.', color: '#6366f1' },
+  { year: '2017', titleEn: 'IT Specialist', titleFa: 'متخصص IT', descEn: 'Expanded into system administration, server management, and enterprise networking.', descFa: 'توسعه تخصص به مدیریت سیستم، سرور و شبکه‌های سازمانی.', color: '#818cf8' },
+  { year: '2021', titleEn: 'Network Operations Engineer', titleFa: 'مهندس عملیات شبکه', descEn: 'Designed and implemented complex LAN/WAN infrastructures, VPN solutions and security systems.', descFa: 'طراحی و پیاده‌سازی زیرساخت‌های پیچیده LAN/WAN، راه‌حل‌های VPN و سیستم‌های امنیتی.', color: '#06b6d4' },
+  { year: '2024', titleEn: 'Senior Infrastructure Engineer', titleFa: 'مهندس ارشد زیرساخت', descEn: 'Led enterprise-scale virtualization, cloud integration, and infrastructure automation projects.', descFa: 'رهبری پروژه‌های مجازی‌سازی سازمانی، یکپارچه‌سازی ابر و خودکارسازی زیرساخت.', color: '#10b981' },
+  { year: '2025', titleEn: 'Network Operations Supervisor', titleFa: 'سرپرست عملیات شبکه', descEn: 'Overseeing multi-site infrastructure operations, mentoring teams and driving digital transformation.', descFa: 'نظارت بر عملیات زیرساخت چند سایته، راهنمایی تیم‌ها و هدایت تحول دیجیتال.', color: '#f59e0b' },
 ]
 
 const SKILLS: SkillItem[] = [
-  { nameEn: 'Network Architecture', nameFa: 'معماری شبکه', categoryEn: 'Networking', categoryFa: 'شبکه', level: 95 },
-  { nameEn: 'MikroTik RouterOS', nameFa: 'میکروتیک RouterOS', categoryEn: 'Networking', categoryFa: 'شبکه', level: 92 },
-  { nameEn: 'Cisco IOS/IOS-XE', nameFa: 'سیسکو IOS', categoryEn: 'Networking', categoryFa: 'شبکه', level: 88 },
-  { nameEn: 'Fortigate / Sophos', nameFa: 'فورتیگیت / سوفوس', categoryEn: 'Security', categoryFa: 'امنیت', level: 90 },
-  { nameEn: 'Network Security', nameFa: 'امنیت شبکه', categoryEn: 'Security', categoryFa: 'امنیت', level: 88 },
-  { nameEn: 'VMware vSphere', nameFa: 'VMware vSphere', categoryEn: 'Virtualization', categoryFa: 'مجازی‌سازی', level: 85 },
-  { nameEn: 'Proxmox VE', nameFa: 'Proxmox VE', categoryEn: 'Virtualization', categoryFa: 'مجازی‌سازی', level: 82 },
-  { nameEn: 'Linux Server Admin', nameFa: 'مدیریت سرور لینوکس', categoryEn: 'Systems', categoryFa: 'سیستم', level: 90 },
-  { nameEn: 'Zabbix / Grafana', nameFa: 'زابیکس / گرافانا', categoryEn: 'Monitoring', categoryFa: 'پایش', level: 85 },
-  { nameEn: 'Infrastructure Automation', nameFa: 'خودکارسازی زیرساخت', categoryEn: 'DevOps', categoryFa: 'دواپس', level: 78 },
-  { nameEn: 'Veeam Backup & DR', nameFa: 'Veeam پشتیبان‌گیری', categoryEn: 'Operations', categoryFa: 'عملیات', level: 85 },
-  { nameEn: 'VoIP Solutions', nameFa: 'راه‌حل‌های VoIP', categoryEn: 'Communications', categoryFa: 'ارتباطات', level: 80 },
+  { nameEn: 'Network Architecture', nameFa: 'معماری شبکه', categoryEn: 'Networking', categoryFa: 'شبکه', level: 95, color: '#6366f1', icon: '/uploads/logos/mikrotik.svg' },
+  { nameEn: 'MikroTik RouterOS', nameFa: 'میکروتیک RouterOS', categoryEn: 'Networking', categoryFa: 'شبکه', level: 92, color: '#c03030', icon: '/uploads/logos/mikrotik.svg' },
+  { nameEn: 'Cisco IOS/IOS-XE', nameFa: 'سیسکو IOS', categoryEn: 'Networking', categoryFa: 'شبکه', level: 88, color: '#1ba0d7', icon: '/uploads/logos/cisco.svg' },
+  { nameEn: 'Fortigate / Sophos', nameFa: 'فورتیگیت / سوفوس', categoryEn: 'Security', categoryFa: 'امنیت', level: 90, color: '#ee3124', icon: '/uploads/logos/fortinet.svg' },
+  { nameEn: 'Network Security', nameFa: 'امنیت شبکه', categoryEn: 'Security', categoryFa: 'امنیت', level: 88, color: '#ef4444', icon: '/uploads/logos/fortinet.svg' },
+  { nameEn: 'VMware vSphere', nameFa: 'VMware vSphere', categoryEn: 'Virtualization', categoryFa: 'مجازی‌سازی', level: 85, color: '#60b6e0', icon: '/uploads/logos/vmware.svg' },
+  { nameEn: 'Proxmox VE', nameFa: 'Proxmox VE', categoryEn: 'Virtualization', categoryFa: 'مجازی‌سازی', level: 82, color: '#e57000', icon: '/uploads/logos/proxmox.svg' },
+  { nameEn: 'Linux Server Admin', nameFa: 'مدیریت سرور لینوکس', categoryEn: 'Systems', categoryFa: 'سیستم', level: 90, color: '#f59e0b', icon: '/uploads/logos/linux.svg' },
+  { nameEn: 'Zabbix / Grafana', nameFa: 'زابیکس / گرافانا', categoryEn: 'Monitoring', categoryFa: 'پایش', level: 85, color: '#f59e0b', icon: '/uploads/logos/zabbix.svg' },
+  { nameEn: 'Infrastructure Automation', nameFa: 'خودکارسازی زیرساخت', categoryEn: 'Automation', categoryFa: 'خودکارسازی', level: 78, color: '#06b6d4', icon: '/uploads/logos/ansible.svg' },
+  { nameEn: 'Veeam Backup & DR', nameFa: 'Veeam پشتیبان‌گیری', categoryEn: 'Operations', categoryFa: 'عملیات', level: 85, color: '#00b336', icon: '/uploads/logos/windows-server.svg' },
+  { nameEn: 'VoIP Solutions', nameFa: 'راه‌حل‌های VoIP', categoryEn: 'Communications', categoryFa: 'ارتباطات', level: 80, color: '#818cf8', icon: '/uploads/logos/linux.svg' },
 ]
 
 const CERTS: CertItem[] = [
-  { name: 'MikroTik MTCNA', icon: '🏅', color: '#c03030' },
-  { name: 'MikroTik MTCRE', icon: '🏅', color: '#c03030' },
-  { name: 'Fortinet NSE', icon: '🛡️', color: '#ee3124' },
-  { name: 'VMware VCP', icon: '☁️', color: '#60b6e0' },
-  { name: 'Linux LPIC', icon: '🐧', color: '#f59e0b' },
-  { name: 'Cisco CCNA', icon: '🔷', color: '#1ba0d7' },
+  { nameEn: 'MikroTik MTCNA', nameFa: 'میکروتیک MTCNA', issuer: 'MikroTik', color: '#c03030' },
+  { nameEn: 'MikroTik MTCRE', nameFa: 'میکروتیک MTCRE', issuer: 'MikroTik', color: '#c03030' },
+  { nameEn: 'Fortinet NSE', nameFa: 'فورتینت NSE', issuer: 'Fortinet', color: '#ee3124' },
+  { nameEn: 'VMware VCP', nameFa: 'VMware VCP', issuer: 'VMware', color: '#60b6e0' },
+  { nameEn: 'Linux LPIC', nameFa: 'لینوکس LPIC', issuer: 'Linux Professional Institute', color: '#f59e0b' },
+  { nameEn: 'Cisco CCNA', nameFa: 'سیسکو CCNA', issuer: 'Cisco', color: '#1ba0d7' },
 ]
 
-function SkillBar({ skill, isRTL, index }: { skill: SkillItem; isRTL: boolean; index: number }) {
+// Map issuer to logo SVG path
+const ISSUER_LOGOS: Record<string, string> = {
+  'MikroTik': '/uploads/logos/mikrotik.svg',
+  'Fortinet': '/uploads/logos/fortinet.svg',
+  'VMware': '/uploads/logos/vmware.svg',
+  'Linux Professional Institute': '/uploads/logos/linux.svg',
+  'Cisco': '/uploads/logos/cisco.svg',
+}
+
+// Level dots — 5 dots filled proportionally
+function LevelDots({ level, color }: { level: number; color: string }) {
+  const filled = Math.round(level / 20)
+  return (
+    <div className="flex gap-1">
+      {[1,2,3,4,5].map(i => (
+        <div
+          key={i}
+          className="w-2 h-2 rounded-full transition-all"
+          style={{ background: i <= filled ? color : `${color}25`, boxShadow: i <= filled ? `0 0 4px ${color}60` : 'none' }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Group skills by category
+function groupByCategory(skills: SkillItem[], isRTL: boolean): Map<string, SkillItem[]> {
+  const map = new Map<string, SkillItem[]>()
+  for (const s of skills) {
+    const cat = isRTL ? s.categoryFa : s.categoryEn
+    if (!map.has(cat)) map.set(cat, [])
+    map.get(cat)!.push(s)
+  }
+  return map
+}
+
+function SkillCard({ skill, isRTL, index }: { skill: SkillItem; isRTL: boolean; index: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
-      whileInView={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ delay: index * 0.06, duration: 0.5 }}
+      transition={{ delay: index * 0.05, duration: 0.4 }}
+      className="relative group flex items-center gap-3 p-3 rounded-xl border border-border bg-surface/50 hover:border-accent/40 hover:bg-surface transition-all duration-200"
     >
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium text-text-primary">
-          {isRTL ? skill.nameFa : skill.nameEn}
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-text-muted px-2 py-0.5 rounded-full bg-surface border border-border">
-            {isRTL ? skill.categoryFa : skill.categoryEn}
-          </span>
-          <span className="text-xs font-mono text-accent">{skill.level}%</span>
-        </div>
+      {/* Logo */}
+      <div
+        className="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center p-1.5"
+        style={{ background: `${skill.color}15`, border: `1px solid ${skill.color}30` }}
+      >
+        {skill.icon ? (
+          <img src={skill.icon} alt={skill.nameEn} className="w-full h-full object-contain" />
+        ) : (
+          <div className="w-5 h-5 rounded" style={{ background: skill.color }} />
+        )}
       </div>
-      <div className="h-1.5 bg-surface rounded-full overflow-hidden border border-border">
-        <motion.div
-          initial={{ width: 0 }}
-          whileInView={{ width: `${skill.level}%` }}
-          viewport={{ once: true }}
-          transition={{ delay: index * 0.06 + 0.3, duration: 0.8, ease: 'easeOut' }}
-          className="h-full rounded-full"
-          style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)', boxShadow: '0 0 8px rgba(99,102,241,0.4)' }}
-        />
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-text-primary truncate">
+          {isRTL ? skill.nameFa : skill.nameEn}
+        </p>
+        <LevelDots level={skill.level} color={skill.color} />
+      </div>
+      {/* Level % */}
+      <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: skill.color }}>
+        {skill.level}%
+      </span>
+    </motion.div>
+  )
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Networking': '🌐', 'شبکه': '🌐',
+  'Security': '🛡️', 'امنیت': '🛡️',
+  'Virtualization': '🖥️', 'مجازی‌سازی': '🖥️',
+  'Systems': '⚙️', 'سیستم': '⚙️',
+  'Monitoring': '📊', 'پایش': '📊',
+  'Automation': '🤖', 'خودکارسازی': '🤖',
+  'Operations': '💾', 'عملیات': '💾',
+  'Communications': '📞', 'ارتباطات': '📞',
+}
+
+function CertCard({ cert, isRTL, index }: { cert: CertItem; isRTL: boolean; index: number }) {
+  const logo = ISSUER_LOGOS[cert.issuer]
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.07, duration: 0.4 }}
+      className="relative overflow-hidden rounded-xl border border-border bg-surface group hover:border-accent/40 transition-all duration-200"
+    >
+      {/* Top color band */}
+      <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${cert.color}, ${cert.color}80)` }} />
+      <div className="p-4">
+        {/* Issuer logo + badge */}
+        <div className="flex items-start justify-between mb-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center p-1.5 flex-shrink-0"
+            style={{ background: `${cert.color}15`, border: `1px solid ${cert.color}30` }}
+          >
+            {logo ? (
+              <img src={logo} alt={cert.issuer} className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-lg">🏅</span>
+            )}
+          </div>
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+            style={{ background: `${cert.color}15`, color: cert.color, border: `1px solid ${cert.color}30` }}
+          >
+            {isRTL ? 'تأیید شده' : 'Verified'}
+          </span>
+        </div>
+        {/* Cert name */}
+        <p className="text-sm font-bold text-text-primary leading-tight mb-1">
+          {isRTL ? cert.nameFa : cert.nameEn}
+        </p>
+        {/* Issuer */}
+        <p className="text-xs text-text-muted">{cert.issuer}</p>
       </div>
     </motion.div>
   )
@@ -147,12 +207,14 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
     : TIMELINE
 
   const SKILLS_DATA: SkillItem[] = (dbSkills && dbSkills.length > 0)
-    ? dbSkills.map(s => ({ nameEn: s.nameEn, nameFa: s.nameFa, categoryEn: s.categoryEn, categoryFa: s.categoryFa, level: s.level }))
+    ? dbSkills.map(s => ({ nameEn: s.nameEn, nameFa: s.nameFa, categoryEn: s.categoryEn, categoryFa: s.categoryFa, level: s.level, color: s.color || '#6366f1', icon: s.icon || null }))
     : SKILLS
 
   const CERTS_DATA: CertItem[] = (dbCerts && dbCerts.length > 0)
-    ? dbCerts.map(c => ({ name: c.nameEn, icon: '🏅', color: c.color || '#6366f1' }))
+    ? dbCerts.map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, issuer: c.issuer || '', color: c.color || '#6366f1' }))
     : CERTS
+
+  const categoryGroups = groupByCategory(SKILLS_DATA, isRTL)
 
   const BIO_FA = `حسین حبیب‌آذر (HBZ) معمار ارشد زیرساخت و مشاور امنیت شبکه با بیش از ۱۰ سال تجربه سازمانی در صنایع مختلف ایران است.`
   const BIO_DETAIL_FA = `او در طراحی معماری شبکه‌های مقاوم، پیاده‌سازی چارچوب‌های امنیتی چندلایه و ساخت پایپ‌لاین‌های خودکار زیرساخت تخصص دارد که هزینه‌های عملیاتی را کاهش داده و قابلیت اطمینان را افزایش می‌دهد.`
@@ -228,24 +290,6 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                   </>)
                 }
               </div>
-
-              {/* Cert badges */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-xs text-text-muted mb-3 uppercase tracking-widest font-semibold">
-                  {isRTL ? 'گواهینامه‌ها' : 'Certifications'}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {CERTS_DATA.map((cert) => (
-                    <span
-                      key={cert.name}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: `${cert.color}15`, border: `1px solid ${cert.color}30`, color: cert.color }}
-                    >
-                      {cert.icon} {cert.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </div>
           </motion.div>
 
@@ -296,7 +340,47 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
           </motion.div>
         </div>
 
-        {/* Skills Matrix */}
+        {/* Skills — Category Grouped Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="mb-20"
+        >
+          <div className="text-center mb-10">
+            <p className="section-label mb-2">{isRTL ? 'سطح تخصص فنی' : 'Technical Proficiency'}</p>
+            <h3 className="text-2xl font-bold text-text-primary">
+              {isRTL ? 'مهارت‌های تخصصی' : 'Technical Skills'}
+            </h3>
+          </div>
+
+          <div className="space-y-8">
+            {Array.from(categoryGroups.entries()).map(([category, catSkills], ci) => (
+              <motion.div
+                key={category}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: ci * 0.1, duration: 0.5 }}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-lg">{CATEGORY_ICONS[category] || '⚡'}</span>
+                  <h4 className="text-sm font-bold text-text-primary uppercase tracking-widest">{category}</h4>
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-text-muted">{catSkills.length} {isRTL ? 'مهارت' : 'skills'}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {catSkills.map((skill, si) => (
+                    <SkillCard key={skill.nameEn} skill={skill} isRTL={isRTL} index={ci * 5 + si} />
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Certifications — Full Cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -304,17 +388,16 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
           transition={{ duration: 0.7 }}
         >
           <div className="text-center mb-10">
-            <p className="section-label mb-2">{isRTL ? 'سطح تخصص فنی' : 'Technical Proficiency'}</p>
+            <p className="section-label mb-2">{isRTL ? 'تأییدیه‌های حرفه‌ای' : 'Professional Credentials'}</p>
             <h3 className="text-2xl font-bold text-text-primary">
-              {isRTL ? 'ماتریس مهارت‌ها' : 'Skills Matrix'}
+              {isRTL ? 'گواهینامه‌ها' : 'Certifications'}
             </h3>
           </div>
-          <div className="glass-card p-8">
-            <div className="grid md:grid-cols-2 gap-6">
-              {SKILLS_DATA.map((skill, i) => (
-                <SkillBar key={skill.nameEn} skill={skill} isRTL={isRTL} index={i} />
-              ))}
-            </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {CERTS_DATA.map((cert, i) => (
+              <CertCard key={cert.nameEn} cert={cert} isRTL={isRTL} index={i} />
+            ))}
           </div>
         </motion.div>
       </div>
