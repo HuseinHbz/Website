@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import path from 'path'
 import * as schema from './schema'
 
-const DB_PATH = path.join(process.cwd(), 'data', 'habibazar.db')
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibazar.db')
 
 let _db: ReturnType<typeof drizzle> | null = null
 

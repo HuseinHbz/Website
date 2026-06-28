@@ -64,7 +64,7 @@ export async function signIn(email: string, password: string, ipAddress?: string
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: SESSION_DURATION / 1000,
-    path: '/admin',
+    path: '/',
   })
 
   return {
