@@ -59,6 +59,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── API routes (non-admin): pass through without intl redirect ──────────────
+  if (pathname.startsWith('/api/')) return NextResponse.next()
+
   // ── Public routes: next-intl i18n ─────────────────────────────────────────
   return intlMiddleware(request)
 }

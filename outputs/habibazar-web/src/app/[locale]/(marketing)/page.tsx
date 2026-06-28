@@ -15,6 +15,7 @@ import {
   getPublicCerts,
   getPublicClients,
   getPublicTimeline,
+  getPublicAbout,
 } from '@/lib/publicData'
 
 interface Props {
@@ -24,13 +25,14 @@ interface Props {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
 
-  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline] = await Promise.all([
+  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout] = await Promise.all([
     getPublicProjects(),
     getPublicServices(),
     getPublicSkills(),
     getPublicCerts(),
     getPublicClients(),
     getPublicTimeline(),
+    getPublicAbout(locale),
   ])
 
   return (
@@ -40,7 +42,7 @@ export default async function HomePage({ params }: Props) {
       <ProofBar locale={locale} />
       <ServicesSection locale={locale} dbServices={dbServices} />
       <ProjectsSection locale={locale} dbProjects={dbProjects} />
-      <AboutSection locale={locale} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
+      <AboutSection locale={locale} dbAbout={dbAbout} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
       <CompanyPortfolio locale={locale} dbClients={dbClients} />
       <AiTeaser locale={locale} />
       <ClosingCta locale={locale} />

@@ -37,6 +37,12 @@ export async function seedDatabase() {
     ['smtp_user', '', 'email'],
     ['smtp_pass', '', 'email'],
     ['smtp_from', 'noreply@habibazar.com', 'email'],
+    ['ai_api_url', 'https://api.habibazar.ir', 'ai'],
+    ['ai_api_key', '', 'ai'],
+    ['ai_model', 'gpt-4o-mini', 'ai'],
+    ['ai_max_turns', '10', 'ai'],
+    ['profile_photo_url', '', 'profile'],
+    ['resume_url', '/resume.pdf', 'profile'],
   ]
   const insertSetting = sqlite.prepare(`INSERT OR IGNORE INTO site_settings (key, value, "group") VALUES (?, ?, ?)`)
   for (const [k, v, g] of settings) insertSetting.run(k, v, g)

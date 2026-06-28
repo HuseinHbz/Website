@@ -51,6 +51,22 @@ const SECTIONS = [
       { key: 'smtp_from', label: 'From Email Address' },
     ],
   },
+  {
+    label: 'AI Chatbot / Assistant',
+    keys: [
+      { key: 'ai_api_url', label: 'AI API Base URL' },
+      { key: 'ai_api_key', label: 'AI API Key', type: 'password' },
+      { key: 'ai_model', label: 'AI Model Name' },
+      { key: 'ai_max_turns', label: 'Max Conversation Turns' },
+    ],
+  },
+  {
+    label: 'Profile & Resume',
+    keys: [
+      { key: 'profile_photo_url', label: 'Profile Photo URL' },
+      { key: 'resume_url', label: 'Resume / CV URL' },
+    ],
+  },
 ]
 
 export function SettingsManager() {

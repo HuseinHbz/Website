@@ -1,15 +1,16 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useTranslations } from 'next-intl'
 import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
 
 interface DbTimeline { year: string; titleEn: string; titleFa: string; descEn: string | null; descFa: string | null; color: string | null }
 interface DbSkill { nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number }
 interface DbCert { nameEn: string; nameFa: string; color: string | null }
+interface DbAbout { bio: string | null; photoUrl: string | null; resumeUrl: string | null; headline: string | null; subheadline: string | null }
 
 interface AboutSectionProps {
   locale?: string
+  dbAbout?: DbAbout | null
   dbTimeline?: DbTimeline[]
   dbSkills?: DbSkill[]
   dbCerts?: DbCert[]
@@ -138,7 +139,7 @@ function SkillBar({ skill, isRTL, index }: { skill: SkillItem; isRTL: boolean; i
   )
 }
 
-export function AboutSection({ locale = 'en', dbTimeline, dbSkills, dbCerts }: AboutSectionProps) {
+export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbCerts }: AboutSectionProps) {
   const isRTL = locale === 'fa'
 
   const TIMELINE_DATA: TimelineItem[] = (dbTimeline && dbTimeline.length > 0)
@@ -203,15 +204,29 @@ export function AboutSection({ locale = 'en', dbTimeline, dbSkills, dbCerts }: A
             transition={{ duration: 0.7 }}
           >
             <div className="glass-card p-8 h-full">
+              {dbAbout?.photoUrl && (
+                <div className="flex justify-center mb-6">
+                  <img
+                    src={dbAbout.photoUrl}
+                    alt="Husein Habibazar"
+                    className="w-28 h-28 rounded-full object-cover border-2 border-accent/30 shadow-lg"
+                  />
+                </div>
+              )}
               <h3 className="text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">👤</span>
                 {isRTL ? 'داستان حرفه‌ای' : 'Professional Story'}
               </h3>
               <div className="space-y-4 text-text-secondary leading-relaxed">
-                <p>{isRTL ? BIO_FA : BIO_EN}</p>
-                <p>{isRTL ? BIO_DETAIL_FA : BIO_DETAIL_EN}</p>
-                <p>{isRTL ? BIO_CLIENT_FA : BIO_CLIENT_EN}</p>
-                <p>{isRTL ? BIO_METHOD_FA : BIO_METHOD_EN}</p>
+                {dbAbout?.bio
+                  ? <p>{dbAbout.bio}</p>
+                  : (<>
+                    <p>{isRTL ? BIO_FA : BIO_EN}</p>
+                    <p>{isRTL ? BIO_DETAIL_FA : BIO_DETAIL_EN}</p>
+                    <p>{isRTL ? BIO_CLIENT_FA : BIO_CLIENT_EN}</p>
+                    <p>{isRTL ? BIO_METHOD_FA : BIO_METHOD_EN}</p>
+                  </>)
+                }
               </div>
 
               {/* Cert badges */}

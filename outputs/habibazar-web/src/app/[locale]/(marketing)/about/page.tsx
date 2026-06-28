@@ -4,6 +4,7 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import { personSchema } from '@/lib/schema'
 import { SITE } from '@/lib/site'
 import type { Metadata } from 'next'
+import { getPublicAbout, getPublicTimeline, getPublicSkills, getPublicCerts } from '@/lib/publicData'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
@@ -27,12 +28,18 @@ interface Props {
 
 export default async function AboutPage({ params }: Props) {
   const { locale } = await params
+  const [dbAbout, dbTimeline, dbSkills, dbCerts] = await Promise.all([
+    getPublicAbout(locale),
+    getPublicTimeline(),
+    getPublicSkills(),
+    getPublicCerts(),
+  ])
 
   return (
     <>
       <JsonLd schema={personSchema()} />
       <div className="pt-16">
-        <AboutSection locale={locale} />
+        <AboutSection locale={locale} dbAbout={dbAbout} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
         <ClosingCta locale={locale} />
       </div>
     </>
