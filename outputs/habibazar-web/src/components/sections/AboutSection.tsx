@@ -266,15 +266,26 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             transition={{ duration: 0.7 }}
           >
             <div className="glass-card p-8 h-full">
-              {dbAbout?.photoUrl && (
-                <div className="flex justify-center mb-6">
+              <div className="flex justify-center mb-6">
+                {dbAbout?.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={dbAbout.photoUrl}
                     alt="Husein Habibazar"
                     className="w-28 h-28 rounded-full object-cover border-2 border-accent/30 shadow-lg"
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="relative">
+                    <div
+                      className="w-28 h-28 rounded-full flex items-center justify-center font-black text-3xl text-white tracking-tight shadow-lg border-2 border-accent/30"
+                      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', boxShadow: '0 0 32px rgba(99,102,241,0.4)' }}
+                    >
+                      HBZ
+                    </div>
+                    <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-success border-2 border-background" />
+                  </div>
+                )}
+              </div>
               <h3 className="text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">👤</span>
                 {isRTL ? 'داستان حرفه‌ای' : 'Professional Story'}

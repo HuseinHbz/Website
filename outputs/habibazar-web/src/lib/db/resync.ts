@@ -6,6 +6,22 @@ const DB_PATH = path.join(process.cwd(), 'data', 'habibazar.db')
 export function resyncPublicContent() {
   const db = new Database(DB_PATH)
 
+  // ── About Content ────────────────────────────────────────────────────────────
+  // Seed about_content if not set; preserve any manually entered bio/photo from admin
+  const existingAboutEn = db.prepare("SELECT id, photo_url FROM about_content WHERE locale = 'en'").get() as { id: number; photo_url: string | null } | undefined
+  const existingAboutFa = db.prepare("SELECT id, photo_url FROM about_content WHERE locale = 'fa'").get() as { id: number; photo_url: string | null } | undefined
+  if (!existingAboutEn) {
+    db.prepare(`INSERT INTO about_content (locale, headline, subheadline, bio, photo_url) VALUES ('en', 'Senior Infrastructure Engineer', 'Building reliable, secure, and automated enterprise infrastructure', null, null)`).run()
+  } else if (existingAboutEn.photo_url && existingAboutEn.photo_url.includes('/uploads/logos/')) {
+    // Clear if someone accidentally set a tech logo as profile photo
+    db.prepare("UPDATE about_content SET photo_url = null WHERE locale = 'en'").run()
+  }
+  if (!existingAboutFa) {
+    db.prepare(`INSERT INTO about_content (locale, headline, subheadline, bio, photo_url) VALUES ('fa', 'مهندس ارشد زیرساخت', 'ساخت زیرساخت سازمانی قابل‌اعتماد، امن و خودکار', null, null)`).run()
+  } else if (existingAboutFa.photo_url && existingAboutFa.photo_url.includes('/uploads/logos/')) {
+    db.prepare("UPDATE about_content SET photo_url = null WHERE locale = 'fa'").run()
+  }
+
   // ── Timeline ────────────────────────────────────────────────────────────────
   db.prepare('DELETE FROM timeline_items').run()
   const insTimeline = db.prepare(`
@@ -306,6 +322,7 @@ export function resyncPublicContent() {
     { slug: 'network-documentation-best-practices', catSlug: 'monitoring', titleEn: 'Network Documentation Best Practices for IT Teams', titleFa: 'بهترین شیوه‌های مستندسازی شبکه برای تیم‌های IT', excerptEn: 'Create and maintain accurate network documentation: topology diagrams, IP address management, change logs, and runbooks.', excerptFa: 'ایجاد و نگهداری مستندات دقیق شبکه: نمودارهای توپولوژی، مدیریت آدرس IP، لاگ تغییرات و Runbook‌ها.', readTimeEn: '9 min read', readTimeFa: '۹ دقیقه مطالعه', publishedAtEn: 'Jun 2025', publishedAtFa: 'خرداد ۱۴۰۴', featured: 0 },
     { slug: 'voip-asterisk-enterprise', catSlug: 'devops', titleEn: 'Enterprise VoIP with Asterisk FreePBX: Full Setup Guide', titleFa: 'VoIP سازمانی با Asterisk FreePBX: راهنمای کامل نصب', excerptEn: 'Deploy a production VoIP system with Asterisk FreePBX: SIP trunks, extensions, IVR, call queues, and recording.', excerptFa: 'استقرار سیستم VoIP تولیدی با Asterisk FreePBX: SIP Trunk، داخلی، IVR، صف تماس و ضبط.', readTimeEn: '20 min read', readTimeFa: '۲۰ دقیقه مطالعه', publishedAtEn: 'Aug 2025', publishedAtFa: 'مرداد ۱۴۰۴', featured: 0 },
     { slug: 'network-capacity-planning', catSlug: 'monitoring', titleEn: 'Network Capacity Planning: Methodology and Tools', titleFa: 'برنامه‌ریزی ظرفیت شبکه: روش‌شناسی و ابزارها', excerptEn: 'Plan network capacity proactively: traffic analysis, growth modeling, bottleneck identification, and upgrade planning cycles.', excerptFa: 'برنامه‌ریزی ظرفیت شبکه به صورت پیشگیرانه: تحلیل ترافیک، مدل‌سازی رشد، شناسایی تنگناها و چرخه‌های برنامه‌ریزی ارتقاء.', readTimeEn: '12 min read', readTimeFa: '۱۲ دقیقه مطالعه', publishedAtEn: 'Aug 2025', publishedAtFa: 'مرداد ۱۴۰۴', featured: 0 },
+    { slug: 'full-blog-platform-search-rss', catSlug: 'devops', titleEn: 'Building a Complete Blog Platform: Search, Filtering, Code Highlighting & RSS Feed', titleFa: 'ساخت پلتفرم کامل وبلاگ: جستجو، فیلترینگ، هایلایت کد و فید RSS', excerptEn: 'A comprehensive guide to building a production-ready blog platform with full-text search, category filtering, syntax highlighting, and RSS feed generation using Next.js, Shiki, and Drizzle ORM.', excerptFa: 'راهنمای جامع ساخت پلتفرم وبلاگ آماده برای محیط تولیدی با جستجوی متن کامل، فیلترینگ دسته‌بندی، هایلایت سینتکس و تولید فید RSS با استفاده از Next.js، Shiki و Drizzle ORM.', readTimeEn: '22 min read', readTimeFa: '۲۲ دقیقه مطالعه', publishedAtEn: 'Aug 2025', publishedAtFa: 'مرداد ۱۴۰۴', featured: 1 },
   ]
   for (const p of blogPostsData) {
     const cat = getCatId.get(p.catSlug) as { id: number } | undefined
