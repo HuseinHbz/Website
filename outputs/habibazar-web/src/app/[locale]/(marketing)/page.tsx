@@ -9,6 +9,7 @@ import { ClosingCta } from '@/components/sections/ClosingCta'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { siteGraphSchema } from '@/lib/schema'
 import {
+  getPublicHero,
   getPublicProjects,
   getPublicServices,
   getPublicSkills,
@@ -25,7 +26,7 @@ interface Props {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
 
-  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout] = await Promise.all([
+  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero] = await Promise.all([
     getPublicProjects(),
     getPublicServices(),
     getPublicSkills(),
@@ -33,12 +34,13 @@ export default async function HomePage({ params }: Props) {
     getPublicClients(),
     getPublicTimeline(),
     getPublicAbout(locale),
+    getPublicHero(locale),
   ])
 
   return (
     <>
       <JsonLd schema={siteGraphSchema()} />
-      <Hero locale={locale} />
+      <Hero locale={locale} dbHero={dbHero} />
       <ProofBar locale={locale} />
       <ServicesSection locale={locale} dbServices={dbServices} />
       <ProjectsSection locale={locale} dbProjects={dbProjects} />
