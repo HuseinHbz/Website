@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <rect width="80" height="80" fill="#0d0d17" rx="10"/>
+  <rect x="8" y="8" width="64" height="64" fill="#e57000" fill-opacity="0.15" rx="8"/>
+  <!-- Server rack -->
+  <rect x="22" y="18" width="36" height="8" fill="none" stroke="#e57000" stroke-width="2" rx="2"/>
+  <rect x="22" y="29" width="36" height="8" fill="none" stroke="#e57000" stroke-width="2" rx="2"/>
+  <rect x="22" y="40" width="36" height="8" fill="none" stroke="#e57000" stroke-width="2" rx="2"/>
+  <!-- LED dots -->
+  <circle cx="51" cy="22" r="2" fill="#e57000"/>
+  <circle cx="51" cy="33" r="2" fill="#e57000"/>
+  <circle cx="51" cy="44" r="2" fill="#e57000"/>
+  <!-- Cluster dots -->
+  <circle cx="28" cy="55" r="3" fill="#e57000"/>
+  <circle cx="40" cy="55" r="3" fill="#e57000"/>
+  <circle cx="52" cy="55" r="3" fill="#e57000"/>
+  <line x1="28" y1="55" x2="52" y2="55" stroke="#e57000" stroke-width="1.5"/>
+  <text x="40" y="68" text-anchor="middle" fill="#e57000" font-family="Arial,sans-serif" font-size="8.5" font-weight="bold">Proxmox</text>
+</svg>

@@ -292,10 +292,10 @@ function VariantMinimal({ c }: { c: HeroContent }) {
       <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}
         className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight leading-none">
         <span className="block" style={{ background:'linear-gradient(90deg,#e2e8f0,#94a3b8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-          {c.isRTL ? 'معمار' : 'INFRA'}
+          {c.isRTL ? 'حسین' : 'INFRA'}
         </span>
         <span className="block" style={{ background:'linear-gradient(90deg,#6366f1,#818cf8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-          {c.isRTL ? 'زیرساخت' : 'ARCHITECT'}
+          {c.isRTL ? 'حبیب‌آذر' : 'ARCHITECT'}
         </span>
       </motion.h1>
       <motion.div initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.5, duration:0.5 }}
@@ -516,9 +516,9 @@ function VariantNeon({ c }: { c: HeroContent }) {
       </motion.div>
       <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}
         className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-none">
-        <span className="block text-text-primary">{c.isRTL ? 'معمار' : 'Infrastructure'}</span>
+        <span className="block text-text-primary">{c.isRTL ? 'حسین' : 'Infrastructure'}</span>
         <span className="block" style={{ background:'linear-gradient(90deg,#06b6d4,#6366f1,#818cf8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-          {c.isRTL ? 'زیرساخت' : 'Architect'}
+          {c.isRTL ? 'حبیب‌آذر' : 'Architect'}
         </span>
       </motion.h1>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}
@@ -734,6 +734,394 @@ function VariantGradient({ c }: { c: HeroContent }) {
   )
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 11 — TIMELINE (vertical career timeline right side)
+══════════════════════════════════════════════════════════════════ */
+function VariantTimeline({ c }: { c: HeroContent }) {
+  const items = c.isRTL
+    ? [{ y:'۱۳۹۲', t:'تکنسین فنی' },{ y:'۱۳۹۶', t:'متخصص IT' },{ y:'۱۴۰۰', t:'مهندس شبکه' },{ y:'۱۴۰۳', t:'معمار ارشد' }]
+    : [{ y:'2013', t:'IT Technician' },{ y:'2017', t:'IT Specialist' },{ y:'2021', t:'Network Eng.' },{ y:'2024', t:'Senior Architect' }]
+  return (
+    <div className="container-site py-20 max-w-5xl mx-auto">
+      <div className={`flex flex-col lg:flex-row items-center gap-12 ${c.isRTL?'lg:flex-row-reverse':''}`}>
+        <div className="flex-1 flex flex-col gap-5">
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
+          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
+            <span className="text-xs tracking-[0.3em] uppercase text-text-muted">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
+            <h1 className="text-4xl sm:text-5xl font-black mt-1" style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.headline}</h1>
+            <p className="text-sm text-text-muted mt-1">{c.headlineHi}</p>
+          </motion.div>
+          <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-sm text-text-secondary leading-relaxed max-w-md">{c.subheadline}</motion.p>
+          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
+        </div>
+        <motion.div initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3 }} className="lg:w-72 flex flex-col gap-0">
+          <p className="text-[9px] tracking-[0.35em] uppercase text-text-muted mb-4">{c.isRTL?'مسیر حرفه‌ای':'Career Path'}</p>
+          {items.map((item, i) => (
+            <div key={i} className="flex gap-4 relative">
+              <div className="flex flex-col items-center">
+                <div className="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style={{ background:['#6366f1','#06b6d4','#10b981','#f59e0b'][i] }}/>
+                {i < items.length-1 && <div className="w-px flex-1 my-1" style={{ background:'linear-gradient(to bottom,'+['#6366f1','#06b6d4','#10b981'][i]+',transparent)' }}/>}
+              </div>
+              <div className="pb-5">
+                <p className="text-[10px] text-text-muted font-mono">{item.y}</p>
+                <p className="text-sm font-semibold text-text-primary">{item.t}</p>
+              </div>
+            </div>
+          ))}
+          <div className="mt-2 pt-3 border-t border-border flex gap-6">
+            {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
+              <div key={i}><div className="text-lg font-black" style={{ color:s.color }}>{s.value}</div><div className="text-[9px] text-text-muted">{s.label.split(' ')[0]}</div></div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 12 — DIAGONAL SPLIT (slanted background divider)
+══════════════════════════════════════════════════════════════════ */
+function VariantDiagonal({ c }: { c: HeroContent }) {
+  return (
+    <div className="relative min-h-screen flex items-center overflow-hidden" dir={c.isRTL?'rtl':'ltr'}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background:'linear-gradient(125deg, rgba(99,102,241,0.12) 0%, transparent 45%)' }}/>
+      <div className="absolute right-0 top-0 bottom-0 w-1/2 pointer-events-none" style={{ background:'linear-gradient(to left, rgba(6,182,212,0.04), transparent)', clipPath:'polygon(10% 0,100% 0,100% 100%,0% 100%)' }}/>
+      <div className="container-site py-24 max-w-5xl mx-auto relative z-10">
+        <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }} className="max-w-xl">
+          <Badge label={c.badge} />
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black mt-5 leading-none tracking-tighter">
+            <span className="block text-text-primary">{c.isRTL?'حسین':'HUSEIN'}</span>
+            <span className="block" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</span>
+            <span className="block text-2xl font-semibold text-text-muted mt-2">{c.headline}</span>
+          </h1>
+          <div className="w-12 h-1 bg-accent rounded-full my-4"/>
+          <p className="text-sm text-text-secondary leading-relaxed mb-6">{c.subheadline}</p>
+          <CtaButtons c={c} />
+        </motion.div>
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
+          className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-3">
+          {c.stats.filter(s=>s.value).map((s,i) => (
+            <div key={i} className="px-5 py-3 rounded-xl text-right"
+              style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}30`, backdropFilter:'blur(12px)' }}>
+              <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
+              <div className="text-[10px] text-text-muted">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 13 — CODE BLOCK (monospace source-code aesthetic)
+══════════════════════════════════════════════════════════════════ */
+function VariantCode({ c }: { c: HeroContent }) {
+  const linesFa = [`// حسین حبیب‌آذر — معمار زیرساخت`,`const profile = {`,`  نام: "حسین",`,`  تخصص: "${c.headline}",`,`  تجربه: "${c.stats[0]?.value} سال",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
+  const linesEn = [`// Husein Habibazar — Infrastructure Architect`,`const profile = {`,`  name: "Husein",`,`  role: "${c.headline}",`,`  experience: "${c.stats[0]?.value} years",`,`  status: "✓ Open to Work"`,`}`]
+  const lines = c.isRTL ? linesFa : linesEn
+  const colors = ['#94a3b8','#6366f1','#06b6d4','#f1f5f9','#10b981','#f59e0b','#6366f1']
+  return (
+    <div className="container-site py-20 max-w-5xl mx-auto">
+      <div className={`flex flex-col lg:flex-row items-start gap-12 ${c.isRTL?'lg:flex-row-reverse':''}`}>
+        <motion.div initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }} className="flex-1">
+          <div className="rounded-xl overflow-hidden border border-[#2a2a3e]" style={{ background:'#0a0a12' }}>
+            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#1e1e2e]">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
+              <span className="text-[10px] text-slate-500 ml-2 font-mono">profile.ts</span>
+            </div>
+            <div className="p-5 font-mono text-sm" dir="ltr">
+              {lines.map((line,i) => (
+                <motion.div key={i} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3+i*0.1 }}
+                  className="flex gap-3 leading-relaxed">
+                  <span className="text-[#3a3a5e] select-none w-4 shrink-0 text-right">{i+1}</span>
+                  <span style={{ color:colors[i] }}>{line}</span>
+                </motion.div>
+              ))}
+              <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,1,0] }} transition={{ delay:1.5, duration:1, repeat:Infinity }}
+                className="inline-block w-2 h-4 bg-indigo-400 ml-1 mt-1"/>
+            </div>
+          </div>
+        </motion.div>
+        <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.4 }} className="lg:w-64 flex flex-col gap-5">
+          <Badge label={c.badge} />
+          <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
+          <CtaButtons c={c} />
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {c.stats.filter(s=>s.value).map((s,i) => (
+              <div key={i} className="p-3 rounded-lg text-center" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}25` }}>
+                <div className="text-lg font-mono font-black" style={{ color:s.color }}>{s.value}</div>
+                <div className="text-[9px] text-text-muted mt-0.5">{s.label.split(' ')[0]}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 14 — PORTRAIT CARD (avatar + card layout)
+══════════════════════════════════════════════════════════════════ */
+function VariantPortrait({ c }: { c: HeroContent }) {
+  return (
+    <div className="container-site py-20 max-w-5xl mx-auto">
+      <div className={`flex flex-col lg:flex-row items-center gap-10 ${c.isRTL?'lg:flex-row-reverse':''}`}>
+        <motion.div initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.15, duration:0.7 }}
+          className="flex flex-col items-center gap-4 shrink-0">
+          <div className="w-40 h-40 rounded-2xl flex items-center justify-center relative"
+            style={{ background:'linear-gradient(135deg,#1e1e3f,#0d0d1a)', border:'1px solid rgba(99,102,241,0.3)', boxShadow:'0 0 50px rgba(99,102,241,0.15)' }}>
+            <span className="text-4xl font-black" style={{ background:'linear-gradient(135deg,#818cf8,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>HBZ</span>
+            <div className="absolute -bottom-2 -right-2 w-6 h-6 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse"/>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-bold text-text-primary">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</p>
+            <p className="text-xs text-accent">{c.isRTL?'معمار زیرساخت':'Infrastructure Architect'}</p>
+          </div>
+          <div className="flex flex-col gap-1.5 w-full">
+            {c.stats.filter(s=>s.value).map((s,i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}20` }}>
+                <span className="text-[10px] text-text-muted">{s.label}</span>
+                <span className="text-sm font-black" style={{ color:s.color }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+        <motion.div initial={{ opacity:0, x:c.isRTL?-30:30 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3 }} className="flex-1 flex flex-col gap-6">
+          <Badge label={c.badge} />
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight"
+            style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#94a3b8 40%,#6366f1 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+            {c.headline}
+          </h1>
+          <p className="text-sm text-text-muted tracking-wider">{c.headlineHi}</p>
+          <p className="text-sm text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</p>
+          <CtaButtons c={c} />
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 15 — BIG METRIC (giant animated numbers)
+══════════════════════════════════════════════════════════════════ */
+function VariantMetric({ c }: { c: HeroContent }) {
+  return (
+    <div className="container-site py-20 max-w-5xl mx-auto flex flex-col gap-8">
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }} className="flex flex-col gap-3 max-w-2xl">
+        <Badge label={c.badge} />
+        <h1 className="text-4xl sm:text-5xl font-black" style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+          {c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}
+        </h1>
+        <p className="text-lg text-text-muted">{c.headline} · {c.headlineHi}</p>
+        <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
+        <div className="mt-2"><CtaButtons c={c} row /></div>
+      </motion.div>
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {c.stats.filter(s=>s.value).map((s,i) => (
+          <motion.div key={i} initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5+i*0.12 }}
+            className="relative rounded-2xl p-6 overflow-hidden" style={{ background:'rgba(10,10,20,0.9)', border:`1px solid ${s.color}25` }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background:`radial-gradient(ellipse 80% 60% at 50% 100%, ${s.color}10, transparent)` }}/>
+            <div className="text-4xl md:text-5xl font-black tabular-nums leading-none" style={{ color:s.color }}>{s.value}</div>
+            <div className="text-xs text-text-muted mt-2 leading-tight">{s.label}</div>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 16 — DARK WAVE (animated wave lines bg)
+══════════════════════════════════════════════════════════════════ */
+function VariantWave({ c }: { c: HeroContent }) {
+  return (
+    <div className="container-site py-24 max-w-4xl mx-auto flex flex-col items-center text-center gap-7">
+      {/* Wave SVG decoration */}
+      <div className="absolute inset-x-0 top-1/3 pointer-events-none opacity-20">
+        <svg viewBox="0 0 1440 120" className="w-full" preserveAspectRatio="none">
+          <path d="M0,60 C360,0 720,120 1080,60 C1260,30 1380,80 1440,60 L1440,120 L0,120 Z" fill="rgba(99,102,241,0.3)"/>
+          <path d="M0,80 C240,40 480,100 720,70 C960,40 1200,90 1440,70 L1440,120 L0,120 Z" fill="rgba(6,182,212,0.2)"/>
+        </svg>
+      </div>
+      <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
+      <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.8 }}>
+        <span className="text-[10px] tracking-[0.4em] uppercase text-text-muted block mb-2">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
+        <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-none"
+          style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#818cf8 40%,#06b6d4 70%,#10b981 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+          {c.headline}
+        </h1>
+      </motion.div>
+      <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }} className="text-sm text-text-secondary max-w-lg leading-relaxed">{c.subheadline}</motion.p>
+      <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}><CtaButtons c={c} row /></motion.div>
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.7 }} className="flex flex-wrap justify-center gap-4">
+        {c.stats.filter(s=>s.value).map((s,i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <span className="text-3xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
+            <span className="text-[10px] text-text-muted uppercase tracking-wider">{s.label}</span>
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 17 — SIDEBAR NAV (vertical accent sidebar)
+══════════════════════════════════════════════════════════════════ */
+function VariantSidebar({ c }: { c: HeroContent }) {
+  return (
+    <div className="min-h-screen flex" dir={c.isRTL?'rtl':'ltr'}>
+      {/* Sidebar accent */}
+      <div className="hidden lg:flex w-14 flex-col items-center py-24 gap-6 shrink-0 border-r border-[#1e1e2e]">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black" style={{ background:'linear-gradient(135deg,#6366f1,#818cf8)', color:'white' }}>HBZ</div>
+        <div className="flex-1 w-px" style={{ background:'linear-gradient(to bottom,#6366f1,#06b6d4,transparent)' }}/>
+        {['⬡','⬢','◈','◉'].map((icon,i) => <span key={i} className="text-text-muted text-sm">{icon}</span>)}
+      </div>
+      <div className="flex-1 container-site py-20 flex flex-col justify-center max-w-4xl gap-6">
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
+        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
+          <p className="text-xs tracking-[0.3em] uppercase text-text-muted mb-2">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</p>
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-none mb-2">
+            <span className="block" style={{ background:'linear-gradient(90deg,#f1f5f9,#94a3b8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.isRTL?'حسین':'HUSEIN'}</span>
+            <span className="block" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</span>
+          </h1>
+          <p className="text-base text-text-muted">{c.headline}</p>
+        </motion.div>
+        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-sm text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</motion.p>
+        <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
+          className="flex gap-6 pt-4 border-t border-border">
+          {c.stats.filter(s=>s.value).map((s,i) => (
+            <div key={i}><div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div><div className="text-[10px] text-text-muted">{s.label}</div></div>
+          ))}
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 18 — HOLOGRAPHIC (iridescent gradient card)
+══════════════════════════════════════════════════════════════════ */
+function VariantHolo({ c }: { c: HeroContent }) {
+  return (
+    <div className="container-site py-20 max-w-4xl mx-auto flex flex-col items-center gap-6 text-center">
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
+      <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}
+        className="w-full rounded-2xl p-10 relative overflow-hidden"
+        style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.08) 0%,rgba(6,182,212,0.06) 25%,rgba(16,185,129,0.06) 50%,rgba(245,158,11,0.06) 75%,rgba(99,102,241,0.08) 100%)', border:'1px solid rgba(99,102,241,0.25)', backdropFilter:'blur(20px)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.04),rgba(6,182,212,0.04),rgba(16,185,129,0.04))', backgroundSize:'200% 200%' }}/>
+        <p className="text-xs tracking-[0.4em] uppercase mb-4" style={{ color:'rgba(129,140,248,0.8)' }}>{c.isRTL?'حسین حبیب‌آذر · معمار زیرساخت':'Husein Habibazar · Infrastructure Architect'}</p>
+        <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight mb-4"
+          style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#818cf8 20%,#06b6d4 40%,#10b981 60%,#f59e0b 80%,#818cf8 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+          {c.headline}
+        </h1>
+        <p className="text-sm text-text-secondary max-w-xl mx-auto leading-relaxed mb-6">{c.subheadline}</p>
+        <CtaButtons c={c} row />
+      </motion.div>
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
+        className="grid grid-cols-4 gap-3 w-full">
+        {c.stats.filter(s=>s.value).map((s,i) => (
+          <div key={i} className="py-3 rounded-xl text-center" style={{ background:`linear-gradient(135deg,${s.color}0d,${s.color}06)`, border:`1px solid ${s.color}20` }}>
+            <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
+            <div className="text-[9px] text-text-muted mt-1">{s.label}</div>
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 19 — DARK NEWSPAPER (editorial black/white)
+══════════════════════════════════════════════════════════════════ */
+function VariantNewspaper({ c }: { c: HeroContent }) {
+  return (
+    <div className="container-site py-20 max-w-5xl mx-auto" dir={c.isRTL?'rtl':'ltr'}>
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }} className="border-t-2 border-b border-border py-3 mb-6 flex items-center justify-between">
+        <span className="text-[10px] tracking-[0.4em] uppercase text-text-muted">{c.isRTL?'معمار زیرساخت · امنیت شبکه':'Infrastructure Architect · Network Security'}</span>
+        <span className="text-[10px] tracking-widest text-text-muted font-mono">HBZ — {new Date().getFullYear()}</span>
+      </motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="lg:col-span-2 border-r border-border pr-8">
+          <Badge label={c.badge} />
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-tight mt-4 text-text-primary">{c.isRTL?'حسین':'HUSEIN'}</h1>
+          <h2 className="text-3xl font-bold tracking-tight" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</h2>
+          <p className="text-xs text-text-muted uppercase tracking-widest mt-3 mb-4">{c.headline}</p>
+          <p className="text-sm text-text-secondary leading-relaxed border-l-2 border-accent pl-4 max-w-lg">{c.subheadline}</p>
+          <div className="mt-6"><CtaButtons c={c} /></div>
+        </motion.div>
+        <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.35 }} className="flex flex-col gap-5">
+          <p className="text-[9px] tracking-[0.35em] uppercase text-text-muted border-b border-border pb-2">{c.isRTL?'آمار کلیدی':'Key Statistics'}</p>
+          {c.stats.filter(s=>s.value).map((s,i) => (
+            <div key={i} className="border-b border-border pb-4 last:border-0 last:pb-0">
+              <div className="text-3xl font-black" style={{ color:s.color }}>{s.value}</div>
+              <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {['Cisco','VMware','MikroTik','Fortinet','Linux'].map(t => (
+              <span key={t} className="text-[9px] border border-border rounded px-1.5 py-0.5 text-text-muted">{t}</span>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIANT 20 — CYBER GRID (futuristic grid lines + HUD feel)
+══════════════════════════════════════════════════════════════════ */
+function VariantCyber({ c }: { c: HeroContent }) {
+  return (
+    <div className="container-site py-20 max-w-5xl mx-auto relative">
+      {/* Corner decorations */}
+      {[['top-8 left-8','border-t-2 border-l-2'],['top-8 right-8','border-t-2 border-r-2'],['bottom-8 left-8','border-b-2 border-l-2'],['bottom-8 right-8','border-b-2 border-r-2']].map(([pos,bdr],i) => (
+        <div key={i} className={`absolute ${pos} w-8 h-8 ${bdr} border-indigo-500/40`}/>
+      ))}
+      <div className="flex flex-col items-center text-center gap-6">
+        <motion.div initial={{ opacity:0, y:-15 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
+          className="flex items-center gap-3 text-[10px] tracking-[0.4em] uppercase" style={{ color:'#06b6d4' }}>
+          <div className="w-6 h-px bg-cyan-400"/>
+          {c.isRTL?'سیستم آماده ∥ HBZ-v2.5':'SYSTEM ONLINE ∥ HBZ-v2.5'}
+          <div className="w-6 h-px bg-cyan-400"/>
+        </motion.div>
+        <motion.div initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.2, duration:0.8 }}>
+          <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-none">
+            <span className="block" style={{ color:'#f1f5f9', textShadow:'0 0 40px rgba(99,102,241,0.4)' }}>{c.isRTL?'حسین':'HUSEIN'}</span>
+            <span className="block" style={{ background:'linear-gradient(90deg,#6366f1,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', textShadow:'none' }}>
+              {c.isRTL?'حبیب‌آذر':'HABIBAZAR'}
+            </span>
+          </h1>
+        </motion.div>
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}
+          className="px-5 py-2 rounded border border-indigo-500/30 font-mono text-sm" style={{ color:'#818cf8', background:'rgba(99,102,241,0.06)' }}>
+          › {c.headline} ‹
+        </motion.div>
+        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="text-sm text-text-secondary max-w-xl leading-relaxed">{c.subheadline}</motion.p>
+        <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}><CtaButtons c={c} row /></motion.div>
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }}
+          className="grid grid-cols-4 gap-3 w-full max-w-2xl">
+          {c.stats.filter(s=>s.value).map((s,i) => (
+            <div key={i} className="py-3 px-2 rounded text-center font-mono"
+              style={{ background:'rgba(6,182,212,0.04)', border:'1px solid rgba(6,182,212,0.2)' }}>
+              <div className="text-xl font-black" style={{ color:s.color }}>{s.value}</div>
+              <div className="text-[9px] text-cyan-500/60 mt-0.5">{s.label.split(' ')[0]}</div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Background layers per variant ──────────────────────────────── */
 function HeroBg({ variant }: { variant: string }) {
   const isTerminal = variant === 'terminal'
@@ -772,16 +1160,26 @@ export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
   const c = buildContent(locale, dbHero)
 
   const VARIANTS: Record<string, React.FC<{ c: HeroContent }>> = {
-    split:    VariantSplit,
-    minimal:  VariantMinimal,
-    glass:    VariantGlass,
-    terminal: VariantTerminal,
-    bento:    VariantBento,
-    luxury:   VariantLuxury,
-    neon:     VariantNeon,
-    magazine: VariantMagazine,
-    centered: VariantCentered,
-    gradient: VariantGradient,
+    split:     VariantSplit,
+    minimal:   VariantMinimal,
+    glass:     VariantGlass,
+    terminal:  VariantTerminal,
+    bento:     VariantBento,
+    luxury:    VariantLuxury,
+    neon:      VariantNeon,
+    magazine:  VariantMagazine,
+    centered:  VariantCentered,
+    gradient:  VariantGradient,
+    timeline:  VariantTimeline,
+    diagonal:  VariantDiagonal,
+    code:      VariantCode,
+    portrait:  VariantPortrait,
+    metric:    VariantMetric,
+    wave:      VariantWave,
+    sidebar:   VariantSidebar,
+    holo:      VariantHolo,
+    newspaper: VariantNewspaper,
+    cyber:     VariantCyber,
   }
   const VariantComponent = VARIANTS[variant] || VariantSplit
 

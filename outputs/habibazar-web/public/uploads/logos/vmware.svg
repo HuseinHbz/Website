@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <rect width="80" height="80" fill="#0d0d17" rx="10"/>
+  <rect x="8" y="8" width="64" height="64" fill="#60b6e0" fill-opacity="0.15" rx="8"/>
+  <!-- Cloud shape -->
+  <circle cx="32" cy="36" r="10" fill="none" stroke="#60b6e0" stroke-width="2"/>
+  <circle cx="44" cy="33" r="8" fill="none" stroke="#60b6e0" stroke-width="2"/>
+  <circle cx="52" cy="38" r="7" fill="none" stroke="#60b6e0" stroke-width="2"/>
+  <rect x="22" y="38" width="37" height="8" fill="#0d0d17"/>
+  <line x1="22" y1="46" x2="59" y2="46" stroke="#60b6e0" stroke-width="2"/>
+  <!-- VM boxes below cloud -->
+  <rect x="22" y="46" width="10" height="8" fill="none" stroke="#60b6e0" stroke-width="1.5" rx="1"/>
+  <rect x="35" y="46" width="10" height="8" fill="none" stroke="#60b6e0" stroke-width="1.5" rx="1"/>
+  <rect x="48" y="46" width="10" height="8" fill="none" stroke="#60b6e0" stroke-width="1.5" rx="1"/>
+  <text x="40" y="66" text-anchor="middle" fill="#60b6e0" font-family="Arial,sans-serif" font-size="9" font-weight="bold">VMware</text>
+</svg>

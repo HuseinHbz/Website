@@ -256,6 +256,28 @@ export function resyncPublicContent() {
     insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', p.featured)
   }
 
+  // ── Media logos (seed SVG logos if not already in DB) ─────────────────────
+  const insMedia = db.prepare(`
+    INSERT OR IGNORE INTO media_files (filename, original_name, mime_type, size, url, folder, alt)
+    VALUES (?,?,?,?,?,?,?)
+  `)
+  const techLogos = [
+    ['cisco.svg','Cisco','logos'],['mikrotik.svg','MikroTik','logos'],['vmware.svg','VMware','logos'],
+    ['fortinet.svg','Fortinet','logos'],['proxmox.svg','Proxmox','logos'],['zabbix.svg','Zabbix','logos'],
+    ['ansible.svg','Ansible','logos'],['linux.svg','Linux','logos'],['docker.svg','Docker','logos'],
+    ['kubernetes.svg','Kubernetes','logos'],['windows-server.svg','Windows Server','logos'],['grafana.svg','Grafana','logos'],
+  ]
+  const orgLogos = [
+    ['network-co.svg','Network Co','general'],['datacenter.svg','DataCenter','general'],
+    ['enterprise.svg','Enterprise','general'],['security-firm.svg','SecureCo','general'],
+    ['isp-provider.svg','ISP Provider','general'],['hospital.svg','Hospital','general'],
+    ['restaurant-chain.svg','Restaurant Chain','general'],['industrial.svg','Industrial','general'],
+    ['government.svg','Government','general'],['university.svg','University','general'],
+  ]
+  for (const [file, name, folder] of [...techLogos, ...orgLogos]) {
+    insMedia.run(file, name, 'image/svg+xml', 1024, `/uploads/${folder}/${file}`, folder, `${name} logo`)
+  }
+
   db.close()
   return { ok: true, message: 'Public content synced to database successfully' }
 }

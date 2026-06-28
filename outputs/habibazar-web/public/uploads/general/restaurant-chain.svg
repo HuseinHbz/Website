@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <rect width="80" height="80" fill="#0d0d17" rx="10"/>
+  <rect x="8" y="8" width="64" height="64" fill="#7c2d12" fill-opacity="0.2" rx="8"/>
+  <!-- Fork -->
+  <line x1="28" y1="18" x2="28" y2="54" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="24" y1="18" x2="24" y2="30" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>
+  <line x1="32" y1="18" x2="32" y2="30" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 30 Q28 34 32 30" fill="none" stroke="#f97316" stroke-width="2"/>
+  <!-- Knife -->
+  <line x1="40" y1="18" x2="40" y2="54" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M40 18 Q46 22 46 34 L40 36" fill="#f97316" fill-opacity="0.4" stroke="#f97316" stroke-width="1.5"/>
+  <!-- Spoon -->
+  <line x1="54" y1="30" x2="54" y2="54" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="54" cy="24" rx="5" ry="7" fill="none" stroke="#f97316" stroke-width="2"/>
+  <text x="40" y="68" text-anchor="middle" fill="#f97316" font-family="Arial,sans-serif" font-size="8" font-weight="bold">Restaurant</text>
+</svg>
