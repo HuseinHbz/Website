@@ -765,9 +765,9 @@ function HeroBg({ variant }: { variant: string }) {
 export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
   const isRTL = locale === 'fa'
   const ref = useRef<HTMLElement>(null)
-  const { scrollYProgress } = useScroll({ target: ref })
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '20%'])
-  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
+  const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0])
 
   const c = buildContent(locale, dbHero)
 

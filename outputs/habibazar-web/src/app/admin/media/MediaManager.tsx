@@ -15,6 +15,26 @@ function formatBytes(b: number) {
 }
 
 function isImage(mime: string) { return mime.startsWith('image/') }
+function fileIcon(mime: string) {
+  if (mime.includes('pdf')) return '📄'
+  if (mime.includes('word') || mime.includes('document')) return '📝'
+  if (mime.includes('excel') || mime.includes('spreadsheet') || mime.includes('csv')) return '📊'
+  if (mime.includes('powerpoint') || mime.includes('presentation')) return '📋'
+  if (mime.includes('video')) return '🎬'
+  if (mime.includes('audio')) return '🎵'
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return '🗜️'
+  if (mime.includes('text') || mime.includes('markdown')) return '📃'
+  return '📎'
+}
+function fileColor(mime: string) {
+  if (mime.includes('pdf')) return '#ef4444'
+  if (mime.includes('word') || mime.includes('document')) return '#3b82f6'
+  if (mime.includes('excel') || mime.includes('spreadsheet')) return '#22c55e'
+  if (mime.includes('powerpoint') || mime.includes('presentation')) return '#f97316'
+  if (mime.includes('video')) return '#a855f7'
+  if (mime.includes('audio')) return '#06b6d4'
+  return '#64748b'
+}
 
 export function MediaManager() {
   const [files, setFiles] = useState<MediaFile[]>([])
@@ -98,11 +118,11 @@ export function MediaManager() {
                 type="file"
                 multiple
                 className="hidden"
-                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.xlsm,.ppt,.pptx,.txt,.md,.csv,.zip,.rar,.7z"
                 onChange={(e) => e.target.files && upload(e.target.files)}
               />
             </label>
-            <p className="text-slate-600 text-xs mt-2">Images, videos, PDFs, documents</p>
+            <p className="text-slate-600 text-xs mt-2">Images (PNG/JPG/WebP/SVG) · Video · Audio · PDF · Word · Excel · PowerPoint · ZIP</p>
           </div>
 
           {/* File grid */}
@@ -122,10 +142,16 @@ export function MediaManager() {
                   >
                     {isImage(f.mimeType) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={f.url} alt={f.alt || f.originalName} className="w-full h-20 object-cover" />
-                    ) : (
-                      <div className="w-full h-20 bg-[#111122] flex items-center justify-center text-2xl">
-                        {f.mimeType.includes('pdf') ? '📄' : f.mimeType.includes('video') ? '🎬' : '📎'}
+                      <img src={f.url} alt={f.alt || f.originalName} className="w-full h-20 object-cover bg-[#111122]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.removeAttribute('style') }} />
+                    ) : null}
+                    {!isImage(f.mimeType) && (
+                      <div className="w-full h-20 flex flex-col items-center justify-center gap-1"
+                        style={{ background:`linear-gradient(135deg, #0c0c1e, #111128)`, borderBottom:`2px solid ${fileColor(f.mimeType)}33` }}>
+                        <span className="text-2xl">{fileIcon(f.mimeType)}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: fileColor(f.mimeType) }}>
+                          {f.mimeType.split('/')[1]?.split('.').pop()?.slice(0,8) || 'FILE'}
+                        </span>
                       </div>
                     )}
                     <div className="p-1.5">
@@ -146,7 +172,29 @@ export function MediaManager() {
               <p className="text-xs font-bold text-white truncate">{selected.originalName}</p>
               {isImage(selected.mimeType) && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={selected.url} alt={selected.alt || ''} className="w-full rounded-lg" />
+                <img src={selected.url} alt={selected.alt || ''} className="w-full rounded-lg bg-[#0c0c14]" />
+              )}
+              {selected.mimeType.includes('pdf') && (
+                <iframe src={selected.url} className="w-full rounded-lg border border-[#2a2a3e]" style={{ height: 200 }} title={selected.originalName} />
+              )}
+              {selected.mimeType.includes('video') && (
+                <video src={selected.url} controls className="w-full rounded-lg" />
+              )}
+              {selected.mimeType.includes('audio') && (
+                <audio src={selected.url} controls className="w-full" />
+              )}
+              {!isImage(selected.mimeType) && !selected.mimeType.includes('pdf') && !selected.mimeType.includes('video') && !selected.mimeType.includes('audio') && (
+                <div className="flex flex-col items-center justify-center gap-2 py-6 rounded-lg border border-[#2a2a3e]"
+                  style={{ background:`linear-gradient(135deg, #0c0c1e, #111128)` }}>
+                  <span className="text-4xl">{fileIcon(selected.mimeType)}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: fileColor(selected.mimeType) }}>
+                    {selected.mimeType.split('/')[1]?.split('.').pop()?.toUpperCase() || 'FILE'}
+                  </span>
+                  <a href={selected.url} target="_blank" rel="noreferrer"
+                    className="text-xs text-indigo-400 hover:text-indigo-300 underline mt-1">
+                    Open file ↗
+                  </a>
+                </div>
               )}
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between"><span className="text-slate-500">Type</span><Badge>{selected.mimeType.split('/')[1]}</Badge></div>

@@ -77,9 +77,11 @@ export function Header({ locale }: HeaderProps) {
             </div>
             <div className="hidden sm:block">
               <div className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">
-                Husein Habibazar
+                {isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
               </div>
-              <div className="text-xs text-text-muted leading-none">Infrastructure Architect</div>
+              <div className="text-xs text-text-muted leading-none">
+                {isRTL ? 'معمار زیرساخت' : 'Infrastructure Architect'}
+              </div>
             </div>
           </Link>
 
