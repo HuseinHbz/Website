@@ -280,17 +280,17 @@ function VariantSplit({ c }: { c: HeroContent }) {
 ══════════════════════════════════════════════════════════════════ */
 function VariantMinimal({ c }: { c: HeroContent }) {
   return (
-    <div className="container-site py-24 flex flex-col items-center text-center gap-6 max-w-4xl mx-auto">
+    <div className="container-site w-full flex flex-col items-center text-center gap-5 max-w-4xl mx-auto py-16">
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}>
         <Badge label={c.badge} />
       </motion.div>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.15 }}>
         <span className="text-xs font-semibold tracking-[0.3em] uppercase text-text-muted">
-          {c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
+          {c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}
         </span>
       </motion.div>
-      <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}
-        className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight leading-[1.1]">
+      <motion.h1 initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}
+        className="text-[13vw] sm:text-[11vw] md:text-[9vw] lg:text-[8vw] font-black tracking-tight leading-[1.1]">
         <span className="block" style={{ background:'linear-gradient(90deg,#e2e8f0,#94a3b8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
           {c.isRTL ? 'حسین' : 'INFRA'}
         </span>
@@ -307,9 +307,6 @@ function VariantMinimal({ c }: { c: HeroContent }) {
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.7 }}>
         <CtaButtons c={c} row />
       </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.85 }} className="w-full max-w-2xl">
-        <StatBar stats={c.stats} />
-      </motion.div>
     </div>
   )
 }
@@ -319,7 +316,7 @@ function VariantMinimal({ c }: { c: HeroContent }) {
 ══════════════════════════════════════════════════════════════════ */
 function VariantGlass({ c }: { c: HeroContent }) {
   return (
-    <div className="container-site py-24 flex flex-col items-center gap-6 max-w-2xl mx-auto text-center">
+    <div className="container-site py-12 flex flex-col items-center gap-6 max-w-4xl mx-auto text-center">
       {/* Tech pills row */}
       <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
         className="flex flex-wrap justify-center gap-2">
@@ -329,18 +326,18 @@ function VariantGlass({ c }: { c: HeroContent }) {
       </motion.div>
       {/* Main glass card */}
       <motion.div initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.2, duration:0.6 }}
-        className="w-full rounded-2xl p-8 flex flex-col gap-5"
-        style={{ background:'rgba(13,13,23,0.8)', border:'1px solid rgba(99,102,241,0.2)', backdropFilter:'blur(20px)', boxShadow:'0 0 60px rgba(99,102,241,0.08)' }}>
+        className="w-full rounded-2xl p-10 flex flex-col gap-6"
+        style={{ background:'rgba(13,13,23,0.8)', border:'1px solid rgba(99,102,241,0.2)', backdropFilter:'blur(20px)', boxShadow:'0 0 80px rgba(99,102,241,0.1)' }}>
         <Badge label={c.badge} />
         <div>
-          <span className="text-xs text-text-muted tracking-widest uppercase">{c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}</span>
-          <h1 className="text-4xl sm:text-5xl font-black mt-1"
+          <span className="text-xs text-text-muted tracking-widest uppercase">{c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}</span>
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black mt-2 leading-tight"
             style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
             {c.headline}
           </h1>
-          <p className="text-text-muted text-sm mt-1">{c.headlineHi}</p>
+          <p className="text-text-muted text-base mt-2">{c.headlineHi}</p>
         </div>
-        <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
+        <p className="text-sm text-text-secondary leading-relaxed max-w-2xl mx-auto">{c.subheadline}</p>
         <CtaButtons c={c} row />
       </motion.div>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="w-full">
@@ -355,7 +352,7 @@ function VariantGlass({ c }: { c: HeroContent }) {
 ══════════════════════════════════════════════════════════════════ */
 function VariantTerminal({ c }: { c: HeroContent }) {
   return (
-    <div className="container-site py-24 flex flex-col items-center gap-8 max-w-2xl mx-auto">
+    <div className="container-site py-12 flex flex-col items-center gap-8 max-w-3xl mx-auto">
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1, duration:0.6 }}
         className="w-full rounded-xl overflow-hidden"
         style={{ background:'rgba(4,8,4,0.97)', border:'1px solid rgba(0,255,100,0.18)', boxShadow:'0 0 40px rgba(0,255,100,0.05)' }}>
@@ -460,18 +457,18 @@ function VariantBento({ c }: { c: HeroContent }) {
 ══════════════════════════════════════════════════════════════════ */
 function VariantLuxury({ c }: { c: HeroContent }) {
   return (
-    <div className="container-site py-24 flex flex-col items-center text-center gap-5 max-w-3xl mx-auto">
+    <div className="container-site py-12 flex flex-col items-center text-center gap-5 max-w-4xl mx-auto">
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}
         className="text-[10px] tracking-[0.4em] uppercase text-text-muted">
         {c.headlineHi}
       </motion.p>
       <motion.div initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.2 }}
-        className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-black"
-        style={{ background:'linear-gradient(135deg,#1e1e3f,#2d2d5f)', border:'1px solid rgba(99,102,241,0.35)', color:'#818cf8', boxShadow:'0 0 30px rgba(99,102,241,0.18)' }}>
+        className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-black"
+        style={{ background:'linear-gradient(135deg,#1e1e3f,#2d2d5f)', border:'1px solid rgba(99,102,241,0.35)', color:'#818cf8', boxShadow:'0 0 40px rgba(99,102,241,0.22)' }}>
         HBZ
       </motion.div>
       <motion.h1 initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.7 }}
-        className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-[1.1]">
+        className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[1.1]">
         <span className="block text-text-primary">{c.isRTL ? 'حسین' : 'HUSEIN'}</span>
         <span className="block" style={{ color:'#6366f1' }}>{c.isRTL ? 'حبیب‌آذر' : 'HABIBAZAR'}</span>
       </motion.h1>
@@ -510,7 +507,7 @@ function VariantNeon({ c }: { c: HeroContent }) {
         className="flex items-center gap-3">
         <div className="h-px w-8 bg-cyan-400"/>
         <span className="text-[10px] tracking-[0.4em] uppercase text-cyan-400">
-          {c.isRTL ? 'حسین حبیب‌آذر · HBZ' : 'Husein Habibazar · HBZ'}
+          {c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}
         </span>
         <div className="h-px w-8 bg-indigo-400"/>
       </motion.div>
@@ -984,7 +981,7 @@ function VariantSidebar({ c }: { c: HeroContent }) {
       <div className="flex-1 container-site py-20 flex flex-col justify-center max-w-4xl gap-6">
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
-          <p className="text-xs tracking-[0.3em] uppercase text-text-muted mb-2">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</p>
+          <p className="text-xs tracking-[0.3em] uppercase text-text-muted mb-2">{c.isRTL?'معمار زیرساخت · HBZ':'Infrastructure Architect · HBZ'}</p>
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.1] mb-2">
             <span className="block" style={{ background:'linear-gradient(90deg,#f1f5f9,#94a3b8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.isRTL?'حسین':'HUSEIN'}</span>
             <span className="block" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</span>
@@ -1155,7 +1152,7 @@ export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '20%'])
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0])
 
-  const c = { ...buildContent(locale, dbHero), stats: [] as HeroContent['stats'] }
+  const c = buildContent(locale, dbHero)
 
   const VARIANTS: Record<string, React.FC<{ c: HeroContent }>> = {
     split:     VariantSplit,

@@ -362,9 +362,10 @@ export function AiAssistant({ locale }: AiAssistantProps) {
         role="dialog"
         aria-modal="true"
         aria-label={t('title')}
+        dir={chatLocale === 'fa' ? 'rtl' : 'ltr'}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0" dir={chatLocale === 'fa' ? 'rtl' : 'ltr'}>
           <div className="flex items-center gap-3">
             <div className={cn(
               'w-8 h-8 rounded-lg flex items-center justify-center',
@@ -411,7 +412,7 @@ export function AiAssistant({ locale }: AiAssistantProps) {
 
         {/* Intake form */}
         {phase === 'intake' && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5" dir={chatLocale === 'fa' ? 'rtl' : 'ltr'}>
             <p className="text-sm font-semibold text-text-primary mb-1">
               {t('intake.title')}
             </p>

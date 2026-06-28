@@ -277,26 +277,61 @@ export function resyncPublicContent() {
     insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', p.featured)
   }
 
-  // ── Media logos (seed SVG logos if not already in DB) ─────────────────────
+  // ── Media files (seed all SVGs) ──────────────────────────────────────────
   const insMedia = db.prepare(`
     INSERT OR IGNORE INTO media_files (filename, original_name, mime_type, size, url, folder, alt)
     VALUES (?,?,?,?,?,?,?)
   `)
-  const techLogos = [
+
+  // Tech logos (12)
+  const techLogos: [string,string,string][] = [
     ['cisco.svg','Cisco','logos'],['mikrotik.svg','MikroTik','logos'],['vmware.svg','VMware','logos'],
     ['fortinet.svg','Fortinet','logos'],['proxmox.svg','Proxmox','logos'],['zabbix.svg','Zabbix','logos'],
     ['ansible.svg','Ansible','logos'],['linux.svg','Linux','logos'],['docker.svg','Docker','logos'],
     ['kubernetes.svg','Kubernetes','logos'],['windows-server.svg','Windows Server','logos'],['grafana.svg','Grafana','logos'],
   ]
-  const orgLogos = [
+  // General org images (20)
+  const orgLogos: [string,string,string][] = [
     ['network-co.svg','Network Co','general'],['datacenter.svg','DataCenter','general'],
     ['enterprise.svg','Enterprise','general'],['security-firm.svg','SecureCo','general'],
     ['isp-provider.svg','ISP Provider','general'],['hospital.svg','Hospital','general'],
     ['restaurant-chain.svg','Restaurant Chain','general'],['industrial.svg','Industrial','general'],
     ['government.svg','Government','general'],['university.svg','University','general'],
+    ['office-building.svg','Office Building','general'],['warehouse.svg','Warehouse','general'],
+    ['telecom-tower.svg','Telecom Tower','general'],['data-room.svg','Data Room','general'],
+    ['control-center.svg','Control Center','general'],['smart-city.svg','Smart City','general'],
+    ['factory.svg','Factory','general'],['bank.svg','Bank','general'],
+    ['airport.svg','Airport','general'],['stadium.svg','Stadium','general'],
   ]
-  for (const [file, name, folder] of [...techLogos, ...orgLogos]) {
-    insMedia.run(file, name, 'image/svg+xml', 1024, `/uploads/${folder}/${file}`, folder, `${name} logo`)
+  // Icons (20)
+  const iconFiles: [string,string,string][] = [
+    ['router.svg','Router Icon','icons'],['switch.svg','Switch Icon','icons'],
+    ['firewall.svg','Firewall Icon','icons'],['server-rack.svg','Server Rack Icon','icons'],
+    ['cloud.svg','Cloud Icon','icons'],['vpn-lock.svg','VPN Lock Icon','icons'],
+    ['monitoring.svg','Monitoring Icon','icons'],['backup.svg','Backup Icon','icons'],
+    ['network-map.svg','Network Map Icon','icons'],['wifi.svg','WiFi Icon','icons'],
+    ['database.svg','Database Icon','icons'],['shield-check.svg','Shield Check Icon','icons'],
+    ['terminal-cmd.svg','Terminal Icon','icons'],['automation.svg','Automation Icon','icons'],
+    ['analytics.svg','Analytics Icon','icons'],['deploy.svg','Deploy Icon','icons'],
+    ['cluster.svg','Cluster Icon','icons'],['api-nodes.svg','API Nodes Icon','icons'],
+    ['voip.svg','VoIP Icon','icons'],['email-server.svg','Email Server Icon','icons'],
+  ]
+  // Avatars (20)
+  const avatarFiles: [string,string,string][] = Array.from({ length: 20 }, (_, i) =>
+    [`avatar-${i+1}.svg`, `Avatar ${i+1}`, 'avatars']
+  )
+  // Projects (20)
+  const projectFiles: [string,string,string][] = Array.from({ length: 20 }, (_, i) =>
+    [`project-${i+1}.svg`, `Project Mockup ${i+1}`, 'projects']
+  )
+  // Clients (20)
+  const clientFiles: [string,string,string][] = Array.from({ length: 20 }, (_, i) =>
+    [`client-${i+1}.svg`, `Client Logo ${i+1}`, 'clients']
+  )
+
+  const allMedia = [...techLogos, ...orgLogos, ...iconFiles, ...avatarFiles, ...projectFiles, ...clientFiles]
+  for (const [file, name, folder] of allMedia) {
+    insMedia.run(file, name, 'image/svg+xml', 1024, `/uploads/${folder}/${file}`, folder, `${name}`)
   }
 
   db.close()
