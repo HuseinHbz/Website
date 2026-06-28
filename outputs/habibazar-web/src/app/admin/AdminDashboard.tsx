@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { StatCard, Card } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
@@ -113,6 +113,8 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [autoSyncInterval, setAutoSyncInterval] = useState<number>(0)
+  const [nextSyncIn, setNextSyncIn] = useState<number>(0)
   const [showCustomize, setShowCustomize] = useState(false)
   const [enabledWidgets, setEnabledWidgets] = useState<Set<WidgetId>>(new Set(DEFAULT_WIDGETS))
 
@@ -136,16 +138,35 @@ export function AdminDashboard() {
 
   const has = (id: WidgetId) => enabledWidgets.has(id)
 
-  async function resyncContent() {
-    if (!confirm(t('resyncConfirm'))) return
+  async function resyncContent(silent = false) {
+    if (!silent && !confirm(t('resyncConfirm'))) return
     setSyncing(true)
-    setSyncMsg('')
+    if (!silent) setSyncMsg('')
     const res = await fetch('/api/admin/resync', { method: 'POST' })
     const d = await res.json().catch(() => ({}))
     setSyncing(false)
-    setSyncMsg(res.ok ? t('resyncDone') : (d.error || t('failed')))
-    setTimeout(() => setSyncMsg(''), 5000)
+    setSyncMsg(res.ok ? (silent ? `✓ همگام‌سازی خودکار: ${new Date().toLocaleTimeString('fa-IR')}` : t('resyncDone')) : (d.error || t('failed')))
+    setTimeout(() => setSyncMsg(''), 8000)
   }
+
+  useEffect(() => {
+    const PREF_KEY = 'hbz_auto_sync_interval'
+    const saved = parseInt(localStorage.getItem(PREF_KEY) || '0')
+    if (saved) setAutoSyncInterval(saved)
+  }, [])
+
+  const resyncRef = useRef(resyncContent)
+  resyncRef.current = resyncContent
+
+  useEffect(() => {
+    const PREF_KEY = 'hbz_auto_sync_interval'
+    localStorage.setItem(PREF_KEY, String(autoSyncInterval))
+    if (!autoSyncInterval) { setNextSyncIn(0); return }
+    setNextSyncIn(autoSyncInterval * 60)
+    const countdown = setInterval(() => setNextSyncIn(n => Math.max(0, n - 1)), 1000)
+    const sync = setInterval(() => { resyncRef.current(true); setNextSyncIn(autoSyncInterval * 60) }, autoSyncInterval * 60 * 1000)
+    return () => { clearInterval(countdown); clearInterval(sync) }
+  }, [autoSyncInterval])
 
   if (loading) {
     return (
@@ -328,19 +349,38 @@ export function AdminDashboard() {
 
       {/* Sync public content button */}
       {has('syncButton') && (
-        <div className="flex items-center gap-4 p-4 bg-[#0c0c14] border border-[#2a2a3e] rounded-xl">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">{t('resyncTitle')}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{t('resyncDesc')}</p>
-            {syncMsg && <p className="text-xs text-green-400 mt-1">{syncMsg}</p>}
+        <div className="p-4 bg-[#0c0c14] border border-[#2a2a3e] rounded-xl space-y-3">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white">{t('resyncTitle')}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t('resyncDesc')}</p>
+              {syncMsg && <p className="text-xs text-green-400 mt-1">{syncMsg}</p>}
+            </div>
+            <button
+              onClick={() => resyncContent(false)}
+              disabled={syncing}
+              className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors whitespace-nowrap"
+            >
+              {syncing ? t('syncing') : t('resyncBtn')}
+            </button>
           </div>
-          <button
-            onClick={resyncContent}
-            disabled={syncing}
-            className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors"
-          >
-            {syncing ? t('syncing') : t('resyncBtn')}
-          </button>
+          {/* Auto-sync timer */}
+          <div className="flex items-center gap-3 pt-2 border-t border-[#1e1e2e]">
+            <span className="text-xs text-slate-400 whitespace-nowrap">همگام‌سازی خودکار:</span>
+            <div className="flex gap-1 flex-wrap">
+              {[0, 5, 10, 15, 20, 30, 60].map(m => (
+                <button key={m} onClick={() => setAutoSyncInterval(m)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${autoSyncInterval === m ? 'bg-indigo-600 text-white' : 'bg-[#1a1a2e] text-slate-400 hover:text-white'}`}>
+                  {m === 0 ? 'خاموش' : `${m} دقیقه`}
+                </button>
+              ))}
+            </div>
+            {autoSyncInterval > 0 && nextSyncIn > 0 && (
+              <span className="text-xs text-slate-500 mr-auto whitespace-nowrap">
+                {Math.floor(nextSyncIn / 60)}:{String(nextSyncIn % 60).padStart(2, '0')} مانده
+              </span>
+            )}
+          </div>
         </div>
       )}
 

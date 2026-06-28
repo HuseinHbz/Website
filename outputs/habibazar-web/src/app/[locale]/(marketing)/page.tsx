@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Hero } from '@/components/sections/Hero'
 import { ProofBar } from '@/components/sections/ProofBar'
 import { ServicesSection } from '@/components/sections/ServicesSection'
