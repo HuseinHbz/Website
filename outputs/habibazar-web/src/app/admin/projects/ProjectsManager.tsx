@@ -2,16 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
+import { MediaPicker, GalleryPicker } from '@/components/admin/MediaPicker'
 import { useT } from '@/lib/admin/locale'
 
 type Project = {
   id?: number; slug: string; nameEn: string; nameFa: string; industryEn: string; industryFa: string
   clientEn: string; clientFa: string; challengeEn: string; challengeFa: string
   solutionEn: string; solutionFa: string; resultsEn: string; resultsFa: string
-  tagsEn: string; tagsFa: string; coverImage: string; color: string
+  tagsEn: string; tagsFa: string; coverImage: string; gallery: string; color: string
   year: string; featured: boolean; sortOrder: number; active: boolean
 }
-const EMPTY: Project = { slug: '', nameEn: '', nameFa: '', industryEn: '', industryFa: '', clientEn: '', clientFa: '', challengeEn: '', challengeFa: '', solutionEn: '', solutionFa: '', resultsEn: '[]', resultsFa: '[]', tagsEn: '[]', tagsFa: '[]', coverImage: '', color: '#6366f1', year: '', featured: false, sortOrder: 0, active: true }
+const EMPTY: Project = { slug: '', nameEn: '', nameFa: '', industryEn: '', industryFa: '', clientEn: '', clientFa: '', challengeEn: '', challengeFa: '', solutionEn: '', solutionFa: '', resultsEn: '[]', resultsFa: '[]', tagsEn: '[]', tagsFa: '[]', coverImage: '', gallery: '[]', color: '#6366f1', year: '', featured: false, sortOrder: 0, active: true }
+
+function parseGallery(v: string | null | undefined): string[] {
+  if (!v) return []
+  try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+}
 
 export function ProjectsManager() {
   const t = useT()
@@ -41,6 +47,8 @@ export function ProjectsManager() {
   }
 
   function set<K extends keyof Project>(k: K, v: Project[K]) { setEditing((e) => ({ ...e, [k]: v })) }
+  const galleryUrls = parseGallery(editing.gallery)
+  function setGallery(urls: string[]) { set('gallery', JSON.stringify(urls)) }
 
   return (
     <>
@@ -48,7 +56,7 @@ export function ProjectsManager() {
       <PageHeader title={t('projectsTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('projectNew')}</Btn>} />
 
       <Card>
-        <Table headers={[t('name'), t('industryEn'), t('year'), t('featured'), t('status'), t('actions')]}>
+        <Table headers={[t('name'), t('industryEn'), t('year'), 'Cover', t('featured'), t('status'), t('actions')]}>
           {projects.map((p) => (
             <TR key={p.id}>
               <TD>
@@ -62,6 +70,11 @@ export function ProjectsManager() {
               </TD>
               <TD className="text-slate-400">{p.industryEn}</TD>
               <TD className="text-slate-400">{p.year}</TD>
+              <TD>
+                {p.coverImage
+                  ? <img src={p.coverImage} alt="" className="w-10 h-10 object-cover rounded-lg border border-[#2a2a3e]" />
+                  : <span className="text-slate-600 text-xs">—</span>}
+              </TD>
               <TD><Badge color={p.featured ? 'indigo' : 'slate'}>{p.featured ? `★ ${t('featured')}` : t('regular')}</Badge></TD>
               <TD><Badge color={p.active ? 'green' : 'slate'}>{p.active ? t('active') : t('hidden')}</Badge></TD>
               <TD>
@@ -96,7 +109,24 @@ export function ProjectsManager() {
             <Input label={t('tagsEn')} value={editing.tagsEn} onChange={(v) => set('tagsEn', v)} />
             <Input label={t('tagsFa')} value={editing.tagsFa} onChange={(v) => set('tagsFa', v)} />
           </div>
-          <Input label={t('coverImg')} value={editing.coverImage} onChange={(v) => set('coverImage', v)} />
+
+          {/* Cover image */}
+          <MediaPicker
+            label="Cover Image"
+            value={editing.coverImage}
+            onChange={(v) => set('coverImage', v)}
+            folder="projects"
+            placeholder="No cover image — click Browse to select from media library"
+          />
+
+          {/* Gallery */}
+          <GalleryPicker
+            label={`Project Gallery (${galleryUrls.length} images)`}
+            value={galleryUrls}
+            onChange={setGallery}
+            folder="projects"
+          />
+
           <div className="grid grid-cols-3 gap-4">
             <Select label={t('featured')} value={editing.featured ? 'true' : 'false'} onChange={(v) => set('featured', v === 'true')} options={[{ value: 'true', label: t('featured') }, { value: 'false', label: t('regular') }]} />
             <Select label={t('status')} value={editing.active ? 'true' : 'false'} onChange={(v) => set('active', v === 'true')} options={[{ value: 'true', label: t('active') }, { value: 'false', label: t('hidden') }]} />

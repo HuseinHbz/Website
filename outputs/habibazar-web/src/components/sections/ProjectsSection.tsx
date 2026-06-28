@@ -8,7 +8,7 @@ interface DbProject {
   id: number; slug: string; nameEn: string; nameFa: string; industryEn: string | null; industryFa: string | null
   clientEn: string | null; clientFa: string | null; challengeEn: string | null; challengeFa: string | null
   solutionEn: string | null; solutionFa: string | null; resultsEn: string | null; resultsFa: string | null
-  tagsEn: string | null; tagsFa: string | null; coverImage: string | null; color: string | null; year: string | null; featured: boolean
+  tagsEn: string | null; tagsFa: string | null; coverImage: string | null; gallery: string | null; color: string | null; year: string | null; featured: boolean
 }
 
 interface ProjectsSectionProps {
@@ -26,6 +26,8 @@ interface Project {
   year: string
   color: string
   icon: string
+  coverImage: string
+  gallery: string[]
   challengeEn: string
   challengeFa: string
   solutionEn: string
@@ -40,6 +42,7 @@ interface Project {
 const PROJECTS: Project[] = [
   {
     id: 'kenzo',
+    coverImage: '', gallery: [],
     nameEn: 'Kenzo Restaurant',
     nameFa: 'رستوران کنزو',
     client: 'Kenzo Group',
@@ -60,6 +63,7 @@ const PROJECTS: Project[] = [
   },
   {
     id: 'popcorn',
+    coverImage: '', gallery: [],
     nameEn: 'Popcorn Holding',
     nameFa: 'هلدینگ پاپ‌کورن',
     client: 'Popcorn Holding Co.',
@@ -80,6 +84,7 @@ const PROJECTS: Project[] = [
   },
   {
     id: 'senso',
+    coverImage: '', gallery: [],
     nameEn: 'Senso Restaurant Group',
     nameFa: 'گروه رستوران سنسو',
     client: 'Senso Group',
@@ -100,6 +105,7 @@ const PROJECTS: Project[] = [
   },
   {
     id: 'enterprise',
+    coverImage: '', gallery: [],
     nameEn: 'Industrial Enterprise',
     nameFa: 'مجتمع صنعتی',
     client: 'Confidential Client',
@@ -139,6 +145,8 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
         year: p.year || '',
         color: p.color || '#6366f1',
         icon: '🏗️',
+        coverImage: p.coverImage || '',
+        gallery: parseJsonArray(p.gallery),
         challengeEn: p.challengeEn || '',
         challengeFa: p.challengeFa || '',
         solutionEn: p.solutionEn || '',
@@ -152,6 +160,7 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
     : PROJECTS
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null)
 
   return (
     <section className="section-padding relative overflow-hidden" id="projects">
@@ -200,6 +209,11 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
                   className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
                   style={{ background: `linear-gradient(90deg, ${project.color}, transparent)` }}
                 />
+                {project.coverImage && (
+                  <div className="w-full h-36 rounded-xl overflow-hidden mb-4 -mt-1">
+                    <img src={project.coverImage} alt={project.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                )}
                 <div className="flex items-start gap-4 mb-4">
                   <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl flex-shrink-0"
@@ -357,6 +371,26 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
                   </ul>
                 </div>
               </div>
+              {/* Gallery */}
+              {selectedProject.gallery.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-text-muted uppercase tracking-widest mb-3">
+                    {isRTL ? 'تصاویر پروژه' : 'Project Gallery'}
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedProject.gallery.map((img, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setLightboxImg(img)}
+                        className="rounded-lg overflow-hidden border border-border hover:border-accent/50 transition-colors"
+                      >
+                        <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-24 object-cover hover:scale-105 transition-transform duration-300" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="mt-8 pt-6 border-t border-border">
                 <a
                   href="/consultation"
@@ -370,6 +404,30 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
                 </a>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxImg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+            onClick={() => setLightboxImg(null)}
+          >
+            <button className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full text-white text-xl flex items-center justify-center transition-colors">✕</button>
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              src={lightboxImg}
+              alt="Gallery"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </motion.div>
         )}
       </AnimatePresence>
