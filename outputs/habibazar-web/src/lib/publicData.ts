@@ -1,6 +1,14 @@
 import { getDb } from '@/lib/db'
-import { projects, services, skills, certifications, clients, timelineItems, blogPosts, blogCategories, aboutContent, heroContent } from '@/lib/db/schema'
+import { projects, services, skills, certifications, clients, timelineItems, blogPosts, blogCategories, aboutContent, heroContent, siteSettings } from '@/lib/db/schema'
 import { eq, asc, desc } from 'drizzle-orm'
+
+export async function getPublicSetting(key: string): Promise<string | null> {
+  try {
+    const db = getDb()
+    const row = db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
+    return row?.value ?? null
+  } catch { return null }
+}
 
 export async function getPublicHero(locale: string) {
   try {

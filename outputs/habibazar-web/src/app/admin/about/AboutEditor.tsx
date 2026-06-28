@@ -72,7 +72,7 @@ export function AboutEditor() {
             <Input label="Headline" value={current.headline || ''} onChange={(v) => set('headline', v)} placeholder="Infrastructure Architect" />
             <Input label="Subheadline" value={current.subheadline || ''} onChange={(v) => set('subheadline', v)} placeholder="& Network Security Consultant" />
           </div>
-          <Input label="Bio / About Text" value={current.bio || ''} onChange={(v) => set('bio', v)} multiline rows={6} placeholder="Professional biography..." />
+          <Input label="داستان حرفه‌ای / Professional Story (bio)" value={current.bio || ''} onChange={(v) => set('bio', v)} multiline rows={6} placeholder="Professional biography shown in the About page under 'داستان حرفه‌ای' section..." />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Photo URL" value={current.photoUrl || ''} onChange={(v) => set('photoUrl', v)} placeholder="/uploads/photo.jpg" />
             <Input label="Resume PDF URL" value={current.resumeUrl || ''} onChange={(v) => set('resumeUrl', v)} placeholder="/resume.pdf" />

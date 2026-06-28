@@ -17,6 +17,7 @@ import {
   getPublicClients,
   getPublicTimeline,
   getPublicAbout,
+  getPublicSetting,
 } from '@/lib/publicData'
 
 interface Props {
@@ -26,7 +27,7 @@ interface Props {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
 
-  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero] = await Promise.all([
+  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero, heroVariant] = await Promise.all([
     getPublicProjects(),
     getPublicServices(),
     getPublicSkills(),
@@ -35,12 +36,13 @@ export default async function HomePage({ params }: Props) {
     getPublicTimeline(),
     getPublicAbout(locale),
     getPublicHero(locale),
+    getPublicSetting('hero_variant'),
   ])
 
   return (
     <>
       <JsonLd schema={siteGraphSchema()} />
-      <Hero locale={locale} dbHero={dbHero} />
+      <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} />
       <ProofBar locale={locale} />
       <ServicesSection locale={locale} dbServices={dbServices} />
       <ProjectsSection locale={locale} dbProjects={dbProjects} />
