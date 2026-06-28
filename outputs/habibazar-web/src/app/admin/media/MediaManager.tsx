@@ -42,6 +42,7 @@ export function MediaManager() {
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [selected, setSelected] = useState<MediaFile | null>(null)
+  const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
   const { toast, ToastContainer } = useToast()
 
   async function load() {
@@ -140,12 +141,12 @@ export function MediaManager() {
                     onClick={() => setSelected(f === selected ? null : f)}
                     className={`group cursor-pointer rounded-lg overflow-hidden border transition-all ${selected?.id === f.id ? 'border-indigo-500' : 'border-[#1e1e2e] hover:border-[#2a2a3e]'}`}
                   >
-                    {isImage(f.mimeType) ? (
+                    {isImage(f.mimeType) && !imgErrors.has(f.id) ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={f.url} alt={f.alt || f.originalName} className="w-full h-20 object-cover bg-[#111122]"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.removeAttribute('style') }} />
+                        onError={() => setImgErrors(prev => new Set(prev).add(f.id))} />
                     ) : null}
-                    {!isImage(f.mimeType) && (
+                    {(!isImage(f.mimeType) || imgErrors.has(f.id)) && (
                       <div className="w-full h-20 flex flex-col items-center justify-center gap-1"
                         style={{ background:`linear-gradient(135deg, #0c0c1e, #111128)`, borderBottom:`2px solid ${fileColor(f.mimeType)}33` }}>
                         <span className="text-2xl">{fileIcon(f.mimeType)}</span>

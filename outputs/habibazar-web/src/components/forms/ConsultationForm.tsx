@@ -142,8 +142,8 @@ export function ConsultationForm({ kind, locale }: ConsultationFormProps) {
     try {
       const endpoint =
         kind === 'INTRO_CALL'
-          ? `${SITE.apiUrl}/api/v1/consultation/intro-call`
-          : `${SITE.apiUrl}/api/v1/consultation`
+          ? '/api/consultation/intro-call'
+          : '/api/consultation'
 
       const payload = {
         name: values.name.trim(),

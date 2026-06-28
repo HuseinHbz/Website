@@ -75,7 +75,11 @@ function MarqueeRow({ items, reverse = false, speed = 30, isRTL = false }: {
             className="flex items-center gap-3 px-5 py-3 rounded-xl flex-shrink-0 hover:border-accent/40 transition-colors duration-200 cursor-default"
             style={{ background: 'rgba(13,13,23,0.8)', border: '1px solid rgba(26,26,46,0.8)', backdropFilter: 'blur(8px)' }}
           >
-            <span className="text-xl">{item.icon}</span>
+            {'logoUrl' in item && item.logoUrl
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={item.logoUrl} alt={('nameEn' in item ? item.nameEn : item.name)} className="w-8 h-8 object-contain" />
+              : <span className="text-xl">{item.icon}</span>
+            }
             <div>
               <div className="text-sm font-semibold text-text-primary whitespace-nowrap">
                 {'nameEn' in item ? (isRTL ? item.nameFa : item.nameEn) : item.name}
@@ -96,11 +100,11 @@ export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioP
   const STATS = isRTL ? STATS_FA : STATS_EN
 
   const regularClients = (dbClients && dbClients.length > 0)
-    ? dbClients.filter(c => !c.isTechPartner).map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, icon: '🏢', typeEn: c.typeEn || '', typeFa: c.typeFa || '' }))
+    ? dbClients.filter(c => !c.isTechPartner).map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, icon: '🏢', typeEn: c.typeEn || '', typeFa: c.typeFa || '', logoUrl: c.logoUrl }))
     : CLIENTS
 
   const techPartners = (dbClients && dbClients.length > 0)
-    ? dbClients.filter(c => c.isTechPartner).map(c => ({ name: c.nameEn, icon: '🔧', color: '#6366f1' }))
+    ? dbClients.filter(c => c.isTechPartner).map(c => ({ name: c.nameEn, icon: '🔧', color: '#6366f1', logoUrl: c.logoUrl }))
     : TECH_PARTNERS
 
   return (
