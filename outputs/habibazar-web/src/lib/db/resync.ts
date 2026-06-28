@@ -217,6 +217,45 @@ export function resyncPublicContent() {
   ]
   for (const r of clientsData) insClient.run(...r)
 
+  // ── Blog Categories ──────────────────────────────────────────────────────────
+  const insCat = db.prepare(`
+    INSERT OR IGNORE INTO blog_categories (slug, name_en, name_fa, icon, color, sort_order)
+    VALUES (?,?,?,?,?,?)
+  `)
+  const blogCats = [
+    ['mikrotik', 'MikroTik', 'میکروتیک', '🌐', '#c03030', 1],
+    ['cisco', 'Cisco', 'سیسکو', '🔷', '#1ba0d7', 2],
+    ['linux', 'Linux', 'لینوکس', '🐧', '#f59e0b', 3],
+    ['windows-server', 'Windows Server', 'ویندوز سرور', '🪟', '#00adef', 4],
+    ['vmware', 'VMware', 'VMware', '☁️', '#60b6e0', 5],
+    ['proxmox', 'Proxmox', 'Proxmox', '🖥️', '#e57000', 6],
+    ['security', 'Security', 'امنیت', '🛡️', '#ef4444', 7],
+    ['monitoring', 'Monitoring', 'پایش', '📊', '#f59e0b', 8],
+    ['automation', 'Automation', 'خودکارسازی', '⚙️', '#06b6d4', 9],
+    ['devops', 'DevOps', 'دواپس', '🚀', '#818cf8', 10],
+  ]
+  for (const r of blogCats) insCat.run(...r)
+
+  // ── Blog Posts ───────────────────────────────────────────────────────────────
+  const getCatId = db.prepare('SELECT id FROM blog_categories WHERE slug = ?')
+  const insPost = db.prepare(`
+    INSERT OR IGNORE INTO blog_posts
+      (slug, title_en, title_fa, excerpt_en, excerpt_fa, category_id, read_time_en, read_time_fa, published_at_en, published_at_fa, status, featured)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+  `)
+  const blogPostsData = [
+    { slug: 'mikrotik-ospf-multi-site', catSlug: 'mikrotik', titleEn: 'Building a Multi-Site MikroTik Network with OSPF', titleFa: 'ساخت شبکه چند سایته MikroTik با OSPF', excerptEn: 'A complete guide to designing and deploying multi-site OSPF routing with MikroTik RouterOS for enterprise branch offices.', excerptFa: 'راهنمای کامل طراحی و استقرار مسیریابی OSPF چند سایته با MikroTik RouterOS برای دفاتر شعبه سازمانی.', readTimeEn: '12 min read', readTimeFa: '۱۲ دقیقه مطالعه', publishedAtEn: 'Jan 2025', publishedAtFa: 'دی ۱۴۰۳', featured: 1 },
+    { slug: 'zero-trust-fortigate', catSlug: 'security', titleEn: 'Zero-Trust Network Architecture with Fortigate', titleFa: 'معماری شبکه Zero-Trust با Fortigate', excerptEn: 'Implementing a zero-trust security model using Fortigate NGFW, SSL inspection, and micro-segmentation for enterprise environments.', excerptFa: 'پیاده‌سازی مدل امنیتی Zero-Trust با استفاده از Fortigate NGFW، بازرسی SSL و میکرو-تقسیم‌بندی برای محیط‌های سازمانی.', readTimeEn: '15 min read', readTimeFa: '۱۵ دقیقه مطالعه', publishedAtEn: 'Feb 2025', publishedAtFa: 'بهمن ۱۴۰۳', featured: 1 },
+    { slug: 'proxmox-cluster-production', catSlug: 'proxmox', titleEn: 'Proxmox VE Cluster Setup for Production Workloads', titleFa: 'راه‌اندازی کلاستر Proxmox VE برای بارکارهای تولیدی', excerptEn: 'Step-by-step guide to building a 3-node Proxmox cluster with Ceph storage, HA failover, and live migration for production VMs.', excerptFa: 'راهنمای گام به گام ساخت کلاستر ۳ نودی Proxmox با ذخیره‌سازی Ceph، Failover HA و Live Migration برای VM‌های تولیدی.', readTimeEn: '18 min read', readTimeFa: '۱۸ دقیقه مطالعه', publishedAtEn: 'Mar 2025', publishedAtFa: 'اسفند ۱۴۰۳', featured: 1 },
+    { slug: 'zabbix-custom-dashboards', catSlug: 'monitoring', titleEn: 'Zabbix 7.0 Advanced Monitoring: Custom Dashboards', titleFa: 'پایش پیشرفته Zabbix 7.0: داشبوردهای اختصاصی', excerptEn: 'Creating enterprise-grade Zabbix dashboards with custom metrics, triggers, and Grafana integration for infrastructure visibility.', excerptFa: 'ساخت داشبوردهای سطح سازمانی در Zabbix با متریک‌های اختصاصی، ترایگرها و یکپارچه‌سازی Grafana برای دید زیرساختی.', readTimeEn: '10 min read', readTimeFa: '۱۰ دقیقه مطالعه', publishedAtEn: 'Apr 2025', publishedAtFa: 'فروردین ۱۴۰۴', featured: 0 },
+    { slug: 'ansible-network-automation', catSlug: 'automation', titleEn: 'Ansible for Network Automation: MikroTik & Cisco', titleFa: 'Ansible برای خودکارسازی شبکه: MikroTik و Cisco', excerptEn: 'Automating network device configuration with Ansible: real playbooks for MikroTik RouterOS and Cisco IOS environments.', excerptFa: 'خودکارسازی پیکربندی تجهیزات شبکه با Ansible: Playbook‌های واقعی برای MikroTik RouterOS و Cisco IOS.', readTimeEn: '14 min read', readTimeFa: '۱۴ دقیقه مطالعه', publishedAtEn: 'May 2025', publishedAtFa: 'اردیبهشت ۱۴۰۴', featured: 0 },
+    { slug: 'linux-server-hardening', catSlug: 'linux', titleEn: 'Linux Server Hardening: Production Security Checklist', titleFa: 'سخت‌سازی سرور لینوکس: چک‌لیست امنیتی تولیدی', excerptEn: 'Comprehensive security hardening checklist for Linux production servers: SSH, firewall, audit, SELinux, and automated compliance.', excerptFa: 'چک‌لیست جامع سخت‌سازی امنیتی سرورهای لینوکس تولیدی: SSH، فایروال، Audit، SELinux و انطباق خودکار.', readTimeEn: '16 min read', readTimeFa: '۱۶ دقیقه مطالعه', publishedAtEn: 'Jun 2025', publishedAtFa: 'خرداد ۱۴۰۴', featured: 0 },
+  ]
+  for (const p of blogPostsData) {
+    const cat = getCatId.get(p.catSlug) as { id: number } | undefined
+    insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', p.featured)
+  }
+
   db.close()
   return { ok: true, message: 'Public content synced to database successfully' }
 }

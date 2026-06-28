@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import { nanoid } from 'nanoid'
 import path from 'path'
 
-const DB_PATH = path.join(process.cwd(), 'data', 'habibazar.db')
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibazar.db')
 
 export async function seedDatabase() {
   const sqlite = new Database(DB_PATH)
