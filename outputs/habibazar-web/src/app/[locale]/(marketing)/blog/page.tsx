@@ -1,5 +1,6 @@
 import { SITE } from '@/lib/site'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { getPublicBlogPosts, getPublicBlogCategories } from '@/lib/publicData'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -148,49 +149,42 @@ export default async function BlogPage({ params }: Props) {
             {isRTL ? 'آخرین مقالات' : 'Latest Articles'}
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map((post, i) => (
-              <article key={i} className="service-card group cursor-pointer">
-                <div
-                  className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-                  style={{ background: `linear-gradient(90deg, ${post.color}, transparent)` }}
-                />
-                <div className="flex items-center justify-between mb-4">
-                  <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-lg"
-                    style={{ background: `${post.color}15`, color: post.color }}
-                  >
-                    {post.category || post.categoryDisplay}
-                  </span>
-                  <span className="text-xs text-text-muted">{post.readTime}</span>
-                </div>
-                <h3 className="text-base font-bold text-text-primary mb-3 group-hover:text-accent transition-colors leading-snug">
-                  {post.title}
-                </h3>
-                <p className="text-sm text-text-secondary leading-relaxed mb-4 line-clamp-3">
-                  {post.excerpt}
-                </p>
-                <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                  <span className="text-xs text-text-muted">{post.publishedAt}</span>
-                  <span className="text-xs text-accent font-medium group-hover:text-accent-hover transition-colors">
-                    {isRTL ? 'خواندن مقاله ←' : 'Read Article →'}
-                  </span>
-                </div>
-              </article>
-            ))}
+            {posts.map((post, i) => {
+              const card = (
+                <article className="service-card group cursor-pointer h-full">
+                  <div
+                    className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+                    style={{ background: `linear-gradient(90deg, ${post.color}, transparent)` }}
+                  />
+                  <div className="flex items-center justify-between mb-4">
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                      style={{ background: `${post.color}15`, color: post.color }}
+                    >
+                      {post.category || post.categoryDisplay}
+                    </span>
+                    <span className="text-xs text-text-muted">{post.readTime}</span>
+                  </div>
+                  <h3 className="text-base font-bold text-text-primary mb-3 group-hover:text-accent transition-colors leading-snug">
+                    {post.title}
+                  </h3>
+                  <p className="text-sm text-text-secondary leading-relaxed mb-4 line-clamp-3">
+                    {post.excerpt}
+                  </p>
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-auto">
+                    <span className="text-xs text-text-muted">{post.publishedAt}</span>
+                    <span className="text-xs text-accent font-medium group-hover:text-accent-hover transition-colors">
+                      {isRTL ? 'خواندن مقاله ←' : 'Read Article →'}
+                    </span>
+                  </div>
+                </article>
+              )
+              return post.slug
+                ? <Link key={i} href={`/${locale}/blog/${post.slug}`} className="block">{card}</Link>
+                : <div key={i}>{card}</div>
+            })}
           </div>
 
-          {/* Coming soon */}
-          <div className="mt-16 text-center p-8 glass-card rounded-2xl">
-            <div className="text-3xl mb-3">📝</div>
-            <h3 className="text-lg font-bold text-text-primary mb-2">
-              {isRTL ? 'وبلاگ کامل به زودی' : 'Full Blog Coming Soon'}
-            </h3>
-            <p className="text-text-secondary text-sm max-w-md mx-auto">
-              {isRTL
-                ? 'پلتفرم کامل وبلاگ با جستجو، فیلترینگ، هایلایت کد و فید RSS در حال توسعه است.'
-                : 'The complete blog platform with search, filtering, syntax highlighting, and RSS feed is currently in development.'}
-            </p>
-          </div>
         </div>
       </section>
     </div>

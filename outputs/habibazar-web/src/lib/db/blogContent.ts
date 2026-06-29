@@ -4608,4 +4608,15736 @@ export async function GET() {
 
 این پلتفرم این وبلاگ را به هر دو زبان انگلیسی و فارسی ارائه می‌دهد، با پشتیبانی کامل RTL، ذخیره‌سازی محتوای مشترک و یک رابط مدیریتی واحد.`,
   },
+  'mikrotik-bandwidth-management': {
+    contentEn: `## Introduction
+
+MikroTik Bandwidth Management: Queues & Traffic Shaping is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing MikroTik Bandwidth Management: Queues & Traffic Shaping in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+مدیریت پهنای باند MikroTik: صف و شکل‌دهی ترافیک یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی مدیریت پهنای باند MikroTik: صف و شکل‌دهی ترافیک در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mikrotik-wireguard-vpn': {
+    contentEn: `## Introduction
+
+WireGuard VPN on MikroTik RouterOS 7 is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing WireGuard VPN on MikroTik RouterOS 7 in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+VPN WireGuard روی MikroTik RouterOS 7 یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی VPN WireGuard روی MikroTik RouterOS 7 در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mikrotik-hotspot-captive-portal': {
+    contentEn: `## Introduction
+
+MikroTik HotSpot and Captive Portal for Guest Networks is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing MikroTik HotSpot and Captive Portal for Guest Networks in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+HotSpot و Captive Portal MikroTik برای شبکه‌های مهمان یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی HotSpot و Captive Portal MikroTik برای شبکه‌های مهمان در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mikrotik-bgp-routeros7': {
+    contentEn: `## Introduction
+
+BGP Routing on MikroTik RouterOS 7: New Routing Engine is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing BGP Routing on MikroTik RouterOS 7: New Routing Engine in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+مسیریابی BGP روی MikroTik RouterOS 7: موتور مسیریابی جدید یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی مسیریابی BGP روی MikroTik RouterOS 7: موتور مسیریابی جدید در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mikrotik-dual-wan-failover': {
+    contentEn: `## Introduction
+
+MikroTik Dual WAN Failover with Load Balancing is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing MikroTik Dual WAN Failover with Load Balancing in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Failover دو WAN MikroTik با توازن بار یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Failover دو WAN MikroTik با توازن بار در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mikrotik-crs-switch-management': {
+    contentEn: `## Introduction
+
+MikroTik CRS Switch: Layer 2 and Layer 3 Management is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing MikroTik CRS Switch: Layer 2 and Layer 3 Management in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+سوئیچ CRS MikroTik: مدیریت لایه ۲ و لایه ۳ یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی سوئیچ CRS MikroTik: مدیریت لایه ۲ و لایه ۳ در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mikrotik-advanced-mangle': {
+    contentEn: `## Introduction
+
+MikroTik Advanced Mangle Rules for Traffic Classification is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing MikroTik Advanced Mangle Rules for Traffic Classification in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+قوانین Mangle پیشرفته MikroTik برای طبقه‌بندی ترافیک یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی قوانین Mangle پیشرفته MikroTik برای طبقه‌بندی ترافیک در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'ssl-tls-certificate-management': {
+    contentEn: `## Introduction
+
+SSL/TLS Certificate Management at Scale is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing SSL/TLS Certificate Management at Scale in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+مدیریت گواهی SSL/TLS در مقیاس بزرگ یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی مدیریت گواهی SSL/TLS در مقیاس بزرگ در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'ids-ips-snort-suricata': {
+    contentEn: `## Introduction
+
+IDS/IPS with Snort and Suricata: Detection and Prevention is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing IDS/IPS with Snort and Suricata: Detection and Prevention in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+IDS/IPS با Snort و Suricata: تشخیص و پیشگیری یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی IDS/IPS با Snort و Suricata: تشخیص و پیشگیری در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'dmz-architecture-design': {
+    contentEn: `## Introduction
+
+DMZ Architecture: Designing a Secure Perimeter Network is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing DMZ Architecture: Designing a Secure Perimeter Network in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+معماری DMZ: طراحی شبکه محیطی امن یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی معماری DMZ: طراحی شبکه محیطی امن در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'siem-log-management-elk': {
+    contentEn: `## Introduction
+
+SIEM and Log Management with ELK Stack is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing SIEM and Log Management with ELK Stack in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+SIEM و مدیریت لاگ با ELK Stack یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی SIEM و مدیریت لاگ با ELK Stack در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'ssl-vpn-openvpn-wireguard': {
+    contentEn: `## Introduction
+
+SSL VPN Compared: OpenVPN vs WireGuard is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing SSL VPN Compared: OpenVPN vs WireGuard in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+مقایسه SSL VPN: OpenVPN در برابر WireGuard یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی مقایسه SSL VPN: OpenVPN در برابر WireGuard در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'email-security-spf-dkim-dmarc': {
+    contentEn: `## Introduction
+
+Email Security: SPF, DKIM, and DMARC Configuration is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Email Security: SPF, DKIM, and DMARC Configuration in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+امنیت ایمیل: پیکربندی SPF، DKIM و DMARC یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی امنیت ایمیل: پیکربندی SPF، DKIM و DMARC در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'ransomware-defense-strategy': {
+    contentEn: `## Introduction
+
+Ransomware Defense: Detection, Prevention and Recovery is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Ransomware Defense: Detection, Prevention and Recovery in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+دفاع در برابر باج‌افزار: تشخیص، پیشگیری و بازیابی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی دفاع در برابر باج‌افزار: تشخیص، پیشگیری و بازیابی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'vulnerability-scanning-openvas': {
+    contentEn: `## Introduction
+
+Vulnerability Scanning with OpenVAS and Greenbone is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Vulnerability Scanning with OpenVAS and Greenbone in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+اسکن آسیب‌پذیری با OpenVAS و Greenbone یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی اسکن آسیب‌پذیری با OpenVAS و Greenbone در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'lxc-lxd-containers-linux': {
+    contentEn: `## Introduction
+
+LXC/LXD Containers on Linux: System Container Virtualization is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing LXC/LXD Containers on Linux: System Container Virtualization in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+کانتینرهای LXC/LXD روی لینوکس: مجازی‌سازی کانتینر سیستمی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی کانتینرهای LXC/LXD روی لینوکس: مجازی‌سازی کانتینر سیستمی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'bash-scripting-sysadmin': {
+    contentEn: `## Introduction
+
+Bash Scripting for SysAdmins: Automation and Monitoring is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Bash Scripting for SysAdmins: Automation and Monitoring in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+اسکریپت‌نویسی Bash برای SysAdmin: خودکارسازی و پایش یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی اسکریپت‌نویسی Bash برای SysAdmin: خودکارسازی و پایش در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'lvm-raid-zfs-storage': {
+    contentEn: `## Introduction
+
+LVM, RAID, and ZFS: Linux Storage Management Guide is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing LVM, RAID, and ZFS: Linux Storage Management Guide in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+LVM، RAID و ZFS: راهنمای مدیریت ذخیره‌سازی لینوکس یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی LVM، RAID و ZFS: راهنمای مدیریت ذخیره‌سازی لینوکس در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'postfix-mail-server-linux': {
+    contentEn: `## Introduction
+
+Setting Up Postfix Mail Server on Linux is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Setting Up Postfix Mail Server on Linux in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+راه‌اندازی سرور ایمیل Postfix روی لینوکس یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی راه‌اندازی سرور ایمیل Postfix روی لینوکس در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'linux-bonding-vlan-bridges': {
+    contentEn: `## Introduction
+
+Linux Network Bonding, VLANs, and Bridges is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Linux Network Bonding, VLANs, and Bridges in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Bonding، VLAN و Bridge شبکه لینوکس یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Bonding، VLAN و Bridge شبکه لینوکس در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'prometheus-node-exporter': {
+    contentEn: `## Introduction
+
+Linux Monitoring with Prometheus Node Exporter is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Linux Monitoring with Prometheus Node Exporter in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+پایش لینوکس با Prometheus Node Exporter یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی پایش لینوکس با Prometheus Node Exporter در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'keepalived-haproxy-ha': {
+    contentEn: `## Introduction
+
+KeepAlived + HAProxy: High Availability Load Balancer is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing KeepAlived + HAProxy: High Availability Load Balancer in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+KeepAlived + HAProxy: توازن بار با دسترس‌پذیری بالا یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی KeepAlived + HAProxy: توازن بار با دسترس‌پذیری بالا در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'elk-log-management-linux': {
+    contentEn: `## Introduction
+
+Centralized Log Management with ELK Stack on Linux is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Centralized Log Management with ELK Stack on Linux in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+مدیریت لاگ متمرکز با ELK Stack روی لینوکس یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی مدیریت لاگ متمرکز با ELK Stack روی لینوکس در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'cisco-stp-rstp-mstp': {
+    contentEn: `## Introduction
+
+Spanning Tree Protocol: STP, RSTP, and MSTP on Cisco is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Spanning Tree Protocol: STP, RSTP, and MSTP on Cisco in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Spanning Tree Protocol: STP، RSTP و MSTP روی سیسکو یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Spanning Tree Protocol: STP، RSTP و MSTP روی سیسکو در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'cisco-ospf-enterprise': {
+    contentEn: `## Introduction
+
+OSPF Design for Enterprise Networks on Cisco IOS is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing OSPF Design for Enterprise Networks on Cisco IOS in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+طراحی OSPF برای شبکه‌های سازمانی روی Cisco IOS یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی طراحی OSPF برای شبکه‌های سازمانی روی Cisco IOS در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'cisco-aci-fundamentals': {
+    contentEn: `## Introduction
+
+Cisco ACI: Application Centric Infrastructure Fundamentals is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Cisco ACI: Application Centric Infrastructure Fundamentals in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Cisco ACI: مبانی زیرساخت متمرکز بر برنامه یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Cisco ACI: مبانی زیرساخت متمرکز بر برنامه در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'cisco-multicast-pim': {
+    contentEn: `## Introduction
+
+Multicast Routing with PIM on Cisco Networks is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Multicast Routing with PIM on Cisco Networks in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+مسیریابی Multicast با PIM روی شبکه‌های سیسکو یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی مسیریابی Multicast با PIM روی شبکه‌های سیسکو در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'cisco-sdaccess': {
+    contentEn: `## Introduction
+
+Cisco SD-Access: DNA Center and Campus Fabric is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Cisco SD-Access: DNA Center and Campus Fabric in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Cisco SD-Access: DNA Center و Campus Fabric یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Cisco SD-Access: DNA Center و Campus Fabric در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'vmware-vsan-configuration': {
+    contentEn: `## Introduction
+
+VMware vSAN: Hyper-Converged Storage Configuration is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing VMware vSAN: Hyper-Converged Storage Configuration in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+VMware vSAN: پیکربندی ذخیره‌سازی Hyper-Converged یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی VMware vSAN: پیکربندی ذخیره‌سازی Hyper-Converged در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'vcenter-upgrade-guide': {
+    contentEn: `## Introduction
+
+vCenter Server Upgrade: Step-by-Step Migration Guide is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing vCenter Server Upgrade: Step-by-Step Migration Guide in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+ارتقاء vCenter Server: راهنمای مهاجرت گام به گام یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی ارتقاء vCenter Server: راهنمای مهاجرت گام به گام در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'nsx-t-networking-basics': {
+    contentEn: `## Introduction
+
+VMware NSX-T: Software-Defined Networking Fundamentals is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing VMware NSX-T: Software-Defined Networking Fundamentals in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+VMware NSX-T: مبانی شبکه نرم‌افزاری یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی VMware NSX-T: مبانی شبکه نرم‌افزاری در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'esxi-performance-tuning': {
+    contentEn: `## Introduction
+
+ESXi Host Performance Tuning for Production Workloads is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing ESXi Host Performance Tuning for Production Workloads in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+تنظیم عملکرد Host ESXi برای بارکارهای تولیدی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی تنظیم عملکرد Host ESXi برای بارکارهای تولیدی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'proxmox-terraform-provider': {
+    contentEn: `## Introduction
+
+Automating Proxmox VE with Terraform is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Automating Proxmox VE with Terraform in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+خودکارسازی Proxmox VE با Terraform یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی خودکارسازی Proxmox VE با Terraform در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'proxmox-lxc-containers': {
+    contentEn: `## Introduction
+
+LXC Containers in Proxmox VE: Best Practices is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing LXC Containers in Proxmox VE: Best Practices in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+کانتینرهای LXC در Proxmox VE: بهترین شیوه‌ها یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی کانتینرهای LXC در Proxmox VE: بهترین شیوه‌ها در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'proxmox-gpu-passthrough': {
+    contentEn: `## Introduction
+
+GPU Passthrough in Proxmox VE: IOMMU and VFIO Setup is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing GPU Passthrough in Proxmox VE: IOMMU and VFIO Setup in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+GPU Passthrough در Proxmox VE: راه‌اندازی IOMMU و VFIO یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی GPU Passthrough در Proxmox VE: راه‌اندازی IOMMU و VFIO در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'netflow-sflow-traffic-analysis': {
+    contentEn: `## Introduction
+
+NetFlow and sFlow Traffic Analysis for Network Visibility is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing NetFlow and sFlow Traffic Analysis for Network Visibility in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+تحلیل ترافیک NetFlow و sFlow برای دید شبکه یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی تحلیل ترافیک NetFlow و sFlow برای دید شبکه در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'alertmanager-routing-rules': {
+    contentEn: `## Introduction
+
+Prometheus Alertmanager: Advanced Routing and Silencing is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Prometheus Alertmanager: Advanced Routing and Silencing in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Prometheus Alertmanager: مسیریابی و Silencing پیشرفته یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Prometheus Alertmanager: مسیریابی و Silencing پیشرفته در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'uptime-kuma-monitoring': {
+    contentEn: `## Introduction
+
+Uptime Kuma: Self-Hosted Status Page and Monitoring is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Uptime Kuma: Self-Hosted Status Page and Monitoring in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Uptime Kuma: صفحه Status و پایش Self-Hosted یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Uptime Kuma: صفحه Status و پایش Self-Hosted در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'grafana-loki-log-aggregation': {
+    contentEn: `## Introduction
+
+Grafana Loki: Log Aggregation for Infrastructure is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Grafana Loki: Log Aggregation for Infrastructure in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Grafana Loki: تجمیع لاگ برای زیرساخت یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Grafana Loki: تجمیع لاگ برای زیرساخت در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'prtg-network-monitoring': {
+    contentEn: `## Introduction
+
+PRTG Network Monitor: Enterprise Monitoring Setup is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing PRTG Network Monitor: Enterprise Monitoring Setup in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+PRTG Network Monitor: راه‌اندازی پایش سازمانی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی PRTG Network Monitor: راه‌اندازی پایش سازمانی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'terraform-reusable-modules': {
+    contentEn: `## Introduction
+
+Building Reusable Terraform Modules for Infrastructure is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Building Reusable Terraform Modules for Infrastructure in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+ساخت ماژول‌های Terraform قابل استفاده مجدد برای زیرساخت یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی ساخت ماژول‌های Terraform قابل استفاده مجدد برای زیرساخت در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'saltstack-infrastructure-automation': {
+    contentEn: `## Introduction
+
+SaltStack for Infrastructure Automation and Configuration is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing SaltStack for Infrastructure Automation and Configuration in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+SaltStack برای خودکارسازی و پیکربندی زیرساخت یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی SaltStack برای خودکارسازی و پیکربندی زیرساخت در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'puppet-configuration-management': {
+    contentEn: `## Introduction
+
+Puppet for Configuration Management at Scale is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Puppet for Configuration Management at Scale in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Puppet برای مدیریت پیکربندی در مقیاس بزرگ یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Puppet برای مدیریت پیکربندی در مقیاس بزرگ در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'jenkins-cicd-infrastructure': {
+    contentEn: `## Introduction
+
+Jenkins CI/CD for Infrastructure Pipelines is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Jenkins CI/CD for Infrastructure Pipelines in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Jenkins CI/CD برای پایپلاین‌های زیرساخت یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Jenkins CI/CD برای پایپلاین‌های زیرساخت در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'automated-network-testing': {
+    contentEn: `## Introduction
+
+Automated Network Testing with pytest and Nornir is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Automated Network Testing with pytest and Nornir in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+آزمایش خودکار شبکه با pytest و Nornir یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی آزمایش خودکار شبکه با pytest و Nornir در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'nornir-network-automation': {
+    contentEn: `## Introduction
+
+Nornir: Python Framework for Network Automation is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Nornir: Python Framework for Network Automation in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Nornir: فریمورک Python برای خودکارسازی شبکه یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Nornir: فریمورک Python برای خودکارسازی شبکه در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'zero-downtime-migration': {
+    contentEn: `## Introduction
+
+Zero-Downtime Infrastructure Migration Strategies is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Zero-Downtime Infrastructure Migration Strategies in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+استراتژی‌های مهاجرت زیرساخت بدون Downtime یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی استراتژی‌های مهاجرت زیرساخت بدون Downtime در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'helm-charts-kubernetes': {
+    contentEn: `## Introduction
+
+Helm Charts: Packaging Kubernetes Applications is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Helm Charts: Packaging Kubernetes Applications in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Helm Charts: بسته‌بندی برنامه‌های Kubernetes یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Helm Charts: بسته‌بندی برنامه‌های Kubernetes در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'argocd-gitops-deployment': {
+    contentEn: `## Introduction
+
+ArgoCD: GitOps Continuous Delivery for Kubernetes is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing ArgoCD: GitOps Continuous Delivery for Kubernetes in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+ArgoCD: تحویل مستمر GitOps برای Kubernetes یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی ArgoCD: تحویل مستمر GitOps برای Kubernetes در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'docker-compose-production': {
+    contentEn: `## Introduction
+
+Docker Compose for Production: Best Practices is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Docker Compose for Production: Best Practices in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Docker Compose برای محیط تولیدی: بهترین شیوه‌ها یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Docker Compose برای محیط تولیدی: بهترین شیوه‌ها در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'custom-prometheus-exporters': {
+    contentEn: `## Introduction
+
+Writing Custom Prometheus Exporters in Python and Go is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Writing Custom Prometheus Exporters in Python and Go in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+نوشتن Prometheus Exporter اختصاصی با Python و Go یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی نوشتن Prometheus Exporter اختصاصی با Python و Go در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'hashicorp-vault-secrets': {
+    contentEn: `## Introduction
+
+HashiCorp Vault: Secrets Management for Infrastructure is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing HashiCorp Vault: Secrets Management for Infrastructure in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+HashiCorp Vault: مدیریت Secret برای زیرساخت یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی HashiCorp Vault: مدیریت Secret برای زیرساخت در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'istio-service-mesh': {
+    contentEn: `## Introduction
+
+Istio Service Mesh: Traffic Management and mTLS is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Istio Service Mesh: Traffic Management and mTLS in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Istio Service Mesh: مدیریت ترافیک و mTLS یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Istio Service Mesh: مدیریت ترافیک و mTLS در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'github-actions-infrastructure': {
+    contentEn: `## Introduction
+
+GitHub Actions for Infrastructure Automation is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing GitHub Actions for Infrastructure Automation in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+GitHub Actions برای خودکارسازی زیرساخت یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی GitHub Actions برای خودکارسازی زیرساخت در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'windows-dhcp-dns-enterprise': {
+    contentEn: `## Introduction
+
+Windows Server DHCP and DNS: Enterprise Configuration is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Windows Server DHCP and DNS: Enterprise Configuration in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+DHCP و DNS Windows Server: پیکربندی سازمانی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی DHCP و DNS Windows Server: پیکربندی سازمانی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'windows-file-server-dfs': {
+    contentEn: `## Introduction
+
+Windows File Server with DFS: Distributed File System Setup is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Windows File Server with DFS: Distributed File System Setup in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+File Server ویندوز با DFS: راه‌اندازی سیستم فایل توزیع‌شده یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی File Server ویندوز با DFS: راه‌اندازی سیستم فایل توزیع‌شده در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'hyper-v-cluster-setup': {
+    contentEn: `## Introduction
+
+Hyper-V Failover Cluster: High Availability VMs is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Hyper-V Failover Cluster: High Availability VMs in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+کلاستر Failover Hyper-V: VM های با دسترس‌پذیری بالا یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی کلاستر Failover Hyper-V: VM های با دسترس‌پذیری بالا در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'azure-ad-connect-hybrid': {
+    contentEn: `## Introduction
+
+Azure AD Connect: Hybrid Identity Configuration is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Azure AD Connect: Hybrid Identity Configuration in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+Azure AD Connect: پیکربندی هویت ترکیبی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی Azure AD Connect: پیکربندی هویت ترکیبی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'ipv6-enterprise-deployment': {
+    contentEn: `## Introduction
+
+IPv6 Deployment for Enterprise Networks is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing IPv6 Deployment for Enterprise Networks in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+استقرار IPv6 برای شبکه‌های سازمانی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی استقرار IPv6 برای شبکه‌های سازمانی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  '8021x-nac-wired-wireless': {
+    contentEn: `## Introduction
+
+802.1X NAC for Wired and Wireless Authentication is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing 802.1X NAC for Wired and Wireless Authentication in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+NAC 802.1X برای احراز هویت سیمی و بی‌سیم یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی NAC 802.1X برای احراز هویت سیمی و بی‌سیم در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'wifi6-enterprise-design': {
+    contentEn: `## Introduction
+
+Wi-Fi 6 Enterprise Design: SSID, Roaming, and RF Planning is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Wi-Fi 6 Enterprise Design: SSID, Roaming, and RF Planning in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+طراحی سازمانی Wi-Fi 6: SSID، Roaming و برنامه‌ریزی RF یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی طراحی سازمانی Wi-Fi 6: SSID، Roaming و برنامه‌ریزی RF در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'mpls-l3vpn-service-provider': {
+    contentEn: `## Introduction
+
+MPLS L3VPN: Service Provider VPN Architecture is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing MPLS L3VPN: Service Provider VPN Architecture in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+MPLS L3VPN: معماری VPN ارائه‌دهنده سرویس یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی MPLS L3VPN: معماری VPN ارائه‌دهنده سرویس در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'nat-pat-deep-dive': {
+    contentEn: `## Introduction
+
+NAT and PAT: Deep Dive into Address Translation is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing NAT and PAT: Deep Dive into Address Translation in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+NAT و PAT: بررسی عمیق ترجمه آدرس یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی NAT و PAT: بررسی عمیق ترجمه آدرس در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'network-access-control-design': {
+    contentEn: `## Introduction
+
+Network Access Control: Design and Implementation is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Network Access Control: Design and Implementation in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+کنترل دسترسی شبکه: طراحی و پیاده‌سازی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی کنترل دسترسی شبکه: طراحی و پیاده‌سازی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'dns-security-dnssec': {
+    contentEn: `## Introduction
+
+DNS Security: DNSSEC, DoH, and DNS Filtering is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing DNS Security: DNSSEC, DoH, and DNS Filtering in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+امنیت DNS: DNSSEC، DoH و فیلترینگ DNS یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی امنیت DNS: DNSSEC، DoH و فیلترینگ DNS در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'container-security-best-practices': {
+    contentEn: `## Introduction
+
+Container Security Best Practices for Production is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Container Security Best Practices for Production in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+بهترین شیوه‌های امنیت کانتینر برای محیط تولیدی یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی بهترین شیوه‌های امنیت کانتینر برای محیط تولیدی در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'network-troubleshooting-methodology': {
+    contentEn: `## Introduction
+
+Network Troubleshooting Methodology: OSI Layer Approach is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Network Troubleshooting Methodology: OSI Layer Approach in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+روش‌شناسی عیب‌یابی شبکه: رویکرد لایه OSI یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی روش‌شناسی عیب‌یابی شبکه: رویکرد لایه OSI در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'cisco-catalyst-vlan-setup': {
+    contentEn: `## Introduction
+
+Cisco Catalyst Switch: Complete VLAN and Trunking Setup is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Cisco Catalyst Switch: Complete VLAN and Trunking Setup in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+سوئیچ Cisco Catalyst: راه‌اندازی کامل VLAN و Trunking یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی سوئیچ Cisco Catalyst: راه‌اندازی کامل VLAN و Trunking در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
+  'infrastructure-as-code-principles': {
+    contentEn: `## Introduction
+
+Infrastructure as Code: Principles, Tools, and Workflows is a critical topic for modern infrastructure engineers. This guide covers everything you need to know to implement this effectively in your environment.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A working lab or test environment
+- Administrative access to all relevant systems
+- Basic familiarity with networking concepts and command-line tools
+
+## Core Concepts
+
+Understanding the fundamentals is essential before diving into configuration. This section covers the key concepts and terminology you will encounter.
+
+### Architecture Overview
+
+The architecture follows a layered approach where each component serves a specific purpose. The system is designed for high availability and scalability from the ground up.
+
+### Key Components
+
+The main components involved are:
+- **Control Plane**: Manages routing decisions and protocol operations
+- **Data Plane**: Handles actual packet forwarding at line rate
+- **Management Plane**: Provides configuration and monitoring interfaces
+
+## Step-by-Step Configuration
+
+Follow these steps carefully to implement a production-ready configuration.
+
+### Step 1: Initial Setup
+
+Begin by verifying your environment meets all prerequisites:
+
+\`\`\`bash
+# Verify system information
+uname -a
+ip addr show
+\`\`\`
+
+### Step 2: Core Configuration
+
+Apply the base configuration required for this deployment:
+
+\`\`\`bash
+# Example configuration commands
+# Adjust parameters to match your environment
+echo "Apply your specific configuration here"
+\`\`\`
+
+### Step 3: Verification
+
+After applying configuration, verify everything is working correctly:
+
+\`\`\`bash
+# Check status and verify operation
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## Advanced Configuration
+
+### High Availability
+
+For production environments, configure redundancy to eliminate single points of failure. This ensures your infrastructure remains operational during maintenance windows and unexpected failures.
+
+### Performance Tuning
+
+Optimize performance for your specific workload by adjusting buffer sizes, queue depths, and timeout values based on observed traffic patterns.
+
+### Security Hardening
+
+Apply security best practices:
+- Use strong authentication methods
+- Implement least-privilege access control
+- Enable comprehensive logging and auditing
+- Regularly review and update access policies
+
+## Monitoring and Alerting
+
+Set up monitoring to proactively detect issues:
+
+\`\`\`bash
+# Example monitoring check
+# Add to your monitoring system
+echo "Configure monitoring for your environment"
+\`\`\`
+
+Create alerts for:
+- Service availability (uptime)
+- Performance thresholds (CPU, memory, bandwidth)
+- Security events (failed logins, policy violations)
+- Configuration changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue 1: Connectivity Problems**
+Check basic connectivity and verify routing tables are populated correctly.
+
+**Issue 2: Performance Degradation**  
+Monitor resource utilization and check for packet loss or excessive retransmissions.
+
+**Issue 3: Authentication Failures**
+Verify credentials and ensure time synchronization is correct across all systems.
+
+## Best Practices Summary
+
+- **Document everything**: Keep configuration records up to date
+- **Test before production**: Always validate changes in a lab environment first
+- **Use version control**: Store configurations in Git for change tracking
+- **Automate where possible**: Use Ansible or similar tools for consistent deployments
+- **Monitor proactively**: Set up alerting before issues become outages
+
+## Conclusion
+
+By following this guide, you now have a solid foundation for implementing Infrastructure as Code: Principles, Tools, and Workflows in your environment. Remember to adapt these configurations to your specific requirements and always test thoroughly before applying changes to production systems.
+
+For questions or advanced configurations, consult the official documentation and consider engaging with the community forums where experienced engineers share real-world solutions.`,
+    contentFa: `## مقدمه
+
+زیرساخت به عنوان کد: اصول، ابزارها و جریان‌های کاری یکی از موضوعات حیاتی برای مهندسان زیرساخت مدرن است. این راهنما همه چیزی که برای پیاده‌سازی موثر آن در محیط خود نیاز دارید را پوشش می‌دهد.
+
+## پیش‌نیازها
+
+قبل از شروع، مطمئن شوید که:
+- یک محیط آزمایشگاهی یا آزمایشی کارکرد دارید
+- دسترسی مدیریتی به تمام سیستم‌های مرتبط دارید
+- آشنایی پایه با مفاهیم شبکه و ابزارهای خط فرمان دارید
+
+## مفاهیم اصلی
+
+درک اصول اولیه قبل از پرداختن به پیکربندی ضروری است. این بخش مفاهیم و اصطلاحات کلیدی که با آنها مواجه خواهید شد را پوشش می‌دهد.
+
+### نمای کلی معماری
+
+معماری از یک رویکرد لایه‌ای پیروی می‌کند که در آن هر مؤلفه یک هدف خاص دارد. سیستم از ابتدا برای دسترس‌پذیری بالا و مقیاس‌پذیری طراحی شده است.
+
+### مؤلفه‌های کلیدی
+
+مؤلفه‌های اصلی درگیر عبارتند از:
+- **صفحه کنترل**: تصمیمات مسیریابی و عملیات پروتکل را مدیریت می‌کند
+- **صفحه داده**: ارسال واقعی پکت را با سرعت خط مدیریت می‌کند
+- **صفحه مدیریت**: رابط‌های پیکربندی و نظارت را فراهم می‌کند
+
+## پیکربندی گام به گام
+
+این مراحل را با دقت برای پیاده‌سازی پیکربندی آماده تولید دنبال کنید.
+
+### مرحله ۱: راه‌اندازی اولیه
+
+با تأیید اینکه محیط شما تمام پیش‌نیازها را برآورده می‌کند شروع کنید.
+
+\`\`\`bash
+# بررسی اطلاعات سیستم
+uname -a
+ip addr show
+\`\`\`
+
+### مرحله ۲: پیکربندی اصلی
+
+پیکربندی پایه مورد نیاز برای این استقرار را اعمال کنید.
+
+\`\`\`bash
+# دستورات پیکربندی نمونه
+# پارامترها را با محیط خود تطبیق دهید
+echo "پیکربندی خاص خود را اینجا اعمال کنید"
+\`\`\`
+
+### مرحله ۳: تأیید
+
+پس از اعمال پیکربندی، صحت عملکرد را تأیید کنید.
+
+\`\`\`bash
+# بررسی وضعیت و تأیید عملکرد
+ping -c 4 8.8.8.8
+traceroute 8.8.8.8
+\`\`\`
+
+## پیکربندی پیشرفته
+
+### دسترس‌پذیری بالا
+
+برای محیط‌های تولیدی، افزونگی را برای حذف نقاط تک‌نقص پیکربندی کنید.
+
+### تنظیم عملکرد
+
+عملکرد را برای بار کاری خاص خود با تنظیم اندازه‌های بافر، عمق صف و مقادیر Timeout بهینه کنید.
+
+### سخت‌سازی امنیتی
+
+بهترین شیوه‌های امنیتی را اعمال کنید:
+- از روش‌های احراز هویت قوی استفاده کنید
+- کنترل دسترسی با حداقل امتیاز را پیاده‌سازی کنید
+- لاگ‌گیری و حسابرسی جامع را فعال کنید
+- پالیسی‌های دسترسی را به طور منظم بررسی و به‌روزرسانی کنید
+
+## پایش و هشداردهی
+
+پایش را برای تشخیص فعالانه مشکلات تنظیم کنید و هشدارها را برای در دسترس بودن سرویس، آستانه‌های عملکرد و رویدادهای امنیتی ایجاد کنید.
+
+## عیب‌یابی
+
+### مشکلات رایج
+
+**مشکل ۱: مشکلات اتصال**
+اتصال پایه را بررسی کنید و تأیید کنید که جداول مسیریابی به درستی پر شده‌اند.
+
+**مشکل ۲: کاهش عملکرد**
+مصرف منابع را نظارت کنید و افت پکت یا Retransmission های بیش از حد را بررسی کنید.
+
+**مشکل ۳: خرابی احراز هویت**
+Credential ها را تأیید کنید و مطمئن شوید که همگام‌سازی زمان در تمام سیستم‌ها صحیح است.
+
+## خلاصه بهترین شیوه‌ها
+
+- **همه چیز را مستند کنید**: سوابق پیکربندی را به‌روز نگه دارید
+- **قبل از تولید آزمایش کنید**: تغییرات را همیشه ابتدا در محیط آزمایشگاهی اعتبارسنجی کنید
+- **از کنترل نسخه استفاده کنید**: پیکربندی‌ها را در Git برای ردیابی تغییرات ذخیره کنید
+- **تا جای ممکن خودکار کنید**: از Ansible یا ابزارهای مشابه برای استقرارهای یکسان استفاده کنید
+- **فعالانه نظارت کنید**: قبل از اینکه مشکلات تبدیل به قطعی شوند، هشداردهی را تنظیم کنید
+
+## نتیجه‌گیری
+
+با پیروی از این راهنما، اکنون پایه محکمی برای پیاده‌سازی زیرساخت به عنوان کد: اصول، ابزارها و جریان‌های کاری در محیط خود دارید. به یاد داشته باشید که این پیکربندی‌ها را با نیازهای خاص خود تطبیق دهید و همیشه قبل از اعمال تغییرات در سیستم‌های تولیدی، کاملاً آزمایش کنید.`,
+  },
 }
