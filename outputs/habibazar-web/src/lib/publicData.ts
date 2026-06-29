@@ -1,6 +1,24 @@
 import { getDb } from '@/lib/db'
 import { projects, services, skills, certifications, clients, timelineItems, blogPosts, blogCategories, aboutContent, heroContent, siteSettings } from '@/lib/db/schema'
-import { eq, asc, desc } from 'drizzle-orm'
+import { eq, asc, desc, sql } from 'drizzle-orm'
+
+const EXPECTED_POST_COUNT = 100
+let _resynced = false
+
+async function autoResyncIfNeeded() {
+  if (_resynced) return
+  try {
+    const db = getDb()
+    const result = db.select({ count: sql<number>`count(*)` }).from(blogPosts).get()
+    if ((result?.count ?? 0) < EXPECTED_POST_COUNT) {
+      const { resyncPublicContent } = await import('@/lib/db/resync')
+      resyncPublicContent()
+      _resynced = true
+    } else {
+      _resynced = true
+    }
+  } catch { /* silent */ }
+}
 
 export async function getPublicSetting(key: string): Promise<string | null> {
   try {
@@ -68,6 +86,7 @@ export async function getPublicTimeline() {
 
 export async function getPublicBlogPosts() {
   try {
+    await autoResyncIfNeeded()
     const db = getDb()
     return db.select().from(blogPosts).where(eq(blogPosts.status, 'published')).orderBy(desc(blogPosts.createdAt)).all()
   } catch { return [] }
