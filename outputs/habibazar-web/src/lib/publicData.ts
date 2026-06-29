@@ -2,9 +2,9 @@ import { getDb } from '@/lib/db'
 import { projects, services, skills, certifications, clients, timelineItems, blogPosts, blogCategories, aboutContent, heroContent, siteSettings } from '@/lib/db/schema'
 import { eq, asc, desc, sql } from 'drizzle-orm'
 
-const EXPECTED_POST_COUNT = 100
+const EXPECTED_POST_COUNT = 150
 // Bump this version whenever blog content is updated to force a DB resync
-const CONTENT_VERSION = '2'
+const CONTENT_VERSION = '3'
 let _resynced = false
 
 async function autoResyncIfNeeded() {
