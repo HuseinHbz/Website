@@ -29,8 +29,7 @@ export function Footer({ locale = 'en' }: FooterProps) {
     ],
     Contact: [
       { label: 'Book Consultation', href: '/consultation' },
-      { label: 'Intro Call', href: '/consultation/intro-call' },
-      { label: 'LinkedIn', href: SITE.social.linkedin, external: true },
+      { label: 'About HBZ', href: '/about' },
     ],
   }
 
@@ -50,8 +49,7 @@ export function Footer({ locale = 'en' }: FooterProps) {
     ],
     'تماس': [
       { label: 'رزرو مشاوره', href: '/consultation' },
-      { label: 'تماس اولیه', href: '/consultation/intro-call' },
-      { label: 'لینکدین', href: SITE.social.linkedin, external: true },
+      { label: 'درباره HBZ', href: '/about' },
     ],
   }
 
@@ -107,7 +105,7 @@ export function Footer({ locale = 'en' }: FooterProps) {
                 {links.map((link) => (
                   <li key={link.label}>
                     <Link
-                      href={buildLocalizedPath(link.href)}
+                      href={'external' in link && link.external ? link.href : buildLocalizedPath(link.href)}
                       target={'external' in link && link.external ? '_blank' : undefined}
                       rel={'external' in link && link.external ? 'noopener noreferrer' : undefined}
                       className="text-sm text-text-secondary hover:text-accent transition-colors duration-150"

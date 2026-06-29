@@ -8,12 +8,17 @@ interface DbSkill { nameEn: string; nameFa: string; categoryEn: string; category
 interface DbCert { nameEn: string; nameFa: string; issuer?: string | null; color: string | null }
 interface DbAbout { bio: string | null; photoUrl: string | null; resumeUrl: string | null; headline: string | null; subheadline: string | null }
 
+interface ContactInfo { email?: string | null; phone?: string | null; locationEn?: string | null; locationFa?: string | null }
+interface SocialLinks { linkedin?: string | null; github?: string | null; twitter?: string | null; instagram?: string | null }
+
 interface AboutSectionProps {
   locale?: string
   dbAbout?: DbAbout | null
   dbTimeline?: DbTimeline[]
   dbSkills?: DbSkill[]
   dbCerts?: DbCert[]
+  contactInfo?: ContactInfo
+  socialLinks?: SocialLinks
 }
 
 interface TimelineItem {
@@ -199,7 +204,7 @@ function CertCard({ cert, isRTL, index }: { cert: CertItem; isRTL: boolean; inde
   )
 }
 
-export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbCerts }: AboutSectionProps) {
+export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbCerts, contactInfo, socialLinks }: AboutSectionProps) {
   const isRTL = locale === 'fa'
 
   const TIMELINE_DATA: TimelineItem[] = (dbTimeline && dbTimeline.length > 0)
@@ -301,6 +306,56 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                   </>)
                 }
               </div>
+              {/* Contact Info */}
+              {(contactInfo?.email || contactInfo?.phone || contactInfo?.locationEn) && (
+                <div className="mt-6 pt-5 border-t border-border/50 space-y-2">
+                  {contactInfo.email && (
+                    <a href={`mailto:${contactInfo.email}`} className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors">
+                      <span className="text-accent">✉</span> {contactInfo.email}
+                    </a>
+                  )}
+                  {contactInfo.phone && (
+                    <a href={`tel:${contactInfo.phone}`} className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors">
+                      <span className="text-accent">📞</span> {contactInfo.phone}
+                    </a>
+                  )}
+                  {(isRTL ? contactInfo.locationFa : contactInfo.locationEn) && (
+                    <p className="flex items-center gap-2 text-sm text-text-secondary">
+                      <span className="text-accent">📍</span> {isRTL ? contactInfo.locationFa : contactInfo.locationEn}
+                    </p>
+                  )}
+                </div>
+              )}
+              {/* Social Links */}
+              {(socialLinks?.linkedin || socialLinks?.github || socialLinks?.twitter || socialLinks?.instagram) && (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {socialLinks.linkedin && (
+                    <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0077b5]/10 text-[#0077b5] hover:bg-[#0077b5]/20 transition-colors border border-[#0077b5]/20">
+                      <span>in</span> LinkedIn
+                    </a>
+                  )}
+                  {socialLinks.github && (
+                    <a href={socialLinks.github} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-text-secondary hover:text-white hover:bg-white/10 transition-colors border border-border">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.4.6.11.82-.26.82-.58v-2c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013.01-.4c1.02 0 2.05.14 3.01.4 2.28-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.7.82.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
+                      GitHub
+                    </a>
+                  )}
+                  {socialLinks.twitter && (
+                    <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1da1f2]/10 text-[#1da1f2] hover:bg-[#1da1f2]/20 transition-colors border border-[#1da1f2]/20">
+                      𝕏 Twitter
+                    </a>
+                  )}
+                  {socialLinks.instagram && (
+                    <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#e1306c]/10 text-[#e1306c] hover:bg-[#e1306c]/20 transition-colors border border-[#e1306c]/20">
+                      📷 Instagram
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
 

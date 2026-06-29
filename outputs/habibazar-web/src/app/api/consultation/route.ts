@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { consultationRequests } from '@/lib/db/schema'
+import { notify } from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +24,13 @@ export async function POST(req: NextRequest) {
       locale: locale || 'en',
       status: 'new',
     })
+
+    // Send notifications asynchronously (don't block response)
+    notify({
+      type: 'consultation',
+      subject: `New consultation request from ${name}`,
+      body: `Name: ${name}\nEmail: ${email}\nPhone: ${phone || '-'}\nCompany: ${company || '-'}\nMessage: ${message}${preferredDate ? `\nPreferred Date: ${preferredDate}` : ''}`,
+    }).catch(console.error)
 
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {

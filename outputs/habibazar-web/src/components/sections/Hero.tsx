@@ -172,15 +172,18 @@ function MiniNetworkSVG() {
           opacity={act ? 0.9 : 0.4}
           style={act ? { animation: `dashFlow ${2+i*0.25}s linear infinite` } : undefined}/>
       })}
-      {[['50','18','Cisco','#1ba0d7'],['18','42','Mikro','#c03030'],['80','40','Linux','#f59e0b'],
-        ['38','62','VMware','#60b6e0'],['10','66','Sec','#10b981'],
-        ['82','62','Cloud','#6366f1'],['58','78','Mon','#f59e0b'],['28','82','Auto','#818cf8']
-      ].map(([cx,cy,lbl,col],i) => (
-        <g key={i} filter="url(#ng2)">
-          <circle cx={cx} cy={cy} r="4.5" fill={`${col}20`} stroke={col} strokeWidth="0.6"/>
-          <text x={cx} y={Number(cy)+3} textAnchor="middle" fill={col} fontSize="2.6" fontWeight="700">{lbl}</text>
-        </g>
-      ))}
+      {([['50','18','Cisco','#1ba0d7',1],['18','42','MikroTik','#c03030',-1],['80','40','Linux','#f59e0b',1],
+        ['38','62','VMware','#60b6e0',-1],['10','66','Security','#10b981',-1],
+        ['82','62','Cloud','#6366f1',1],['58','78','Monitor','#f59e0b',1],['28','82','Ansible','#818cf8',-1]
+      ] as [string,string,string,string,number][]).map(([cx,cy,lbl,col,dir],i) => {
+        const labelY = dir > 0 ? Number(cy) + 8.5 : Number(cy) - 6
+        return (
+          <g key={i} filter="url(#ng2)">
+            <circle cx={cx} cy={cy} r="5" fill={`${col}25`} stroke={col} strokeWidth="0.8"/>
+            <text x={cx} y={labelY} textAnchor="middle" fill={col} fontSize="3.2" fontWeight="700" opacity="0.95">{lbl}</text>
+          </g>
+        )
+      })}
       {[['50,18','18,42','#818cf8',2.2],['50,18','80,40','#06b6d4',2.6],
         ['18,42','10,66','#10b981',2.0],['80,40','38,62','#6366f1',2.4]
       ].map(([path, ,col,dur],i) => {

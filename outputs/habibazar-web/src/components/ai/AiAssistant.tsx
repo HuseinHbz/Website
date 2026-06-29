@@ -111,6 +111,7 @@ export function AiAssistant({ locale }: AiAssistantProps) {
   const [intake, setIntake] = useState<IntakeData>({ name: '', company: '', phone: '' })
   const [intakeErrors, setIntakeErrors] = useState<Partial<IntakeData>>({})
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [chatContext, setChatContext] = useState<string>('')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -170,35 +171,23 @@ export function AiAssistant({ locale }: AiAssistantProps) {
     setError(null)
 
     try {
-      const res = await fetch(`${SITE.apiUrl}/api/v1/ai/conversations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: intake.name.trim(),
-          company: intake.company.trim() || undefined,
-          phone: intake.phone.trim(),
-          locale: chatLocale,
-        }),
-      })
+      const contextMsg = isRTL
+        ? `کاربر: ${intake.name.trim()}${intake.company.trim() ? ` از ${intake.company.trim()}` : ''}, تلفن: ${intake.phone.trim()}`
+        : `User: ${intake.name.trim()}${intake.company.trim() ? ` from ${intake.company.trim()}` : ''}, phone: ${intake.phone.trim()}`
+      setChatContext(contextMsg)
+      setConversationId(`local-${Date.now()}`)
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-
-      const data = await res.json() as { id: string; greeting?: string }
-      setConversationId(data.id)
-
-      // Add greeting if provided
-      if (data.greeting) {
-        setMessages([
-          {
-            id: 'greeting',
-            role: 'assistant',
-            content: data.greeting,
-            timestamp: new Date(),
-          },
-        ])
-      }
+      const greeting = isRTL
+        ? `سلام ${intake.name.trim()}! من دستیار هوشمند HBZ هستم. چطور می‌توانم کمکتان کنم؟`
+        : `Hello ${intake.name.trim()}! I'm the HBZ AI assistant. How can I help you today?`
+      setMessages([
+        {
+          id: 'greeting',
+          role: 'assistant',
+          content: greeting,
+          timestamp: new Date(),
+        },
+      ])
 
       setPhase('chat')
     } catch {
@@ -238,66 +227,42 @@ export function AiAssistant({ locale }: AiAssistantProps) {
     ])
 
     try {
-      const res = await fetch(
-        `${SITE.apiUrl}/api/v1/ai/conversations/${conversationId}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'text/event-stream',
-          },
-          body: JSON.stringify({ content, locale: chatLocale }),
-        }
+      // Build messages array for local API (include user context as first system-like message)
+      const apiMessages = messages
+        .filter((m) => m.content)
+        .map((m) => ({ role: m.role, content: m.content }))
+      apiMessages.push({ role: 'user', content: content })
+
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: chatContext
+            ? [{ role: 'user', content: chatContext }, ...apiMessages]
+            : apiMessages,
+          locale: chatLocale,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
+
+      const data = await res.json() as { reply: string }
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId ? { ...m, content: data.reply } : m
+        )
       )
-
-      if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const raw = line.slice(6).trim()
-          if (raw === '[DONE]') continue
-
-          try {
-            const event = JSON.parse(raw) as {
-              type: string
-              content?: string
-            }
-            if (event.type === 'delta' && event.content) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, content: m.content + event.content }
-                    : m
-                )
-              )
-            }
-          } catch {
-            // Ignore JSON parse errors on malformed SSE events
-          }
-        }
-      }
-    } catch {
-      setError(t('error'))
-      // Remove the empty assistant message on error
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('error')
+      setError(msg)
       setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId))
     } finally {
       setIsStreaming(false)
     }
-  }, [inputValue, conversationId, isStreaming, chatLocale, t])
+  }, [inputValue, conversationId, isStreaming, chatLocale, chatContext, messages, t])
 
   // Handle Enter key in chat input
   function handleChatKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

@@ -167,7 +167,7 @@ export function Table({ headers, children }: { headers: string[]; children: Reac
         <thead>
           <tr className="border-b border-[#1e1e2e]">
             {headers.map((h) => (
-              <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+              <th key={h} className="text-start py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
             ))}
           </tr>
         </thead>
