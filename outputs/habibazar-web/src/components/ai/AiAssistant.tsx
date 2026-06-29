@@ -311,11 +311,12 @@ export function AiAssistant({ locale }: AiAssistantProps) {
   const isAtLimit = turnCount >= MAX_TURNS
 
   // ── Position ─────────────────────────────────────────────────────────────
-  // RTL: bottom-left / LTR: bottom-right
+  // RTL: bottom-left / LTR: bottom-right — follows chatLocale toggle, not page locale
 
-  const floatPosition = isRTL
-    ? 'bottom-6 start-6'
-    : 'bottom-6 end-6'
+  const isChatRTL = chatLocale === 'fa'
+  const floatPosition = isChatRTL
+    ? 'bottom-6 left-6'
+    : 'bottom-6 right-6'
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -357,7 +358,7 @@ export function AiAssistant({ locale }: AiAssistantProps) {
           'fixed z-50 flex flex-col',
           'w-full sm:w-[400px] max-h-[85vh]',
           'bg-surface border border-border rounded-2xl shadow-2xl shadow-black/50',
-          isRTL ? 'bottom-6 start-6' : 'bottom-6 end-6'
+          isChatRTL ? 'bottom-6 left-6' : 'bottom-6 right-6'
         )}
         role="dialog"
         aria-modal="true"

@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import { BLOG_CONTENT } from './blogContent'
 
 const DB_PATH = path.join(process.cwd(), 'data', 'habibazar.db')
 
@@ -277,8 +278,8 @@ export function resyncPublicContent() {
   const getCatId = db.prepare('SELECT id FROM blog_categories WHERE slug = ?')
   const insPost = db.prepare(`
     INSERT OR REPLACE INTO blog_posts
-      (slug, title_en, title_fa, excerpt_en, excerpt_fa, category_id, read_time_en, read_time_fa, published_at_en, published_at_fa, status, featured)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+      (slug, title_en, title_fa, excerpt_en, excerpt_fa, content_en, content_fa, category_id, read_time_en, read_time_fa, published_at_en, published_at_fa, status, featured)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `)
   const blogPostsData = [
     // MikroTik
@@ -326,7 +327,8 @@ export function resyncPublicContent() {
   ]
   for (const p of blogPostsData) {
     const cat = getCatId.get(p.catSlug) as { id: number } | undefined
-    insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', p.featured)
+    const bc = BLOG_CONTENT[p.slug]
+    insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, bc?.contentEn ?? null, bc?.contentFa ?? null, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', p.featured)
   }
 
   // ── Media files (seed all SVGs) ──────────────────────────────────────────
