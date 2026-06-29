@@ -3,6 +3,8 @@ import { projects, services, skills, certifications, clients, timelineItems, blo
 import { eq, asc, desc, sql } from 'drizzle-orm'
 
 const EXPECTED_POST_COUNT = 100
+// Bump this version whenever blog content is updated to force a DB resync
+const CONTENT_VERSION = '2'
 let _resynced = false
 
 async function autoResyncIfNeeded() {
@@ -10,9 +12,13 @@ async function autoResyncIfNeeded() {
   try {
     const db = getDb()
     const result = db.select({ count: sql<number>`count(*)` }).from(blogPosts).get()
-    if ((result?.count ?? 0) < EXPECTED_POST_COUNT) {
+    const storedVersion = db.select().from(siteSettings).where(eq(siteSettings.key, '_content_version')).get()
+    const needsResync = (result?.count ?? 0) < EXPECTED_POST_COUNT || storedVersion?.value !== CONTENT_VERSION
+    if (needsResync) {
       const { resyncPublicContent } = await import('@/lib/db/resync')
       resyncPublicContent()
+      // Store current version to avoid re-running on next request
+      db.$client.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('_content_version', ?)").run(CONTENT_VERSION)
       _resynced = true
     } else {
       _resynced = true
