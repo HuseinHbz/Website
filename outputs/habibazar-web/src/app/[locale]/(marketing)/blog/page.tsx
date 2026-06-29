@@ -1,7 +1,7 @@
 import { SITE } from '@/lib/site'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { getPublicBlogPosts, getPublicBlogCategories } from '@/lib/publicData'
+import BlogClient from './BlogClient'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
@@ -120,70 +120,7 @@ export default async function BlogPage({ params }: Props) {
             </p>
           </div>
 
-          {/* Category grid */}
-          <div className="mb-16">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-6">
-              {isRTL ? 'مرور بر اساس دسته‌بندی' : 'Browse by Category'}
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {categories.map((cat) => (
-                <div
-                  key={cat.name}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                  style={{ background: `${cat.color}15`, border: `1px solid ${cat.color}30` }}
-                >
-                  <span>{cat.icon}</span>
-                  <span className="text-sm font-medium" style={{ color: cat.color }}>{cat.name}</span>
-                  {cat.count > 0 && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: `${cat.color}20`, color: cat.color }}>
-                      {cat.count}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Posts */}
-          <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-6">
-            {isRTL ? 'آخرین مقالات' : 'Latest Articles'}
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map((post, i) => {
-              const card = (
-                <article className="service-card group cursor-pointer h-full">
-                  <div
-                    className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-                    style={{ background: `linear-gradient(90deg, ${post.color}, transparent)` }}
-                  />
-                  <div className="flex items-center justify-between mb-4">
-                    <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-lg"
-                      style={{ background: `${post.color}15`, color: post.color }}
-                    >
-                      {post.category || post.categoryDisplay}
-                    </span>
-                    <span className="text-xs text-text-muted">{post.readTime}</span>
-                  </div>
-                  <h3 className="text-base font-bold text-text-primary mb-3 group-hover:text-accent transition-colors leading-snug">
-                    {post.title}
-                  </h3>
-                  <p className="text-sm text-text-secondary leading-relaxed mb-4 line-clamp-3">
-                    {post.excerpt}
-                  </p>
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-auto">
-                    <span className="text-xs text-text-muted">{post.publishedAt}</span>
-                    <span className="text-xs text-accent font-medium group-hover:text-accent-hover transition-colors">
-                      {isRTL ? 'خواندن مقاله ←' : 'Read Article →'}
-                    </span>
-                  </div>
-                </article>
-              )
-              return post.slug
-                ? <Link key={i} href={`/${locale}/blog/${post.slug}`} className="block">{card}</Link>
-                : <div key={i}>{card}</div>
-            })}
-          </div>
+          <BlogClient posts={posts} categories={categories} locale={locale} isRTL={isRTL} />
 
         </div>
       </section>
