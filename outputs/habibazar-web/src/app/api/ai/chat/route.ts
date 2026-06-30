@@ -38,7 +38,7 @@ async function callClaude(apiKey: string, apiUrl: string, model: string, message
     system: systemPrompt || undefined,
     messages,
   }
-  const authHeader = useBearer
+  const authHeader: Record<string, string> = useBearer
     ? { 'Authorization': `Bearer ${apiKey}` }
     : { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
   const res = await fetch(url, {
