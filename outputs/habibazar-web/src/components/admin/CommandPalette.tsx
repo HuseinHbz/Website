@@ -26,11 +26,11 @@ const COMMANDS: Command[] = [
   { id: 'about', label: 'Executive Profile', labelFa: 'پروفایل اجرایی', icon: '◍', href: '/admin/about', group: 'Content', groupFa: 'محتوا', keywords: 'about bio profile' },
   { id: 'timeline', label: 'Leadership Journey', labelFa: 'مسیر رهبری', icon: '◎', href: '/admin/timeline', group: 'Content', groupFa: 'محتوا', keywords: 'career timeline' },
   { id: 'skills', label: 'Core Expertise', labelFa: 'تخصص‌های اصلی', icon: '◈', href: '/admin/skills', group: 'Content', groupFa: 'محتوا', keywords: 'skills expertise' },
-  { id: 'certs', label: 'Professional Credentials', labelFa: 'گواهینامه‌های حرفه‌ای', icon: '🏅', href: '/admin/certifications', group: 'Content', groupFa: 'محتوا', keywords: 'certifications credentials' },
+  { id: 'certs', label: 'Professional Credentials', labelFa: 'گواهینامه‌های حرفه‌ای', icon: '🏅', href: '/admin/credentials', group: 'Content', groupFa: 'محتوا', keywords: 'certifications credentials awards badges' },
   { id: 'services', label: 'Technology Solutions', labelFa: 'راهکارهای فناوری', icon: '◉', href: '/admin/services', group: 'Content', groupFa: 'محتوا', keywords: 'services solutions' },
   { id: 'projects', label: 'Enterprise Case Studies', labelFa: 'مطالعات موردی', icon: '◆', href: '/admin/projects', group: 'Content', groupFa: 'محتوا', keywords: 'projects case studies' },
-  { id: 'clients', label: 'Enterprise Partners', labelFa: 'شرکای سازمانی', icon: '◇', href: '/admin/clients', group: 'Content', groupFa: 'محتوا', keywords: 'clients partners companies' },
-  { id: 'blog', label: 'Knowledge Center', labelFa: 'مرکز دانش', icon: '▣', href: '/admin/blog', group: 'Content', groupFa: 'محتوا', keywords: 'blog posts articles knowledge' },
+  { id: 'organizations', label: 'Organization Hub', labelFa: 'هاب سازمان‌ها', icon: '◇', href: '/admin/organizations', group: 'Content', groupFa: 'محتوا', keywords: 'clients partners companies organizations employers' },
+  { id: 'content-hub', label: 'Content Hub', labelFa: 'هاب محتوا', icon: '▣', href: '/admin/content', group: 'Content', groupFa: 'محتوا', keywords: 'blog posts articles docs tutorials knowledge content' },
   // Solutions
   { id: 'solutions', label: 'Technology Solutions', labelFa: 'راهکارهای فناوری', icon: '💡', href: '/admin/solutions', group: 'Solutions', groupFa: 'راهکارها', keywords: 'solutions enterprise technology' },
   { id: 'industries', label: 'Industries', labelFa: 'صنایع', icon: '🏭', href: '/admin/industries', group: 'Solutions', groupFa: 'راهکارها', keywords: 'industries verticals sectors' },
@@ -74,7 +74,7 @@ const COMMANDS: Command[] = [
   { id: 'audit', label: 'Audit Center', labelFa: 'مرکز حسابرسی', icon: '▦', href: '/admin/audit', group: 'System', groupFa: 'سیستم', keywords: 'audit logs activity trail' },
   { id: 'backup', label: 'Backup & Recovery', labelFa: 'پشتیبان‌گیری و بازیابی', icon: '💾', href: '/admin/backup', group: 'System', groupFa: 'سیستم', keywords: 'backup restore recovery' },
   // Quick actions
-  { id: 'new-post', label: 'New Blog Post', labelFa: 'پست جدید', icon: '✏', href: '/admin/blog', group: 'Quick Actions', groupFa: 'اقدامات سریع', keywords: 'new create post write' },
+  { id: 'new-post', label: 'New Content', labelFa: 'محتوای جدید', icon: '✏', href: '/admin/content', group: 'Quick Actions', groupFa: 'اقدامات سریع', keywords: 'new create post write content blog docs' },
   { id: 'new-project', label: 'New Case Study', labelFa: 'مطالعه موردی جدید', icon: '+', href: '/admin/projects', group: 'Quick Actions', groupFa: 'اقدامات سریع', keywords: 'new create case study project' },
   { id: 'view-site', label: 'View Public Site', labelFa: 'مشاهده سایت عمومی', icon: '↗', href: '/', group: 'Quick Actions', groupFa: 'اقدامات سریع', keywords: 'site preview public' },
 ]

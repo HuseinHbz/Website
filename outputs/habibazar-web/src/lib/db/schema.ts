@@ -1113,3 +1113,152 @@ export const searchIndex = sqliteTable('search_index', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
 })
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 7.5 — ENTERPRISE ARCHITECTURE AUDIT: UNIFIED DOMAIN MODEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Unified: Organizations ────────────────────────────────────────────────────
+// Consolidates: clients + partners
+// type: client | employer | tech_partner | reseller | distributor | consultant
+//       | vendor | referral | branch
+export const organizations = sqliteTable('organizations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa'),
+  type: text('type', {
+    enum: ['client', 'employer', 'tech_partner', 'reseller', 'distributor',
+           'consultant', 'vendor', 'referral', 'branch'],
+  }).notNull().default('client'),
+  tier: text('tier', { enum: ['platinum', 'gold', 'silver', 'bronze'] }),
+  logoUrl: text('logo_url'),
+  website: text('website'),
+  contactEmail: text('contact_email'),
+  phone: text('phone'),
+  country: text('country'),
+  descriptionEn: text('description_en'),
+  descriptionFa: text('description_fa'),
+  certificationsJson: text('certifications_json').notNull().default('[]'),
+  regionsJson: text('regions_json').notNull().default('[]'),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedBy: text('updated_by').references(() => users.id),
+})
+
+export type Organization = typeof organizations.$inferSelect
+
+// ─── Unified: Content Categories ──────────────────────────────────────────────
+// Consolidates: blog_categories + doc_categories + course_categories
+export const contentCategories = sqliteTable('content_categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa').notNull(),
+  icon: text('icon').notNull().default('📁'),
+  color: text('color').notNull().default('#6366f1'),
+  contentTypes: text('content_types').notNull().default('all'),
+  parentId: integer('parent_id'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+})
+
+export type ContentCategory = typeof contentCategories.$inferSelect
+
+// ─── Unified: Content ─────────────────────────────────────────────────────────
+// Consolidates: blog_posts + docs
+// type: blog | news | docs | api | tutorial | guide | runbook | release
+//       | research | announcement
+export const content = sqliteTable('content', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  type: text('type', {
+    enum: ['blog', 'news', 'docs', 'api', 'tutorial', 'guide',
+           'runbook', 'release', 'research', 'announcement'],
+  }).notNull().default('blog'),
+  titleEn: text('title_en').notNull(),
+  titleFa: text('title_fa'),
+  excerptEn: text('excerpt_en'),
+  excerptFa: text('excerpt_fa'),
+  contentEn: text('content_en'),
+  contentFa: text('content_fa'),
+  categoryId: integer('category_id').references(() => contentCategories.id),
+  coverImage: text('cover_image'),
+  version: text('version'),
+  productId: integer('product_id').references(() => products.id),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  readTimeMinutes: integer('read_time_minutes').default(5),
+  views: integer('views').notNull().default(0),
+  helpful: integer('helpful').notNull().default(0),
+  status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  seoTitle: text('seo_title'),
+  seoDescription: text('seo_description'),
+  seoKeywords: text('seo_keywords'),
+  ogImage: text('og_image'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  publishedAt: text('published_at'),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedBy: text('updated_by').references(() => users.id),
+})
+
+export type Content = typeof content.$inferSelect
+
+// ─── Unified: Credentials ─────────────────────────────────────────────────────
+// Consolidates: certifications
+// type: certification | award | membership | badge | license | recognition
+export const credentials = sqliteTable('credentials', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  type: text('type', {
+    enum: ['certification', 'award', 'membership', 'badge', 'license', 'recognition'],
+  }).notNull().default('certification'),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa'),
+  issuer: text('issuer'),
+  issuerLogoUrl: text('issuer_logo_url'),
+  issueDate: text('issue_date'),
+  expiryDate: text('expiry_date'),
+  credentialId: text('credential_id'),
+  credentialUrl: text('credential_url'),
+  badgeUrl: text('badge_url'),
+  descriptionEn: text('description_en'),
+  color: text('color').default('#6366f1'),
+  icon: text('icon'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedBy: text('updated_by').references(() => users.id),
+})
+
+export type Credential = typeof credentials.$inferSelect
+
+// ─── Unified: Success Stories ─────────────────────────────────────────────────
+// Extends testimonials with type + organization reference
+export const successStories = sqliteTable('success_stories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  type: text('type', {
+    enum: ['testimonial', 'recommendation', 'review', 'award'],
+  }).notNull().default('testimonial'),
+  personName: text('person_name').notNull(),
+  personTitle: text('person_title'),
+  personAvatar: text('person_avatar'),
+  organizationId: integer('organization_id').references(() => organizations.id),
+  organizationName: text('organization_name'),
+  quoteEn: text('quote_en').notNull(),
+  quoteFa: text('quote_fa'),
+  rating: integer('rating').notNull().default(5),
+  caseStudySlug: text('case_study_slug'),
+  solutionSlug: text('solution_slug'),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export type SuccessStory = typeof successStories.$inferSelect

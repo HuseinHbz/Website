@@ -1200,6 +1200,142 @@ export function runMigrations() {
     for (const c of DEFAULT_COURSE_CATS) { insertCourseCat.run(c.slug, c.nameEn, c.nameFa, c.icon, c.color, c.sortOrder) }
   }
 
+  // ─── Phase 7.5: Unified Domain Model Tables ──────────────────────────────────
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS organizations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        name_en TEXT NOT NULL,
+        name_fa TEXT,
+        type TEXT NOT NULL DEFAULT 'client'
+          CHECK(type IN ('client','employer','tech_partner','reseller','distributor','consultant','vendor','referral','branch')),
+        tier TEXT CHECK(tier IN ('platinum','gold','silver','bronze')),
+        logo_url TEXT,
+        website TEXT,
+        contact_email TEXT,
+        phone TEXT,
+        country TEXT,
+        description_en TEXT,
+        description_fa TEXT,
+        certifications_json TEXT NOT NULL DEFAULT '[]',
+        regions_json TEXT NOT NULL DEFAULT '[]',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        active INTEGER NOT NULL DEFAULT 1,
+        featured INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_by TEXT REFERENCES users(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS content_categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        name_en TEXT NOT NULL,
+        name_fa TEXT NOT NULL,
+        icon TEXT NOT NULL DEFAULT '📁',
+        color TEXT NOT NULL DEFAULT '#6366f1',
+        content_types TEXT NOT NULL DEFAULT 'all',
+        parent_id INTEGER,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1
+      );
+
+      CREATE TABLE IF NOT EXISTS content (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL DEFAULT 'blog'
+          CHECK(type IN ('blog','news','docs','api','tutorial','guide','runbook','release','research','announcement')),
+        title_en TEXT NOT NULL,
+        title_fa TEXT,
+        excerpt_en TEXT,
+        excerpt_fa TEXT,
+        content_en TEXT,
+        content_fa TEXT,
+        category_id INTEGER REFERENCES content_categories(id),
+        cover_image TEXT,
+        version TEXT,
+        product_id INTEGER REFERENCES products(id),
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        read_time_minutes INTEGER DEFAULT 5,
+        views INTEGER NOT NULL DEFAULT 0,
+        helpful INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+        featured INTEGER NOT NULL DEFAULT 0,
+        seo_title TEXT,
+        seo_description TEXT,
+        seo_keywords TEXT,
+        og_image TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_by TEXT REFERENCES users(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL DEFAULT 'certification'
+          CHECK(type IN ('certification','award','membership','badge','license','recognition')),
+        name_en TEXT NOT NULL,
+        name_fa TEXT,
+        issuer TEXT,
+        issuer_logo_url TEXT,
+        issue_date TEXT,
+        expiry_date TEXT,
+        credential_id TEXT,
+        credential_url TEXT,
+        badge_url TEXT,
+        description_en TEXT,
+        color TEXT DEFAULT '#6366f1',
+        icon TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        featured INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_by TEXT REFERENCES users(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS success_stories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL DEFAULT 'testimonial'
+          CHECK(type IN ('testimonial','recommendation','review','award')),
+        person_name TEXT NOT NULL,
+        person_title TEXT,
+        person_avatar TEXT,
+        organization_id INTEGER REFERENCES organizations(id),
+        organization_name TEXT,
+        quote_en TEXT NOT NULL,
+        quote_fa TEXT,
+        rating INTEGER NOT NULL DEFAULT 5,
+        case_study_slug TEXT,
+        solution_slug TEXT,
+        featured INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+    `)
+  } catch {}
+
+  // Seed content_categories from existing blog_categories + doc_categories
+  const contentCatCount = (sqlite.prepare('SELECT COUNT(*) as c FROM content_categories').get() as { c: number }).c
+  if (contentCatCount === 0) {
+    const DEFAULT_CONTENT_CATS = [
+      { slug: 'technology', nameEn: 'Technology', nameFa: 'فناوری', icon: '⚙️', color: '#6366f1', contentTypes: 'blog,news,research' },
+      { slug: 'networking', nameEn: 'Networking', nameFa: 'شبکه', icon: '🌐', color: '#3b82f6', contentTypes: 'blog,tutorial,docs' },
+      { slug: 'cloud', nameEn: 'Cloud & Infrastructure', nameFa: 'ابر و زیرساخت', icon: '☁️', color: '#06b6d4', contentTypes: 'blog,tutorial,guide' },
+      { slug: 'security', nameEn: 'Cybersecurity', nameFa: 'امنیت سایبری', icon: '🔒', color: '#ef4444', contentTypes: 'blog,guide,tutorial' },
+      { slug: 'getting-started', nameEn: 'Getting Started', nameFa: 'شروع سریع', icon: '🚀', color: '#22c55e', contentTypes: 'docs,tutorial' },
+      { slug: 'api-reference', nameEn: 'API Reference', nameFa: 'مرجع API', icon: '⚡', color: '#3b82f6', contentTypes: 'api,docs' },
+      { slug: 'runbooks', nameEn: 'Runbooks', nameFa: 'Runbook‌ها', icon: '📋', color: '#f59e0b', contentTypes: 'runbook' },
+      { slug: 'release-notes', nameEn: 'Release Notes', nameFa: 'یادداشت‌های نسخه', icon: '📦', color: '#06b6d4', contentTypes: 'release,announcement' },
+    ]
+    const insertCC = sqlite.prepare(`INSERT OR IGNORE INTO content_categories (slug, name_en, name_fa, icon, color, content_types) VALUES (?,?,?,?,?,?)`)
+    for (const c of DEFAULT_CONTENT_CATS) { insertCC.run(c.slug, c.nameEn, c.nameFa, c.icon, c.color, c.contentTypes) }
+  }
+
   const productCatCount = (sqlite.prepare('SELECT COUNT(*) as c FROM product_categories').get() as { c: number }).c
   if (productCatCount === 0) {
     const DEFAULT_PRODUCT_CATS = [

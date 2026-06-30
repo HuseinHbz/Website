@@ -12,37 +12,39 @@ const NAV = [
     ],
   },
   {
-    group: { en: 'Content', fa: 'محتوا' },
+    group: { en: 'Personal Brand', fa: 'برند شخصی' },
     items: [
-      { labelEn: 'Hero Section', labelFa: 'بخش هیرو', href: '/admin/hero', icon: '⬡' },
       { labelEn: 'Executive Profile', labelFa: 'پروفایل اجرایی', href: '/admin/about', icon: '◍' },
       { labelEn: 'Leadership Journey', labelFa: 'مسیر رهبری', href: '/admin/timeline', icon: '◎' },
-      { labelEn: 'Core Expertise', labelFa: 'تخصص‌های اصلی', href: '/admin/skills', icon: '◈' },
-      { labelEn: 'Credentials', labelFa: 'گواهینامه‌ها', href: '/admin/certifications', icon: '🏅' },
-      { labelEn: 'Technology Solutions', labelFa: 'راهکارهای فناوری', href: '/admin/services', icon: '◉' },
-      { labelEn: 'Case Studies', labelFa: 'مطالعات موردی', href: '/admin/projects', icon: '◆' },
-      { labelEn: 'Enterprise Partners', labelFa: 'شرکای سازمانی', href: '/admin/clients', icon: '◇' },
-      { labelEn: 'Knowledge Center', labelFa: 'مرکز دانش', href: '/admin/blog', icon: '▣' },
+      { labelEn: 'Credentials', labelFa: 'گواهینامه‌ها و جوایز', href: '/admin/credentials', icon: '🏅' },
     ],
   },
   {
-    group: { en: 'Solutions', fa: 'راهکارها' },
+    group: { en: 'Content Hub', fa: 'مرکز محتوا' },
     items: [
-      { labelEn: 'Technology Solutions', labelFa: 'راهکارهای فناوری', href: '/admin/solutions', icon: '💡' },
+      { labelEn: 'All Content', labelFa: 'همه محتوا', href: '/admin/content', icon: '📝' },
+      { labelEn: 'Hero & Landing', labelFa: 'هیرو و صفحه اصلی', href: '/admin/hero', icon: '⬡' },
+    ],
+  },
+  {
+    group: { en: 'Technology', fa: 'فناوری' },
+    items: [
+      { labelEn: 'Technology Catalog', labelFa: 'کاتالوگ فناوری', href: '/admin/technologies', icon: '⚙️' },
+      { labelEn: 'Solutions', labelFa: 'راهکارها', href: '/admin/solutions', icon: '💡' },
       { labelEn: 'Industries', labelFa: 'صنایع', href: '/admin/industries', icon: '🏭' },
-      { labelEn: 'Technology Ecosystem', labelFa: 'اکوسیستم فناوری', href: '/admin/technologies', icon: '⚙️' },
-      { labelEn: 'Client Testimonials', labelFa: 'نظرات مشتریان', href: '/admin/testimonials', icon: '⭐' },
-      { labelEn: 'Page Templates', labelFa: 'قالب‌های صفحه', href: '/admin/templates', icon: '🗂️' },
     ],
   },
   {
-    group: { en: 'Enterprise', fa: 'سازمانی' },
+    group: { en: 'Portfolio', fa: 'پورتفولیو' },
     items: [
-      { labelEn: 'Organization', labelFa: 'سازمان', href: '/admin/organization', icon: '🏢' },
-      { labelEn: 'Sites', labelFa: 'سایت‌ها', href: '/admin/sites', icon: '🌐' },
-      { labelEn: 'Workspaces', labelFa: 'فضاهای کاری', href: '/admin/workspaces', icon: '🗂️' },
-      { labelEn: 'Partners', labelFa: 'شرکا', href: '/admin/partners', icon: '🤝' },
-      { labelEn: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', href: '/admin/integrations', icon: '🔌' },
+      { labelEn: 'Case Studies', labelFa: 'مطالعات موردی', href: '/admin/projects', icon: '◆' },
+      { labelEn: 'Success Stories', labelFa: 'داستان‌های موفقیت', href: '/admin/testimonials', icon: '⭐' },
+    ],
+  },
+  {
+    group: { en: 'Organizations', fa: 'سازمان‌ها' },
+    items: [
+      { labelEn: 'Organization Hub', labelFa: 'مرکز سازمان‌ها', href: '/admin/organizations', icon: '🏢' },
     ],
   },
   {
@@ -58,15 +60,19 @@ const NAV = [
     ],
   },
   {
-    group: { en: 'Documentation', fa: 'مستندات' },
-    items: [
-      { labelEn: 'Documentation Center', labelFa: 'مرکز مستندات', href: '/admin/docs', icon: '📄' },
-    ],
-  },
-  {
     group: { en: 'Community', fa: 'جامعه' },
     items: [
       { labelEn: 'Events & Webinars', labelFa: 'رویدادها و وبینارها', href: '/admin/events-mgr', icon: '🗓️' },
+    ],
+  },
+  {
+    group: { en: 'Enterprise', fa: 'سازمانی' },
+    items: [
+      { labelEn: 'HBZ Organization', labelFa: 'پروفایل شرکت', href: '/admin/organization', icon: '🏛️' },
+      { labelEn: 'Sites', labelFa: 'سایت‌ها', href: '/admin/sites', icon: '🌐' },
+      { labelEn: 'Workspaces', labelFa: 'فضاهای کاری', href: '/admin/workspaces', icon: '🗃️' },
+      { labelEn: 'Partners', labelFa: 'شرکا', href: '/admin/partners', icon: '🤝' },
+      { labelEn: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', href: '/admin/integrations', icon: '🔌' },
     ],
   },
   {
@@ -76,12 +82,14 @@ const NAV = [
     ],
   },
   {
-    group: { en: 'Builder', fa: 'سازنده' },
+    group: { en: 'Builder & Media', fa: 'سازنده و رسانه' },
     items: [
       { labelEn: 'Section Builder', labelFa: 'سازنده بخش‌ها', href: '/admin/sections', icon: '🧩' },
       { labelEn: 'Page Builder', labelFa: 'سازنده صفحات', href: '/admin/pages', icon: '📄' },
       { labelEn: 'Form Builder', labelFa: 'سازنده فرم', href: '/admin/forms', icon: '📋' },
       { labelEn: 'Menu Builder', labelFa: 'سازنده منو', href: '/admin/menus', icon: '☰' },
+      { labelEn: 'Media Center', labelFa: 'مرکز رسانه', href: '/admin/media', icon: '▤' },
+      { labelEn: 'Page Templates', labelFa: 'قالب‌های صفحه', href: '/admin/templates', icon: '🗂️' },
     ],
   },
   {
@@ -92,9 +100,8 @@ const NAV = [
     ],
   },
   {
-    group: { en: 'Media & AI', fa: 'رسانه و هوش مصنوعی' },
+    group: { en: 'AI Platform', fa: 'پلتفرم هوش مصنوعی' },
     items: [
-      { labelEn: 'Media Center', labelFa: 'مرکز رسانه', href: '/admin/media', icon: '▤' },
       { labelEn: 'AI Control Center', labelFa: 'مرکز کنترل هوش مصنوعی', href: '/admin/ai-control', icon: '🤖' },
       { labelEn: 'AI Knowledge Base', labelFa: 'پایگاه دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '📚' },
     ],
@@ -111,6 +118,7 @@ const NAV = [
     ],
   },
 ]
+
 
 interface Props {
   collapsed: boolean
