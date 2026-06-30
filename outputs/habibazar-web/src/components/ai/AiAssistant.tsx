@@ -227,9 +227,9 @@ export function AiAssistant({ locale }: AiAssistantProps) {
     ])
 
     try {
-      // Build messages array for local API (include user context as first system-like message)
+      // Build messages array — skip the local greeting (id='greeting') since it wasn't AI-generated
       const apiMessages = messages
-        .filter((m) => m.content)
+        .filter((m) => m.content && m.id !== 'greeting')
         .map((m) => ({ role: m.role, content: m.content }))
       apiMessages.push({ role: 'user', content: content })
 
