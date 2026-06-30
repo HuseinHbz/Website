@@ -22,7 +22,10 @@ async function callChatGPT(apiKey: string, apiUrl: string, model: string, messag
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`)
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`AI error ${res.status}: ${errText.slice(0, 200)}`)
+  }
   const data = await res.json() as { choices: { message: { content: string } }[] }
   return data.choices[0].message.content
 }
