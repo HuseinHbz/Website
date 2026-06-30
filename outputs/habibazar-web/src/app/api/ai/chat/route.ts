@@ -110,6 +110,9 @@ export async function POST(req: NextRequest) {
       case 'copilot':
         reply = await callChatGPT(apiKey, apiUrl || 'https://api.github.com/copilot', model, messages, systemPrompt)
         break
+      case 'conduit':
+        reply = await callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', model || 'anthropic/claude-sonnet-4-6', messages, systemPrompt)
+        break
       default: // chatgpt
         reply = await callChatGPT(apiKey, apiUrl || 'https://api.openai.com/v1', model, messages, systemPrompt)
         break

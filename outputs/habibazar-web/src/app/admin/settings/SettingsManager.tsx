@@ -12,6 +12,7 @@ const AI_PROVIDERS = [
   { value: 'gemini', label: 'Gemini (Google)' },
   { value: 'grok', label: 'Grok (xAI)' },
   { value: 'copilot', label: 'Copilot (Microsoft)' },
+  { value: 'conduit', label: 'Conduit (Multi-model)' },
 ]
 
 const AI_PROVIDER_DEFAULTS: Record<string, { url: string; model: string }> = {
@@ -20,6 +21,7 @@ const AI_PROVIDER_DEFAULTS: Record<string, { url: string; model: string }> = {
   gemini:   { url: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-1.5-pro' },
   grok:     { url: 'https://api.x.ai/v1', model: 'grok-beta' },
   copilot:  { url: 'https://api.github.com/copilot', model: 'gpt-4o' },
+  conduit:  { url: 'https://conduit.ozdoev.net/api/v1', model: 'anthropic/claude-sonnet-4-6' },
 }
 
 const NOTIFICATION_KEYS = [
