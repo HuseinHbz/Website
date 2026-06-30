@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
@@ -13,7 +13,20 @@ export function ClientsManager() {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Client>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState<'all' | 'partner' | 'client'>('all')
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'hidden'>('all')
   const { toast, ToastContainer } = useToast()
+
+  const filtered = useMemo(() => clients.filter((c) => {
+    const q = search.toLowerCase()
+    if (q && !c.nameEn.toLowerCase().includes(q) && !c.nameFa.includes(q) && !c.typeEn.toLowerCase().includes(q)) return false
+    if (filterType === 'partner' && !c.isTechPartner) return false
+    if (filterType === 'client' && c.isTechPartner) return false
+    if (filterActive === 'active' && !c.active) return false
+    if (filterActive === 'hidden' && c.active) return false
+    return true
+  }), [clients, search, filterType, filterActive])
 
   async function load() {
     const r = await fetch('/api/admin/clients')
@@ -46,9 +59,25 @@ export function ClientsManager() {
       <ToastContainer />
       <PageHeader title={t('clientsTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('clientNew')}</Btn>} />
 
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search clients..." className="flex-1 min-w-[200px] bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500" />
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="all">All Types</option>
+          <option value="partner">Tech Partners</option>
+          <option value="client">Clients</option>
+        </select>
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        {(search || filterType !== 'all' || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterType('all'); setFilterActive('all') }} className="px-3 py-2 text-xs text-slate-400 hover:text-white border border-[#2a2a3e] rounded-lg">✕ Clear</button>}
+        <span className="px-3 py-2 text-xs text-slate-500">{filtered.length} / {clients.length}</span>
+      </div>
+
       <Card>
         <Table headers={[t('name'), t('type'), t('isTechPartner'), t('status'), t('actions')]}>
-          {clients.map((c) => (
+          {filtered.map((c) => (
             <TR key={c.id}>
               <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-slate-500">{c.nameFa}</div></TD>
               <TD className="text-slate-400">{c.typeEn}</TD>

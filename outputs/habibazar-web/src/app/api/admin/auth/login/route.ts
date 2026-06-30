@@ -15,15 +15,18 @@ async function ensureInit() {
 
 export async function POST(req: NextRequest) {
   await ensureInit()
-  const { email, password } = await req.json()
+  const { email, password, totpCode } = await req.json()
   if (!email || !password) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
   }
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
   const ua = req.headers.get('user-agent') || undefined
-  const result = await signIn(email, password, ip ?? undefined, ua)
+  const result = await signIn(email, password, ip ?? undefined, ua, totpCode)
   if (result.error) {
     return NextResponse.json({ error: result.error }, { status: 401 })
+  }
+  if (result.requireTotp) {
+    return NextResponse.json({ requireTotp: true }, { status: 200 })
   }
   return NextResponse.json({ user: result.user })
 }

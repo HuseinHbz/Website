@@ -2,9 +2,13 @@ import bcrypt from 'bcryptjs'
 import { SignJWT, jwtVerify } from 'jose'
 import { nanoid } from 'nanoid'
 import { cookies } from 'next/headers'
+import { TOTP, NobleCryptoPlugin, ScureBase32Plugin, generateSecret as otplibGenerateSecret } from 'otplib'
 import { getDb } from '@/lib/db'
 import { users, adminSessions, auditLogs } from '@/lib/db/schema'
 import { eq, and, gt } from 'drizzle-orm'
+
+const totp = new TOTP({ crypto: new NobleCryptoPlugin(), base32: new ScureBase32Plugin() })
+export { otplibGenerateSecret as generateTotpSecret, totp }
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || 'HBZ-Admin-Secret-Key-2025-Change-In-Production'
@@ -19,7 +23,14 @@ export interface AdminUser {
   avatar?: string | null
 }
 
-export async function signIn(email: string, password: string, ipAddress?: string, userAgent?: string) {
+export async function verifyTotp(userId: string, code: string): Promise<boolean> {
+  const db = getDb()
+  const user = await db.select().from(users).where(eq(users.id, userId)).get()
+  if (!user?.totpSecret || !user.totpEnabled) return false
+  return !!(await totp.verify(code, { secret: user.totpSecret }))?.valid
+}
+
+export async function signIn(email: string, password: string, ipAddress?: string, userAgent?: string, totpCode?: string) {
   const db = getDb()
   const user = await db.select().from(users).where(
     and(eq(users.email, email.toLowerCase()), eq(users.active, true))
@@ -29,6 +40,12 @@ export async function signIn(email: string, password: string, ipAddress?: string
 
   const valid = await bcrypt.compare(password, user.passwordHash)
   if (!valid) return { error: 'Invalid credentials' }
+
+  if (user.totpEnabled && user.totpSecret) {
+    if (!totpCode) return { requireTotp: true }
+    const totpValid = !!(await totp.verify(totpCode, { secret: user.totpSecret }))?.valid
+    if (!totpValid) return { error: 'Invalid authentication code' }
+  }
 
   const sessionId = nanoid()
   const token = await new SignJWT({ sub: user.id, role: user.role, sessionId })

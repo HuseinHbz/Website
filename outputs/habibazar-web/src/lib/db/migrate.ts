@@ -358,9 +358,17 @@ export function runMigrations() {
   `)
 
   // ── Column additions for existing DBs ────────────────────────────────────
-  const cols = sqlite.prepare(`PRAGMA table_info(blog_categories)`).all() as { name: string }[]
-  if (!cols.find((c) => c.name === 'active')) {
+  const blogCatCols = sqlite.prepare(`PRAGMA table_info(blog_categories)`).all() as { name: string }[]
+  if (!blogCatCols.find((c) => c.name === 'active')) {
     sqlite.exec(`ALTER TABLE blog_categories ADD COLUMN active INTEGER NOT NULL DEFAULT 1`)
+  }
+
+  const userCols = sqlite.prepare(`PRAGMA table_info(users)`).all() as { name: string }[]
+  if (!userCols.find((c) => c.name === 'totp_secret')) {
+    sqlite.exec(`ALTER TABLE users ADD COLUMN totp_secret TEXT`)
+  }
+  if (!userCols.find((c) => c.name === 'totp_enabled')) {
+    sqlite.exec(`ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0`)
   }
 
   sqlite.close()

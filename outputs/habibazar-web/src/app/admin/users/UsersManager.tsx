@@ -33,8 +33,10 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
 
   async function del(id: string) {
     if (!confirm('Delete this user?')) return
-    await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    toast('Deleted'); load()
+    const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const data = await res.json()
+    if (!res.ok) { toast(data.error || 'Delete failed', 'error'); return }
+    toast('Deleted', 'success'); load()
   }
 
   return (

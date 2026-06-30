@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { users } from '@/lib/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, sql } from 'drizzle-orm'
 import { getAdminUser, hashPassword } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { nanoid } from 'nanoid'
@@ -76,6 +76,8 @@ export async function DELETE(req: NextRequest) {
       const { id } = await req.json()
       if (id === me.id) return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
       const db = getDb()
+      try { await db.run(sql`UPDATE audit_logs SET user_id=NULL WHERE user_id=${id}`) } catch { /* ok */ }
+      try { await db.run(sql`UPDATE media_files SET uploaded_by=NULL WHERE uploaded_by=${id}`) } catch { /* ok */ }
       await db.delete(users).where(eq(users.id, id))
       await logAction(me, 'DELETE', 'users', id)
       return NextResponse.json({ ok: true })

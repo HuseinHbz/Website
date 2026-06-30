@@ -16,6 +16,8 @@ export const users = sqliteTable('users', {
   role: text('role', { enum: ['super_admin', 'administrator', 'editor'] }).notNull().default('editor'),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   avatar: text('avatar'),
+  totpSecret: text('totp_secret'),
+  totpEnabled: integer('totp_enabled', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
   lastLogin: text('last_login'),
 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
@@ -17,7 +17,17 @@ export function ServicesManager() {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Service>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'hidden'>('all')
   const { toast, ToastContainer } = useToast()
+
+  const filtered = useMemo(() => services.filter((s) => {
+    const q = search.toLowerCase()
+    if (q && !s.titleEn.toLowerCase().includes(q) && !s.titleFa.includes(q) && !s.categoryEn.toLowerCase().includes(q)) return false
+    if (filterActive === 'active' && !s.active) return false
+    if (filterActive === 'hidden' && s.active) return false
+    return true
+  }), [services, search, filterActive])
 
   async function load() {
     const r = await fetch('/api/admin/services')
@@ -50,9 +60,20 @@ export function ServicesManager() {
       <ToastContainer />
       <PageHeader title={t('servicesTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('addNew')} {t('servicesTitle')}</Btn>} />
 
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." className="flex-1 min-w-[200px] bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500" />
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        {(search || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterActive('all') }} className="px-3 py-2 text-xs text-slate-400 hover:text-white border border-[#2a2a3e] rounded-lg">✕ Clear</button>}
+        <span className="px-3 py-2 text-xs text-slate-500">{filtered.length} / {services.length}</span>
+      </div>
+
       <Card>
         <Table headers={[t('title'), t('category'), t('color'), t('sortOrder'), t('status'), t('actions')]}>
-          {services.map((s) => (
+          {filtered.map((s) => (
             <TR key={s.id}>
               <TD><div className="font-medium text-white">{s.titleEn}</div><div className="text-xs text-slate-500">{s.titleFa}</div></TD>
               <TD className="text-slate-400">{s.categoryEn}</TD>

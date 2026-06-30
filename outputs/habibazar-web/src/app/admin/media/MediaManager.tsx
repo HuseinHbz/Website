@@ -6,7 +6,7 @@ import { useT } from '@/lib/admin/locale'
 
 type MediaFile = { id: number; filename: string; originalName: string; mimeType: string; size: number; url: string; folder: string; alt: string; uploadedAt: string }
 
-const FOLDERS = ['general', 'blog', 'projects', 'clients', 'logos', 'avatars']
+const FOLDERS = ['general', 'blog', 'projects', 'clients', 'logos', 'avatars', 'profile', 'certifications']
 
 function formatBytes(b: number) {
   if (b < 1024) return `${b} B`
@@ -143,7 +143,7 @@ export function MediaManager() {
                   >
                     {isImage(f.mimeType) && !imgErrors.has(f.id) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={f.url} alt={f.alt || f.originalName} className="w-full h-20 object-cover bg-[#111122]"
+                      <img src={f.url.startsWith('/') ? f.url : `/${f.url}`} alt={f.alt || f.originalName} className="w-full h-20 object-cover bg-[#111122]"
                         onError={() => setImgErrors(prev => new Set(prev).add(f.id))} />
                     ) : null}
                     {(!isImage(f.mimeType) || imgErrors.has(f.id)) && (
@@ -173,7 +173,7 @@ export function MediaManager() {
               <p className="text-xs font-bold text-white truncate">{selected.originalName}</p>
               {isImage(selected.mimeType) && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={selected.url} alt={selected.alt || ''} className="w-full rounded-lg bg-[#0c0c14]" />
+                <img src={selected.url.startsWith('/') ? selected.url : `/${selected.url}`} alt={selected.alt || ''} className="w-full rounded-lg bg-[#0c0c14]" />
               )}
               {selected.mimeType.includes('pdf') && (
                 <iframe src={selected.url} className="w-full rounded-lg border border-[#2a2a3e]" style={{ height: 200 }} title={selected.originalName} />

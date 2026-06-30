@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
@@ -19,7 +19,25 @@ export function SkillsManager() {
   const [editS, setEditS] = useState<Skill>(EMPTY_SKILL)
   const [editC, setEditC] = useState<Cert>(EMPTY_CERT)
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'hidden'>('all')
   const { toast, ToastContainer } = useToast()
+
+  const filteredSkills = useMemo(() => skills.filter((s) => {
+    const q = search.toLowerCase()
+    if (q && !s.nameEn.toLowerCase().includes(q) && !s.nameFa.includes(q) && !s.categoryEn.toLowerCase().includes(q)) return false
+    if (filterActive === 'active' && !s.active) return false
+    if (filterActive === 'hidden' && s.active) return false
+    return true
+  }), [skills, search, filterActive])
+
+  const filteredCerts = useMemo(() => certs.filter((c) => {
+    const q = search.toLowerCase()
+    if (q && !c.nameEn.toLowerCase().includes(q) && !c.nameFa.includes(q) && !c.issuer.toLowerCase().includes(q)) return false
+    if (filterActive === 'active' && !c.active) return false
+    if (filterActive === 'hidden' && c.active) return false
+    return true
+  }), [certs, search, filterActive])
 
   async function loadSkills() {
     const r = await fetch('/api/admin/skills')
@@ -83,10 +101,21 @@ export function SkillsManager() {
         }
       />
 
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="flex-1 min-w-[200px] bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500" />
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        {(search || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterActive('all') }} className="px-3 py-2 text-xs text-slate-400 hover:text-white border border-[#2a2a3e] rounded-lg">✕ Clear</button>}
+        <span className="px-3 py-2 text-xs text-slate-500">{tab === 'skills' ? filteredSkills.length : filteredCerts.length} / {tab === 'skills' ? skills.length : certs.length}</span>
+      </div>
+
       {tab === 'skills' ? (
         <Card>
           <Table headers={[t('name'), t('category'), t('level'), t('color'), t('status'), t('actions')]}>
-            {skills.map((s) => (
+            {filteredSkills.map((s) => (
               <TR key={s.id}>
                 <TD><div className="font-medium text-white">{s.nameEn}</div><div className="text-xs text-slate-500">{s.nameFa}</div></TD>
                 <TD className="text-slate-400">{s.categoryEn}</TD>
@@ -114,7 +143,7 @@ export function SkillsManager() {
       ) : (
         <Card>
           <Table headers={[t('name'), t('issuer'), t('date'), t('color'), t('actions')]}>
-            {certs.map((c) => (
+            {filteredCerts.map((c) => (
               <TR key={c.id}>
                 <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-slate-500">{c.nameFa}</div></TD>
                 <TD className="text-slate-400">{c.issuer}</TD>
