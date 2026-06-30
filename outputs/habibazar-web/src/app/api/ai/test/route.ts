@@ -34,8 +34,44 @@ export async function GET() {
     }
   } catch { /* ignore */ }
 
-  // Test with a simple chat completion — use valid model from list
-  const testModel = model || models[0] || 'claude-sonnet-4-6'
+  const testModel = model || 'claude-sonnet-4-6'
+  const isClaudeOnConduit = provider === 'conduit' && testModel.startsWith('claude')
+
+  if (isClaudeOnConduit) {
+    // Use Anthropic Messages endpoint for Claude models on Conduit
+    const url = 'https://conduit.ozdoev.net/v1/messages'
+    const requestBody = {
+      model: testModel,
+      system: 'You are a helpful assistant.',
+      messages: [{ role: 'user', content: 'Reply with exactly the word: ok' }],
+      max_tokens: 50,
+    }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
+      const rawBody = await res.text()
+      if (!res.ok) {
+        return NextResponse.json({ ok: false, config, models, status: res.status, error: rawBody, sentRequest: requestBody, endpoint: url })
+      }
+      let parsed: Record<string, unknown>
+      try { parsed = JSON.parse(rawBody) } catch {
+        return NextResponse.json({ ok: false, config, models, error: 'Invalid JSON', rawBody, sentRequest: requestBody })
+      }
+      const reply = (parsed.content as { text: string }[])?.[0]?.text
+      return NextResponse.json({ ok: true, config, models, reply, rawBody: parsed, sentRequest: requestBody, endpoint: url })
+    } catch (e) {
+      return NextResponse.json({ ok: false, config, models, error: String(e), sentRequest: requestBody })
+    }
+  }
+
+  // OpenAI-compatible endpoint for non-Claude models
   const requestBody = {
     model: testModel,
     messages: [
@@ -44,15 +80,11 @@ export async function GET() {
     ],
     max_tokens: 50,
   }
-
   const url = `${baseUrl}/chat/completions`
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
     })
     const rawBody = await res.text()
@@ -60,10 +92,8 @@ export async function GET() {
       return NextResponse.json({ ok: false, config, models, status: res.status, error: rawBody, sentRequest: requestBody })
     }
     let parsed: Record<string, unknown>
-    try {
-      parsed = JSON.parse(rawBody)
-    } catch {
-      return NextResponse.json({ ok: false, config, models, error: 'Invalid JSON response', rawBody, sentRequest: requestBody })
+    try { parsed = JSON.parse(rawBody) } catch {
+      return NextResponse.json({ ok: false, config, models, error: 'Invalid JSON', rawBody, sentRequest: requestBody })
     }
     const reply = (parsed.choices as { message: { content: string } }[])?.[0]?.message?.content
     return NextResponse.json({ ok: true, config, models, reply, rawBody: parsed, sentRequest: requestBody })

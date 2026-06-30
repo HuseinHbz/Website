@@ -115,9 +115,17 @@ export async function POST(req: NextRequest) {
       case 'copilot':
         reply = await callChatGPT(apiKey, apiUrl || 'https://api.github.com/copilot', model, messages, systemPrompt)
         break
-      case 'conduit':
-        reply = await callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', model || 'anthropic/claude-sonnet-4-6', messages, systemPrompt)
+      case 'conduit': {
+        const conduitModel = model || 'claude-sonnet-4-6'
+        // Claude models: use Anthropic Messages endpoint (system field works correctly)
+        // Other models: use OpenAI-compatible endpoint
+        if (conduitModel.startsWith('claude')) {
+          reply = await callClaude(apiKey, 'https://conduit.ozdoev.net/v1', conduitModel, messages, systemPrompt)
+        } else {
+          reply = await callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', conduitModel, messages, systemPrompt)
+        }
         break
+      }
       default: // chatgpt
         reply = await callChatGPT(apiKey, apiUrl || 'https://api.openai.com/v1', model, messages, systemPrompt)
         break
