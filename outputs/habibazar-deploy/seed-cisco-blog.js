@@ -14,20 +14,14 @@ const db = new Database(dbPath)
 
 db.pragma('journal_mode = WAL')
 
-// ── Categories ────────────────────────────────────────────────────────────────
-const cats = db.prepare(`INSERT OR IGNORE INTO blog_categories (slug, name_en, name_fa, color, sort_order) VALUES (?,?,?,?,?)`)
-const catData = [
-  ['cisco-basics',    'Cisco Training',           'آموزش سیسکو',              '#2563eb', 1],
-  ['cisco-security',  'Network Security',          'امنیت شبکه',              '#dc2626', 2],
-  ['cisco-logging',   'Logging & Reporting',       'لاگ‌گیری و گزارش‌گیری',   '#d97706', 3],
-  ['cisco-models',    'Cisco Models',              'مدل‌های سیسکو',            '#7c3aed', 4],
-  ['cisco-firewall',  'Cisco Firewall',            'فایروال سیسکو',            '#059669', 5],
-  ['cisco-config',    'Essential Configurations',  'تنظیمات ضروری',           '#0891b2', 6],
-]
-catData.forEach(r => cats.run(...r))
+// ── Cleanup: remove stale sub-categories added by previous runs ───────────────
+const staleSlugs = ['cisco-basics','cisco-security','cisco-logging','cisco-models','cisco-firewall','cisco-config','cisco-automation','cisco-tricks']
+staleSlugs.forEach(s => db.prepare('DELETE FROM blog_categories WHERE slug=?').run(s))
 
-function getCatId(slug) {
-  return db.prepare('SELECT id FROM blog_categories WHERE slug=?').get(slug)?.id
+// ── Category ──────────────────────────────────────────────────────────────────
+// All Cisco posts go under the existing 'cisco' category (created by the main seed)
+function getCatId() {
+  return db.prepare('SELECT id FROM blog_categories WHERE slug=?').get('cisco')?.id
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -38,10 +32,12 @@ const ins = db.prepare(`
   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `)
 
-function post(slug, titleEn, titleFa, excerptEn, excerptFa, contentEn, contentFa, catSlug, mins, featured=0) {
+const CISCO_CAT_ID = getCatId()
+
+function post(slug, titleEn, titleFa, excerptEn, excerptFa, contentEn, contentFa, _catSlug, mins, featured=0) {
   ins.run(
     slug, titleEn, titleFa, excerptEn, excerptFa, contentEn, contentFa,
-    getCatId(catSlug), `${mins} min read`, `${mins} دقیقه مطالعه`,
+    CISCO_CAT_ID, `${mins} min read`, `${mins} دقیقه مطالعه`,
     'June 30, 2025', '۹ تیر ۱۴۰۴', 'published', featured
   )
 }
@@ -3765,10 +3761,7 @@ console.log('Total posts: 20 + 10 + 3 + 3 + 3 + 3 = 42 posts')
 // SECTION 7 — اتوماسیون، بکاپ خودکار و ترفندها
 // ══════════════════════════════════════════════════════════════════════════════
 
-// اضافه کردن دسته‌بندی جدید
-const autoCats = db.prepare(`INSERT OR IGNORE INTO blog_categories (slug, name_en, name_fa, color, sort_order) VALUES (?,?,?,?,?)`)
-autoCats.run('cisco-automation', 'Cisco Automation', 'اتوماسیون سیسکو', '#7c3aed', 7)
-autoCats.run('cisco-tricks',     'Tips & Tricks',    'ترفندها و نکات',  '#0f766e', 8)
+// همه پست‌های اتوماسیون و ترفندها هم زیر دسته cisco ثبت می‌شوند
 
 post('auto-backup-cisco-complete',
   'Automatic Cisco Backup — 5 Methods from Basic to Pro',
