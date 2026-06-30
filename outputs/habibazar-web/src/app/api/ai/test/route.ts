@@ -21,11 +21,11 @@ export async function GET() {
     return NextResponse.json({ ok: false, config, error: 'No API key configured' })
   }
 
-  // First, fetch available models
-  const modelsUrl = `${apiUrl || 'https://conduit.ozdoev.net/api/v1'}/models`
+  // Fetch available models
+  const baseUrl = apiUrl || 'https://conduit.ozdoev.net/api/v1'
   let models: string[] = []
   try {
-    const mRes = await fetch(modelsUrl, {
+    const mRes = await fetch(`${baseUrl}/models`, {
       headers: { 'Authorization': `Bearer ${apiKey}` },
     })
     if (mRes.ok) {
@@ -34,7 +34,18 @@ export async function GET() {
     }
   } catch { /* ignore */ }
 
-  const url = `${apiUrl || 'https://conduit.ozdoev.net/api/v1'}/chat/completions`
+  // Test with a simple chat completion — use valid model from list
+  const testModel = model || models[0] || 'claude-sonnet-4-6'
+  const requestBody = {
+    model: testModel,
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'Reply with exactly the word: ok' },
+    ],
+    max_tokens: 50,
+  }
+
+  const url = `${baseUrl}/chat/completions`
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -42,19 +53,21 @@ export async function GET() {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: model || 'anthropic/claude-sonnet-4-6',
-        messages: [{ role: 'user', content: 'Say "ok" in one word.' }],
-        max_tokens: 10,
-      }),
+      body: JSON.stringify(requestBody),
     })
-    const body = await res.text()
+    const rawBody = await res.text()
     if (!res.ok) {
-      return NextResponse.json({ ok: false, config, models, status: res.status, error: body })
+      return NextResponse.json({ ok: false, config, models, status: res.status, error: rawBody, sentRequest: requestBody })
     }
-    const data = JSON.parse(body)
-    return NextResponse.json({ ok: true, config, models, reply: data.choices?.[0]?.message?.content })
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(rawBody)
+    } catch {
+      return NextResponse.json({ ok: false, config, models, error: 'Invalid JSON response', rawBody, sentRequest: requestBody })
+    }
+    const reply = (parsed.choices as { message: { content: string } }[])?.[0]?.message?.content
+    return NextResponse.json({ ok: true, config, models, reply, rawBody: parsed, sentRequest: requestBody })
   } catch (e) {
-    return NextResponse.json({ ok: false, config, models, error: String(e) })
+    return NextResponse.json({ ok: false, config, models, error: String(e), sentRequest: requestBody })
   }
 }
