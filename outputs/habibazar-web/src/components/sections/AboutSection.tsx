@@ -245,19 +245,19 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
           viewport={{ once: true }}
           className="text-center mb-20"
         >
-          <motion.p variants={fadeIn} className="section-label mb-3">
-            {isRTL ? 'درباره' : 'About'}
+          <motion.p variants={fadeIn} className="section-label mb-4 justify-center">
+            {isRTL ? 'پروفایل اجرایی' : 'Executive Profile'}
           </motion.p>
           <motion.h2 variants={slideUp} className="section-title mb-4">
-            {isRTL ? 'معمار پشت ' : 'The Architect Behind '}
+            {isRTL ? 'رهبر فناوری زیرساخت ' : 'The Infrastructure '}
             <span className="gradient-text">
-              {isRTL ? 'زیرساخت' : 'The Infrastructure'}
+              {isRTL ? 'سازمانی' : 'Technology Leader'}
             </span>
           </motion.h2>
           <motion.p variants={slideUp} className="section-subtitle max-w-2xl mx-auto">
             {isRTL
-              ? 'بیش از یک دهه تجربه عملی در طراحی، ایمن‌سازی و خودکارسازی زیرساخت سازمانی در صنایع مختلف.'
-              : 'Over a decade of hands-on experience designing, securing, and automating enterprise-grade infrastructure across industries.'}
+              ? 'بیش از یک دهه رهبری فناوری، طراحی معماری سازمانی و ارائه راه‌حل‌های زیرساختی پایدار در صنایع مختلف.'
+              : 'Over a decade of technology leadership — designing enterprise architectures, securing critical infrastructure, and delivering measurable business outcomes across industries.'}
           </motion.p>
         </motion.div>
 
@@ -288,8 +288,8 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                 )}
               </div>
               <h3 className="text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">👤</span>
-                {isRTL ? 'داستان حرفه‌ای' : 'Professional Story'}
+                <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">◈</span>
+                {isRTL ? 'مسیر حرفه‌ای' : 'Professional Journey'}
               </h3>
               <div className="space-y-4 text-text-secondary leading-relaxed">
                 {dbAbout?.bio
@@ -377,8 +377,8 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             transition={{ duration: 0.7 }}
           >
             <h3 className="text-xl font-bold text-text-primary mb-8 flex items-center gap-2">
-              <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">📈</span>
-              {isRTL ? 'مسیر شغلی' : 'Career Timeline'}
+              <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">◎</span>
+              {isRTL ? 'مسیر رهبری' : 'Leadership Journey'}
             </h3>
             <div className="space-y-8">
               {TIMELINE_DATA.map((item, i) => (
@@ -425,10 +425,15 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
           className="mb-20"
         >
           <div className="text-center mb-10">
-            <p className="section-label mb-2">{isRTL ? 'سطح تخصص فنی' : 'Technical Proficiency'}</p>
+            <p className="section-label mb-3 justify-center">{isRTL ? 'تخصص‌های محوری' : 'Core Expertise'}</p>
             <h3 className="text-2xl font-bold text-text-primary">
-              {isRTL ? 'مهارت‌های تخصصی' : 'Technical Skills'}
+              {isRTL ? 'حوزه‌های تخصصی' : 'Technical Competencies'}
             </h3>
+            <p className="text-sm text-text-muted mt-2 max-w-xl mx-auto">
+              {isRTL
+                ? 'مجموعه‌ای از تخصص‌های عمیق که در دهه‌ای از پروژه‌های سازمانی واقعی شکل گرفته‌اند.'
+                : 'Deep competencies forged across a decade of real enterprise projects and production environments.'}
+            </p>
           </div>
 
           <div className="space-y-8">
@@ -464,10 +469,15 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
           transition={{ duration: 0.7 }}
         >
           <div className="text-center mb-10">
-            <p className="section-label mb-2">{isRTL ? 'تأییدیه‌های حرفه‌ای' : 'Professional Credentials'}</p>
+            <p className="section-label mb-3 justify-center">{isRTL ? 'اعتبارسنجی حرفه‌ای' : 'Professional Credentials'}</p>
             <h3 className="text-2xl font-bold text-text-primary">
-              {isRTL ? 'گواهینامه‌ها' : 'Certifications'}
+              {isRTL ? 'گواهینامه‌های تخصصی' : 'Industry Certifications'}
             </h3>
+            <p className="text-sm text-text-muted mt-2 max-w-xl mx-auto">
+              {isRTL
+                ? 'تأیید صلاحیت از معتبرترین سازمان‌های فناوری جهان.'
+                : 'Validated expertise recognized by the world\'s leading technology organizations.'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

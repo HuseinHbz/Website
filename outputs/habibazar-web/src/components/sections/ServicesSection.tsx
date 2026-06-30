@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
+import { slideUp, staggerContainer, fadeIn, blurReveal, staggerFast } from '@/lib/motion'
 
 interface ServiceData {
   id: string
@@ -205,21 +205,21 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
       <div className="container-site relative z-10">
         {/* Header */}
         <motion.div
-          variants={staggerContainer}
+          variants={staggerFast}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <motion.p variants={fadeIn} className="section-label mb-3">
-            {isRTL ? 'خدمات سازمانی' : 'Enterprise Services'}
+          <motion.p variants={blurReveal} className="section-label mb-4 justify-center">
+            {isRTL ? 'راهکارهای فناوری' : 'Technology Solutions'}
           </motion.p>
-          <motion.h2 variants={slideUp} className="section-title mb-4">
+          <motion.h2 variants={blurReveal} className="section-title mb-4">
             {isRTL ? 'آنچه ' : 'What '}
             <span className="gradient-text-cyan">HBZ</span>
             {isRTL ? ' ارائه می‌دهد' : ' Delivers'}
           </motion.h2>
-          <motion.p variants={slideUp} className="section-subtitle max-w-2xl mx-auto">
+          <motion.p variants={blurReveal} className="section-subtitle max-w-2xl mx-auto">
             {isRTL
               ? 'مشاوره زیرساختی جامع از طراحی تا استقرار، از پایش تا خودکارسازی — برای قابلیت اطمینان سازمانی.'
               : 'End-to-end infrastructure consulting from design to deployment, monitoring to automation — built for enterprise reliability.'}

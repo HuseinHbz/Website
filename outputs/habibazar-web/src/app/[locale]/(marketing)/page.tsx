@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { Hero } from '@/components/sections/Hero'
 import { ProofBar } from '@/components/sections/ProofBar'
+import { EnterpriseMetrics } from '@/components/sections/EnterpriseMetrics'
 import { ServicesSection } from '@/components/sections/ServicesSection'
 import { ProjectsSection } from '@/components/sections/ProjectsSection'
 import { AboutSection } from '@/components/sections/AboutSection'
@@ -46,6 +47,7 @@ export default async function HomePage({ params }: Props) {
       <JsonLd schema={siteGraphSchema()} />
       <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} />
       <ProofBar locale={locale} />
+      <EnterpriseMetrics locale={locale} />
       <ServicesSection locale={locale} dbServices={dbServices} />
       <ProjectsSection locale={locale} dbProjects={dbProjects} />
       <AboutSection locale={locale} dbAbout={dbAbout} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />

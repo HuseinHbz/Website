@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { staggerContainer, slideUp, fadeIn } from '@/lib/motion'
+import { staggerContainer, slideUp, fadeIn, blurReveal, staggerFast } from '@/lib/motion'
 
 interface DbClient { nameEn: string; nameFa: string; typeEn: string | null; typeFa: string | null; isTechPartner: boolean; logoUrl?: string | null }
 
@@ -115,23 +115,23 @@ export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioP
 
       <div className="container-site relative z-10 mb-16">
         <motion.div
-          variants={staggerContainer}
+          variants={staggerFast}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           className="text-center"
         >
-          <motion.p variants={fadeIn} className="section-label mb-3">
-            {isRTL ? 'نمونه‌کار' : 'Portfolio'}
+          <motion.p variants={blurReveal} className="section-label mb-4 justify-center">
+            {isRTL ? 'شرکای سازمانی' : 'Enterprise Partners'}
           </motion.p>
-          <motion.h2 variants={slideUp} className="section-title mb-4">
+          <motion.h2 variants={blurReveal} className="section-title mb-4">
             {isRTL ? 'مورد اعتماد ' : 'Trusted By '}
-            <span className="gradient-text">{isRTL ? 'سازمان‌ها' : 'Enterprises'}</span>
+            <span className="gradient-text">{isRTL ? 'سازمان‌های پیشرو' : 'Industry Leaders'}</span>
           </motion.h2>
-          <motion.p variants={slideUp} className="section-subtitle max-w-xl mx-auto">
+          <motion.p variants={blurReveal} className="section-subtitle max-w-xl mx-auto">
             {isRTL
-              ? 'سازمان‌های مختلف صنایع به HBZ اعتماد کرده‌اند تا زیرساخت حیاتی‌شان را طراحی، ایمن و خودکار کند.'
-              : 'Organizations across industries have trusted HBZ to design, secure, and automate their critical infrastructure.'}
+              ? 'سازمان‌های پیشرو در صنایع مختلف به HBZ اعتماد کرده‌اند تا زیرساخت حیاتی‌شان را طراحی، ایمن و خودکار کند.'
+              : 'Industry-leading organizations have trusted HBZ to design, secure, and automate their mission-critical infrastructure.'}
           </motion.p>
         </motion.div>
       </div>

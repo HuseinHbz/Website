@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
-import { slideUp, staggerContainer } from '@/lib/motion'
+import { slideUp, staggerContainer, blurReveal, staggerFast } from '@/lib/motion'
 import { SITE } from '@/lib/site'
 
 interface ClosingCtaProps {
@@ -43,7 +43,7 @@ export function ClosingCta({ locale }: ClosingCtaProps) {
 
       <div className="container-site relative z-10">
         <motion.div
-          variants={staggerContainer}
+          variants={staggerFast}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -60,38 +60,44 @@ export function ClosingCta({ locale }: ClosingCtaProps) {
           </motion.div>
 
           <motion.h2
-            variants={slideUp}
+            variants={blurReveal}
             className="text-3xl md:text-4xl lg:text-5xl font-bold text-text-primary mb-5 text-balance leading-tight"
           >
             {isRTL
-              ? <>آماده تحول زیرساخت <span className="gradient-text">سازمانی‌تان</span> هستید؟</>
-              : <>Ready to Transform Your <span className="gradient-text">Enterprise Infrastructure?</span></>}
+              ? <>آماده <span className="gradient-text">تحول دیجیتال</span> زیرساخت سازمانی‌تان هستید؟</>
+              : <>Ready to Elevate Your <span className="gradient-text">Enterprise Infrastructure?</span></>}
           </motion.h2>
 
-          <motion.p variants={slideUp} className="text-lg text-text-secondary leading-relaxed mb-10 max-w-xl mx-auto">
-            {t('subtitle')}
+          <motion.p variants={blurReveal} className="text-lg text-text-secondary leading-relaxed mb-3 max-w-xl mx-auto">
+            {isRTL
+              ? 'با یک مشاوره رایگان شروع کنید. بدون تعهد — فقط یک گفتگوی صادقانه درباره چالش‌های زیرساختی شما.'
+              : 'Start with a complimentary infrastructure assessment. No commitment — just an expert conversation about your technology challenges.'}
           </motion.p>
 
-          <motion.div variants={slideUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.p variants={blurReveal} className="text-sm text-text-muted mb-10 max-w-lg mx-auto italic">
+            {isRTL
+              ? 'مخاطبان: مدیران ارشد فناوری، مدیران IT، رهبران کسب‌وکار'
+              : 'Serving: CTOs, CIOs, IT Directors, and Enterprise Technology Leaders'}
+          </motion.p>
+
+          <motion.div variants={blurReveal} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href={buildPath('/consultation')}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all duration-200 hover:scale-105 hover:shadow-2xl"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)', boxShadow: '0 8px 32px rgba(99,102,241,0.35)' }}
+              className="btn-enterprise"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              {t('ctaPrimary')}
+              {isRTL ? 'رزرو مشاوره رایگان' : 'Book Free Consultation'}
             </a>
             <a
               href={buildPath('/consultation/intro-call')}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all duration-200 hover:bg-white/5"
-              style={{ border: '1px solid rgba(99,102,241,0.3)', color: '#94a3b8' }}
+              className="btn-outline-enterprise"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              {t('ctaSecondary')}
+              {isRTL ? 'تماس مقدماتی' : t('ctaSecondary')}
             </a>
           </motion.div>
 

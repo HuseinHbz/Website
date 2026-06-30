@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
+import { slideUp, staggerContainer, fadeIn, blurReveal, staggerFast } from '@/lib/motion'
 
 interface DbProject {
   id: number; slug: string; nameEn: string; nameFa: string; industryEn: string | null; industryFa: string | null
@@ -169,23 +169,23 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
 
       <div className="container-site relative z-10">
         <motion.div
-          variants={staggerContainer}
+          variants={staggerFast}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <motion.p variants={fadeIn} className="section-label mb-3">
-            {isRTL ? 'نمونه‌کارها' : 'Case Studies'}
+          <motion.p variants={blurReveal} className="section-label mb-4 justify-center">
+            {isRTL ? 'مطالعات موردی سازمانی' : 'Enterprise Case Studies'}
           </motion.p>
-          <motion.h2 variants={slideUp} className="section-title mb-4">
-            {isRTL ? 'پروژه‌های واقعی. ' : 'Real Projects. '}
-            <span className="gradient-text">{isRTL ? 'نتایج واقعی.' : 'Real Results.'}</span>
+          <motion.h2 variants={blurReveal} className="section-title mb-4">
+            {isRTL ? 'تحولات واقعی. ' : 'Real Transformations. '}
+            <span className="gradient-text">{isRTL ? 'نتایج قابل اندازه‌گیری.' : 'Measurable Results.'}</span>
           </motion.h2>
-          <motion.p variants={slideUp} className="section-subtitle max-w-2xl mx-auto">
+          <motion.p variants={blurReveal} className="section-subtitle max-w-2xl mx-auto">
             {isRTL
-              ? 'تحول زیرساخت در صنایع هتلداری، هلدینگ، غذا و نوشیدنی و صنعتی.'
-              : 'Infrastructure transformations across hospitality, holding companies, food & beverage, and industrial sectors.'}
+              ? 'تحول زیرساخت در صنایع هتلداری، هلدینگ، غذا و نوشیدنی و صنعتی — با اثرات تجاری مستند.'
+              : 'Infrastructure transformations across hospitality, holding companies, F&B, and industrial sectors — with documented business outcomes.'}
           </motion.p>
         </motion.div>
 

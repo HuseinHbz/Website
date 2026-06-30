@@ -13,10 +13,10 @@
   },
   "nav": {
     "home": "Home",
-    "about": "About",
-    "services": "Services",
-    "projects": "Projects",
-    "blog": "Blog",
+    "about": "Executive Profile",
+    "services": "Technology Solutions",
+    "projects": "Case Studies",
+    "blog": "Knowledge Center",
     "consultation": "Consultation",
     "introCall": "Intro Call",
     "bookConsultation": "Book Consultation"
@@ -81,18 +81,18 @@
     "viewCase": "View Case Study"
   },
   "about": {
-    "title": "About",
-    "subtitle": "The Architect Behind The Infrastructure",
+    "title": "Executive Profile",
+    "subtitle": "The Infrastructure Technology Leader",
     "bio": "Husein Habibazar (HBZ) is a Senior Infrastructure Architect and Network & Security Consultant with over 10 years of enterprise IT experience across diverse industries.",
-    "timeline": "Career Timeline",
-    "skills": "Skills Matrix",
-    "certs": "Certifications"
+    "timeline": "Leadership Journey",
+    "skills": "Core Expertise",
+    "certs": "Professional Credentials"
   },
   "aiTeaser": {
-    "title": "AI Assistant",
+    "title": "AI Technology Advisor",
     "subtitle": "Have a Technical Question?",
-    "description": "Ask the HBZ AI assistant about infrastructure, network security, virtualization, and more. For complex challenges, book a consultation.",
-    "cta": "Start Conversation"
+    "description": "Consult the HBZ AI Technology Advisor on infrastructure architecture, network security, virtualization, and enterprise strategy. Powered by a decade of real-world knowledge.",
+    "cta": "Ask the AI Advisor"
   },
   "closingCta": {
     "title": "Ready to Transform Your Enterprise Infrastructure?",

@@ -61,21 +61,29 @@ export function AiTeaser({ locale }: AiTeaserProps) {
               <SparklesIcon />
             </div>
 
-            <p className="text-sm font-medium text-accent uppercase tracking-widest mb-3">
-              {t('title')}
+            <p className="section-label mb-3 justify-center">
+              {isRTL ? 'مشاور فناوری هوش مصنوعی' : 'AI Technology Advisor'}
             </p>
 
             <h2 className="text-2xl md:text-3xl font-bold text-text-primary mb-4">
-              {t('subtitle')}
+              {isRTL ? 'سوال فنی دارید؟' : t('subtitle')}
             </h2>
 
-            <p className="text-text-secondary leading-relaxed max-w-xl mx-auto mb-8">
+            <p className="text-text-secondary leading-relaxed max-w-xl mx-auto mb-3">
               {t('description')}
             </p>
 
-            <Button variant="primary" size="lg" onClick={openChat}>
-              {t('cta')}
-            </Button>
+            <p className="text-sm text-text-muted max-w-lg mx-auto mb-8">
+              {isRTL
+                ? 'برای چالش‌های پیچیده زیرساخت، مشاوره تخصصی با کارشناس رزرو کنید.'
+                : 'For complex infrastructure challenges, book a consultation with the expert directly.'}
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button variant="primary" size="lg" onClick={openChat}>
+                {t('cta')}
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       </div>
