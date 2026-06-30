@@ -242,6 +242,7 @@ export const blogCategories = sqliteTable('blog_categories', {
   icon: text('icon'),
   color: text('color').default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
 })
 
 // ─── Blog Posts ───────────────────────────────────────────────────────────────

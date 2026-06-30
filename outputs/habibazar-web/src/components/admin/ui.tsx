@@ -188,8 +188,8 @@ export function TR({ children, onClick }: { children: React.ReactNode; onClick?:
   )
 }
 
-export function TD({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void }) {
-  return <td onClick={onClick} className={`py-3 px-4 text-slate-300 ${className}`}>{children}</td>
+export function TD({ children, className = '', onClick, colSpan }: { children: React.ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void; colSpan?: number }) {
+  return <td onClick={onClick} colSpan={colSpan} className={`py-3 px-4 text-slate-300 ${className}`}>{children}</td>
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────

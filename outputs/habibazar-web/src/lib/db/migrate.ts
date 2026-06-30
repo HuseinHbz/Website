@@ -223,7 +223,8 @@ export function runMigrations() {
       name_fa TEXT NOT NULL,
       icon TEXT,
       color TEXT DEFAULT '#6366f1',
-      sort_order INTEGER NOT NULL DEFAULT 0
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS blog_posts (
@@ -355,6 +356,12 @@ export function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `)
+
+  // ── Column additions for existing DBs ────────────────────────────────────
+  const cols = sqlite.prepare(`PRAGMA table_info(blog_categories)`).all() as { name: string }[]
+  if (!cols.find((c) => c.name === 'active')) {
+    sqlite.exec(`ALTER TABLE blog_categories ADD COLUMN active INTEGER NOT NULL DEFAULT 1`)
+  }
 
   sqlite.close()
 }

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
-type Category = { id: number; slug: string; nameEn: string; nameFa: string; color: string; icon: string; sortOrder: number }
+type Category = { id: number; slug: string; nameEn: string; nameFa: string; color: string; icon: string; sortOrder: number; active: boolean }
 type Post = {
   id?: number; slug: string; titleEn: string; titleFa: string; excerptEn: string; excerptFa: string
   contentEn: string; contentFa: string; categoryId: number | null; coverImage: string
@@ -27,6 +27,14 @@ export function BlogManager() {
   const fileRef = useRef<HTMLInputElement>(null)
   const { toast, ToastContainer } = useToast()
 
+  // ── Filters ──────────────────────────────────────────────────────────────
+  const [search, setSearch] = useState('')
+  const [filterCat, setFilterCat] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterFeatured, setFilterFeatured] = useState('')
+  const [catSearch, setCatSearch] = useState('')
+  const [filterCatActive, setFilterCatActive] = useState('')
+
   async function load() {
     const r = await fetch('/api/admin/blog')
     const d = await r.json()
@@ -34,6 +42,28 @@ export function BlogManager() {
     setCategories(d.categories || [])
   }
   useEffect(() => { load() }, [])
+
+  // ── Filtered posts ────────────────────────────────────────────────────────
+  const filteredPosts = useMemo(() => {
+    return posts.filter((p) => {
+      if (search && !p.titleEn.toLowerCase().includes(search.toLowerCase()) && !p.titleFa.includes(search) && !p.slug.includes(search)) return false
+      if (filterCat && String(p.categoryId) !== filterCat) return false
+      if (filterStatus && p.status !== filterStatus) return false
+      if (filterFeatured === 'yes' && !p.featured) return false
+      if (filterFeatured === 'no' && p.featured) return false
+      return true
+    })
+  }, [posts, search, filterCat, filterStatus, filterFeatured])
+
+  // ── Filtered categories ───────────────────────────────────────────────────
+  const filteredCats = useMemo(() => {
+    return categories.filter((c) => {
+      if (catSearch && !c.nameEn.toLowerCase().includes(catSearch.toLowerCase()) && !c.nameFa.includes(catSearch) && !c.slug.includes(catSearch)) return false
+      if (filterCatActive === 'active' && !c.active) return false
+      if (filterCatActive === 'inactive' && c.active) return false
+      return true
+    })
+  }, [categories, catSearch, filterCatActive])
 
   async function savePost() {
     setSaving(true)
@@ -54,11 +84,32 @@ export function BlogManager() {
     toast(t('deleted')); load()
   }
 
+  async function togglePostStatus(p: Post) {
+    const next = p.status === 'published' ? 'draft' : 'published'
+    await fetch('/api/admin/blog', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, status: next }) })
+    toast(t('saved')); load()
+  }
+
   async function saveCat() {
     setSaving(true)
-    const res = await fetch('/api/admin/blog/categories', { method: editCat.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCat) })
+    const method = editCat.id ? 'PUT' : 'POST'
+    const res = await fetch('/api/admin/blog/categories', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCat) })
     setSaving(false)
     if (res.ok) { toast(t('saved')); setCatModal(false); load() } else toast(t('failed'), 'error')
+  }
+
+  async function delCat(id: number) {
+    if (!confirm(t('confirmDel'))) return
+    const res = await fetch('/api/admin/blog/categories', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (res.ok) { toast(t('deleted')); load() } else {
+      const err = await res.json().catch(() => ({}))
+      toast(err.error || t('failed'), 'error')
+    }
+  }
+
+  async function toggleCat(c: Category) {
+    await fetch('/api/admin/blog/categories', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, active: !c.active }) })
+    toast(t('saved')); load()
   }
 
   async function uploadCoverImage(file: File) {
@@ -90,6 +141,8 @@ export function BlogManager() {
     setModal(true)
   }
 
+  const hasPostFilters = search || filterCat || filterStatus || filterFeatured
+
   return (
     <>
       <ToastContainer />
@@ -105,52 +158,179 @@ export function BlogManager() {
             {tab === 'posts' ? (
               <Btn onClick={() => { setEditing(EMPTY_POST); setModal(true) }}>{t('postNew')}</Btn>
             ) : (
-              <Btn onClick={() => { setEditCat({ nameEn: '', nameFa: '', slug: '', icon: '', color: '#6366f1', sortOrder: 0 }); setCatModal(true) }}>{t('catNew')}</Btn>
+              <Btn onClick={() => { setEditCat({ nameEn: '', nameFa: '', slug: '', icon: '', color: '#6366f1', sortOrder: 0, active: true }); setCatModal(true) }}>{t('catNew')}</Btn>
             )}
           </div>
         }
       />
 
       {tab === 'posts' ? (
-        <Card>
-          <Table headers={[t('title'), t('category'), t('status'), t('views'), t('date'), t('actions')]}>
-            {posts.map((p) => (
-              <TR key={p.id}>
-                <TD>
-                  <div className="font-medium text-white">{p.titleEn}</div>
-                  <div className="text-xs text-slate-500 truncate max-w-48">{p.titleFa}</div>
-                </TD>
-                <TD className="text-slate-400">{categories.find((c) => c.id === p.categoryId)?.nameEn || '—'}</TD>
-                <TD><Badge color={statusColor[p.status]}>{statusLabel[p.status] || p.status}</Badge></TD>
-                <TD className="text-slate-500">{p.views}</TD>
-                <TD className="text-xs text-slate-500">{p.publishedAtEn}</TD>
-                <TD>
-                  <div className="flex gap-2">
-                    <Btn size="sm" variant="secondary" onClick={() => openEditPost(p)}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => delPost(p.id!)}>{t('delete')}</Btn>
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </Table>
-        </Card>
+        <>
+          {/* ── Filter Bar ── */}
+          <Card className="mb-4">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-40">
+                <Input
+                  label="جستجو / Search"
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="عنوان، slug..."
+                />
+              </div>
+              <div className="w-44">
+                <Select
+                  label="دسته‌بندی"
+                  value={filterCat}
+                  onChange={setFilterCat}
+                  options={[
+                    { value: '', label: 'همه دسته‌ها' },
+                    ...categories.map((c) => ({ value: String(c.id), label: `${c.icon || ''} ${c.nameEn}` })),
+                  ]}
+                />
+              </div>
+              <div className="w-36">
+                <Select
+                  label="وضعیت"
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  options={[
+                    { value: '', label: 'همه' },
+                    { value: 'published', label: t('published') },
+                    { value: 'draft', label: t('draft') },
+                    { value: 'archived', label: t('archived') },
+                  ]}
+                />
+              </div>
+              <div className="w-36">
+                <Select
+                  label="ویژه"
+                  value={filterFeatured}
+                  onChange={setFilterFeatured}
+                  options={[
+                    { value: '', label: 'همه' },
+                    { value: 'yes', label: '★ ویژه' },
+                    { value: 'no', label: 'عادی' },
+                  ]}
+                />
+              </div>
+              {hasPostFilters && (
+                <Btn variant="secondary" size="sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterStatus(''); setFilterFeatured('') }}>
+                  ✕ پاک کردن
+                </Btn>
+              )}
+              <span className="text-xs text-slate-500 self-end pb-1">{filteredPosts.length} / {posts.length} پست</span>
+            </div>
+          </Card>
+
+          <Card>
+            <Table headers={[t('title'), t('category'), t('status'), t('views'), t('date'), t('actions')]}>
+              {filteredPosts.map((p) => (
+                <TR key={p.id}>
+                  <TD>
+                    <div className="font-medium text-white flex items-center gap-1">
+                      {p.featured && <span className="text-yellow-400 text-xs">★</span>}
+                      {p.titleEn}
+                    </div>
+                    <div className="text-xs text-slate-500 truncate max-w-48">{p.titleFa}</div>
+                  </TD>
+                  <TD>
+                    {(() => {
+                      const cat = categories.find((c) => c.id === p.categoryId)
+                      return cat ? (
+                        <span className="flex items-center gap-1 text-sm">
+                          <span className="w-2 h-2 rounded-full inline-block" style={{ background: cat.color }} />
+                          <span className="text-slate-300">{cat.nameEn}</span>
+                        </span>
+                      ) : <span className="text-slate-600">—</span>
+                    })()}
+                  </TD>
+                  <TD><Badge color={statusColor[p.status]}>{statusLabel[p.status] || p.status}</Badge></TD>
+                  <TD className="text-slate-500">{p.views}</TD>
+                  <TD className="text-xs text-slate-500">{p.publishedAtEn}</TD>
+                  <TD>
+                    <div className="flex gap-2">
+                      <Btn size="sm" variant="secondary" onClick={() => openEditPost(p)}>{t('edit')}</Btn>
+                      <Btn size="sm" variant="secondary" onClick={() => togglePostStatus(p)}>
+                        {p.status === 'published' ? '⏸' : '▶'}
+                      </Btn>
+                      <Btn size="sm" variant="danger" onClick={() => delPost(p.id!)}>{t('delete')}</Btn>
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+              {filteredPosts.length === 0 && (
+                <TR><TD colSpan={6} className="text-center text-slate-500 py-8">نتیجه‌ای یافت نشد</TD></TR>
+              )}
+            </Table>
+          </Card>
+        </>
       ) : (
-        <Card>
-          <Table headers={[t('category'), t('slug'), t('icon'), t('color'), t('sortOrder'), t('actions')]}>
-            {categories.map((c) => (
-              <TR key={c.id}>
-                <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-slate-500">{c.nameFa}</div></TD>
-                <TD className="text-slate-500 font-mono text-xs">{c.slug}</TD>
-                <TD>{c.icon}</TD>
-                <TD><span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} /></TD>
-                <TD className="text-slate-500">{c.sortOrder}</TD>
-                <TD>
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditCat(c); setCatModal(true) }}>{t('edit')}</Btn>
-                </TD>
-              </TR>
-            ))}
-          </Table>
-        </Card>
+        <>
+          {/* ── Category Filter Bar ── */}
+          <Card className="mb-4">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-40">
+                <Input label="جستجو" value={catSearch} onChange={setCatSearch} placeholder="نام، slug..." />
+              </div>
+              <div className="w-36">
+                <Select
+                  label="وضعیت"
+                  value={filterCatActive}
+                  onChange={setFilterCatActive}
+                  options={[
+                    { value: '', label: 'همه' },
+                    { value: 'active', label: 'فعال' },
+                    { value: 'inactive', label: 'غیرفعال' },
+                  ]}
+                />
+              </div>
+              {(catSearch || filterCatActive) && (
+                <Btn variant="secondary" size="sm" onClick={() => { setCatSearch(''); setFilterCatActive('') }}>✕ پاک کردن</Btn>
+              )}
+              <span className="text-xs text-slate-500 self-end pb-1">{filteredCats.length} / {categories.length} دسته</span>
+            </div>
+          </Card>
+
+          <Card>
+            <Table headers={[t('category'), t('slug'), t('icon'), t('color'), t('sortOrder'), 'پست‌ها', 'وضعیت', t('actions')]}>
+              {filteredCats.map((c) => (
+                <TR key={c.id}>
+                  <TD>
+                    <div className="font-medium text-white">{c.nameEn}</div>
+                    <div className="text-xs text-slate-500">{c.nameFa}</div>
+                  </TD>
+                  <TD className="text-slate-500 font-mono text-xs">{c.slug}</TD>
+                  <TD>{c.icon}</TD>
+                  <TD>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
+                      <span className="text-xs text-slate-500 font-mono">{c.color}</span>
+                    </span>
+                  </TD>
+                  <TD className="text-slate-500">{c.sortOrder}</TD>
+                  <TD className="text-slate-400 text-sm">{posts.filter((p) => p.categoryId === c.id).length}</TD>
+                  <TD>
+                    <Badge color={c.active ? 'green' : 'slate'}>{c.active ? 'فعال' : 'غیرفعال'}</Badge>
+                  </TD>
+                  <TD>
+                    <div className="flex gap-2">
+                      <Btn size="sm" variant="secondary" onClick={() => { setEditCat(c); setCatModal(true) }}>{t('edit')}</Btn>
+                      <Btn size="sm" variant="secondary" onClick={() => toggleCat(c)}>
+                        {c.active ? '⏸' : '▶'}
+                      </Btn>
+                      <Btn size="sm" variant="danger" onClick={() => delCat(c.id)}>
+                        {t('delete')}
+                      </Btn>
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+              {filteredCats.length === 0 && (
+                <TR><TD colSpan={8} className="text-center text-slate-500 py-8">نتیجه‌ای یافت نشد</TD></TR>
+              )}
+            </Table>
+          </Card>
+        </>
       )}
 
       {/* Post Modal */}
@@ -158,7 +338,7 @@ export function BlogManager() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label={`${t('slug')} *`} value={editing.slug} onChange={(v) => set('slug', v)} placeholder="mikrotik-ospf-guide" />
-            <Select label={t('category')} value={String(editing.categoryId || '')} onChange={(v) => set('categoryId', v ? Number(v) : null)} options={[{ value: '', label: '— None —' }, ...categories.map((c) => ({ value: String(c.id), label: c.nameEn }))]} />
+            <Select label={t('category')} value={String(editing.categoryId || '')} onChange={(v) => set('categoryId', v ? Number(v) : null)} options={[{ value: '', label: '— None —' }, ...categories.map((c) => ({ value: String(c.id), label: `${c.icon || ''} ${c.nameEn}` }))]} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input label={t('titleEng')} value={editing.titleEn} onChange={(v) => set('titleEn', v)} />
@@ -172,7 +352,6 @@ export function BlogManager() {
             <Input label={t('pubDateEn')} value={editing.publishedAtEn} onChange={(v) => set('publishedAtEn', v)} placeholder="Jan 2025" />
             <Input label={t('pubDateFa')} value={editing.publishedAtFa} onChange={(v) => set('publishedAtFa', v)} placeholder="دی ۱۴۰۳" />
           </div>
-          {/* Cover image with upload button */}
           <div className="space-y-2">
             <div className="flex gap-2 items-end">
               <div className="flex-1">
@@ -208,6 +387,12 @@ export function BlogManager() {
             <Input label={t('color')} type="color" value={editCat.color || '#6366f1'} onChange={(v) => setEditCat({ ...editCat, color: v })} />
             <Input label={t('sortOrder')} type="number" value={String(editCat.sortOrder || 0)} onChange={(v) => setEditCat({ ...editCat, sortOrder: Number(v) })} />
           </div>
+          <Select
+            label="وضعیت"
+            value={editCat.active === false ? 'false' : 'true'}
+            onChange={(v) => setEditCat({ ...editCat, active: v === 'true' })}
+            options={[{ value: 'true', label: 'فعال' }, { value: 'false', label: 'غیرفعال' }]}
+          />
           <div className="flex gap-3">
             <Btn onClick={saveCat} disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
             <Btn variant="secondary" onClick={() => setCatModal(false)}>{t('cancel')}</Btn>
