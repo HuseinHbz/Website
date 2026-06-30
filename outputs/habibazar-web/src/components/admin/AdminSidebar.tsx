@@ -8,26 +8,21 @@ const NAV = [
     group: { en: 'Overview', fa: 'خلاصه' },
     items: [
       { labelEn: 'Dashboard', labelFa: 'داشبورد', href: '/admin', icon: '◈' },
-      { labelEn: 'Analytics', labelFa: 'آمار', href: '/admin/dashboard', icon: '◉' },
+      { labelEn: 'Analytics', labelFa: 'آنالیتیکس', href: '/admin/dashboard', icon: '◉' },
     ],
   },
   {
     group: { en: 'Content', fa: 'محتوا' },
     items: [
       { labelEn: 'Hero Section', labelFa: 'بخش هیرو', href: '/admin/hero', icon: '⬡' },
-      { labelEn: 'About / Bio', labelFa: 'درباره / بیوگرافی', href: '/admin/about', icon: '◍' },
-      { labelEn: 'Career Timeline', labelFa: 'تایم‌لاین شغلی', href: '/admin/timeline', icon: '◎' },
-      { labelEn: 'Skills', labelFa: 'مهارت‌ها', href: '/admin/skills', icon: '◈' },
-      { labelEn: 'Certifications', labelFa: 'گواهینامه‌ها', href: '/admin/certifications', icon: '🏅' },
-      { labelEn: 'Services', labelFa: 'خدمات', href: '/admin/services', icon: '◉' },
-      { labelEn: 'Projects', labelFa: 'پروژه‌ها', href: '/admin/projects', icon: '◆' },
-      { labelEn: 'Clients', labelFa: 'مشتریان', href: '/admin/clients', icon: '◇' },
-    ],
-  },
-  {
-    group: { en: 'Blog', fa: 'وبلاگ' },
-    items: [
-      { labelEn: 'Blog Posts', labelFa: 'پست‌های وبلاگ', href: '/admin/blog', icon: '▣' },
+      { labelEn: 'Executive Profile', labelFa: 'پروفایل اجرایی', href: '/admin/about', icon: '◍' },
+      { labelEn: 'Leadership Journey', labelFa: 'مسیر رهبری', href: '/admin/timeline', icon: '◎' },
+      { labelEn: 'Core Expertise', labelFa: 'تخصص‌های اصلی', href: '/admin/skills', icon: '◈' },
+      { labelEn: 'Credentials', labelFa: 'گواهینامه‌ها', href: '/admin/certifications', icon: '🏅' },
+      { labelEn: 'Technology Solutions', labelFa: 'راهکارهای فناوری', href: '/admin/services', icon: '◉' },
+      { labelEn: 'Case Studies', labelFa: 'مطالعات موردی', href: '/admin/projects', icon: '◆' },
+      { labelEn: 'Enterprise Partners', labelFa: 'شرکای سازمانی', href: '/admin/clients', icon: '◇' },
+      { labelEn: 'Knowledge Center', labelFa: 'مرکز دانش', href: '/admin/blog', icon: '▣' },
     ],
   },
   {
@@ -47,18 +42,19 @@ const NAV = [
   {
     group: { en: 'Media & AI', fa: 'رسانه و هوش مصنوعی' },
     items: [
-      { labelEn: 'Media Manager', labelFa: 'مدیریت رسانه', href: '/admin/media', icon: '▤' },
-      { labelEn: 'AI Knowledge Base', labelFa: 'پایگاه دانش AI', href: '/admin/ai-kb', icon: '◈' },
+      { labelEn: 'Media Center', labelFa: 'مرکز رسانه', href: '/admin/media', icon: '▤' },
+      { labelEn: 'AI Knowledge Center', labelFa: 'مرکز دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '🤖' },
     ],
   },
   {
     group: { en: 'System', fa: 'سیستم' },
     items: [
-      { labelEn: 'SEO Settings', labelFa: 'تنظیمات سئو', href: '/admin/seo', icon: '◎' },
-      { labelEn: 'Site Settings', labelFa: 'تنظیمات سایت', href: '/admin/settings', icon: '⚙' },
-      { labelEn: 'Users & Roles', labelFa: 'کاربران و نقش‌ها', href: '/admin/users', icon: '◉' },
+      { labelEn: 'SEO Control Center', labelFa: 'مرکز کنترل سئو', href: '/admin/seo', icon: '◎' },
+      { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
+      { labelEn: 'User Management', labelFa: 'مدیریت کاربران', href: '/admin/users', icon: '◉' },
       { labelEn: 'Security & 2FA', labelFa: 'امنیت و ۲FA', href: '/admin/security', icon: '🔐' },
-      { labelEn: 'Audit Logs', labelFa: 'لاگ‌های حسابرسی', href: '/admin/audit', icon: '▦' },
+      { labelEn: 'Audit Center', labelFa: 'مرکز حسابرسی', href: '/admin/audit', icon: '▦' },
+      { labelEn: 'Backup & Recovery', labelFa: 'پشتیبان‌گیری و بازیابی', href: '/admin/backup', icon: '💾' },
     ],
   },
 ]
@@ -68,9 +64,10 @@ interface Props {
   onToggle: () => void
   locale: 'fa' | 'en'
   isRTL: boolean
+  onOpenCmd: () => void
 }
 
-export function AdminSidebar({ collapsed, onToggle, locale, isRTL }: Props) {
+export function AdminSidebar({ collapsed, onToggle, locale, isRTL, onOpenCmd }: Props) {
   const pathname = usePathname()
 
   const sidePosition = isRTL
@@ -91,9 +88,9 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL }: Props) {
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <div className="text-sm font-bold text-white truncate">
-              {isRTL ? 'پنل ادمین' : 'Admin Panel'}
+              {isRTL ? 'مرکز کنترل' : 'Control Center'}
             </div>
-            <div className="text-[10px] text-slate-500 truncate">habibazar.ir</div>
+            <div className="text-[10px] text-slate-500 truncate">HBZ Technology</div>
           </div>
         )}
         <button
@@ -101,15 +98,27 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL }: Props) {
           className={`${isRTL ? 'mr-auto' : 'ml-auto'} text-slate-500 hover:text-white transition-colors flex-shrink-0`}
           title={collapsed ? (isRTL ? 'باز کردن' : 'Expand') : (isRTL ? 'بستن' : 'Collapse')}
         >
-          {collapsed
-            ? (isRTL ? '‹' : '›')
-            : (isRTL ? '›' : '‹')
-          }
+          {collapsed ? (isRTL ? '‹' : '›') : (isRTL ? '›' : '‹')}
         </button>
       </div>
 
+      {/* Command palette shortcut */}
+      {!collapsed && (
+        <div className="px-3 pt-3 pb-1">
+          <button
+            onClick={onOpenCmd}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-slate-300 transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <span>🔍</span>
+            <span className="flex-1 text-start">{isRTL ? 'جستجوی سریع...' : 'Quick search...'}</span>
+            <kbd className="text-[10px] px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>⌘K</kbd>
+          </button>
+        </div>
+      )}
+
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-5">
         {NAV.map((section) => (
           <div key={section.group.en}>
             {!collapsed && (
@@ -144,15 +153,24 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL }: Props) {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-[#1e1e2e]">
+      <div className="p-3 border-t border-[#1e1e2e] space-y-1">
+        {collapsed && (
+          <button
+            onClick={onOpenCmd}
+            className="w-full flex items-center justify-center py-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all"
+            title={isRTL ? 'جستجوی سریع' : 'Quick search'}
+          >
+            🔍
+          </button>
+        )}
         <Link
           href="/fa"
           target="_blank"
           className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs text-slate-500 hover:text-white hover:bg-white/5 transition-all"
-          title={isRTL ? 'مشاهده سایت' : 'View Public Site'}
+          title={isRTL ? 'مشاهده سایت عمومی' : 'View Public Site'}
         >
           <span>↗</span>
-          {!collapsed && <span>{isRTL ? 'مشاهده سایت' : 'View Public Site'}</span>}
+          {!collapsed && <span>{isRTL ? 'مشاهده سایت عمومی' : 'View Public Site'}</span>}
         </Link>
       </div>
     </aside>
