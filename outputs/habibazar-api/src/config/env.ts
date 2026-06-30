@@ -27,7 +27,7 @@ const envSchema = z.object({
   SCORE_NURTURE_BELOW: z.coerce.number().int().min(0).max(100).default(20),
 
   // AI
-  AI_PROVIDER: z.enum(['openai', 'anthropic', 'deepseek', 'ollama']).default('openai'),
+  AI_PROVIDER: z.enum(['openai', 'anthropic', 'deepseek', 'ollama', 'conduit']).default('openai'),
   AI_MAX_TOKENS: z.coerce.number().int().positive().default(800),
   AI_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.4),
   AI_RATE_PER_MIN: z.coerce.number().int().positive().default(10),
@@ -52,6 +52,11 @@ const envSchema = z.object({
   // Ollama
   OLLAMA_BASE_URL: z.string().url().default('http://localhost:11434'),
   OLLAMA_MODEL: z.string().default('llama3.1'),
+
+  // Conduit (OpenAI-compatible multi-model gateway)
+  CONDUIT_API_KEY: z.string().optional(),
+  CONDUIT_BASE_URL: z.string().url().default('https://conduit.ozdoev.net/api/v1'),
+  CONDUIT_MODEL: z.string().default('anthropic/claude-sonnet-4-6'),
 
   // SMTP (optional — if not configured, email sending is skipped gracefully)
   SMTP_HOST: z.string().optional(),

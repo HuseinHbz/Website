@@ -8,6 +8,7 @@ import { streamOpenAI } from './providers/openai.provider';
 import { streamAnthropic } from './providers/anthropic.provider';
 import { streamDeepSeek } from './providers/deepseek.provider';
 import { streamOllama } from './providers/ollama.provider';
+import { streamConduit } from './providers/conduit.provider';
 import { IntakeInput } from './ai.schemas';
 import logger from '../../lib/logger';
 import { LeadSource } from '../../lib/enums';
@@ -129,6 +130,8 @@ export async function* chat(
     stream = streamDeepSeek(chatMessages);
   } else if (provider === 'ollama') {
     stream = streamOllama(chatMessages);
+  } else if (provider === 'conduit') {
+    stream = streamConduit(chatMessages);
   } else {
     stream = streamOpenAI(chatMessages);
   }
