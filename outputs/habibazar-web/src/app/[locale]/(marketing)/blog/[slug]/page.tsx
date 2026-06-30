@@ -4,23 +4,19 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.habibazar.ir'
+
 interface BlogPost {
-  id: number
+  id: string
   slug: string
   titleEn: string
   titleFa: string
-  excerptEn: string | null
-  excerptFa: string | null
-  contentEn: string | null
-  contentFa: string | null
-  readTimeEn: string | null
-  readTimeFa: string | null
-  publishedAtEn: string | null
-  publishedAtFa: string | null
-  categoryId: number | null
-  categoryNameEn?: string
-  categoryNameFa?: string
-  categoryColor?: string
+  summaryEn: string | null
+  summaryFa: string | null
+  bodyEn: string | null
+  bodyFa: string | null
+  publishedAt: string | null
+  author?: { id: string; name: string } | null
   prev?: { slug: string; titleEn: string; titleFa: string } | null
   next?: { slug: string; titleEn: string; titleFa: string } | null
 }
@@ -305,7 +301,7 @@ export default function BlogPostPage() {
 
   useEffect(() => {
     if (!slug) return
-    fetch(`/api/blog/${slug}`)
+    fetch(`${API_URL}/api/v1/posts/${slug}`)
       .then(r => {
         if (!r.ok) { setNotFound(true); setLoading(false); return null }
         return r.json()
@@ -340,12 +336,10 @@ export default function BlogPostPage() {
   }
 
   const title = isRTL ? post.titleFa : post.titleEn
-  const excerpt = isRTL ? post.excerptFa : post.excerptEn
-  const content = isRTL ? post.contentFa : post.contentEn
-  const readTime = isRTL ? post.readTimeFa : post.readTimeEn
-  const publishedAt = isRTL ? post.publishedAtFa : post.publishedAtEn
-  const catName = isRTL ? post.categoryNameFa : post.categoryNameEn
-  const color = post.categoryColor || '#6366f1'
+  const excerpt = isRTL ? post.summaryFa : post.summaryEn
+  const content = isRTL ? post.bodyFa : post.bodyEn
+  const publishedAt = post.publishedAt ? new Date(post.publishedAt).toLocaleDateString(isRTL ? 'fa-IR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null
+  const color = '#6366f1'
 
   return (
     <div className="pt-16 min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -367,17 +361,7 @@ export default function BlogPostPage() {
             {isRTL ? 'بازگشت به وبلاگ' : 'Back to Blog'}
           </Link>
 
-          {/* Category badge */}
-          {catName && (
-            <div className="mb-5">
-              <span
-                className="text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase"
-                style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
-              >
-                {catName}
-              </span>
-            </div>
-          )}
+
 
           {/* Title */}
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-text-primary leading-tight mb-6" style={{ letterSpacing: '-0.02em' }}>
@@ -401,12 +385,12 @@ export default function BlogPostPage() {
                 {publishedAt}
               </div>
             )}
-            {readTime && (
+            {post.author?.name && (
               <div className="flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
-                {readTime}
+                {post.author.name}
               </div>
             )}
           </div>

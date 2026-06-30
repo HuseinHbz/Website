@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     const provider = getSetting(db, 'ai_provider') || 'chatgpt'
     const apiKey = getSetting(db, 'ai_api_key')
     const model = getSetting(db, 'ai_model')
-    const apiUrl = getSetting(db, 'ai_api_url')
+    const apiUrl = getSetting(db, 'ai_base_url') || getSetting(db, 'ai_api_url')
     const customSystemPrompt = getSetting(db, 'ai_system_prompt')
 
     if (!apiKey) {

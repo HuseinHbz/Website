@@ -275,8 +275,23 @@ router.get(
         return;
       }
 
-      setCache(cacheKey, post);
-      ok(res, post);
+      const navSelect = { slug: true, titleEn: true, titleFa: true };
+      const [prev, next] = await Promise.all([
+        prisma.post.findFirst({
+          where: { status: ContentStatus.PUBLISHED, deletedAt: null, publishedAt: { lt: post.publishedAt ?? post.createdAt } },
+          orderBy: { publishedAt: 'desc' },
+          select: navSelect,
+        }),
+        prisma.post.findFirst({
+          where: { status: ContentStatus.PUBLISHED, deletedAt: null, publishedAt: { gt: post.publishedAt ?? post.createdAt } },
+          orderBy: { publishedAt: 'asc' },
+          select: navSelect,
+        }),
+      ]);
+
+      const result = { ...post, prev: prev ?? null, next: next ?? null };
+      setCache(cacheKey, result);
+      ok(res, result);
     } catch (err) {
       next(err);
     }
