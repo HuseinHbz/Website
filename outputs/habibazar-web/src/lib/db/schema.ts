@@ -365,6 +365,44 @@ export const aiKnowledgeBase = sqliteTable('ai_knowledge_base', {
   updatedBy: text('updated_by').references(() => users.id),
 })
 
+// ─── Forms ────────────────────────────────────────────────────────────────────
+
+export const forms = sqliteTable('forms', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  type: text('type', { enum: ['contact', 'consultation', 'newsletter', 'custom'] }).notNull().default('contact'),
+  fieldsJson: text('fields_json').notNull().default('[]'),
+  settingsJson: text('settings_json').notNull().default('{}'),
+  emailTo: text('email_to'),
+  emailSubject: text('email_subject'),
+  successMessageEn: text('success_message_en'),
+  successMessageFa: text('success_message_fa'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  submissionsCount: integer('submissions_count').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdBy: text('created_by').references(() => users.id),
+})
+
+export type Form = typeof forms.$inferSelect
+
+// ─── Redirects ────────────────────────────────────────────────────────────────
+
+export const redirects = sqliteTable('redirects', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  fromPath: text('from_path').notNull().unique(),
+  toPath: text('to_path').notNull(),
+  statusCode: integer('status_code').notNull().default(301),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  hits: integer('hits').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export type Redirect = typeof redirects.$inferSelect
+
 // ─── Contact Requests ─────────────────────────────────────────────────────────
 
 export const contactRequests = sqliteTable('contact_requests', {

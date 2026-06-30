@@ -34,6 +34,8 @@ const COMMANDS: Command[] = [
   // Builder
   { id: 'sections', label: 'Section Builder', labelFa: 'سازنده بخش‌ها', icon: '🧩', href: '/admin/sections', group: 'Builder', groupFa: 'سازنده', keywords: 'sections builder' },
   { id: 'pages', label: 'Page Builder', labelFa: 'سازنده صفحات', icon: '📄', href: '/admin/pages', group: 'Builder', groupFa: 'سازنده', keywords: 'pages builder' },
+  { id: 'forms', label: 'Form Builder', labelFa: 'سازنده فرم', icon: '📋', href: '/admin/forms', group: 'Builder', groupFa: 'سازنده', keywords: 'forms contact newsletter custom fields' },
+  { id: 'menus', label: 'Menu Builder', labelFa: 'سازنده منو', icon: '☰', href: '/admin/menus', group: 'Builder', groupFa: 'سازنده', keywords: 'menus navigation header footer' },
   // Requests
   { id: 'contacts', label: 'Contact Requests', labelFa: 'درخواست‌های تماس', icon: '✉', href: '/admin/contacts', group: 'Requests', groupFa: 'درخواست‌ها', keywords: 'contacts leads' },
   { id: 'consultations', label: 'Consultations', labelFa: 'مشاوره‌ها', icon: '◎', href: '/admin/consultations', group: 'Requests', groupFa: 'درخواست‌ها', keywords: 'consultations bookings' },

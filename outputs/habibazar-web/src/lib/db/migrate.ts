@@ -490,5 +490,40 @@ export function runMigrations() {
     try { sqlite.exec(col) } catch { /* column already exists */ }
   }
 
+  // Phase 4: Forms & Redirects tables
+  const phase4Tables = [
+    `CREATE TABLE IF NOT EXISTS forms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      description TEXT,
+      type TEXT NOT NULL DEFAULT 'contact',
+      fields_json TEXT NOT NULL DEFAULT '[]',
+      settings_json TEXT NOT NULL DEFAULT '{}',
+      email_to TEXT,
+      email_subject TEXT,
+      success_message_en TEXT,
+      success_message_fa TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      submissions_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS redirects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_path TEXT NOT NULL UNIQUE,
+      to_path TEXT NOT NULL,
+      status_code INTEGER NOT NULL DEFAULT 301,
+      active INTEGER NOT NULL DEFAULT 1,
+      hits INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+  ]
+  for (const stmt of phase4Tables) {
+    try { sqlite.exec(stmt) } catch { /* table already exists */ }
+  }
+
   sqlite.close()
 }

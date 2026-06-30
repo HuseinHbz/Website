@@ -30,6 +30,8 @@ const NAV = [
     items: [
       { labelEn: 'Section Builder', labelFa: 'سازنده بخش‌ها', href: '/admin/sections', icon: '🧩' },
       { labelEn: 'Page Builder', labelFa: 'سازنده صفحات', href: '/admin/pages', icon: '📄' },
+      { labelEn: 'Form Builder', labelFa: 'سازنده فرم', href: '/admin/forms', icon: '📋' },
+      { labelEn: 'Menu Builder', labelFa: 'سازنده منو', href: '/admin/menus', icon: '☰' },
     ],
   },
   {
