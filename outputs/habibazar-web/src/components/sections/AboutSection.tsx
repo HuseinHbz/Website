@@ -271,16 +271,16 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             transition={{ duration: 0.7 }}
           >
             <div className="glass-card p-8 h-full">
-              <div className="w-full mb-6">
+              <div className="flex justify-center mb-6">
                 {dbAbout?.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={dbAbout.photoUrl.startsWith('/') ? dbAbout.photoUrl : `/${dbAbout.photoUrl}`}
                     alt="Husein Habibazar"
-                    className="w-full aspect-video rounded-xl object-cover border border-accent/20 shadow-lg"
+                    className="w-44 aspect-[9/16] rounded-2xl object-cover border border-accent/20 shadow-lg"
                   />
                 ) : (
-                  <div className="relative w-full aspect-video rounded-xl flex items-center justify-center border border-accent/20 shadow-lg"
+                  <div className="relative w-44 aspect-[9/16] rounded-2xl flex items-center justify-center border border-accent/20 shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', boxShadow: '0 0 32px rgba(99,102,241,0.3)' }}>
                     <span className="font-black text-4xl text-white tracking-tight">HBZ</span>
                     <span className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-success border-2 border-background" />

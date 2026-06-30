@@ -35,7 +35,7 @@ export function AboutEditor() {
     setData((d) => ({ ...d, [locale]: { ...(d[locale] || { ...EMPTY, locale }), [k]: v } }))
   }
 
-  function setPhotoUrl(url: string) {
+  async function setPhotoUrl(url: string) {
     setData((prev) => {
       const next = { ...prev }
       for (const loc of ['en', 'fa']) {
@@ -43,15 +43,34 @@ export function AboutEditor() {
       }
       return next
     })
+    // Auto-save photo to both locales immediately
+    await Promise.all(['en', 'fa'].map((loc) =>
+      fetch('/api/admin/about', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: loc, photoUrl: url }),
+      })
+    ))
+    toast(url ? 'Photo saved' : 'Photo removed', 'success')
   }
 
   async function save() {
     setSaving(true)
-    const res = await fetch('/api/admin/about', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(current),
-    })
+    // Save current locale; also sync photoUrl to the other locale
+    const otherLoc = locale === 'en' ? 'fa' : 'en'
+    const otherData = data[otherLoc] || { ...EMPTY, locale: otherLoc }
+    const [res] = await Promise.all([
+      fetch('/api/admin/about', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(current),
+      }),
+      fetch('/api/admin/about', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...otherData, photoUrl: current.photoUrl }),
+      }),
+    ])
     setSaving(false)
     toast(res.ok ? 'Saved successfully' : 'Save failed', res.ok ? 'success' : 'error')
   }
@@ -89,10 +108,10 @@ export function AboutEditor() {
             value={current.photoUrl || ''}
             onChange={setPhotoUrl}
             folder="profile"
-            aspect={16 / 9}
+            aspect={9 / 16}
             shape="rect"
-            label="Profile Photo (16:9)"
-            previewClass="w-48 aspect-video rounded-xl"
+            label="Profile Photo (9:16 portrait)"
+            previewClass="w-32 aspect-[9/16] rounded-xl"
           />
           <Input label="Resume PDF URL" value={current.resumeUrl || ''} onChange={(v) => set('resumeUrl', v)} placeholder="/resume.pdf" />
         </Card>

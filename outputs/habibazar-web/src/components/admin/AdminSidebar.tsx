@@ -50,6 +50,7 @@ const NAV = [
       { labelEn: 'SEO Settings', labelFa: 'تنظیمات سئو', href: '/admin/seo', icon: '◎' },
       { labelEn: 'Site Settings', labelFa: 'تنظیمات سایت', href: '/admin/settings', icon: '⚙' },
       { labelEn: 'Users & Roles', labelFa: 'کاربران و نقش‌ها', href: '/admin/users', icon: '◉' },
+      { labelEn: 'Security & 2FA', labelFa: 'امنیت و ۲FA', href: '/admin/security', icon: '🔐' },
       { labelEn: 'Audit Logs', labelFa: 'لاگ‌های حسابرسی', href: '/admin/audit', icon: '▦' },
     ],
   },
