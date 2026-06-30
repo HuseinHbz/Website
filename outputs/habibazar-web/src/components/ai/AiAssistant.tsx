@@ -237,9 +237,8 @@ export function AiAssistant({ locale }: AiAssistantProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: chatContext
-            ? [{ role: 'user', content: chatContext }, ...apiMessages]
-            : apiMessages,
+          messages: apiMessages,
+          chatContext: chatContext || undefined,
           locale: chatLocale,
         }),
       })

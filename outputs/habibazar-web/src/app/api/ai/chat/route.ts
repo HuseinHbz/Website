@@ -79,15 +79,8 @@ async function callGrok(apiKey: string, apiUrl: string, model: string, messages:
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages: rawMessages, locale } = await req.json() as { messages: { role: string; content: string }[]; locale?: string }
-
-    // Fix consecutive user messages: merge leading user messages into system context
-    let userContext = ''
-    let messages = rawMessages
-    if (rawMessages.length >= 2 && rawMessages[0].role === 'user' && rawMessages[1].role === 'user') {
-      userContext = rawMessages[0].content
-      messages = rawMessages.slice(1)
-    }
+    const { messages, locale, chatContext } = await req.json() as { messages: { role: string; content: string }[]; locale?: string; chatContext?: string }
+    const userContext = chatContext || ''
 
     const db = getDb()
     const provider = getSetting(db, 'ai_provider') || 'chatgpt'
