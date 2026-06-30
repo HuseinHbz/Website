@@ -2,8 +2,14 @@
 // Run: node seed-cisco-blog.js /var/www/habibazar/web/data/habibazar.db
 
 const path = require('path')
-const dbPath = process.argv[2] || path.join(__dirname, '../web/data/habibazar.db')
-const Database = require(path.join(__dirname, '../web/node_modules/better-sqlite3'))
+const dbPath = process.argv[2] || path.join(__dirname, '../habibazar-web/data/habibazar.db')
+// Try habibazar-web first, fall back to web
+let Database
+try {
+  Database = require(path.join(__dirname, '../habibazar-web/node_modules/better-sqlite3'))
+} catch {
+  Database = require(path.join(__dirname, '../web/node_modules/better-sqlite3'))
+}
 const db = new Database(dbPath)
 
 db.pragma('journal_mode = WAL')
