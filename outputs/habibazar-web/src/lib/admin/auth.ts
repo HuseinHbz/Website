@@ -2,13 +2,28 @@ import bcrypt from 'bcryptjs'
 import { SignJWT, jwtVerify } from 'jose'
 import { nanoid } from 'nanoid'
 import { cookies } from 'next/headers'
-import { TOTP, NobleCryptoPlugin, ScureBase32Plugin, generateSecret as otplibGenerateSecret } from 'otplib'
+import { NobleCryptoPlugin, ScureBase32Plugin, generateSecret as otplibGenerateSecret, verifySync, generateSync, generateURI } from 'otplib'
 import { getDb } from '@/lib/db'
 import { users, adminSessions, auditLogs } from '@/lib/db/schema'
 import { eq, and, gt } from 'drizzle-orm'
 
-const totp = new TOTP({ crypto: new NobleCryptoPlugin(), base32: new ScureBase32Plugin() })
-export { otplibGenerateSecret as generateTotpSecret, totp }
+const totpPlugins = { crypto: new NobleCryptoPlugin(), base32: new ScureBase32Plugin() }
+
+export function generateTotpSecret(): string {
+  return otplibGenerateSecret(totpPlugins)
+}
+
+export function verifyTotpCode(token: string, secret: string): boolean {
+  return !!(verifySync({ token, secret, ...totpPlugins }))?.valid
+}
+
+export function generateTotpToken(secret: string): string {
+  return generateSync({ secret, ...totpPlugins })
+}
+
+export function generateTotpURI(label: string, issuer: string, secret: string): string {
+  return generateURI({ strategy: 'totp', label, issuer, secret })
+}
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || 'HBZ-Admin-Secret-Key-2025-Change-In-Production'
@@ -27,7 +42,7 @@ export async function verifyTotp(userId: string, code: string): Promise<boolean>
   const db = getDb()
   const user = await db.select().from(users).where(eq(users.id, userId)).get()
   if (!user?.totpSecret || !user.totpEnabled) return false
-  return !!(await totp.verify(code, { secret: user.totpSecret }))?.valid
+  return verifyTotpCode(code, user.totpSecret)
 }
 
 export async function signIn(email: string, password: string, ipAddress?: string, userAgent?: string, totpCode?: string) {
@@ -43,8 +58,7 @@ export async function signIn(email: string, password: string, ipAddress?: string
 
   if (user.totpEnabled && user.totpSecret) {
     if (!totpCode) return { requireTotp: true }
-    const totpValid = !!(await totp.verify(totpCode, { secret: user.totpSecret }))?.valid
-    if (!totpValid) return { error: 'Invalid authentication code' }
+    if (!verifyTotpCode(totpCode, user.totpSecret)) return { error: 'Invalid authentication code' }
   }
 
   const sessionId = nanoid()

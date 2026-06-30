@@ -18,6 +18,7 @@ export async function GET() {
         email: users.email,
         role: users.role,
         active: users.active,
+        totpEnabled: users.totpEnabled,
         createdAt: users.createdAt,
         lastLogin: users.lastLogin,
       }).from(users).orderBy(desc(users.createdAt)).all()
