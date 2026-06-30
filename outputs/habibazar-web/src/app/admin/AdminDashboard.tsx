@@ -51,6 +51,7 @@ function pageLabel(page: string): string {
   }
   // Blog post paths like /blog/some-slug
   if (clean.startsWith('/blog/')) return `📝 ${clean.replace('/blog/', '')}`
+  if (clean.startsWith('/case-studies/')) return `◆ ${clean.replace('/case-studies/', '')}`
   return map[clean] || clean
 }
 
@@ -389,7 +390,7 @@ export function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: 'Edit Hero', href: '/admin/hero', icon: '⬡', color: '#6366f1' },
-            { label: 'New Blog Post', href: '/admin/blog', icon: '▣', color: '#818cf8' },
+            { label: 'New Case Study', href: '/admin/projects', icon: '◆', color: '#818cf8' },
             { label: 'View Contacts', href: '/admin/contacts', icon: '✉', color: '#f59e0b' },
             { label: 'Media Upload', href: '/admin/media', icon: '▤', color: '#06b6d4' },
           ].map((item) => (
