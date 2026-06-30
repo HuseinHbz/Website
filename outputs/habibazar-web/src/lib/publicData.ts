@@ -1,6 +1,6 @@
 import { getDb } from '@/lib/db'
 import { projects, services, skills, certifications, clients, timelineItems, blogPosts, blogCategories, aboutContent, heroContent, siteSettings } from '@/lib/db/schema'
-import { eq, asc, desc, sql } from 'drizzle-orm'
+import { eq, asc, desc, sql, and, inArray } from 'drizzle-orm'
 
 const EXPECTED_POST_COUNT = 150
 // Bump this version whenever blog content is updated to force a DB resync
@@ -102,5 +102,21 @@ export async function getPublicBlogCategories() {
   try {
     const db = getDb()
     return db.select().from(blogCategories).orderBy(asc(blogCategories.sortOrder)).all()
+  } catch { return [] }
+}
+
+export async function getPublicCaseStudyBySlug(slug: string) {
+  try {
+    const db = getDb()
+    const result = db.select().from(projects).where(and(eq(projects.slug, slug), eq(projects.active, true))).get()
+    return result ?? null
+  } catch { return null }
+}
+
+export async function getPublicRelatedCaseStudies(slugs: string[]) {
+  try {
+    if (!slugs.length) return []
+    const db = getDb()
+    return db.select().from(projects).where(and(inArray(projects.slug, slugs), eq(projects.active, true))).all()
   } catch { return [] }
 }

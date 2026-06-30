@@ -32,6 +32,7 @@ const routes: Array<{
   priority: number
 }> = [
   { path: '/', changeFrequency: 'weekly', priority: 1.0 },
+  { path: '/case-studies', changeFrequency: 'weekly', priority: 0.9 },
   { path: '/consultation', changeFrequency: 'monthly', priority: 0.8 },
   {
     path: '/consultation/intro-call',

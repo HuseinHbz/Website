@@ -439,5 +439,56 @@ export function runMigrations() {
     sqlite.exec(`ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0`)
   }
 
+  // Phase 3: Case Study fields — ADD COLUMN is idempotent in SQLite via try/catch pattern
+  const caseStudyCols = [
+    "ALTER TABLE projects ADD COLUMN executive_summary_en TEXT",
+    "ALTER TABLE projects ADD COLUMN executive_summary_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN existing_infra_en TEXT",
+    "ALTER TABLE projects ADD COLUMN existing_infra_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN proposed_arch_en TEXT",
+    "ALTER TABLE projects ADD COLUMN proposed_arch_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN tech_stack_json TEXT",
+    "ALTER TABLE projects ADD COLUMN implementation_timeline_json TEXT",
+    "ALTER TABLE projects ADD COLUMN lessons_learned_en TEXT",
+    "ALTER TABLE projects ADD COLUMN lessons_learned_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN future_improvements_en TEXT",
+    "ALTER TABLE projects ADD COLUMN future_improvements_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN business_scope_en TEXT",
+    "ALTER TABLE projects ADD COLUMN business_scope_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN collaboration_type TEXT DEFAULT 'full'",
+    "ALTER TABLE projects ADD COLUMN project_status TEXT DEFAULT 'completed'",
+    "ALTER TABLE projects ADD COLUMN is_confidential INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE projects ADD COLUMN network_diagram_url TEXT",
+    "ALTER TABLE projects ADD COLUMN infra_diagram_url TEXT",
+    "ALTER TABLE projects ADD COLUMN download_pdf_url TEXT",
+    "ALTER TABLE projects ADD COLUMN download_arch_url TEXT",
+    "ALTER TABLE projects ADD COLUMN download_tech_summary_url TEXT",
+    "ALTER TABLE projects ADD COLUMN client_logo_url TEXT",
+    "ALTER TABLE projects ADD COLUMN technology_filters TEXT",
+    "ALTER TABLE projects ADD COLUMN seo_title TEXT",
+    "ALTER TABLE projects ADD COLUMN seo_description TEXT",
+    "ALTER TABLE projects ADD COLUMN seo_keywords TEXT",
+    "ALTER TABLE projects ADD COLUMN og_image TEXT",
+    "ALTER TABLE projects ADD COLUMN ha_availability_en TEXT",
+    "ALTER TABLE projects ADD COLUMN ha_availability_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN backup_strategy_en TEXT",
+    "ALTER TABLE projects ADD COLUMN backup_strategy_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN disaster_recovery_en TEXT",
+    "ALTER TABLE projects ADD COLUMN disaster_recovery_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN monitoring_strategy_en TEXT",
+    "ALTER TABLE projects ADD COLUMN monitoring_strategy_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN security_considerations_en TEXT",
+    "ALTER TABLE projects ADD COLUMN security_considerations_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN deployment_process_en TEXT",
+    "ALTER TABLE projects ADD COLUMN deployment_process_fa TEXT",
+    "ALTER TABLE projects ADD COLUMN before_after_json TEXT",
+    "ALTER TABLE projects ADD COLUMN business_impact_json TEXT",
+    "ALTER TABLE projects ADD COLUMN related_tags TEXT",
+    "ALTER TABLE projects ADD COLUMN related_case_study_slugs TEXT",
+  ]
+  for (const col of caseStudyCols) {
+    try { sqlite.exec(col) } catch { /* column already exists */ }
+  }
+
   sqlite.close()
 }

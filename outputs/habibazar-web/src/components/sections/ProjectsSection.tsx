@@ -2,13 +2,17 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { slideUp, staggerContainer, fadeIn, blurReveal, staggerFast } from '@/lib/motion'
+import Link from 'next/link'
+import { blurReveal, staggerFast, springUp } from '@/lib/motion'
 
 interface DbProject {
   id: number; slug: string; nameEn: string; nameFa: string; industryEn: string | null; industryFa: string | null
   clientEn: string | null; clientFa: string | null; challengeEn: string | null; challengeFa: string | null
   solutionEn: string | null; solutionFa: string | null; resultsEn: string | null; resultsFa: string | null
-  tagsEn: string | null; tagsFa: string | null; coverImage: string | null; gallery: string | null; color: string | null; year: string | null; featured: boolean
+  tagsEn: string | null; tagsFa: string | null; coverImage: string | null; gallery: string | null
+  color: string | null; year: string | null; featured: boolean
+  executiveSummaryEn?: string | null; executiveSummaryFa?: string | null
+  projectStatus?: string | null; isConfidential?: boolean | null
 }
 
 interface ProjectsSectionProps {
@@ -16,158 +20,82 @@ interface ProjectsSectionProps {
   dbProjects?: DbProject[]
 }
 
-interface Project {
-  id: string
-  nameEn: string
-  nameFa: string
-  client: string
-  industryEn: string
-  industryFa: string
-  year: string
-  color: string
-  icon: string
-  coverImage: string
-  gallery: string[]
-  challengeEn: string
-  challengeFa: string
-  solutionEn: string
-  solutionFa: string
-  technologies: string[]
-  resultsEn: string[]
-  resultsFa: string[]
-  tagsEn: string[]
-  tagsFa: string[]
-}
-
-const PROJECTS: Project[] = [
-  {
-    id: 'kenzo',
-    coverImage: '', gallery: [],
-    nameEn: 'Kenzo Restaurant',
-    nameFa: 'رستوران کنزو',
-    client: 'Kenzo Group',
-    industryEn: 'Hospitality',
-    industryFa: 'هتلداری',
-    year: '2023',
-    color: '#f59e0b',
-    icon: '🍽️',
-    challengeEn: 'Multi-branch restaurant chain with outdated network infrastructure causing POS system outages, poor WiFi coverage, and zero centralized management across 5 locations.',
-    challengeFa: 'زنجیره رستوران چند شعبه‌ای با زیرساخت شبکه قدیمی که باعث قطعی سیستم POS، پوشش ضعیف WiFi و عدم مدیریت متمرکز در ۵ شعبه می‌شد.',
-    solutionEn: 'Designed and deployed a unified MikroTik-based network infrastructure with centralized management, VLAN segmentation (POS, Staff, Guest WiFi), site-to-site VPN between branches, and real-time monitoring via Zabbix.',
-    solutionFa: 'طراحی و استقرار زیرساخت شبکه یکپارچه مبتنی بر MikroTik با مدیریت متمرکز، تقسیم‌بندی VLAN (POS، کارمندان، WiFi مهمان)، VPN سایت به سایت بین شعب و پایش لحظه‌ای با Zabbix.',
-    technologies: ['MikroTik', 'Ubiquiti APs', 'Zabbix', 'VPN/IPSEC', 'VLAN', 'QoS'],
-    resultsEn: ['99.9% uptime across all 5 branches', 'Zero POS system outages post-deployment', 'Centralized management from single pane of glass', '60% reduction in IT support tickets', 'Guest WiFi with captive portal & bandwidth control'],
-    resultsFa: ['آپتایم ۹۹.۹٪ در تمام ۵ شعبه', 'صفر قطعی سیستم POS پس از استقرار', 'مدیریت متمرکز از یک پنل واحد', 'کاهش ۶۰٪ تیکت‌های پشتیبانی IT', 'WiFi مهمان با پورتال اختصاصی و کنترل پهنای باند'],
-    tagsEn: ['Networking', 'WiFi', 'VPN', 'Monitoring'],
-    tagsFa: ['شبکه', 'وای‌فای', 'VPN', 'پایش'],
-  },
-  {
-    id: 'popcorn',
-    coverImage: '', gallery: [],
-    nameEn: 'Popcorn Holding',
-    nameFa: 'هلدینگ پاپ‌کورن',
-    client: 'Popcorn Holding Co.',
-    industryEn: 'Holding Company',
-    industryFa: 'هلدینگ',
-    year: '2024',
-    color: '#10b981',
-    icon: '🏢',
-    challengeEn: 'Holding company managing 8 subsidiaries with completely isolated IT systems, no centralized security policy, mixed infrastructure (Windows/Linux), and no disaster recovery plan.',
-    challengeFa: 'هلدینگ با ۸ شرکت زیرمجموعه با سیستم‌های IT کاملاً مجزا، بدون سیاست امنیتی متمرکز، زیرساخت ترکیبی (Windows/Linux) و بدون برنامه بازیابی فاجعه.',
-    solutionEn: 'Architected a unified enterprise infrastructure: centralized Active Directory with subsidiary OUs, site-to-site VPN mesh, Fortigate-based security perimeter, VMware vSphere virtualization layer, and Veeam backup solution with offsite DR.',
-    solutionFa: 'طراحی زیرساخت سازمانی یکپارچه: Active Directory مرکزی با واحدهای سازمانی زیرمجموعه‌ها، شبکه VPN سایت به سایت، محیط امنیتی مبتنی بر Fortigate، لایه مجازی‌سازی VMware vSphere و راه‌حل پشتیبان‌گیری Veeam با DR برون‌سازمانی.',
-    technologies: ['Fortigate', 'VMware vSphere', 'Active Directory', 'Veeam', 'Cisco', 'MPLS VPN'],
-    resultsEn: ['Unified identity management across 8 subsidiaries', 'RTO reduced from days to 4 hours', 'Security incidents reduced by 80%', 'Infrastructure cost reduced by 35% via consolidation', 'Full DR capability with tested failover procedures'],
-    resultsFa: ['مدیریت هویت یکپارچه در ۸ زیرمجموعه', 'RTO از چند روز به ۴ ساعت کاهش یافت', 'حوادث امنیتی ۸۰٪ کاهش یافت', 'هزینه زیرساخت ۳۵٪ از طریق ادغام کاهش یافت', 'قابلیت DR کامل با رویه‌های Failover آزموده‌شده'],
-    tagsEn: ['Enterprise', 'Security', 'Virtualization', 'DR'],
-    tagsFa: ['سازمانی', 'امنیت', 'مجازی‌سازی', 'بازیابی'],
-  },
-  {
-    id: 'senso',
-    coverImage: '', gallery: [],
-    nameEn: 'Senso Restaurant Group',
-    nameFa: 'گروه رستوران سنسو',
-    client: 'Senso Group',
-    industryEn: 'Food & Beverage',
-    industryFa: 'غذا و نوشیدنی',
-    year: '2024',
-    color: '#818cf8',
-    icon: '🍷',
-    challengeEn: 'Upscale restaurant chain requiring premium WiFi experience for guests, CCTV integration, VoIP system for reservations, and compliance with data privacy requirements.',
-    challengeFa: 'زنجیره رستوران لوکس نیازمند تجربه WiFi ممتاز برای مهمانان، یکپارچه‌سازی دوربین مداربسته، سیستم VoIP برای رزرواسیون و رعایت الزامات حریم خصوصی داده.',
-    solutionEn: 'End-to-end infrastructure: Ubiquiti enterprise WiFi with guest portal, Asterisk VoIP PBX with extension routing, IP CCTV over dedicated VLAN, Sophos XG firewall with web filtering, and automated backup for POS data.',
-    solutionFa: 'زیرساخت کامل: WiFi سازمانی Ubiquiti با پورتال مهمان، PBX VoIP Asterisk با مسیریابی داخلی، CCTV IP روی VLAN اختصاصی، فایروال Sophos XG با فیلترینگ وب و پشتیبان‌گیری خودکار داده POS.',
-    technologies: ['Ubiquiti', 'Sophos XG', 'Asterisk PBX', 'IP CCTV', 'TrueNAS', 'Zabbix'],
-    resultsEn: ['Guest WiFi satisfaction score: 4.8/5', 'VoIP system handling 200+ daily calls', 'CCTV retention: 30 days across all cameras', 'POS backup: 15-minute RPO', 'Fully compliant data handling procedures'],
-    resultsFa: ['امتیاز رضایت WiFi مهمان: ۴.۸/۵', 'سیستم VoIP با +۲۰۰ تماس روزانه', 'نگهداری CCTV: ۳۰ روز روی تمام دوربین‌ها', 'پشتیبان POS: RPO 15 دقیقه', 'رویه‌های مدیریت داده کاملاً منطبق'],
-    tagsEn: ['VoIP', 'WiFi', 'Security', 'CCTV'],
-    tagsFa: ['VoIP', 'وای‌فای', 'امنیت', 'دوربین مداربسته'],
-  },
-  {
-    id: 'enterprise',
-    coverImage: '', gallery: [],
-    nameEn: 'Industrial Enterprise',
-    nameFa: 'مجتمع صنعتی',
-    client: 'Confidential Client',
-    industryEn: 'Industrial',
-    industryFa: 'صنعتی',
-    year: '2023',
-    color: '#06b6d4',
-    icon: '🏭',
-    challengeEn: 'Large industrial facility requiring OT/IT network convergence, 24/7 monitoring of critical production equipment, zero-downtime network migration, and multi-shift VoIP communication system.',
-    challengeFa: 'مجتمع صنعتی بزرگ نیازمند همگرایی شبکه OT/IT، پایش ۲۴/۷ تجهیزات تولیدی حیاتی، مهاجرت شبکه بدون توقف و سیستم ارتباطی VoIP چند شیفته.',
-    solutionEn: 'Designed OT/IT segmented network with industrial-grade switches, SCADA-compatible network architecture, Grafana-based production monitoring dashboard, and redundant Cisco core infrastructure with sub-second failover.',
-    solutionFa: 'طراحی شبکه تقسیم‌بندی‌شده OT/IT با سوئیچ‌های صنعتی، معماری شبکه سازگار با SCADA، داشبورد پایش تولید مبتنی بر Grafana و زیرساخت هسته‌ای افزونه Cisco با Failover زیر یک ثانیه.',
-    technologies: ['Cisco', 'Grafana', 'Prometheus', 'Industrial Switches', 'SCADA', 'VoIP'],
-    resultsEn: ['Zero production downtime during migration', 'Real-time visibility into 150+ production nodes', 'Sub-second network failover achieved', 'OT/IT convergence without security compromise', '40% reduction in network-related production stoppages'],
-    resultsFa: ['صفر توقف تولید در طول مهاجرت', 'دید لحظه‌ای به +۱۵۰ نود تولیدی', 'Failover شبکه زیر یک ثانیه محقق شد', 'همگرایی OT/IT بدون مصالحه امنیتی', 'کاهش ۴۰٪ توقف‌های تولید مرتبط با شبکه'],
-    tagsEn: ['Industrial', 'OT/IT', 'Monitoring', 'Cisco'],
-    tagsFa: ['صنعتی', 'OT/IT', 'پایش', 'سیسکو'],
-  },
-]
-
 function parseJsonArray(v: string | null | undefined): string[] {
   if (!v) return []
   try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
 }
 
+const FALLBACK_PROJECTS: DbProject[] = [
+  {
+    id: 1, slug: 'kenzo-restaurant', nameEn: 'Kenzo Restaurant Group', nameFa: 'گروه رستوران کنزو',
+    industryEn: 'Hospitality', industryFa: 'هتلداری',
+    clientEn: 'Kenzo Group', clientFa: 'گروه کنزو',
+    challengeEn: 'Multi-branch restaurant chain with outdated network causing POS outages and poor WiFi coverage across 5 locations.',
+    challengeFa: 'زنجیره رستوران با زیرساخت قدیمی که باعث قطعی POS و پوشش ضعیف WiFi در ۵ شعبه می‌شد.',
+    solutionEn: null, solutionFa: null,
+    resultsEn: JSON.stringify(['99.9% uptime across all branches', 'Zero POS outages post-deployment', '60% reduction in IT tickets']),
+    resultsFa: JSON.stringify(['آپتایم ۹۹.۹٪ در تمام شعب', 'صفر قطعی POS پس از استقرار', 'کاهش ۶۰٪ تیکت‌های IT']),
+    tagsEn: JSON.stringify(['MikroTik', 'Zabbix', 'VPN', 'VLAN', 'WiFi']),
+    tagsFa: JSON.stringify(['MikroTik', 'Zabbix', 'VPN', 'VLAN', 'WiFi']),
+    coverImage: null, gallery: null, color: '#f59e0b', year: '2023', featured: true,
+  },
+  {
+    id: 2, slug: 'popcorn-holding', nameEn: 'Popcorn Holding Co.', nameFa: 'هلدینگ پاپ‌کورن',
+    industryEn: 'Holding Company', industryFa: 'هلدینگ',
+    clientEn: 'Popcorn Holding', clientFa: 'هلدینگ پاپ‌کورن',
+    challengeEn: 'Holding company managing 8 subsidiaries with isolated IT, no centralized security, and zero disaster recovery.',
+    challengeFa: 'هلدینگ با ۸ زیرمجموعه دارای سیستم‌های مجزا، فاقد سیاست امنیتی متمرکز و DR.',
+    solutionEn: null, solutionFa: null,
+    resultsEn: JSON.stringify(['Unified identity across 8 subsidiaries', 'RTO from days → 4 hours', '80% reduction in security incidents']),
+    resultsFa: JSON.stringify(['هویت یکپارچه در ۸ زیرمجموعه', 'RTO از چند روز به ۴ ساعت', 'کاهش ۸۰٪ حوادث امنیتی']),
+    tagsEn: JSON.stringify(['Fortigate', 'VMware', 'Active Directory', 'Veeam', 'Cisco']),
+    tagsFa: JSON.stringify(['Fortigate', 'VMware', 'Active Directory', 'Veeam', 'Cisco']),
+    coverImage: null, gallery: null, color: '#10b981', year: '2024', featured: true,
+  },
+  {
+    id: 3, slug: 'senso-restaurant', nameEn: 'Senso Restaurant Group', nameFa: 'گروه رستوران سنسو',
+    industryEn: 'Food & Beverage', industryFa: 'غذا و نوشیدنی',
+    clientEn: 'Senso Group', clientFa: 'گروه سنسو',
+    challengeEn: 'Upscale restaurant requiring premium guest WiFi, CCTV integration, VoIP for reservations, and data privacy compliance.',
+    challengeFa: 'رستوران لوکس نیازمند WiFi ممتاز، دوربین مداربسته، VoIP رزروگیری و رعایت حریم خصوصی.',
+    solutionEn: null, solutionFa: null,
+    resultsEn: JSON.stringify(['Guest WiFi score 4.8/5', '200+ daily VoIP calls', '30-day CCTV retention']),
+    resultsFa: JSON.stringify(['امتیاز WiFi مهمان ۴.۸/۵', 'بیش از ۲۰۰ تماس VoIP روزانه', 'نگهداری CCTV ۳۰ روزه']),
+    tagsEn: JSON.stringify(['Ubiquiti', 'Sophos', 'Asterisk', 'CCTV', 'TrueNAS']),
+    tagsFa: JSON.stringify(['Ubiquiti', 'Sophos', 'Asterisk', 'CCTV', 'TrueNAS']),
+    coverImage: null, gallery: null, color: '#818cf8', year: '2024', featured: false,
+  },
+  {
+    id: 4, slug: 'industrial-enterprise', nameEn: 'Industrial Enterprise', nameFa: 'مجتمع صنعتی',
+    industryEn: 'Industrial', industryFa: 'صنعتی',
+    clientEn: 'Confidential Client', clientFa: 'مشتری محرمانه',
+    challengeEn: 'Industrial facility requiring OT/IT convergence, 24/7 monitoring of production equipment, and sub-second failover.',
+    challengeFa: 'مجتمع صنعتی نیازمند همگرایی OT/IT، پایش ۲۴/۷ تجهیزات تولیدی و Failover زیر یک ثانیه.',
+    solutionEn: null, solutionFa: null,
+    resultsEn: JSON.stringify(['Zero production downtime during migration', 'Sub-second network failover', '40% fewer network-related stoppages']),
+    resultsFa: JSON.stringify(['صفر توقف تولید در حین مهاجرت', 'Failover زیر یک ثانیه', 'کاهش ۴۰٪ توقف‌های شبکه‌ای']),
+    tagsEn: JSON.stringify(['Cisco', 'Grafana', 'SCADA', 'Industrial Switches', 'Prometheus']),
+    tagsFa: JSON.stringify(['Cisco', 'Grafana', 'SCADA', 'سوئیچ صنعتی', 'Prometheus']),
+    coverImage: null, gallery: null, color: '#06b6d4', year: '2023', featured: false,
+    isConfidential: true,
+  },
+]
+
 export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionProps) {
   const isRTL = locale === 'fa'
-
-  const PROJECTS_DATA: Project[] = (dbProjects && dbProjects.length > 0)
-    ? dbProjects.map((p) => ({
-        id: p.slug,
-        nameEn: p.nameEn,
-        nameFa: p.nameFa,
-        client: p.clientEn || p.nameEn,
-        industryEn: p.industryEn || '',
-        industryFa: p.industryFa || '',
-        year: p.year || '',
-        color: p.color || '#6366f1',
-        icon: '🏗️',
-        coverImage: p.coverImage || '',
-        gallery: parseJsonArray(p.gallery),
-        challengeEn: p.challengeEn || '',
-        challengeFa: p.challengeFa || '',
-        solutionEn: p.solutionEn || '',
-        solutionFa: p.solutionFa || '',
-        technologies: parseJsonArray(p.tagsEn),
-        resultsEn: parseJsonArray(p.resultsEn),
-        resultsFa: parseJsonArray(p.resultsFa),
-        tagsEn: parseJsonArray(p.tagsEn),
-        tagsFa: parseJsonArray(p.tagsFa),
-      }))
-    : PROJECTS
-
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [lightboxImg, setLightboxImg] = useState<string | null>(null)
+  const projects = (dbProjects && dbProjects.length > 0) ? dbProjects : FALLBACK_PROJECTS
+  const featured = projects.filter(p => p.featured)
+  const rest = projects.filter(p => !p.featured)
+  const display = [...featured, ...rest].slice(0, 6)
 
   return (
-    <section className="section-padding relative overflow-hidden" id="projects">
-      <div className="absolute inset-0 grid-bg" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-DEFAULT/30 to-transparent" />
+    <section className="section-padding relative overflow-hidden" id="case-studies">
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #07070d 0%, #0a0a14 50%, #07070d 100%)' }} />
+      <div className="absolute inset-0 grid-bg opacity-40" />
+      <div className="absolute top-0 inset-x-0 accent-divider" />
 
-      <div className="container-site relative z-10">
+      <div className="container-site relative z-10" dir={isRTL ? 'rtl' : 'ltr'}>
+        {/* Header */}
         <motion.div
           variants={staggerFast}
           initial="hidden"
@@ -184,253 +112,139 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
           </motion.h2>
           <motion.p variants={blurReveal} className="section-subtitle max-w-2xl mx-auto">
             {isRTL
-              ? 'تحول زیرساخت در صنایع هتلداری، هلدینگ، غذا و نوشیدنی و صنعتی — با اثرات تجاری مستند.'
-              : 'Infrastructure transformations across hospitality, holding companies, F&B, and industrial sectors — with documented business outcomes.'}
+              ? 'هر پروژه نقطه‌ای از تحول کسب‌وکار است — با معماری مستند، اثرات واقعی و درس‌های آموخته.'
+              : 'Every engagement is a documented business transformation — with full architecture, measured outcomes, and lessons learned.'}
           </motion.p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {PROJECTS_DATA.map((project, i) => (
-            <motion.div
-              key={project.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-            >
-              <motion.div
-                className="service-card cursor-pointer group"
-                onClick={() => setSelectedProject(project)}
+        {/* Projects grid */}
+        <motion.div
+          variants={staggerFast}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
+        >
+          {display.map((p) => {
+            const name = isRTL ? p.nameFa : p.nameEn
+            const industry = isRTL ? p.industryFa : p.industryEn
+            const client = (isRTL ? p.clientFa : p.clientEn) || ''
+            const summary = isRTL
+              ? (p.executiveSummaryFa || p.challengeFa || '')
+              : (p.executiveSummaryEn || p.challengeEn || '')
+            const tags = parseJsonArray(p.tagsEn)
+            const results = parseJsonArray(isRTL ? p.resultsFa : p.resultsEn)
+            const color = p.color || '#6366f1'
+
+            return (
+              <motion.article
+                key={p.slug}
+                variants={springUp}
+                className="group relative overflow-hidden rounded-2xl transition-all duration-300"
+                style={{ background: 'rgba(10,10,18,0.9)', border: '1px solid rgba(255,255,255,0.06)' }}
                 whileHover={{ y: -4 }}
-                transition={{ duration: 0.2 }}
-                dir={isRTL ? 'rtl' : 'ltr'}
               >
-                <div
-                  className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-                  style={{ background: `linear-gradient(90deg, ${project.color}, transparent)` }}
-                />
-                {project.coverImage && (
-                  <div className="w-full h-36 rounded-xl overflow-hidden mb-4 -mt-1">
-                    <img src={project.coverImage} alt={project.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                )}
-                <div className="flex items-start gap-4 mb-4">
-                  <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl flex-shrink-0"
-                    style={{ background: `${project.color}15`, border: `1px solid ${project.color}30` }}
-                  >
-                    {project.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-text-primary group-hover:text-accent transition-colors">
-                      {isRTL ? project.nameFa : project.nameEn}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-text-muted">
-                        {isRTL ? project.industryFa : project.industryEn}
-                      </span>
-                      <span className="text-text-muted/40">•</span>
-                      <span className="text-xs font-mono" style={{ color: project.color }}>{project.year}</span>
+                {/* Accent bar */}
+                <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${color}, ${color}60, transparent)` }} />
+
+                {/* Visual header */}
+                <div className="h-32 relative overflow-hidden flex items-center justify-center" style={{ background: `${color}08` }}>
+                  {p.coverImage ? (
+                    <img src={p.coverImage} alt={name} className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <div className="text-4xl font-black opacity-15 tracking-tighter" style={{ color }}>
+                        {name.split(' ').map((w: string) => w[0]).join('').slice(0, 3)}
+                      </div>
+                      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse 80% 80% at 50% 100%, ${color}20, transparent)` }} />
+                    </>
+                  )}
+                  {p.isConfidential && (
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs"
+                      style={{ background: 'rgba(0,0,0,0.6)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+                      {isRTL ? 'محرمانه' : 'Confidential'}
                     </div>
-                  </div>
+                  )}
                 </div>
-                <p className="text-sm text-text-secondary leading-relaxed mb-4 line-clamp-3">
-                  {isRTL ? project.challengeFa : project.challengeEn}
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {(isRTL ? project.tagsFa : project.tagsEn).map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-0.5 text-xs rounded-md"
-                      style={{ background: `${project.color}15`, color: project.color, border: `1px solid ${project.color}25` }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div
-                  className="flex items-center justify-between gap-2 pt-3 border-t border-border/50"
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                >
-                  <div className="flex flex-wrap gap-1 min-w-0">
-                    {project.technologies.slice(0, 3).map((tech) => (
-                      <span key={tech} className="px-2 py-0.5 text-xs bg-surface border border-border rounded-md font-mono whitespace-nowrap">
-                        {tech}
-                      </span>
-                    ))}
-                    {project.technologies.length > 3 && (
-                      <span className="px-2 py-0.5 text-xs bg-surface border border-border rounded-md text-text-muted">
-                        +{project.technologies.length - 3}
+
+                <div className="p-5">
+                  {/* Meta */}
+                  <div className="flex items-center gap-2 mb-3">
+                    {industry && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: `${color}15`, color, border: `1px solid ${color}25` }}>
+                        {industry}
                       </span>
                     )}
+                    {p.year && <span className="text-xs text-text-muted ml-auto">{p.year}</span>}
                   </div>
-                  <span className="text-xs text-accent font-medium group-hover:text-accent-hover transition-colors whitespace-nowrap flex-shrink-0">
-                    {isRTL ? '← مشاهده موردی' : 'View Case Study →'}
-                  </span>
-                </div>
-              </motion.div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
 
-      {/* Modal */}
-      <AnimatePresence>
-        {selectedProject && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedProject(null)}
-          >
-            <div className="absolute inset-0 bg-background/90 backdrop-blur-md" />
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative z-10 w-full max-w-2xl max-h-[85vh] overflow-y-auto glass-card p-8 rounded-2xl"
-              style={{ border: `1px solid ${selectedProject.color}30` }}
-              dir={isRTL ? 'rtl' : 'ltr'}
-            >
-              <button
-                onClick={() => setSelectedProject(null)}
-                className="absolute top-4 end-4 w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
-              >
-                ✕
-              </button>
-              <div className="flex items-center gap-4 mb-6">
-                <div
-                  className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl flex-shrink-0"
-                  style={{ background: `${selectedProject.color}15`, border: `1px solid ${selectedProject.color}30` }}
-                >
-                  {selectedProject.icon}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-text-primary">
-                    {isRTL ? selectedProject.nameFa : selectedProject.nameEn}
-                  </h2>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-sm text-text-muted">{selectedProject.client}</span>
-                    <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: `${selectedProject.color}20`, color: selectedProject.color }}>
-                      {selectedProject.year}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-semibold text-text-muted uppercase tracking-widest mb-2">
-                    {isRTL ? 'چالش' : 'Challenge'}
-                  </h4>
-                  <p className="text-text-secondary leading-relaxed">
-                    {isRTL ? selectedProject.challengeFa : selectedProject.challengeEn}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-text-muted uppercase tracking-widest mb-2">
-                    {isRTL ? 'راه‌حل' : 'Solution'}
-                  </h4>
-                  <p className="text-text-secondary leading-relaxed">
-                    {isRTL ? selectedProject.solutionFa : selectedProject.solutionEn}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-text-muted uppercase tracking-widest mb-3">
-                    {isRTL ? 'تکنولوژی‌های استفاده‌شده' : 'Technologies Used'}
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProject.technologies.map((tech) => (
-                      <span
-                        key={tech}
-                        className="px-3 py-1 text-sm rounded-lg font-medium"
-                        style={{ background: `${selectedProject.color}15`, color: selectedProject.color, border: `1px solid ${selectedProject.color}25` }}
-                      >
-                        {tech}
+                  <h3 className="font-bold text-text-primary mb-2 leading-tight group-hover:text-accent transition-colors">
+                    {name}
+                  </h3>
+
+                  {!p.isConfidential && client && (
+                    <p className="text-xs text-text-muted mb-3">{client}</p>
+                  )}
+
+                  {summary && (
+                    <p className="text-sm text-text-secondary leading-relaxed mb-3 line-clamp-2">{summary}</p>
+                  )}
+
+                  {/* Top result */}
+                  {results[0] && (
+                    <div className="flex items-start gap-1.5 mb-4">
+                      <span className="text-emerald-400 text-xs mt-0.5 shrink-0">✓</span>
+                      <p className="text-xs text-text-muted">{results[0]}</p>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {tags.slice(0, 3).map(t => (
+                      <span key={t} className="text-xs px-1.5 py-0.5 rounded text-text-muted"
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        {t}
                       </span>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-text-muted uppercase tracking-widest mb-3">
-                    {isRTL ? 'نتایج و دستاوردها' : 'Results & Outcomes'}
-                  </h4>
-                  <ul className="space-y-2">
-                    {(isRTL ? selectedProject.resultsFa : selectedProject.resultsEn).map((result) => (
-                      <li key={result} className="flex items-start gap-2 text-sm text-text-secondary">
-                        <span
-                          className="mt-1 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ background: `${selectedProject.color}20` }}
-                        >
-                          <span style={{ color: selectedProject.color, fontSize: '10px' }}>✓</span>
-                        </span>
-                        {result}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              {/* Gallery */}
-              {selectedProject.gallery.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-text-muted uppercase tracking-widest mb-3">
-                    {isRTL ? 'تصاویر پروژه' : 'Project Gallery'}
-                  </h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedProject.gallery.map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setLightboxImg(img)}
-                        className="rounded-lg overflow-hidden border border-border hover:border-accent/50 transition-colors"
-                      >
-                        <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-24 object-cover hover:scale-105 transition-transform duration-300" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              <div className="mt-8 pt-6 border-t border-border">
-                <a
-                  href="/consultation"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105"
-                  style={{ background: `linear-gradient(135deg, ${selectedProject.color}, ${selectedProject.color}cc)`, boxShadow: `0 8px 24px ${selectedProject.color}30` }}
-                >
-                  {isRTL ? 'مشاوره درباره پروژه مشابه' : 'Discuss a Similar Project'}
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </a>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <Link
+                    href={`/${locale}/case-studies/${p.slug}`}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all"
+                    style={{ color }}
+                  >
+                    {isRTL ? 'مشاهده مطالعه موردی' : 'View Case Study'}
+                    <span className="transition-transform group-hover:translate-x-1">{isRTL ? '←' : '→'}</span>
+                  </Link>
+                </div>
+              </motion.article>
+            )
+          })}
+        </motion.div>
 
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightboxImg && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
-            onClick={() => setLightboxImg(null)}
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.4 }}
+          className="text-center"
+        >
+          <Link
+            href={`/${locale}/case-studies`}
+            className="btn-enterprise"
           >
-            <button className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full text-white text-xl flex items-center justify-center transition-colors">✕</button>
-            <motion.img
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              src={lightboxImg}
-              alt="Gallery"
-              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {isRTL ? 'مشاهده همه مطالعات موردی' : 'View All Case Studies'}
+            <span>{isRTL ? '←' : '→'}</span>
+          </Link>
+          <p className="text-sm text-text-muted mt-4">
+            {isRTL
+              ? `${projects.length}+ مطالعه موردی سازمانی مستند`
+              : `${projects.length}+ documented enterprise case studies`}
+          </p>
+        </motion.div>
+      </div>
     </section>
   )
 }
