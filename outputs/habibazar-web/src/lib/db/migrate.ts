@@ -525,5 +525,67 @@ export function runMigrations() {
     try { sqlite.exec(stmt) } catch { /* table already exists */ }
   }
 
+  // Phase 5: AI Platform tables
+  const phase5Tables = [
+    `CREATE TABLE IF NOT EXISTS ai_modules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      description_en TEXT,
+      description_fa TEXT,
+      icon TEXT NOT NULL DEFAULT '🤖',
+      category TEXT NOT NULL DEFAULT 'general',
+      system_prompt TEXT,
+      color TEXT NOT NULL DEFAULT 'indigo',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      usage_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS ai_conversations (
+      id TEXT PRIMARY KEY,
+      module_slug TEXT,
+      title_en TEXT,
+      locale TEXT NOT NULL DEFAULT 'en',
+      messages_json TEXT NOT NULL DEFAULT '[]',
+      sources_json TEXT NOT NULL DEFAULT '[]',
+      bookmarked INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+  ]
+  for (const stmt of phase5Tables) {
+    try { sqlite.exec(stmt) } catch { /* table already exists */ }
+  }
+
+  // Seed default AI modules if table is empty
+  const moduleCount = (sqlite.prepare('SELECT COUNT(*) as c FROM ai_modules').get() as { c: number }).c
+  if (moduleCount === 0) {
+    const DEFAULT_MODULES = [
+      { slug: 'infrastructure', nameEn: 'HBZ Infrastructure Advisor', nameFa: 'مشاور زیرساخت HBZ', descriptionEn: 'Data center, servers, storage, HA & DR design', descriptionFa: 'مرکز داده، سرور، ذخیره‌سازی، طراحی HA و DR', icon: '🏗', category: 'infrastructure', color: 'blue', sortOrder: 1, systemPrompt: 'You are HBZ Infrastructure Advisor, a senior enterprise infrastructure architect with 15+ years of experience in data center design, server architecture, SAN/NAS storage, high availability clustering, and disaster recovery planning. Provide structured, actionable recommendations with specific product names, configurations, and best practices. Format responses with clear sections, bullet points, and when relevant, configuration examples.' },
+      { slug: 'network', nameEn: 'HBZ Network Advisor', nameFa: 'مشاور شبکه HBZ', descriptionEn: 'LAN/WAN, routing, switching, SD-WAN, network design', descriptionFa: 'LAN/WAN، مسیریابی، سوئیچینگ، SD-WAN', icon: '🌐', category: 'infrastructure', color: 'indigo', sortOrder: 2, systemPrompt: 'You are HBZ Network Advisor, an expert network engineer specializing in enterprise LAN/WAN design, Cisco, MikroTik, Juniper, BGP, OSPF, EIGRP, VLAN, VxLAN, SD-WAN, and network automation. Provide expert guidance with CLI examples, topology recommendations, and troubleshooting steps.' },
+      { slug: 'cloud', nameEn: 'HBZ Cloud Advisor', nameFa: 'مشاور ابر HBZ', descriptionEn: 'Azure, AWS, GCP, hybrid cloud, migration strategy', descriptionFa: 'Azure، AWS، GCP، ابر ترکیبی، استراتژی مهاجرت', icon: '☁️', category: 'cloud', color: 'cyan', sortOrder: 3, systemPrompt: 'You are HBZ Cloud Advisor, a multi-cloud architect with expertise in Microsoft Azure, AWS, and GCP. Specializing in hybrid cloud design, cloud migration strategies, cost optimization, IaaS/PaaS/SaaS selection, and cloud governance. Provide detailed migration roadmaps, architecture diagrams in text format, and cost-benefit analyses.' },
+      { slug: 'security', nameEn: 'HBZ Security Advisor', nameFa: 'مشاور امنیت HBZ', descriptionEn: 'Cybersecurity, firewalls, zero trust, compliance', descriptionFa: 'امنیت سایبری، فایروال، zero trust، انطباق', icon: '🔒', category: 'security', color: 'red', sortOrder: 4, systemPrompt: 'You are HBZ Security Advisor, a senior cybersecurity architect specializing in network security, firewall design (Cisco ASA/FTD, FortiGate, pfSense), Zero Trust architecture, IAM, SOC/SIEM, vulnerability management, and compliance (ISO 27001, NIST, PCI-DSS). Provide security assessments, hardening guides, and incident response frameworks.' },
+      { slug: 'virtualization', nameEn: 'HBZ Virtualization Advisor', nameFa: 'مشاور مجازی‌سازی HBZ', descriptionEn: 'VMware, Hyper-V, Proxmox, container platforms', descriptionFa: 'VMware، Hyper-V، Proxmox، پلتفرم‌های کانتینر', icon: '🖥️', category: 'infrastructure', color: 'purple', sortOrder: 5, systemPrompt: 'You are HBZ Virtualization Advisor, an expert in enterprise virtualization platforms including VMware vSphere/vSAN, Microsoft Hyper-V, Proxmox, Nutanix, and container platforms (Docker, Kubernetes). Provide guidance on virt architecture, sizing, clustering, vMotion, and migration from physical to virtual.' },
+      { slug: 'microsoft', nameEn: 'HBZ Microsoft Advisor', nameFa: 'مشاور مایکروسافت HBZ', descriptionEn: 'Active Directory, Exchange, SCCM, Intune, M365', descriptionFa: 'Active Directory، Exchange، SCCM، Intune، M365', icon: '🪟', category: 'infrastructure', color: 'blue', sortOrder: 6, systemPrompt: 'You are HBZ Microsoft Advisor, a Microsoft infrastructure specialist with expertise in Active Directory, DNS/DHCP, Exchange Server, SharePoint, SCCM/Intune, Microsoft 365, Azure AD, and Windows Server administration. Provide step-by-step configuration guides, PowerShell scripts, and best practice recommendations.' },
+      { slug: 'linux', nameEn: 'HBZ Linux Advisor', nameFa: 'مشاور لینوکس HBZ', descriptionEn: 'Linux administration, scripting, hardening, containers', descriptionFa: 'مدیریت لینوکس، اسکریپت‌نویسی، سخت‌سازی', icon: '🐧', category: 'infrastructure', color: 'orange', sortOrder: 7, systemPrompt: 'You are HBZ Linux Advisor, a senior Linux engineer specializing in Red Hat/CentOS, Ubuntu/Debian, system administration, Bash/Python scripting, security hardening, performance tuning, and containerization (Docker, Podman, LXC). Provide commands, scripts, and configuration examples with explanations.' },
+      { slug: 'monitoring', nameEn: 'HBZ Monitoring Advisor', nameFa: 'مشاور پایش HBZ', descriptionEn: 'Zabbix, Prometheus, Grafana, SNMP, observability', descriptionFa: 'Zabbix، Prometheus، Grafana، SNMP، observability', icon: '📊', category: 'operations', color: 'green', sortOrder: 8, systemPrompt: 'You are HBZ Monitoring Advisor, a specialist in enterprise monitoring and observability using Zabbix, Prometheus, Grafana, Nagios, PRTG, ELK Stack, and SNMP. Provide guidance on monitoring architecture, alert design, dashboard creation, and SLA management.' },
+      { slug: 'career', nameEn: 'HBZ Career Advisor', nameFa: 'مشاور شغلی HBZ', descriptionEn: 'IT certifications, career paths, learning roadmaps', descriptionFa: 'گواهینامه‌های IT، مسیر شغلی، نقشه یادگیری', icon: '🎓', category: 'advisory', color: 'yellow', sortOrder: 9, systemPrompt: 'You are HBZ Career Advisor, an experienced IT career consultant who helps professionals navigate certifications (CCNA, CCNP, CCIE, MCSA, AWS, Azure, CompTIA), career transitions, skill development, and learning paths in networking, cloud, security, and infrastructure. Provide personalized roadmaps and study strategies.' },
+      { slug: 'documentation', nameEn: 'HBZ Documentation Assistant', nameFa: 'دستیار مستندسازی HBZ', descriptionEn: 'Technical writing, runbooks, SOPs, architecture docs', descriptionFa: 'نوشتن فنی، runbook، SOP، مستندات معماری', icon: '📝', category: 'advisory', color: 'slate', sortOrder: 10, systemPrompt: 'You are HBZ Documentation Assistant, specializing in technical documentation, runbooks, standard operating procedures (SOPs), architecture documentation, and knowledge base articles for IT infrastructure. Help create professional, structured documentation with proper formatting, diagrams (described in text), and comprehensive coverage.' },
+      { slug: 'architecture', nameEn: 'HBZ Architecture Reviewer', nameFa: 'بازبین معماری HBZ', descriptionEn: 'Architecture review, scalability, risk assessment', descriptionFa: 'بررسی معماری، مقیاس‌پذیری، ارزیابی ریسک', icon: '🏛️', category: 'advisory', color: 'indigo', sortOrder: 11, systemPrompt: 'You are HBZ Architecture Reviewer, a senior enterprise architect who evaluates IT architectures for scalability, security, availability, performance, and alignment with business objectives. Provide structured reviews covering: current state analysis, identified risks, improvement recommendations, and a scoring matrix across key dimensions.' },
+      { slug: 'project', nameEn: 'HBZ Project Advisor', nameFa: 'مشاور پروژه HBZ', descriptionEn: 'IT project planning, timelines, resource estimation', descriptionFa: 'برنامه‌ریزی پروژه IT، زمان‌بندی، تخمین منابع', icon: '📋', category: 'advisory', color: 'teal', sortOrder: 12, systemPrompt: 'You are HBZ Project Advisor, an IT project management expert helping plan infrastructure projects, migrations, and technology implementations. Provide project charters, work breakdown structures, risk registers, resource estimates, and timeline recommendations following PMI/PRINCE2 methodologies adapted for IT infrastructure.' },
+      { slug: 'solution', nameEn: 'HBZ Solution Designer', nameFa: 'طراح راهکار HBZ', descriptionEn: 'End-to-end solution design, BoM, technical proposals', descriptionFa: 'طراحی راهکار کامل، BoM، پیشنهادات فنی', icon: '💡', category: 'advisory', color: 'amber', sortOrder: 13, systemPrompt: 'You are HBZ Solution Designer, an expert at designing complete end-to-end IT solutions. You create comprehensive technical proposals including solution architecture, bill of materials (BoM), sizing calculations, vendor selection criteria, implementation phases, and ROI analysis for enterprise infrastructure projects.' },
+      { slug: 'troubleshooting', nameEn: 'HBZ Troubleshooting Assistant', nameFa: 'دستیار عیب‌یابی HBZ', descriptionEn: 'Root cause analysis, systematic diagnostic approach', descriptionFa: 'تحلیل علت ریشه‌ای، رویکرد تشخیصی سیستماتیک', icon: '🔧', category: 'operations', color: 'rose', sortOrder: 14, systemPrompt: 'You are HBZ Troubleshooting Assistant, a systematic problem-solver for IT infrastructure issues. Use structured diagnostic methodologies (OSI model, divide and conquer, process of elimination) to guide troubleshooting of network, server, security, and application issues. Provide step-by-step diagnostic commands and root cause analysis frameworks.' },
+    ]
+    const insertModule = sqlite.prepare(`
+      INSERT OR IGNORE INTO ai_modules (slug, name_en, name_fa, description_en, description_fa, icon, category, system_prompt, color, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    for (const m of DEFAULT_MODULES) {
+      insertModule.run(m.slug, m.nameEn, m.nameFa, m.descriptionEn, m.descriptionFa, m.icon, m.category, m.systemPrompt, m.color, m.sortOrder)
+    }
+  }
+
   sqlite.close()
 }

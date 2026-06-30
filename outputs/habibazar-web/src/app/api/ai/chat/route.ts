@@ -1,7 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
-import { siteSettings } from '@/lib/db/schema'
+import { siteSettings, aiModules, aiKnowledgeBase } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+
+type KbSource = { id: number; title: string; excerpt: string }
+
+function retrieveContext(userMessage: string, locale: string): { contextBlock: string; sources: KbSource[] } {
+  try {
+    const db = getDb()
+    const terms = userMessage.toLowerCase().split(/\s+/).filter(t => t.length > 2)
+    const items = db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true)).all()
+    const scored = items.map(item => {
+      const haystack = `${item.title} ${item.content || ''} ${item.tags || ''}`.toLowerCase()
+      const score = terms.reduce((s, t) => s + (haystack.includes(t) ? 1 : 0), 0)
+      return { ...item, score: score + item.priority * 0.1 }
+    }).filter(i => i.score > 0).sort((a, b) => b.score - a.score).slice(0, 4)
+
+    if (scored.length === 0) return { contextBlock: '', sources: [] }
+
+    const sources: KbSource[] = scored.map(i => ({ id: i.id, title: i.title, excerpt: (i.content || '').slice(0, 120) }))
+    const contextBlock = `\n\n--- KNOWLEDGE BASE CONTEXT ---\n${scored.map((item, idx) => `[${idx + 1}] ${item.title}: ${(item.content || '').slice(0, 600)}`).join('\n\n')}\n--- END CONTEXT ---\n\nWhen relevant, reference the above context and cite sources using [1], [2], etc.`
+    return { contextBlock, sources }
+  } catch {
+    return { contextBlock: '', sources: [] }
+  }
+}
 
 function getSetting(db: ReturnType<typeof getDb>, key: string): string {
   const row = db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
@@ -81,7 +104,7 @@ async function callGrok(apiKey: string, apiUrl: string, model: string, messages:
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, locale, chatContext } = await req.json() as { messages: { role: string; content: string }[]; locale?: string; chatContext?: string }
+    const { messages, locale, chatContext, moduleSlug } = await req.json() as { messages: { role: string; content: string }[]; locale?: string; chatContext?: string; moduleSlug?: string }
     const userContext = chatContext || ''
 
     const db = getDb()
@@ -95,12 +118,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI API key not configured' }, { status: 503 })
     }
 
+    // Load module system prompt
+    let modulePrompt = ''
+    if (moduleSlug) {
+      const mod = db.select().from(aiModules).where(eq(aiModules.slug, moduleSlug)).get()
+      if (mod?.systemPrompt) modulePrompt = mod.systemPrompt
+      // Increment usage count
+      db.update(aiModules).set({ usageCount: (mod?.usageCount ?? 0) + 1 }).where(eq(aiModules.slug, moduleSlug)).run()
+    }
+
+    // RAG: retrieve relevant knowledge base context
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || ''
+    const { contextBlock, sources } = retrieveContext(lastUserMsg, locale || 'en')
+
     const isFA = locale === 'fa'
     const defaultSystemPrompt = isFA
-      ? 'شما دستیار هوشمند HBZ هستید. به سوالات کاربران درباره خدمات زیرساخت شبکه، امنیت، و مشاوره حسین حبیب‌آذر پاسخ دهید. پاسخ‌ها را کوتاه و مفید نگه دارید.'
-      : 'You are the HBZ AI assistant. Help users with questions about network infrastructure services, security, and consultations by Husein Habibazar. Keep responses concise and helpful.'
-    const basePrompt = customSystemPrompt || defaultSystemPrompt
-    const systemPrompt = userContext ? `${basePrompt}\n\nUser info: ${userContext}` : basePrompt
+      ? 'شما HBZ AI Platform هستید — پلتفرم هوش مصنوعی سازمانی HBZ Technology. متخصص در زیرساخت IT، شبکه، امنیت، ابر، و مشاوره فناوری. پاسخ‌ها را حرفه‌ای، ساختارمند، و مفید نگه دارید.'
+      : 'You are HBZ AI Platform — the enterprise AI advisor of HBZ Technology. You are an expert in IT infrastructure, networking, cybersecurity, cloud, virtualization, and technology consulting. Provide professional, structured, and actionable responses.'
+    const basePrompt = modulePrompt || customSystemPrompt || defaultSystemPrompt
+    const systemPrompt = [
+      basePrompt,
+      userContext ? `\nUser context: ${userContext}` : '',
+      contextBlock,
+    ].join('')
 
     let reply = ''
 
@@ -134,7 +174,7 @@ export async function POST(req: NextRequest) {
         break
     }
 
-    return NextResponse.json({ reply })
+    return NextResponse.json({ reply, sources })
   } catch (err) {
     console.error('AI chat error:', err)
     return NextResponse.json(

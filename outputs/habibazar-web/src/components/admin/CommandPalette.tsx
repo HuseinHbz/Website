@@ -41,7 +41,9 @@ const COMMANDS: Command[] = [
   { id: 'consultations', label: 'Consultations', labelFa: 'مشاوره‌ها', icon: '◎', href: '/admin/consultations', group: 'Requests', groupFa: 'درخواست‌ها', keywords: 'consultations bookings' },
   // Media & AI
   { id: 'media', label: 'Media Center', labelFa: 'مرکز رسانه', icon: '▤', href: '/admin/media', group: 'Media & AI', groupFa: 'رسانه و هوش مصنوعی', keywords: 'media images files upload' },
-  { id: 'ai-kb', label: 'AI Knowledge Center', labelFa: 'مرکز دانش هوش مصنوعی', icon: '🤖', href: '/admin/ai-kb', group: 'Media & AI', groupFa: 'رسانه و هوش مصنوعی', keywords: 'ai knowledge rag vector' },
+  { id: 'ai-control', label: 'AI Control Center', labelFa: 'مرکز کنترل هوش مصنوعی', icon: '🤖', href: '/admin/ai-control', group: 'Media & AI', groupFa: 'رسانه و هوش مصنوعی', keywords: 'ai modules knowledge analytics settings provider' },
+  { id: 'ai-kb', label: 'AI Knowledge Base', labelFa: 'پایگاه دانش هوش مصنوعی', icon: '📚', href: '/admin/ai-kb', group: 'Media & AI', groupFa: 'رسانه و هوش مصنوعی', keywords: 'ai knowledge rag vector documents' },
+  { id: 'ai-platform', label: 'Open AI Platform', labelFa: 'باز کردن پلتفرم هوش مصنوعی', icon: '✦', href: '/en/ai', group: 'Quick Actions', groupFa: 'اقدامات سریع', keywords: 'ai platform chat advisor' },
   // System
   { id: 'seo', label: 'SEO Control Center', labelFa: 'مرکز کنترل سئو', icon: '◎', href: '/admin/seo', group: 'System', groupFa: 'سیستم', keywords: 'seo meta tags sitemap' },
   { id: 'settings', label: 'System Settings', labelFa: 'تنظیمات سیستم', icon: '⚙', href: '/admin/settings', group: 'System', groupFa: 'سیستم', keywords: 'settings config brand' },

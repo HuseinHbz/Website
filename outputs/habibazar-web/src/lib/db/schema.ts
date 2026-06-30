@@ -388,6 +388,37 @@ export const forms = sqliteTable('forms', {
 
 export type Form = typeof forms.$inferSelect
 
+// ─── AI Platform ─────────────────────────────────────────────────────────────
+
+export const aiModules = sqliteTable('ai_modules', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa').notNull(),
+  descriptionEn: text('description_en'),
+  descriptionFa: text('description_fa'),
+  icon: text('icon').notNull().default('🤖'),
+  category: text('category').notNull().default('general'),
+  systemPrompt: text('system_prompt'),
+  color: text('color').notNull().default('indigo'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  usageCount: integer('usage_count').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export const aiConversations = sqliteTable('ai_conversations', {
+  id: text('id').primaryKey(),
+  moduleSlug: text('module_slug'),
+  titleEn: text('title_en'),
+  locale: text('locale').notNull().default('en'),
+  messagesJson: text('messages_json').notNull().default('[]'),
+  sourcesJson: text('sources_json').notNull().default('[]'),
+  bookmarked: integer('bookmarked', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+})
+
 // ─── Redirects ────────────────────────────────────────────────────────────────
 
 export const redirects = sqliteTable('redirects', {
@@ -568,3 +599,5 @@ export type Section = typeof sections.$inferSelect
 export type SectionVersion = typeof sectionVersions.$inferSelect
 export type Page = typeof pages.$inferSelect
 export type PageSection = typeof pageSections.$inferSelect
+export type AiModule = typeof aiModules.$inferSelect
+export type AiConversation = typeof aiConversations.$inferSelect

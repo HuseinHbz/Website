@@ -45,7 +45,8 @@ const NAV = [
     group: { en: 'Media & AI', fa: 'رسانه و هوش مصنوعی' },
     items: [
       { labelEn: 'Media Center', labelFa: 'مرکز رسانه', href: '/admin/media', icon: '▤' },
-      { labelEn: 'AI Knowledge Center', labelFa: 'مرکز دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '🤖' },
+      { labelEn: 'AI Control Center', labelFa: 'مرکز کنترل هوش مصنوعی', href: '/admin/ai-control', icon: '🤖' },
+      { labelEn: 'AI Knowledge Base', labelFa: 'پایگاه دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '📚' },
     ],
   },
   {
