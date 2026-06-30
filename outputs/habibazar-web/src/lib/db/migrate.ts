@@ -355,6 +355,74 @@ export function runMigrations() {
       user_agent TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS sections (
+      id TEXT PRIMARY KEY,
+      section_type TEXT NOT NULL,
+      variant TEXT NOT NULL DEFAULT 'default',
+      title_en TEXT,
+      title_fa TEXT,
+      subtitle_en TEXT,
+      subtitle_fa TEXT,
+      content_en TEXT,
+      content_fa TEXT,
+      theme TEXT NOT NULL DEFAULT 'dark',
+      bg_color TEXT,
+      bg_image TEXT,
+      bg_overlay REAL DEFAULT 0,
+      media_url TEXT,
+      media_alt TEXT,
+      animation_in TEXT DEFAULT 'fade',
+      visibility_rules TEXT,
+      responsive_config TEXT,
+      seo_title TEXT,
+      seo_description TEXT,
+      extra_data TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+      scheduled_at TEXT,
+      archived_at TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id),
+      updated_by TEXT REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS section_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      section_id TEXT NOT NULL REFERENCES sections(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      snapshot TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS pages (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      title_en TEXT NOT NULL,
+      title_fa TEXT NOT NULL,
+      description_en TEXT,
+      description_fa TEXT,
+      seo_title TEXT,
+      seo_description TEXT,
+      og_image TEXT,
+      layout TEXT NOT NULL DEFAULT 'default',
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+      published_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id),
+      updated_by TEXT REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS page_sections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      section_id TEXT NOT NULL REFERENCES sections(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
+    );
   `)
 
   // ── Column additions for existing DBs ────────────────────────────────────

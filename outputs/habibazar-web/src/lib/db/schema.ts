@@ -392,6 +392,76 @@ export const auditLogs = sqliteTable('audit_logs', {
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 })
 
+// ─── Section Builder ──────────────────────────────────────────────────────────
+
+export const sections = sqliteTable('sections', {
+  id: text('id').primaryKey(),
+  sectionType: text('section_type').notNull(),
+  variant: text('variant').notNull().default('default'),
+  titleEn: text('title_en'),
+  titleFa: text('title_fa'),
+  subtitleEn: text('subtitle_en'),
+  subtitleFa: text('subtitle_fa'),
+  contentEn: text('content_en'),
+  contentFa: text('content_fa'),
+  theme: text('theme').notNull().default('dark'),
+  bgColor: text('bg_color'),
+  bgImage: text('bg_image'),
+  bgOverlay: real('bg_overlay').default(0),
+  mediaUrl: text('media_url'),
+  mediaAlt: text('media_alt'),
+  animationIn: text('animation_in').default('fade'),
+  visibilityRules: text('visibility_rules'),
+  responsiveConfig: text('responsive_config'),
+  seoTitle: text('seo_title'),
+  seoDescription: text('seo_description'),
+  extraData: text('extra_data'),
+  status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
+  scheduledAt: text('scheduled_at'),
+  archivedAt: text('archived_at'),
+  version: integer('version').notNull().default(1),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdBy: text('created_by').references(() => users.id),
+  updatedBy: text('updated_by').references(() => users.id),
+})
+
+export const sectionVersions = sqliteTable('section_versions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  sectionId: text('section_id').notNull().references(() => sections.id, { onDelete: 'cascade' }),
+  version: integer('version').notNull(),
+  snapshot: text('snapshot').notNull(),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdBy: text('created_by').references(() => users.id),
+})
+
+export const pages = sqliteTable('pages', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  titleEn: text('title_en').notNull(),
+  titleFa: text('title_fa').notNull(),
+  descriptionEn: text('description_en'),
+  descriptionFa: text('description_fa'),
+  seoTitle: text('seo_title'),
+  seoDescription: text('seo_description'),
+  ogImage: text('og_image'),
+  layout: text('layout').notNull().default('default'),
+  status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
+  publishedAt: text('published_at'),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdBy: text('created_by').references(() => users.id),
+  updatedBy: text('updated_by').references(() => users.id),
+})
+
+export const pageSections = sqliteTable('page_sections', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  pageId: text('page_id').notNull().references(() => pages.id, { onDelete: 'cascade' }),
+  sectionId: text('section_id').notNull().references(() => sections.id, { onDelete: 'cascade' }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+})
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
@@ -412,3 +482,7 @@ export type ContactRequest = typeof contactRequests.$inferSelect
 export type ConsultationRequest = typeof consultationRequests.$inferSelect
 export type AuditLog = typeof auditLogs.$inferSelect
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect
+export type Section = typeof sections.$inferSelect
+export type SectionVersion = typeof sectionVersions.$inferSelect
+export type Page = typeof pages.$inferSelect
+export type PageSection = typeof pageSections.$inferSelect

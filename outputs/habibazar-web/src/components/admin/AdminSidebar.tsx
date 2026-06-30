@@ -31,6 +31,13 @@ const NAV = [
     ],
   },
   {
+    group: { en: 'Builder', fa: 'سازنده' },
+    items: [
+      { labelEn: 'Section Builder', labelFa: 'سازنده بخش‌ها', href: '/admin/sections', icon: '🧩' },
+      { labelEn: 'Page Builder', labelFa: 'سازنده صفحات', href: '/admin/pages', icon: '📄' },
+    ],
+  },
+  {
     group: { en: 'Requests', fa: 'درخواست‌ها' },
     items: [
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
