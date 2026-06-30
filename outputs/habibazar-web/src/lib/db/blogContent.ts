@@ -22740,4 +22740,11162 @@ dev → staging → production (کد یکسان، متغیرهای مختلف)
 IaC یک تغییر فرهنگی به همان اندازه که تکنیکی است: تغییرات زیرساخت از طریق pull request، بررسی و تأیید، سپس به‌صورت خودکار اعمال می‌شوند.
 `,
   },
+
+  'mikrotik-what-is-introduction': {
+    contentEn: `## What Is MikroTik?
+
+MikroTik is a Latvian network equipment manufacturer best known for **RouterOS**, a powerful operating system that turns ordinary hardware (or MikroTik's own RouterBOARD devices) into enterprise-grade routers, switches, firewalls, and wireless access points. For network engineers, IT students, and small ISPs, MikroTik is attractive because a single low-cost device can replace functionality that would otherwise require several expensive appliances from larger vendors.
+
+This post is the starting point of a complete "zero to hero" MikroTik curriculum. We assume you know nothing about MikroTik yet, so we will go slowly and build a solid foundation before moving into configuration in later posts.
+
+### Why Engineers Choose MikroTik
+
+- **Cost efficiency**: Hardware and licensing cost a fraction of comparable Cisco/Juniper gear.
+- **RouterOS feature set**: Routing (static, OSPF, BGP), firewall, VPN (IPsec, WireGuard, PPTP/L2TP), QoS, wireless, hotspot, and scripting — all in one OS.
+- **CLI and GUI both available**: You can configure everything through the command line, the Winbox desktop tool, or the WebFig browser interface.
+- **Scriptability**: RouterOS has its own scripting language for automation, alerts, and scheduled maintenance.
+
+### The RouterOS Architecture
+
+RouterOS is built on a Linux kernel but exposes its own command structure organized into **menus**, similar to a filesystem:
+
+\`\`\`
+/ip address
+/ip route
+/ip firewall filter
+/interface bridge
+/system identity
+\`\`\`
+
+Every configuration item lives under a menu path. For example, to see all configured IP addresses you would run:
+
+\`\`\`
+/ip address print
+\`\`\`
+
+### Hardware vs RouterOS-only
+
+MikroTik sells physical devices called **RouterBOARD** (and the newer **RB**/**CRS**/**CCR** product lines), but RouterOS can also run as software on standard x86 hardware or in a virtual machine (CHR — Cloud Hosted Router). This means you can practice everything in this course using a free CHR trial license inside VirtualBox or any VM platform, no physical hardware required.
+
+### What You Will Learn in This Course
+
+Over the next 29 posts we will progress through:
+
+1. Hardware basics and licensing
+2. First connection via Winbox/WebFig/SSH
+3. IP addressing, DHCP, and basic routing
+4. Firewall fundamentals and NAT
+5. Wireless and bridging
+6. DNS, PPPoE, and user management
+7. Backups, upgrades, logging, and monitoring
+8. Bandwidth shaping (queues)
+9. Automation with scripting and scheduler
+10. VPNs (IPsec, PPTP/L2TP) and centralized wireless management (CAPsMAN)
+
+By the end of this series you will be comfortable configuring a MikroTik router from a factory-reset state to a fully functioning, secured, production network device.
+
+### A Note on Terminology
+
+Throughout this course you will see these recurring terms:
+
+- **Identity**: the device's hostname.
+- **Interface**: any physical or virtual network port (ether1, wlan1, bridge1, etc.).
+- **RouterOS version**: we will mostly reference RouterOS v7, the current major branch with WireGuard support and improved routing.
+- **Winbox**: the native MikroTik configuration GUI (Windows/Wine, connects over a special discovery protocol or IP).
+
+In the next post we will look at MikroTik's hardware lineup so you understand which device class fits which use case before we start configuring.`,
+    contentFa: `## میکروتیک چیست؟
+
+میکروتیک (MikroTik) یک شرکت سازنده تجهیزات شبکه از کشور لتونی است که بیشتر به خاطر سیستم‌عامل **RouterOS** شناخته می‌شود. این سیستم‌عامل سخت‌افزارهای معمولی یا دستگاه‌های RouterBOARD خود میکروتیک را به روتر، سوییچ، فایروال و اکسس‌پوینت بی‌سیم در سطح سازمانی تبدیل می‌کند. برای مهندسان شبکه، دانشجویان IT و ISPهای کوچک، میکروتیک جذاب است چون یک دستگاه کم‌هزینه می‌تواند جای چند دستگاه گران‌قیمت از برندهای بزرگ‌تر را بگیرد.
+
+این پست نقطه شروع یک دوره کامل "صفر تا صد" میکروتیک است. فرض می‌کنیم هیچ چیزی درباره میکروتیک نمی‌دانید، پس آرام پیش می‌رویم و قبل از ورود به تنظیمات، یک پایه قوی می‌سازیم.
+
+### چرا مهندسان میکروتیک را انتخاب می‌کنند؟
+
+- **صرفه‌جویی هزینه**: سخت‌افزار و لایسنس بخش کوچکی از هزینه تجهیزات مشابه سیسکو یا جونیپر را دارد.
+- **مجموعه قابلیت‌های RouterOS**: روتینگ (استاتیک، OSPF، BGP)، فایروال، VPN (IPsec، WireGuard، PPTP/L2TP)، کیفیت سرویس (QoS)، وایرلس، هات‌اسپات و اسکریپت‌نویسی — همه در یک سیستم‌عامل.
+- **دسترسی هم با CLI و هم GUI**: می‌توانید همه چیز را از طریق خط فرمان، ابزار دسکتاپ Winbox یا رابط مرورگری WebFig تنظیم کنید.
+- **قابلیت اسکریپت‌نویسی**: RouterOS زبان اسکریپت‌نویسی مخصوص خود را دارد که برای اتوماسیون، هشدارها و نگهداری زمان‌بندی‌شده استفاده می‌شود.
+
+### معماری RouterOS
+
+RouterOS بر پایه کرنل لینوکس ساخته شده، اما ساختار فرمان‌های خاص خودش را به شکل **منو**ها شبیه فایل‌سیستم نشان می‌دهد:
+
+\`\`\`
+/ip address
+/ip route
+/ip firewall filter
+/interface bridge
+/system identity
+\`\`\`
+
+هر آیتم تنظیمات زیر یک مسیر منو قرار دارد. مثلاً برای دیدن همه آی‌پی‌های تنظیم‌شده می‌نویسید:
+
+\`\`\`
+/ip address print
+\`\`\`
+
+### سخت‌افزار در مقابل RouterOS به‌تنهایی
+
+میکروتیک دستگاه‌های فیزیکی به نام **RouterBOARD** (و سری‌های جدیدتر RB، CRS، CCR) می‌فروشد، اما RouterOS می‌تواند به‌صورت نرم‌افزار روی سخت‌افزار x86 معمولی یا در یک ماشین مجازی (CHR — Cloud Hosted Router) هم اجرا شود. یعنی می‌توانید تمام تمرین‌های این دوره را با یک لایسنس آزمایشی رایگان CHR داخل VirtualBox یا هر پلتفرم مجازی‌سازی دیگری انجام دهید، بدون نیاز به سخت‌افزار فیزیکی.
+
+### در این دوره چه چیزی یاد خواهید گرفت؟
+
+در ۲۹ پست آینده مراحل زیر را طی می‌کنیم:
+
+۱. اصول سخت‌افزار و لایسنس
+۲. اولین اتصال از طریق Winbox/WebFig/SSH
+۳. آی‌پی‌دهی، DHCP و روتینگ پایه
+۴. اصول فایروال و NAT
+۵. وایرلس و بریجینگ
+۶. DNS، PPPoE و مدیریت کاربران
+۷. بکاپ، آپگرید، لاگ‌گیری و مانیتورینگ
+۸. شکل‌دهی پهنای باند (Queue)
+۹. اتوماسیون با اسکریپت‌نویسی و Scheduler
+۱۰. VPN (IPsec، PPTP/L2TP) و مدیریت متمرکز وایرلس (CAPsMAN)
+
+در پایان این سری، شما می‌توانید یک دستگاه میکروتیک را از حالت فکتوری‌ریست تا یک دستگاه شبکه کاملاً کارکردی و امن در محیط تولید پیکربندی کنید.
+
+### نکته‌ای درباره اصطلاحات
+
+در طول این دوره با این اصطلاحات تکرارشونده مواجه می‌شوید:
+
+- **Identity**: نام میزبان دستگاه.
+- **Interface**: هر پورت فیزیکی یا مجازی شبکه (ether1، wlan1، bridge1 و غیره).
+- **نسخه RouterOS**: ما بیشتر به RouterOS v7 ارجاع می‌دهیم، شاخه اصلی فعلی با پشتیبانی از WireGuard و روتینگ بهبودیافته.
+- **Winbox**: ابزار رابط گرافیکی بومی میکروتیک (ویندوز/واین، اتصال از طریق پروتکل discovery یا آی‌پی).
+
+در پست بعدی به سراغ خط محصولات سخت‌افزاری میکروتیک می‌رویم تا قبل از شروع تنظیمات بدانید کدام کلاس دستگاه برای کدام کاربرد مناسب است.`,
+  },
+  'mikrotik-routerboard-hardware-guide': {
+    contentEn: `
+## MikroTik Hardware Families: A Complete Beginner Guide
+
+If you are new to MikroTik, the first thing you will notice is that MikroTik sells many different devices. Some look like home routers, some look like data-center switches, and some are bare circuit boards. This guide walks you through every major hardware family so you can choose the right device for your project.
+
+## What Is RouterBOARD?
+
+RouterBOARD is the brand name MikroTik uses for its bare-board and enclosure-based network devices that run RouterOS. Think of RouterBOARD as the platform: the combination of hardware and the RouterOS operating system installed on it.
+
+Almost all MikroTik devices sold today are RouterBOARD products. When you buy a MikroTik device you get:
+
+- The hardware (CPU, RAM, flash storage, Ethernet ports, optional wireless chips)
+- RouterOS pre-installed on the device
+- A RouterOS license bundled with the hardware (no separate purchase needed for most devices)
+
+## Major Hardware Families
+
+### hAP and hAP ac — Home and Small Office Routers
+
+The **hAP** (home Access Point) series is designed for home users and small offices. These devices have:
+
+- 5 Ethernet ports (usually 1 WAN + 4 LAN)
+- Built-in wireless (2.4 GHz on hAP, dual-band 2.4/5 GHz on hAP ac models)
+- Compact plastic enclosure
+- Low power consumption
+- Price range: $30 to $80 USD
+
+Popular models: hAP ac2, hAP ac3, hAP ax2 (Wi-Fi 6)
+
+**Best for:** Home users, small offices, beginners learning RouterOS.
+
+### hEX Series — Small Wired Routers
+
+The **hEX** series is similar to hAP but without wireless. These are pure wired routers:
+
+- 5 Gigabit Ethernet ports
+- Small plastic enclosure
+- Very affordable ($50 to $70 USD)
+- Some models include SFP port or USB
+
+Popular models: hEX, hEX S, hEX lite
+
+**Best for:** Wired-only environments, branch offices, users who have a separate access point.
+
+### RB Series (RouterBOARD Boards)
+
+The **RB** prefix indicates a bare RouterBOARD without an enclosure, or a specialized device. Examples:
+
+- **RB750Gr3** — budget 5-port Gigabit router
+- **RB4011** — high-performance 10-port router with SFP+
+- **RB3011** — 10-port router popular in small ISPs
+
+These range from $50 to $200 USD and are very popular with ISPs and network engineers.
+
+### CRS — Cloud Router Switches
+
+**CRS** (Cloud Router Switch) devices are Layer 2/Layer 3 switches with full RouterOS. They have:
+
+- Many Ethernet ports (8, 16, 24, or 48 ports)
+- SFP or SFP+ uplink ports for fiber
+- Switching ASICs for hardware-accelerated packet forwarding
+- Can run either RouterOS or SwitchOS (a simpler switch OS)
+
+Popular models: CRS326-24G-2S+, CRS354-48G-4S+2Q+
+
+**Best for:** Office networks, ISP aggregation, anyone who needs a managed switch with routing capability.
+
+### CCR — Cloud Core Router
+
+**CCR** (Cloud Core Router) devices are MikroTik high-end routers for ISPs and enterprises. They feature:
+
+- Multi-core Tilera or ARM processors (up to 72 cores)
+- High throughput (multi-gigabit routing)
+- Rack-mount form factor
+- Multiple SFP/SFP+ ports
+- Price range: $300 to $3000+ USD
+
+Popular models: CCR2004-1G-12S+2XS, CCR1036-8G-2S+
+
+**Best for:** Internet service providers, enterprise networks, high-bandwidth environments.
+
+### LHG, SXT, LDF — Outdoor Wireless Devices
+
+MikroTik also makes outdoor point-to-point and point-to-multipoint wireless devices:
+
+- **LHG** — Lightweight High Gain dish antenna, for long-distance links
+- **SXT** — Small sector/dish for short-to-medium wireless links
+- **LDF** — LTE/4G device for cellular backhaul
+
+**Best for:** Wireless ISPs (WISPs), outdoor coverage, building-to-building links.
+
+## RouterOS License Levels
+
+RouterOS comes in several license levels. The higher the level, the more features are unlocked.
+
+| Level | Typical Use |
+|-------|-------------|
+| Level 1 | Free/Demo — very limited, mostly for testing |
+| Level 3 | ISP Wireless — wireless client, CPE devices |
+| Level 4 | WISP — wireless AP, most home/office features |
+| Level 5 | WISP AP — adds hotspot user limit increase |
+| Level 6 | Controller — unlimited everything |
+
+**Important:** Almost all physical MikroTik hardware comes with a license already included (usually Level 4 or Level 6 depending on the device). You only need to buy a separate license if you are installing RouterOS on a standard PC (called CHR — Cloud Hosted Router).
+
+### CHR (Cloud Hosted Router)
+
+CHR is RouterOS installed as a virtual machine on a server or cloud provider. Licensing for CHR:
+
+- **Free trial** — 1 Mbps throughput limit
+- **P1** — $45/year — 1 Gbps limit
+- **P10** — $95/year — 10 Gbps limit
+- **P-Unlimited** — $250/year — no limit
+
+## How to Pick the Right Hardware
+
+Use this simple guide:
+
+- **Home/small office with wireless** — hAP ac2 or hAP ac3
+- **Home/small office, wired only** — hEX or hEX S
+- **Small business switch** — CRS326 or CRS354
+- **ISP edge router, high throughput** — CCR series
+- **Outdoor wireless link** — LHG or SXT
+- **Learning/testing on a PC or VM** — CHR (free tier works fine for learning)
+
+## Summary
+
+MikroTik hardware ranges from a $30 home router to a $3000 ISP core router, all running the same RouterOS software. Once you learn RouterOS on a cheap hAP device, you can apply that knowledge to any other MikroTik product. Start small, learn the software, then scale up.
+`,
+    contentFa: `
+## راهنمای سخت‌افزار میکروتیک برای مبتدیان
+
+اگر تازه با میکروتیک آشنا شده‌اید، احتمالاً با تنوع زیاد محصولات این شرکت روبرو شده‌اید. در این راهنما همه خانواده‌های سخت‌افزاری میکروتیک را به زبان ساده توضیح می‌دهیم.
+
+## RouterBOARD چیست؟
+
+RouterBOARD نام برند میکروتیک برای دستگاه‌هایی است که سیستم‌عامل RouterOS را اجرا می‌کنند. وقتی یک دستگاه میکروتیک می‌خرید، سه چیز با هم دریافت می‌کنید:
+
+- سخت‌افزار (پردازنده، RAM، حافظه فلش، پورت‌های شبکه)
+- RouterOS که از قبل نصب شده
+- لایسنس RouterOS که با دستگاه همراه است
+
+## خانواده‌های اصلی سخت‌افزار
+
+### سری hAP — روترهای خانگی و اداری کوچک
+
+سری **hAP** برای کاربران خانگی و ادارات کوچک طراحی شده:
+
+- ۵ پورت اترنت (معمولاً ۱ WAN و ۴ LAN)
+- وای‌فای داخلی (۲.۴ گیگاهرتز یا دوباند در مدل‌های ac)
+- قیمت: ۳۰ تا ۸۰ دلار
+
+مدل‌های پرطرفدار: hAP ac2، hAP ac3، hAP ax2
+
+**مناسب برای:** کاربران خانگی، ادارات کوچک، مبتدیانی که می‌خواهند RouterOS یاد بگیرند.
+
+### سری hEX — روترهای سیمی کوچک
+
+سری **hEX** مثل hAP است اما بدون وای‌فای:
+
+- ۵ پورت گیگابیت اترنت
+- قیمت مناسب (۵۰ تا ۷۰ دلار)
+
+**مناسب برای:** محیط‌های بدون نیاز به وای‌فای، دفاتر کوچک.
+
+### سری CRS — سوئیچ‌های هوشمند
+
+دستگاه‌های **CRS** ترکیبی از سوئیچ و روتر هستند:
+
+- ۸ تا ۴۸ پورت اترنت
+- پورت‌های SFP برای فیبر نوری
+- تسریع سخت‌افزاری در انتقال بسته‌ها
+
+**مناسب برای:** شبکه‌های اداری، ISP‌های کوچک.
+
+### سری CCR — روترهای سطح ISP
+
+دستگاه‌های **CCR** روترهای حرفه‌ای میکروتیک هستند:
+
+- پردازنده‌های چندهسته‌ای قدرتمند
+- توان پردازش چند گیگابیت
+- فرم رک‌مونت
+- قیمت: ۳۰۰ تا ۳۰۰۰ دلار و بیشتر
+
+**مناسب برای:** ISP‌ها، شبکه‌های سازمانی.
+
+### دستگاه‌های وایرلس فضای باز
+
+- **LHG** — آنتن دیشی برای لینک‌های طولانی
+- **SXT** — برای لینک‌های کوتاه تا متوسط
+- **LDF** — دستگاه LTE/4G برای اتصال سلولی
+
+## سطوح لایسنس RouterOS
+
+| سطح | کاربرد |
+|-----|---------|
+| Level 1 | آزمایش و تست (محدود) |
+| Level 4 | اکثر کاربردهای خانگی و اداری |
+| Level 6 | بدون محدودیت — مناسب ISP‌ها |
+
+نکته مهم: تقریباً همه دستگاه‌های فیزیکی میکروتیک با لایسنس همراه هستند.
+
+### CHR — روتر ابری
+
+CHR نسخه‌ای از RouterOS است که روی ماشین مجازی نصب می‌شود. نسخه رایگان آن محدودیت ۱ مگابیت دارد اما برای یادگیری کافی است.
+
+## انتخاب سخت‌افزار مناسب
+
+- **خانه یا اداره کوچک با وای‌فای** — hAP ac2 یا hAP ac3
+- **محیط سیمی** — hEX یا hEX S
+- **سوئیچ اداری** — CRS326 یا CRS354
+- **روتر پرسرعت ISP** — سری CCR
+- **یادگیری روی کامپیوتر** — CHR نسخه رایگان
+
+## جمع‌بندی
+
+میکروتیک از روترهای ۳۰ دلاری خانگی تا روترهای ۳۰۰۰ دلاری ISP، همه با همان RouterOS کار می‌کنند. یادگیری RouterOS روی یک دستگاه ارزان‌قیمت به شما اجازه می‌دهد همان دانش را روی هر دستگاه میکروتیک دیگری استفاده کنید.
+`,
+  },
+  'mikrotik-winbox-first-connection': {
+    contentEn: `
+## Connecting to Your MikroTik for the First Time Using Winbox
+
+Winbox is MikroTik official graphical configuration tool. It is a small Windows application (also runs on Linux/macOS via Wine) that gives you a full graphical interface to RouterOS. For beginners, Winbox is the easiest way to start configuring a MikroTik device.
+
+## Downloading Winbox
+
+1. Go to \`https://mikrotik.com/download\` in your browser.
+2. Find the Winbox section and download the latest version for your operating system.
+3. Winbox is a single \`.exe\` file — no installation needed. Just download and run it.
+
+On Linux/macOS, you can run Winbox with Wine, or use WebFig (covered in the next lesson) which runs in any browser.
+
+## Factory Default State
+
+A brand-new MikroTik device (or one that has been reset to factory defaults) will have:
+
+- **Login:** \`admin\`
+- **Password:** empty (just press Enter) — on newer devices running RouterOS 7.x, the password may be printed on the device label
+- **Default IP:** \`192.168.88.1\` on the LAN port (ether2 and higher, depending on model)
+- **DHCP server active** on LAN ports — your computer will get an IP like \`192.168.88.x\`
+
+## Connecting via MAC Address (Recommended for First Connection)
+
+The safest way to connect to a fresh MikroTik is via **MAC address**, not IP. This works even if the device has no IP address configured.
+
+Steps:
+
+1. Connect your computer directly to the MikroTik using an Ethernet cable (use ether2 or any LAN port).
+2. Open Winbox.
+3. Click the **"..."** button next to the Connect To field — this opens the neighbor discovery window.
+4. Wait a few seconds. Your MikroTik should appear in the list with its MAC address.
+5. Click on the device row to fill in the MAC address automatically.
+6. Enter \`admin\` as the username and leave the password blank.
+7. Click **Connect**.
+
+You are now connected via MAC address!
+
+## The Quick Set / Default Configuration
+
+When you connect for the first time, RouterOS may show you a **Quick Set** dialog. This is a simplified setup wizard. For learning purposes, it is often better to close it and configure things manually. If you want to use it, fill in the fields and click **Apply**.
+
+## Setting the Admin Password (Critical Safety Step)
+
+The very first thing you should do on any MikroTik is set a strong admin password. Leaving it blank is a serious security risk.
+
+In Winbox:
+1. Go to **System > Users**
+2. Double-click the \`admin\` user
+3. Click **Password** button
+4. Enter your new password twice and click **OK**
+
+Or via CLI:
+
+\`\`\`
+/user set admin password=YourStrongPassword123
+\`\`\`
+
+Write down this password. If you forget it, you will need to reset the device.
+
+## Basic Safety Steps — Avoid Locking Yourself Out
+
+### Do Not Remove the Default Firewall Rules Immediately
+
+A factory-default MikroTik has firewall rules that protect it. Do not delete all firewall rules unless you understand what you are doing.
+
+### Keep at Least One Management Access Method
+
+- Keep an Ethernet cable connected to a LAN port
+- Do not block port 8291 (Winbox) or port 22 (SSH) in the firewall INPUT chain on the LAN interface
+
+### Know How to Reset to Factory Defaults
+
+If you lock yourself out:
+
+- **Software reset:** In Winbox go to System > Reset Configuration
+- **Hardware reset:** Hold the reset button on the device for 5 seconds while powered on
+
+After a hardware reset, the device returns to factory defaults and you can connect again with \`admin\` and no password.
+
+## Winbox Interface Overview
+
+Once connected, Winbox shows:
+
+- **Left menu:** All RouterOS configuration sections (IP, Interfaces, Wireless, etc.)
+- **Top toolbar:** Buttons for safe mode, terminal, neighbors
+- **Main area:** Configuration windows open here
+
+### Safe Mode
+
+Winbox has a Safe Mode feature (click the **Safe** button or press Ctrl+X). When safe mode is active:
+
+- Any changes you make are held temporarily
+- If your Winbox connection drops, RouterOS automatically rolls back all changes
+- This prevents you from accidentally locking yourself out
+
+Always enable Safe Mode before making firewall or IP address changes!
+
+## Connecting via IP Address
+
+Once the device has an IP address (default is \`192.168.88.1\`):
+
+1. Make sure your computer gets an IP from the MikroTik DHCP server
+2. In Winbox, type \`192.168.88.1\` in the Connect To field
+3. Enter \`admin\` and your password
+4. Click **Connect**
+
+## Summary
+
+Winbox makes it easy to configure MikroTik without knowing any CLI commands. Key points:
+
+- Download from \`https://mikrotik.com/download\`
+- Connect via MAC address for the safest first connection
+- Set the admin password immediately
+- Use Safe Mode when making risky changes
+- Know how to reset to factory defaults if needed
+`,
+    contentFa: `
+## اتصال اول به میکروتیک با Winbox
+
+Winbox ابزار گرافیکی رسمی میکروتیک برای پیکربندی RouterOS است. برای مبتدیان، Winbox ساده‌ترین روش شروع است.
+
+## دانلود Winbox
+
+۱. به آدرس \`https://mikrotik.com/download\` بروید.
+۲. بخش Winbox را پیدا کنید و آخرین نسخه را دانلود کنید.
+۳. Winbox یک فایل \`.exe\` تنهاست و نیازی به نصب ندارد.
+
+## حالت پیش‌فرض کارخانه
+
+یک دستگاه میکروتیک جدید یا ریست‌شده این تنظیمات را دارد:
+
+- **نام کاربری:** \`admin\`
+- **رمز:** خالی (فقط Enter بزنید) — در دستگاه‌های جدیدتر ممکن است روی برچسب دستگاه نوشته باشد
+- **IP پیش‌فرض:** \`192.168.88.1\` روی پورت LAN
+- **سرور DHCP فعال** روی پورت‌های LAN
+
+## اتصال از طریق آدرس MAC (توصیه‌شده)
+
+بهترین روش برای اولین اتصال، استفاده از آدرس MAC است:
+
+۱. کامپیوتر خود را با کابل اترنت به پورت LAN میکروتیک (ether2 یا بالاتر) وصل کنید.
+۲. Winbox را باز کنید.
+۳. روی دکمه **"..."** کنار فیلد Connect To کلیک کنید.
+۴. چند ثانیه صبر کنید — دستگاه میکروتیک در لیست نمایش داده می‌شود.
+۵. روی ردیف دستگاه کلیک کنید تا آدرس MAC پر شود.
+۶. نام کاربری \`admin\` و رمز خالی را وارد کنید.
+۷. روی **Connect** کلیک کنید.
+
+## تنظیم رمز عبور مدیر (ضروری)
+
+اولین کاری که باید انجام دهید، تنظیم رمز قوی برای admin است. رها کردن رمز خالی یک خطر امنیتی جدی است.
+
+در Winbox:
+۱. به **System > Users** بروید.
+۲. روی کاربر \`admin\` دوبار کلیک کنید.
+۳. دکمه **Password** را بزنید.
+۴. رمز جدید را دو بار وارد کنید و OK کنید.
+
+یا از طریق CLI:
+
+\`\`\`
+/user set admin password=YourStrongPassword123
+\`\`\`
+
+## نکات ایمنی مهم
+
+### قوانین فایروال پیش‌فرض را حذف نکنید
+
+میکروتیک از کارخانه قوانین فایروال محافظتی دارد. تا زمانی که این قوانین را کاملاً درک نکرده‌اید، آنها را حذف نکنید.
+
+### همیشه یک راه دسترسی داشته باشید
+
+- کابل اترنت به پورت LAN متصل نگه دارید
+- پورت ۸۲۹۱ (Winbox) و ۲۲ (SSH) را در فایروال برای LAN باز نگه دارید
+
+### روش ریست دستگاه
+
+اگر از روتر قفل شدید:
+
+- **ریست نرم‌افزاری:** در Winbox به System > Reset Configuration بروید
+- **ریست سخت‌افزاری:** دکمه Reset را هنگام روشن بودن دستگاه ۵ ثانیه نگه دارید
+
+## Safe Mode در Winbox
+
+قبل از تغییرات مهم، دکمه **Safe** را بزنید (یا Ctrl+X). در این حالت اگر اتصال Winbox قطع شود، RouterOS تمام تغییرات را به‌طور خودکار برمی‌گرداند.
+
+## اتصال از طریق IP
+
+اگر دستگاه IP دارد (پیش‌فرض: \`192.168.88.1\`):
+
+۱. آدرس \`192.168.88.1\` را در فیلد Connect To وارد کنید.
+۲. نام کاربری \`admin\` و رمز را وارد کنید.
+۳. روی **Connect** کلیک کنید.
+
+## جمع‌بندی
+
+- Winbox را از \`https://mikrotik.com/download\` دانلود کنید
+- برای اولین اتصال از MAC address استفاده کنید
+- بلافاصله رمز admin را تنظیم کنید
+- قبل از تغییرات مهم، Safe Mode را فعال کنید
+`,
+  },
+  'mikrotik-webfig-ssh-cli': {
+    contentEn: `
+## WebFig, SSH, and CLI: Three Ways to Configure RouterOS
+
+RouterOS can be configured in three main ways beyond Winbox: **WebFig** (browser-based GUI), **SSH** (secure remote terminal), and the **CLI** (command-line interface). Each has its strengths, and knowing all three makes you a more capable network engineer.
+
+## Comparing Configuration Methods
+
+| Method | Interface | Requires | Best For |
+|--------|-----------|----------|----------|
+| Winbox | Graphical | Winbox app | Beginners, daily management |
+| WebFig | Graphical | Web browser | Remote access without Winbox |
+| SSH/CLI | Text | SSH client | Scripting, bulk changes, automation |
+
+## WebFig — Browser-Based Configuration
+
+WebFig is built into RouterOS and accessible from any web browser. No software installation needed.
+
+### Accessing WebFig
+
+1. Make sure your computer can reach the MikroTik
+2. Open your browser and go to: \`http://192.168.88.1\`
+3. Log in with \`admin\` and your password
+4. You will see the WebFig interface — similar layout to Winbox but in a browser
+
+### Security Note
+
+By default, WebFig uses plain HTTP. For production environments, consider disabling HTTP and using HTTPS:
+
+\`\`\`
+/ip service set www disabled=yes
+/ip service set www-ssl disabled=no
+\`\`\`
+
+Restrict which IPs can access it:
+
+\`\`\`
+/ip service set www-ssl address=192.168.88.0/24
+\`\`\`
+
+## SSH — Secure Remote CLI Access
+
+SSH gives you command-line access to RouterOS from any SSH client.
+
+### Checking SSH Service
+
+\`\`\`
+/ip service print
+\`\`\`
+
+SSH runs on port 22 by default. To ensure it is enabled:
+
+\`\`\`
+/ip service set ssh disabled=no
+\`\`\`
+
+### Connecting via SSH
+
+On Linux/macOS:
+\`\`\`
+ssh admin@192.168.88.1
+\`\`\`
+
+On Windows, use PuTTY, Windows Terminal, or any SSH client.
+
+After login you will see the RouterOS CLI prompt:
+
+\`\`\`
+[admin@MikroTik] >
+\`\`\`
+
+## CLI Navigation Basics
+
+The RouterOS CLI is organized as a hierarchy of menus. Understanding navigation is essential.
+
+### Entering a Menu
+
+Type the menu path and press Enter:
+
+\`\`\`
+[admin@MikroTik] > /ip address
+[admin@MikroTik] /ip/address>
+\`\`\`
+
+The prompt changes to show your current location.
+
+### Going Back to Root
+
+Type \`/\` to jump back to root from anywhere:
+
+\`\`\`
+[admin@MikroTik] /ip/address> /
+[admin@MikroTik] >
+\`\`\`
+
+Type \`..\` to go up one level:
+
+\`\`\`
+[admin@MikroTik] /ip/address> ..
+[admin@MikroTik] /ip>
+\`\`\`
+
+### The ? Help System
+
+Type \`?\` to see available options at any point:
+
+\`\`\`
+[admin@MikroTik] > ?
+\`\`\`
+
+This lists all top-level menus. Inside a menu, \`?\` shows available subcommands.
+
+### Tab Completion
+
+Press **Tab** after typing a partial command to auto-complete:
+
+\`\`\`
+/ip add[TAB]              becomes  /ip address
+/ip address add int[TAB]  becomes  /ip address add interface=
+\`\`\`
+
+### The print Command
+
+\`print\` shows the current configuration for whatever menu you are in:
+
+\`\`\`
+[admin@MikroTik] /ip/address> print
+Flags: X - disabled, I - invalid, D - dynamic
+ #   ADDRESS            NETWORK         INTERFACE
+ 0   192.168.88.1/24    192.168.88.0    bridge
+\`\`\`
+
+### The set Command
+
+\`set\` modifies an existing entry by number:
+
+\`\`\`
+/ip address set 0 address=10.0.0.1/24
+\`\`\`
+
+### The add Command
+
+\`add\` creates a new entry:
+
+\`\`\`
+/ip address add address=10.0.0.1/24 interface=ether1
+\`\`\`
+
+### The remove Command
+
+\`remove\` deletes an entry by number:
+
+\`\`\`
+/ip address remove 0
+\`\`\`
+
+## Useful CLI Commands for Beginners
+
+\`\`\`
+# View system resource usage
+/system resource print
+
+# View all interfaces
+/interface print
+
+# View IP addresses
+/ip address print
+
+# View routing table
+/ip route print
+
+# Ping a host
+/ping 8.8.8.8 count=4
+
+# Export config to file (backup)
+/export file=my-backup
+
+# Undo last change
+/undo
+\`\`\`
+
+## Absolute Paths vs Relative Navigation
+
+You can run any command from root using its full path without navigating into the menu first:
+
+\`\`\`
+/ip address print
+/ip address add address=192.168.1.1/24 interface=ether2
+/ip dhcp-server print
+\`\`\`
+
+This is very useful in scripts where you want to be explicit about location.
+
+## print detail and print where
+
+For more verbose output showing all parameters:
+
+\`\`\`
+/ip address print detail
+\`\`\`
+
+To filter output:
+
+\`\`\`
+/ip address print where interface=ether1
+\`\`\`
+
+## CLI Tips
+
+- Use \`/export\` to back up before making major changes
+- Use tab completion — it saves time and prevents typos
+- Commands are case-insensitive in RouterOS CLI
+- Use \`print count-only\` to count entries without listing them
+
+## Summary
+
+WebFig is great when you need browser access without installing Winbox. SSH and CLI are essential for automation, scripting, and managing remote routers. Master the basic navigation (\`/\`, \`..\`, \`print\`, \`set\`, \`add\`, \`remove\`, \`?\`, Tab) and you will be comfortable with RouterOS in no time.
+`,
+    contentFa: `
+## WebFig، SSH و CLI: سه روش پیکربندی RouterOS
+
+علاوه بر Winbox، سه روش دیگر برای پیکربندی RouterOS وجود دارد. دانستن هر سه روش شما را به یک مدیر شبکه کامل تبدیل می‌کند.
+
+## مقایسه روش‌های پیکربندی
+
+| روش | نوع رابط | نیاز دارد به | مناسب برای |
+|-----|----------|-------------|------------|
+| Winbox | گرافیکی | نرم‌افزار Winbox | مبتدیان، مدیریت روزانه |
+| WebFig | گرافیکی | مرورگر وب | دسترسی از راه دور |
+| SSH/CLI | متنی | کلاینت SSH | اسکریپت‌نویسی، اتوماسیون |
+
+## WebFig — پیکربندی از طریق مرورگر
+
+WebFig درون RouterOS تعبیه شده و از هر مرورگری قابل دسترس است. نیازی به نصب نرم‌افزار اضافی نیست.
+
+### دسترسی به WebFig
+
+۱. مرورگر را باز کنید و به آدرس \`http://192.168.88.1\` بروید.
+۲. با \`admin\` و رمز خود وارد شوید.
+
+### نکته امنیتی
+
+برای جلوگیری از استفاده از HTTP ساده:
+
+\`\`\`
+/ip service set www disabled=yes
+/ip service set www-ssl disabled=no
+/ip service set www-ssl address=192.168.88.0/24
+\`\`\`
+
+## SSH — دسترسی ایمن از راه دور
+
+SSH دسترسی خط فرمان ایمن به RouterOS را ممکن می‌کند.
+
+### اتصال از طریق SSH
+
+در Linux/macOS:
+\`\`\`
+ssh admin@192.168.88.1
+\`\`\`
+
+در Windows از PuTTY یا Windows Terminal استفاده کنید.
+
+## اصول ناوبری در CLI
+
+### ورود به منو
+
+\`\`\`
+[admin@MikroTik] > /ip address
+[admin@MikroTik] /ip/address>
+\`\`\`
+
+### برگشت به ریشه
+
+\`\`\`
+[admin@MikroTik] /ip/address> /
+[admin@MikroTik] >
+\`\`\`
+
+یک سطح بالا:
+
+\`\`\`
+[admin@MikroTik] /ip/address> ..
+[admin@MikroTik] /ip>
+\`\`\`
+
+### سیستم راهنما (?)
+
+\`\`\`
+[admin@MikroTik] > ?
+\`\`\`
+
+همه منوهای سطح بالا را نشان می‌دهد.
+
+### تکمیل خودکار (Tab)
+
+\`\`\`
+/ip add[TAB]  -->  /ip address
+\`\`\`
+
+### دستورات اصلی
+
+\`\`\`
+# نمایش پیکربندی
+/ip address print
+
+# اضافه کردن آدرس
+/ip address add address=10.0.0.1/24 interface=ether1
+
+# تغییر ورودی موجود
+/ip address set 0 address=10.0.0.2/24
+
+# حذف ورودی
+/ip address remove 0
+\`\`\`
+
+## دستورات مفید برای مبتدیان
+
+\`\`\`
+# نمایش منابع سیستم
+/system resource print
+
+# نمایش همه اینترفیس‌ها
+/interface print
+
+# نمایش آدرس‌های IP
+/ip address print
+
+# پینگ
+/ping 8.8.8.8 count=4
+
+# بکاپ از پیکربندی
+/export file=my-backup
+
+# بازگشت آخرین تغییر
+/undo
+\`\`\`
+
+## فیلتر کردن خروجی
+
+\`\`\`
+/ip address print detail
+/ip address print where interface=ether1
+\`\`\`
+
+## نکات کاربردی CLI
+
+- قبل از تغییرات مهم از \`/export\` برای بکاپ استفاده کنید
+- از Tab completion استفاده کنید
+- دستورات به حروف بزرگ/کوچک حساس نیستند
+
+## جمع‌بندی
+
+WebFig وقتی Winbox ندارید مفید است. SSH و CLI برای اتوماسیون و کار با روترهای راه دور ضروری هستند. با یادگیری ناوبری پایه (\`/\`، \`..\`، \`print\`، \`set\`، \`add\`، \`remove\`، \`?\`، Tab) در RouterOS مسلط خواهید شد.
+`,
+  },
+  'mikrotik-ip-addressing-basics': {
+    contentEn: `
+## IPv4 Addressing on RouterOS: A Beginner Guide
+
+Before a MikroTik router can do anything useful, its interfaces need IP addresses. This lesson covers everything you need to know about assigning and managing IP addresses in RouterOS.
+
+## Quick Review: IP Addresses and Subnets
+
+An IPv4 address is written as four groups of digits separated by dots — for example, \`192.168.1.100\`. Every device on a network needs a unique IP address to communicate.
+
+A **subnet mask** tells you which part of the address identifies the network. The modern way to write this is **CIDR notation** — for example, \`/24\` means the first 24 bits are the network part.
+
+Common subnets:
+
+| CIDR | Subnet Mask | Usable Hosts |
+|------|-------------|--------------|
+| /24 | 255.255.255.0 | 254 |
+| /25 | 255.255.255.128 | 126 |
+| /16 | 255.255.0.0 | 65534 |
+| /30 | 255.255.255.252 | 2 (point-to-point links) |
+
+## Viewing Existing IP Addresses
+
+\`\`\`
+/ip address print
+\`\`\`
+
+Example output:
+
+\`\`\`
+Flags: X - disabled, I - invalid, D - dynamic
+ #   ADDRESS            NETWORK         INTERFACE
+ 0   192.168.88.1/24    192.168.88.0    bridge
+ 1 D 10.0.0.2/30        10.0.0.0        ether1
+\`\`\`
+
+- \`D\` means dynamic (assigned by DHCP client)
+- \`X\` means disabled
+
+For more detail:
+
+\`\`\`
+/ip address print detail
+\`\`\`
+
+## Viewing Interface Names
+
+Before assigning an IP, check your interface names:
+
+\`\`\`
+/interface print
+\`\`\`
+
+Output example:
+
+\`\`\`
+ #     NAME      TYPE    ACTUAL-MTU
+ 0  R  ether1    ether   1500
+ 1  R  ether2    ether   1500
+ 2  R  wlan1     wlan    1500
+ 3  R  bridge    bridge  1500
+\`\`\`
+
+## Adding an IP Address
+
+Basic syntax:
+
+\`\`\`
+/ip address add address=<IP/PREFIX> interface=<INTERFACE-NAME>
+\`\`\`
+
+### Add WAN address (static from ISP)
+
+\`\`\`
+/ip address add address=203.0.113.10/30 interface=ether1
+\`\`\`
+
+### Add LAN address
+
+\`\`\`
+/ip address add address=192.168.1.1/24 interface=ether2
+\`\`\`
+
+### Add multiple addresses to one interface
+
+One interface can have multiple IPs:
+
+\`\`\`
+/ip address add address=192.168.10.1/24 interface=ether2
+/ip address add address=172.16.0.1/24 interface=ether2
+\`\`\`
+
+## Modifying an Existing IP Address
+
+Find the entry number with \`print\`, then use \`set\`:
+
+\`\`\`
+/ip address print
+/ip address set 0 address=192.168.1.1/24
+\`\`\`
+
+Or use the \`find\` function:
+
+\`\`\`
+/ip address set [find interface=ether2] address=192.168.20.1/24
+\`\`\`
+
+## Removing an IP Address
+
+\`\`\`
+# Remove by number
+/ip address remove 0
+
+# Remove a specific address
+/ip address remove [find address=192.168.88.1/24]
+\`\`\`
+
+## Disabling and Enabling an IP Address
+
+\`\`\`
+/ip address disable 0
+/ip address enable 0
+\`\`\`
+
+A disabled address shows with the \`X\` flag in \`print\` output.
+
+## Practical Example: Two-Interface Setup
+
+ether1 connected to ISP, ether2 connected to LAN:
+
+\`\`\`
+# Static WAN address
+/ip address add address=203.0.113.10/30 interface=ether1
+
+# LAN address
+/ip address add address=192.168.1.1/24 interface=ether2
+\`\`\`
+
+## DHCP Client — Dynamic WAN IP from ISP
+
+If your ISP assigns your WAN IP via DHCP:
+
+\`\`\`
+/ip dhcp-client add interface=ether1 disabled=no
+\`\`\`
+
+Check the result:
+
+\`\`\`
+/ip dhcp-client print
+\`\`\`
+
+## Connected Routes Are Created Automatically
+
+When you add an IP address, RouterOS automatically adds a connected route to the routing table. Verify:
+
+\`\`\`
+/ip route print
+\`\`\`
+
+You will see a route like \`192.168.1.0/24\` via \`ether2\` marked with type \`C\` (connected).
+
+## Common Mistakes to Avoid
+
+### Wrong Subnet Mask
+
+Use \`/30\` for router-to-router links (gives exactly 2 usable hosts). Using \`/24\` wastes 252 addresses.
+
+### Duplicate IP Addresses
+
+Two devices with the same IP on the same subnet causes network chaos. Always check existing addresses before adding new ones.
+
+### Assigning to Wrong Interface
+
+On most MikroTik devices, \`ether1\` is the WAN port and \`ether2\`–\`ether5\` are LAN ports. Double-check before assigning.
+
+### Forgetting to Remove Old Address
+
+Before changing an interface address, remove the old one first to avoid having two addresses on the same interface causing routing confusion.
+
+## Summary
+
+IP addressing in RouterOS is straightforward:
+
+- \`print\` — see current addresses
+- \`add address=X.X.X.X/prefix interface=NAME\` — add new address
+- \`set NUMBER address=X.X.X.X/prefix\` — modify existing
+- \`remove NUMBER\` — delete
+- Connected routes are created automatically
+`,
+    contentFa: `
+## آدرس‌دهی IPv4 در RouterOS
+
+قبل از اینکه روتر میکروتیک کار مفیدی انجام دهد، اینترفیس‌ها باید آدرس IP داشته باشند.
+
+## مرور سریع: آدرس IP چیست؟
+
+آدرس IPv4 چهار گروه عدد است که با نقطه از هم جدا می‌شوند — مثلاً \`192.168.1.100\`. **نماد CIDR** نشان می‌دهد چند بیت برای شبکه است:
+
+| CIDR | Subnet Mask | هاست قابل استفاده |
+|------|-------------|-----------------|
+| /24 | 255.255.255.0 | 254 |
+| /25 | 255.255.255.128 | 126 |
+| /30 | 255.255.255.252 | 2 |
+
+## مشاهده آدرس‌های IP موجود
+
+\`\`\`
+/ip address print
+\`\`\`
+
+خروجی نمونه:
+
+\`\`\`
+ #   ADDRESS            NETWORK         INTERFACE
+ 0   192.168.88.1/24    192.168.88.0    bridge
+ 1 D 10.0.0.2/30        10.0.0.0        ether1
+\`\`\`
+
+\`D\` یعنی آدرس از DHCP دریافت شده. \`X\` یعنی غیرفعال است.
+
+## مشاهده نام اینترفیس‌ها
+
+\`\`\`
+/interface print
+\`\`\`
+
+## اضافه کردن آدرس IP
+
+\`\`\`
+/ip address add address=<IP/PREFIX> interface=<INTERFACE-NAME>
+\`\`\`
+
+مثال‌ها:
+
+\`\`\`
+# آدرس WAN
+/ip address add address=203.0.113.10/30 interface=ether1
+
+# آدرس LAN
+/ip address add address=192.168.1.1/24 interface=ether2
+\`\`\`
+
+## تغییر آدرس موجود
+
+\`\`\`
+/ip address print
+/ip address set 0 address=192.168.1.1/24
+\`\`\`
+
+## حذف آدرس IP
+
+\`\`\`
+/ip address remove 0
+/ip address remove [find address=192.168.88.1/24]
+\`\`\`
+
+## مثال عملی
+
+ether1 به ISP و ether2 به LAN:
+
+\`\`\`
+/ip address add address=203.0.113.10/30 interface=ether1
+/ip address add address=192.168.1.1/24 interface=ether2
+\`\`\`
+
+## DHCP Client — دریافت IP خودکار از ISP
+
+\`\`\`
+/ip dhcp-client add interface=ether1 disabled=no
+/ip dhcp-client print
+\`\`\`
+
+## مسیرهای connected
+
+وقتی آدرس IP اضافه می‌کنید، RouterOS به‌طور خودکار مسیر connected در جدول مسیریابی ایجاد می‌کند:
+
+\`\`\`
+/ip route print
+\`\`\`
+
+## اشتباهات رایج
+
+- **آدرس اشتباه به اینترفیس اشتباه**: ether1 معمولاً WAN است
+- **آدرس تکراری**: دو دستگاه با یک IP باعث اختلال می‌شود
+- **فراموش کردن حذف آدرس قدیمی**: قبل از تغییر آدرس، قدیمی را حذف کنید
+
+## جمع‌بندی
+
+- \`print\` برای مشاهده
+- \`add\` برای اضافه کردن
+- \`set\` برای تغییر
+- \`remove\` برای حذف
+`,
+  },
+  'mikrotik-dhcp-server-setup': {
+    contentEn: `
+## Setting Up a DHCP Server on MikroTik RouterOS
+
+A DHCP server automatically assigns IP addresses to devices on your network. Without it, every device would need a manually configured IP address — which is impractical for most networks. This guide shows you how to set up a complete DHCP server on RouterOS v7.
+
+## How DHCP Works (Brief Overview)
+
+When a device connects to your network, it sends a broadcast message saying "I need an IP address." The DHCP server hears this, picks an available IP from its pool, and sends it to the device along with:
+
+- The assigned IP address
+- Subnet mask
+- Default gateway (usually your router IP)
+- DNS server addresses
+- Lease time (how long the device can keep the IP)
+
+## The Three Components of RouterOS DHCP Server
+
+To set up DHCP in RouterOS you need three things:
+
+1. **IP Pool** — the range of addresses to hand out
+2. **DHCP Server** — the service that listens for requests and assigns IPs
+3. **DHCP Server Network** — tells the DHCP server what gateway and DNS to send to clients
+
+## Step 1: Create an IP Pool
+
+An IP pool defines the range of addresses available for DHCP assignment.
+
+\`\`\`
+/ip pool add name=lan-pool ranges=192.168.1.100-192.168.1.200
+\`\`\`
+
+This creates a pool named \`lan-pool\` that can hand out addresses from \`.100\` to \`.200\` — that is 101 addresses.
+
+View your pools:
+
+\`\`\`
+/ip pool print
+\`\`\`
+
+## Step 2: Create the DHCP Server
+
+\`\`\`
+/ip dhcp-server add name=dhcp-lan interface=bridge address-pool=lan-pool disabled=no
+\`\`\`
+
+Parameters explained:
+
+- \`name=dhcp-lan\` — a name for this DHCP server instance (you can have multiple)
+- \`interface=bridge\` — which interface to listen on (use your LAN interface — often a bridge)
+- \`address-pool=lan-pool\` — which pool to draw addresses from
+- \`disabled=no\` — enable it immediately
+
+View the DHCP server:
+
+\`\`\`
+/ip dhcp-server print
+\`\`\`
+
+## Step 3: Configure the DHCP Server Network
+
+This tells the DHCP server what network information to send to clients:
+
+\`\`\`
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=8.8.8.8,8.8.4.4
+\`\`\`
+
+Parameters:
+
+- \`address=192.168.1.0/24\` — the network this DHCP server serves
+- \`gateway=192.168.1.1\` — the default gateway clients should use (your router LAN IP)
+- \`dns-server=8.8.8.8,8.8.4.4\` — DNS servers for clients
+
+View the network configuration:
+
+\`\`\`
+/ip dhcp-server network print
+\`\`\`
+
+## Verifying It Works
+
+Connect a device to your LAN and let it get an address automatically. Then check active leases:
+
+\`\`\`
+/ip dhcp-server lease print
+\`\`\`
+
+You will see something like:
+
+\`\`\`
+ #   ADDRESS         MAC-ADDRESS       HOST-NAME    STATUS
+ 0   192.168.1.100   AA:BB:CC:DD:EE:FF my-laptop    bound
+\`\`\`
+
+## Viewing and Managing Leases
+
+### See All Current Leases
+
+\`\`\`
+/ip dhcp-server lease print
+\`\`\`
+
+### See Detailed Lease Information
+
+\`\`\`
+/ip dhcp-server lease print detail
+\`\`\`
+
+### Remove a Lease Manually
+
+\`\`\`
+/ip dhcp-server lease remove 0
+\`\`\`
+
+## Static DHCP Leases
+
+A static DHCP lease (also called a DHCP reservation) assigns the same IP address to a specific device every time, based on its MAC address. This is useful for printers, servers, and other devices that need a predictable IP.
+
+### Adding a Static Lease
+
+\`\`\`
+/ip dhcp-server lease add address=192.168.1.50 mac-address=AA:BB:CC:DD:EE:FF server=dhcp-lan comment=my-printer
+\`\`\`
+
+Parameters:
+
+- \`address=192.168.1.50\` — the IP to always assign to this device
+- \`mac-address=AA:BB:CC:DD:EE:FF\` — the MAC address of the device
+- \`server=dhcp-lan\` — which DHCP server this lease belongs to
+- \`comment=my-printer\` — optional label for readability
+
+### Converting an Existing Dynamic Lease to Static
+
+If a device already has a dynamic lease and you want to make it permanent:
+
+\`\`\`
+/ip dhcp-server lease make-static 0
+\`\`\`
+
+(where 0 is the lease number from \`print\`)
+
+This converts the lease to static so that device always gets the same IP.
+
+## Complete DHCP Setup in One Go
+
+Here is a full example for a typical home network where the router LAN interface is a bridge with IP \`192.168.1.1/24\`:
+
+\`\`\`
+# Step 1: Create IP pool
+/ip pool add name=lan-pool ranges=192.168.1.100-192.168.1.200
+
+# Step 2: Create DHCP server
+/ip dhcp-server add name=dhcp-lan interface=bridge address-pool=lan-pool disabled=no
+
+# Step 3: Configure network info for clients
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=8.8.8.8,1.1.1.1
+\`\`\`
+
+## Lease Time
+
+The default lease time in RouterOS is 10 minutes for the offer and 3 days for the actual lease. You can change it per DHCP server network:
+
+\`\`\`
+/ip dhcp-server network set 0 lease-time=1d
+\`\`\`
+
+Or set it at the DHCP server level:
+
+\`\`\`
+/ip dhcp-server set dhcp-lan lease-time=12h
+\`\`\`
+
+Common values: \`30m\`, \`1h\`, \`12h\`, \`1d\`, \`3d\`
+
+## DHCP Server on Multiple Interfaces
+
+If your router has multiple LAN segments, you can run separate DHCP servers for each:
+
+\`\`\`
+# Pool for VLAN 10
+/ip pool add name=vlan10-pool ranges=10.10.10.100-10.10.10.200
+
+# DHCP server for VLAN 10 interface
+/ip dhcp-server add name=dhcp-vlan10 interface=vlan10 address-pool=vlan10-pool disabled=no
+
+# Network info for VLAN 10
+/ip dhcp-server network add address=10.10.10.0/24 gateway=10.10.10.1 dns-server=8.8.8.8
+\`\`\`
+
+## Using the DHCP Server Setup Wizard
+
+RouterOS also includes a quick setup command that does all three steps automatically:
+
+\`\`\`
+/ip dhcp-server setup
+\`\`\`
+
+This runs an interactive wizard asking for interface, address pool range, gateway, and DNS. It is the fastest way if you just want a quick setup.
+
+## Summary
+
+DHCP setup in RouterOS requires three steps:
+
+1. Create a pool: \`/ip pool add\`
+2. Create the server: \`/ip dhcp-server add\`
+3. Configure network info: \`/ip dhcp-server network add\`
+
+Use static leases for devices that need a fixed IP. Use \`/ip dhcp-server lease print\` to monitor what addresses have been assigned.
+`,
+    contentFa: `
+## راه‌اندازی سرور DHCP در میکروتیک RouterOS
+
+سرور DHCP به‌طور خودکار آدرس IP به دستگاه‌های شبکه اختصاص می‌دهد. بدون آن، هر دستگاه باید به‌صورت دستی پیکربندی شود.
+
+## DHCP چطور کار می‌کند؟
+
+وقتی یک دستگاه به شبکه وصل می‌شود، پیامی ارسال می‌کند که می‌گوید آدرس IP می‌خواهم. سرور DHCP یک آدرس از pool خود انتخاب می‌کند و همراه با اطلاعات زیر ارسال می‌کند:
+
+- آدرس IP
+- Subnet mask
+- Gateway پیش‌فرض
+- آدرس سرورهای DNS
+- مدت اعتبار (lease time)
+
+## سه مؤلفه DHCP در RouterOS
+
+برای راه‌اندازی DHCP به سه چیز نیاز دارید:
+
+۱. **IP Pool** — محدوده آدرس‌های قابل اختصاص
+۲. **DHCP Server** — سرویسی که درخواست‌ها را می‌شنود
+۳. **DHCP Server Network** — اطلاعات gateway و DNS برای کلاینت‌ها
+
+## مرحله ۱: ایجاد IP Pool
+
+\`\`\`
+/ip pool add name=lan-pool ranges=192.168.1.100-192.168.1.200
+\`\`\`
+
+این یک pool ایجاد می‌کند که ۱۰۱ آدرس از \`.100\` تا \`.200\` دارد.
+
+\`\`\`
+/ip pool print
+\`\`\`
+
+## مرحله ۲: ایجاد DHCP Server
+
+\`\`\`
+/ip dhcp-server add name=dhcp-lan interface=bridge address-pool=lan-pool disabled=no
+\`\`\`
+
+- \`interface=bridge\` — روی کدام اینترفیس گوش دهد (معمولاً bridge یا ether2)
+- \`address-pool=lan-pool\` — از کدام pool آدرس بدهد
+
+\`\`\`
+/ip dhcp-server print
+\`\`\`
+
+## مرحله ۳: پیکربندی Network DHCP
+
+\`\`\`
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=8.8.8.8,8.8.4.4
+\`\`\`
+
+- \`address\` — شبکه‌ای که این سرور DHCP سرویس می‌دهد
+- \`gateway\` — دروازه پیش‌فرض برای کلاینت‌ها
+- \`dns-server\` — سرورهای DNS
+
+## بررسی عملکرد
+
+\`\`\`
+/ip dhcp-server lease print
+\`\`\`
+
+خروجی نمونه:
+
+\`\`\`
+ #   ADDRESS         MAC-ADDRESS       HOST-NAME   STATUS
+ 0   192.168.1.100   AA:BB:CC:DD:EE:FF my-laptop   bound
+\`\`\`
+
+## Static DHCP Lease (رزرو آدرس)
+
+برای دستگاه‌هایی که همیشه باید یک IP ثابت بگیرند (پرینتر، سرور):
+
+\`\`\`
+/ip dhcp-server lease add address=192.168.1.50 mac-address=AA:BB:CC:DD:EE:FF server=dhcp-lan comment=my-printer
+\`\`\`
+
+### تبدیل lease پویا به ثابت
+
+\`\`\`
+/ip dhcp-server lease make-static 0
+\`\`\`
+
+## راه‌اندازی کامل (مثال)
+
+\`\`\`
+# مرحله ۱: ایجاد pool
+/ip pool add name=lan-pool ranges=192.168.1.100-192.168.1.200
+
+# مرحله ۲: ایجاد سرور DHCP
+/ip dhcp-server add name=dhcp-lan interface=bridge address-pool=lan-pool disabled=no
+
+# مرحله ۳: اطلاعات شبکه برای کلاینت‌ها
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=8.8.8.8,1.1.1.1
+\`\`\`
+
+## تنظیم مدت اعتبار (Lease Time)
+
+\`\`\`
+/ip dhcp-server set dhcp-lan lease-time=12h
+\`\`\`
+
+مقادیر رایج: \`30m\`، \`1h\`، \`12h\`، \`1d\`، \`3d\`
+
+## ویزارد راه‌اندازی سریع
+
+\`\`\`
+/ip dhcp-server setup
+\`\`\`
+
+این دستور یک ویزارد تعاملی اجرا می‌کند که هر سه مرحله را در یک گام انجام می‌دهد.
+
+## جمع‌بندی
+
+راه‌اندازی DHCP در RouterOS سه مرحله دارد:
+۱. \`/ip pool add\` — ایجاد pool آدرس
+۲. \`/ip dhcp-server add\` — ایجاد سرور
+۳. \`/ip dhcp-server network add\` — پیکربندی اطلاعات شبکه
+`,
+  },
+  'mikrotik-nat-masquerade-basics': {
+    contentEn: `
+## NAT and Masquerade on MikroTik: Sharing Your Internet Connection
+
+NAT (Network Address Translation) is the technology that allows many devices on your private network to share a single public IP address from your ISP. Without NAT, every device would need its own public IP — which is impractical and expensive. This guide explains how NAT works and how to set it up on RouterOS.
+
+## How NAT Works (The Simple Explanation)
+
+Imagine your home network uses IP addresses like \`192.168.1.x\`. These are private addresses that cannot be routed on the public Internet. Your ISP gives your router a single public IP like \`203.0.113.1\`.
+
+Without NAT, when your laptop (192.168.1.10) tries to visit a website, the website would not know where to send the reply — it cannot reach \`192.168.1.10\` because that address is private.
+
+With NAT (specifically Source NAT, also called masquerade):
+
+1. Your laptop sends a packet from \`192.168.1.10:54321\` to \`93.184.216.34:80\`
+2. Your router replaces the source address with its public IP: \`203.0.113.1:54321\`
+3. The website replies to \`203.0.113.1:54321\`
+4. Your router remembers the original connection and forwards the reply back to \`192.168.1.10:54321\`
+
+The router acts as a translator between your private network and the Internet.
+
+## Source NAT vs Destination NAT
+
+- **Source NAT (SNAT/Masquerade)** — changes the source IP of outgoing packets. Used for Internet sharing.
+- **Destination NAT (DNAT/Port Forward)** — changes the destination IP of incoming packets. Used to forward specific ports to internal servers.
+
+This lesson focuses on Source NAT (masquerade).
+
+## Setting Up Masquerade in RouterOS
+
+The command is simple:
+
+\`\`\`
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1 comment=masquerade-for-internet
+\`\`\`
+
+Parameters explained:
+
+- \`chain=srcnat\` — this is a Source NAT rule (changes source address)
+- \`action=masquerade\` — automatically uses the current IP of the out-interface (perfect when your ISP IP changes dynamically)
+- \`out-interface=ether1\` — apply this rule when traffic exits through ether1 (your WAN/Internet interface)
+- \`comment=masquerade-for-internet\` — optional label
+
+That single rule is all you need for basic Internet sharing!
+
+## Verifying the NAT Rule
+
+\`\`\`
+/ip firewall nat print
+\`\`\`
+
+Output example:
+
+\`\`\`
+Flags: X - disabled, I - invalid, D - dynamic
+ 0    chain=srcnat action=masquerade out-interface=ether1
+\`\`\`
+
+## Why masquerade Instead of src-nat?
+
+There are two actions that do Source NAT:
+
+- \`action=masquerade\` — automatically uses whatever IP the out-interface currently has. Best when your ISP gives you a dynamic IP (it changes sometimes).
+- \`action=src-nat to-addresses=203.0.113.1\` — you specify the exact IP to NAT to. Better for static IP addresses (slightly more efficient).
+
+For most beginners and home setups, use masquerade. It just works.
+
+## Adding More Specificity to the NAT Rule
+
+For better control, you can restrict the masquerade rule to only apply to traffic from your LAN:
+
+\`\`\`
+/ip firewall nat add chain=srcnat src-address=192.168.1.0/24 action=masquerade out-interface=ether1
+\`\`\`
+
+This only masquerades packets that originated from the \`192.168.1.0/24\` subnet. Traffic from other sources is not affected.
+
+## How to Check If NAT Is Working
+
+After adding the masquerade rule, try pinging the Internet from your MikroTik:
+
+\`\`\`
+/ping 8.8.8.8 count=4
+\`\`\`
+
+If this works, the router itself has Internet access. Now check from a client device on your LAN — if the client can reach the Internet, NAT is working.
+
+To see NAT connections in real time:
+
+\`\`\`
+/ip firewall connection print
+\`\`\`
+
+This shows all active connection tracking entries.
+
+## Port Forwarding (Destination NAT) — Brief Overview
+
+If you want to host a server (for example a web server on \`192.168.1.100\` port 80), you need to forward incoming traffic from the WAN to the internal server:
+
+\`\`\`
+/ip firewall nat add chain=dstnat in-interface=ether1 protocol=tcp dst-port=80 action=dst-nat to-addresses=192.168.1.100 to-ports=80
+\`\`\`
+
+Parameters:
+
+- \`chain=dstnat\` — Destination NAT rule
+- \`in-interface=ether1\` — apply when traffic arrives on ether1 (WAN)
+- \`protocol=tcp dst-port=80\` — only for TCP port 80 (HTTP)
+- \`action=dst-nat to-addresses=192.168.1.100 to-ports=80\` — send it to internal server
+
+## Full Example: Home Network NAT Setup
+
+Assume: ether1 is WAN (DHCP from ISP), ether2 is LAN (\`192.168.1.1/24\`):
+
+\`\`\`
+# WAN gets IP from ISP via DHCP
+/ip dhcp-client add interface=ether1 disabled=no
+
+# LAN address
+/ip address add address=192.168.1.1/24 interface=ether2
+
+# Default route (gets added automatically by DHCP client, but manually:)
+# /ip route add dst-address=0.0.0.0/0 gateway=<ISP-GATEWAY>
+
+# Masquerade for Internet sharing
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1
+\`\`\`
+
+## Common Mistakes
+
+### Forgetting the Default Route
+
+NAT only handles address translation. Your router still needs to know where to send Internet traffic — you need a default route pointing to your ISP gateway. DHCP client adds this automatically. If using a static IP, add it manually:
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=203.0.113.254
+\`\`\`
+
+### Wrong Interface in the NAT Rule
+
+Make sure \`out-interface\` matches your actual WAN interface name. Use \`/interface print\` to confirm.
+
+### NAT Rule Too Broad or Not Broad Enough
+
+If you add \`src-address\` restrictions, make sure they cover all your LAN subnets.
+
+## Summary
+
+Source NAT (masquerade) on MikroTik is set up with one command:
+
+\`\`\`
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1
+\`\`\`
+
+This single rule allows all devices on your LAN to share your public IP address and access the Internet. For dynamic ISP IPs, masquerade is the correct action to use.
+`,
+    contentFa: `
+## NAT و Masquerade در میکروتیک: اشتراک‌گذاری اتصال اینترنت
+
+NAT (ترجمه آدرس شبکه) تکنولوژی‌ای است که به چندین دستگاه در شبکه خصوصی شما امکان می‌دهد از یک آدرس IP عمومی استفاده کنند.
+
+## NAT چطور کار می‌کند؟
+
+فرض کنید شبکه خانگی شما از آدرس‌های \`192.168.1.x\` استفاده می‌کند. این آدرس‌های خصوصی در اینترنت عمومی قابل مسیریابی نیستند. ISP شما یک IP عمومی مثل \`203.0.113.1\` به روتر شما می‌دهد.
+
+با NAT (Source NAT یا masquerade):
+
+۱. لپ‌تاپ شما بسته‌ای از \`192.168.1.10:54321\` به سرور ارسال می‌کند
+۲. روتر آدرس مبدأ را با IP عمومی جایگزین می‌کند: \`203.0.113.1:54321\`
+۳. سرور پاسخ را به \`203.0.113.1:54321\` ارسال می‌کند
+۴. روتر پاسخ را به \`192.168.1.10\` هدایت می‌کند
+
+## Source NAT در مقابل Destination NAT
+
+- **Source NAT (Masquerade)** — آدرس مبدأ بسته‌های خروجی را تغییر می‌دهد. برای اشتراک اینترنت.
+- **Destination NAT (Port Forward)** — آدرس مقصد بسته‌های ورودی را تغییر می‌دهد. برای هاست کردن سرور.
+
+## راه‌اندازی Masquerade در RouterOS
+
+\`\`\`
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1 comment=masquerade-for-internet
+\`\`\`
+
+توضیح پارامترها:
+
+- \`chain=srcnat\` — قانون Source NAT
+- \`action=masquerade\` — به‌طور خودکار از IP فعلی اینترفیس خروجی استفاده می‌کند
+- \`out-interface=ether1\` — وقتی ترافیک از ether1 (WAN) خارج می‌شود
+
+همین یک دستور برای اشتراک‌گذاری اینترنت کافی است!
+
+## بررسی قانون NAT
+
+\`\`\`
+/ip firewall nat print
+\`\`\`
+
+## masquerade در مقابل src-nat
+
+- \`action=masquerade\` — وقتی ISP آدرس IP پویا (DHCP) می‌دهد بهتر است
+- \`action=src-nat to-addresses=203.0.113.1\` — وقتی IP ثابت دارید کارایی بهتری دارد
+
+برای اکثر مبتدیان از masquerade استفاده کنید.
+
+## اضافه کردن محدودیت به قانون NAT
+
+برای اعمال فقط به ترافیک شبکه LAN:
+
+\`\`\`
+/ip firewall nat add chain=srcnat src-address=192.168.1.0/24 action=masquerade out-interface=ether1
+\`\`\`
+
+## بررسی عملکرد NAT
+
+\`\`\`
+/ping 8.8.8.8 count=4
+\`\`\`
+
+اگر این دستور کار کرد، روتر دسترسی به اینترنت دارد. بعد از یک دستگاه کلاینت بررسی کنید.
+
+دیدن اتصالات NAT در لحظه:
+
+\`\`\`
+/ip firewall connection print
+\`\`\`
+
+## Port Forwarding (Destination NAT)
+
+اگر می‌خواهید سروری داخلی را از بیرون قابل دسترس کنید:
+
+\`\`\`
+/ip firewall nat add chain=dstnat in-interface=ether1 protocol=tcp dst-port=80 action=dst-nat to-addresses=192.168.1.100 to-ports=80
+\`\`\`
+
+## مثال کامل
+
+\`\`\`
+# IP از ISP از طریق DHCP
+/ip dhcp-client add interface=ether1 disabled=no
+
+# آدرس LAN
+/ip address add address=192.168.1.1/24 interface=ether2
+
+# Masquerade برای اشتراک اینترنت
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1
+\`\`\`
+
+## اشتباهات رایج
+
+### فراموش کردن Default Route
+
+NAT فقط آدرس‌ها را ترجمه می‌کند. روتر هنوز باید بداند ترافیک اینترنت را به کجا بفرستد. DHCP client این را خودکار اضافه می‌کند. برای IP ثابت:
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=203.0.113.254
+\`\`\`
+
+## جمع‌بندی
+
+Source NAT در میکروتیک با یک دستور راه‌اندازی می‌شود:
+
+\`\`\`
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1
+\`\`\`
+
+این یک قانون به همه دستگاه‌های LAN اجازه می‌دهد از IP عمومی شما استفاده کنند.
+`,
+  },
+  'mikrotik-firewall-chains-basics': {
+    contentEn: `
+## MikroTik Firewall Chains: Understanding input, forward, and output
+
+The firewall is one of the most important features in RouterOS. It lets you control exactly which traffic is allowed through your router and which is blocked. This lesson covers the fundamental concepts: firewall chains, how packets flow through them, and how to write basic rules.
+
+## How Packets Travel Through RouterOS
+
+Before writing firewall rules, you need to understand how RouterOS processes packets. There are three paths a packet can take:
+
+### The input Chain
+
+The \`input\` chain handles packets **destined for the router itself**. Examples:
+
+- Someone trying to SSH into your router (port 22)
+- Someone trying to connect to Winbox (port 8291)
+- Ping requests to your router IP
+- DHCP requests received by the router
+
+Rule of thumb: **input** = traffic going TO the router, not through it.
+
+### The forward Chain
+
+The \`forward\` chain handles packets that **pass through the router** from one interface to another. Examples:
+
+- A device on your LAN browsing the Internet (LAN to WAN)
+- Traffic between two VLANs
+- Any routed traffic that is not for the router itself
+
+Rule of thumb: **forward** = traffic going THROUGH the router.
+
+### The output Chain
+
+The \`output\` chain handles packets **generated by the router itself**. Examples:
+
+- The router sending a ping (\`/ping 8.8.8.8\`)
+- The router sending DNS queries
+- RouterOS sending NTP time sync packets
+
+Rule of thumb: **output** = traffic FROM the router. Rarely modified by beginners.
+
+## The Default-Deny Philosophy
+
+A properly secured router uses a **default-deny** approach:
+
+1. Explicitly allow what you want to permit
+2. Drop everything else at the end
+
+This is much safer than "allow everything except what you explicitly block."
+
+The classic firewall chain order:
+
+1. Accept established/related traffic (connections already in progress)
+2. Drop invalid traffic
+3. Accept specific wanted traffic
+4. Drop everything else (catch-all drop at the bottom)
+
+## RouterOS Firewall Rule Order
+
+Rules are evaluated **top to bottom**. The first rule that matches a packet wins. This is critical — put more specific rules before more general ones.
+
+\`\`\`
+/ip firewall filter print
+\`\`\`
+
+Rules are numbered. If rule 0 matches a packet, rules 1, 2, 3 etc. are not checked for that packet.
+
+## Connection Tracking
+
+RouterOS tracks the state of connections using connection tracking. Each packet is classified as:
+
+- \`established\` — part of an already-accepted connection
+- \`related\` — related to an established connection (e.g., FTP data channel)
+- \`new\` — starting a new connection
+- \`invalid\` — does not match any known connection state
+
+This lets you write simple rules like "accept all established traffic" rather than writing rules for both directions of every connection.
+
+## Building a Basic Firewall: input Chain
+
+Here is a safe default configuration for the input chain:
+
+\`\`\`
+# Accept established and related connections (traffic from sessions already allowed)
+/ip firewall filter add chain=input connection-state=established,related action=accept comment=accept-established-related
+
+# Drop invalid packets
+/ip firewall filter add chain=input connection-state=invalid action=drop comment=drop-invalid
+
+# Accept ICMP (ping) from anywhere (optional, remove if you want to be stealthy)
+/ip firewall filter add chain=input protocol=icmp action=accept comment=accept-icmp
+
+# Accept management traffic from LAN only
+/ip firewall filter add chain=input in-interface=bridge action=accept comment=accept-from-lan
+
+# Drop everything else coming into the router (especially from WAN)
+/ip firewall filter add chain=input action=drop comment=drop-all-else
+\`\`\`
+
+This configuration:
+- Allows all ongoing connections to continue
+- Drops bad/invalid packets
+- Allows ping
+- Allows full management from LAN
+- Blocks everything arriving from the WAN (Internet)
+
+## Building a Basic Firewall: forward Chain
+
+\`\`\`
+# Accept established and related connections
+/ip firewall filter add chain=forward connection-state=established,related action=accept comment=accept-established-related
+
+# Drop invalid packets
+/ip firewall filter add chain=forward connection-state=invalid action=drop comment=drop-invalid
+
+# Accept LAN to WAN traffic (allow your clients to reach the Internet)
+/ip firewall filter add chain=forward in-interface=bridge out-interface=ether1 action=accept comment=lan-to-wan
+
+# Drop everything else
+/ip firewall filter add chain=forward action=drop comment=drop-all-else
+\`\`\`
+
+## Viewing Firewall Rules
+
+\`\`\`
+/ip firewall filter print
+\`\`\`
+
+To see rules with hit counters (how many packets matched each rule):
+
+\`\`\`
+/ip firewall filter print stats
+\`\`\`
+
+This is very useful for troubleshooting — a rule with zero hits may not be placed correctly.
+
+## Reordering Rules
+
+Rules are applied in order. You can move them with:
+
+\`\`\`
+/ip firewall filter move 5 destination=0
+\`\`\`
+
+This moves rule 5 to position 0 (the top).
+
+## Disabling and Enabling Rules
+
+Instead of deleting a rule, disable it for testing:
+
+\`\`\`
+/ip firewall filter disable 3
+/ip firewall filter enable 3
+\`\`\`
+
+## Removing Rules
+
+\`\`\`
+/ip firewall filter remove 3
+\`\`\`
+
+Be careful with the default-deny drop rule at the bottom — removing it might open everything.
+
+## Logging Traffic
+
+To log packets matching a rule (useful for debugging):
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp dst-port=22 action=log log-prefix=SSH-ATTEMPT
+\`\`\`
+
+View logs:
+
+\`\`\`
+/log print
+\`\`\`
+
+## The address-list Feature
+
+You can group IP addresses into named lists for easier rule management:
+
+\`\`\`
+# Create a list
+/ip firewall address-list add list=trusted-admins address=192.168.1.10
+
+# Use the list in a rule
+/ip firewall filter add chain=input src-address-list=trusted-admins action=accept
+\`\`\`
+
+## Summary
+
+Firewall chains in RouterOS:
+
+- **input** — traffic TO the router
+- **forward** — traffic THROUGH the router
+- **output** — traffic FROM the router
+
+Always use the default-deny pattern: accept what you need, drop everything else at the bottom. Use connection-state matching (established, related, invalid) to simplify your rules. Use \`print stats\` to verify your rules are actually matching traffic.
+`,
+    contentFa: `
+## اصول فایروال در میکروتیک: input، forward و output
+
+فایروال یکی از مهم‌ترین ویژگی‌های RouterOS است. با آن می‌توانید کنترل کنید چه ترافیکی از روتر عبور کند و چه چیزی بلاک شود.
+
+## چطور بسته‌ها در RouterOS پردازش می‌شوند؟
+
+سه مسیر برای یک بسته در RouterOS وجود دارد:
+
+### زنجیره input
+
+\`input\` بسته‌هایی را مدیریت می‌کند که **مقصدشان خود روتر است**:
+
+- اتصال SSH به روتر (پورت ۲۲)
+- اتصال Winbox (پورت ۸۲۹۱)
+- Ping به آدرس IP روتر
+- درخواست‌های DHCP
+
+**قانون:** input = ترافیک که به روتر می‌رود، نه از آن عبور می‌کند.
+
+### زنجیره forward
+
+\`forward\` بسته‌هایی را مدیریت می‌کند که **از روتر عبور می‌کنند**:
+
+- دستگاه‌های LAN که به اینترنت دسترسی دارند
+- ترافیک بین VLAN‌ها
+
+**قانون:** forward = ترافیک که از روتر عبور می‌کند.
+
+### زنجیره output
+
+\`output\` بسته‌هایی را مدیریت می‌کند که **خود روتر ایجاد می‌کند**:
+
+- روتر Ping ارسال می‌کند
+- روتر DNS query ارسال می‌کند
+
+**قانون:** output = ترافیک از روتر. مبتدیان معمولاً آن را تغییر نمی‌دهند.
+
+## فلسفه default-deny
+
+یک روتر امن از رویکرد **default-deny** استفاده می‌کند:
+
+۱. آنچه می‌خواهید مجاز باشد را صریحاً مجاز کنید
+۲. در پایان همه چیز دیگر را drop کنید
+
+## Connection Tracking
+
+RouterOS وضعیت اتصالات را ردیابی می‌کند. هر بسته به یکی از این حالت‌ها تعلق دارد:
+
+- \`established\` — بخشی از اتصال موجود
+- \`related\` — مرتبط با اتصال موجود
+- \`new\` — شروع اتصال جدید
+- \`invalid\` — با هیچ حالت شناخته‌شده‌ای مطابقت ندارد
+
+## ساخت فایروال پایه: زنجیره input
+
+\`\`\`
+# پذیرش اتصالات موجود
+/ip firewall filter add chain=input connection-state=established,related action=accept comment=accept-established-related
+
+# Drop بسته‌های نامعتبر
+/ip firewall filter add chain=input connection-state=invalid action=drop comment=drop-invalid
+
+# پذیرش ICMP (ping)
+/ip firewall filter add chain=input protocol=icmp action=accept comment=accept-icmp
+
+# پذیرش ترافیک مدیریتی از LAN
+/ip firewall filter add chain=input in-interface=bridge action=accept comment=accept-from-lan
+
+# Drop همه چیز دیگر
+/ip firewall filter add chain=input action=drop comment=drop-all-else
+\`\`\`
+
+## ساخت فایروال پایه: زنجیره forward
+
+\`\`\`
+# پذیرش اتصالات موجود
+/ip firewall filter add chain=forward connection-state=established,related action=accept comment=accept-established-related
+
+# Drop بسته‌های نامعتبر
+/ip firewall filter add chain=forward connection-state=invalid action=drop comment=drop-invalid
+
+# پذیرش ترافیک از LAN به WAN
+/ip firewall filter add chain=forward in-interface=bridge out-interface=ether1 action=accept comment=lan-to-wan
+
+# Drop همه چیز دیگر
+/ip firewall filter add chain=forward action=drop comment=drop-all-else
+\`\`\`
+
+## مشاهده قوانین فایروال
+
+\`\`\`
+/ip firewall filter print
+\`\`\`
+
+با شمارنده hits:
+
+\`\`\`
+/ip firewall filter print stats
+\`\`\`
+
+## مدیریت قوانین
+
+\`\`\`
+# جابجایی قانون
+/ip firewall filter move 5 destination=0
+
+# غیرفعال کردن موقت
+/ip firewall filter disable 3
+/ip firewall filter enable 3
+
+# حذف
+/ip firewall filter remove 3
+\`\`\`
+
+## ثبت گزارش ترافیک
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp dst-port=22 action=log log-prefix=SSH-ATTEMPT
+/log print
+\`\`\`
+
+## جمع‌بندی
+
+زنجیره‌های فایروال در RouterOS:
+
+- **input** — ترافیک به روتر
+- **forward** — ترافیک از روتر عبور می‌کند
+- **output** — ترافیک از روتر
+
+همیشه از الگوی default-deny استفاده کنید: آنچه نیاز دارید را مجاز کنید، بقیه را در پایان drop کنید.
+`,
+  },
+  'mikrotik-static-routing-basics': {
+    contentEn: `
+## Static Routing on MikroTik RouterOS
+
+Routing is the process of deciding where to send a packet based on its destination IP address. RouterOS maintains a **routing table** — a list of known networks and how to reach them. This lesson covers static routes: routes you add manually.
+
+## The Routing Table
+
+To see the current routing table:
+
+\`\`\`
+/ip route print
+\`\`\`
+
+Example output:
+
+\`\`\`
+Flags: X - disabled, A - active, D - dynamic, C - connect, S - static, r - rip, b - bgp, o - ospf
+ #      DST-ADDRESS        PREF-SRC        GATEWAY            DISTANCE
+ 0 ADC  192.168.1.0/24     192.168.1.1     bridge             0
+ 1 ADC  10.0.0.0/30        10.0.0.1        ether1             0
+ 2 ADS  0.0.0.0/0                          10.0.0.254         1
+\`\`\`
+
+Understanding the flags:
+
+- \`A\` — Active (this route is currently being used)
+- \`D\` — Dynamic (added automatically, e.g., by DHCP client or routing protocol)
+- \`C\` — Connected (created automatically when you add an IP address to an interface)
+- \`S\` — Static (manually added by you)
+
+## The Default Route
+
+The most important static route is the **default route** — also called the gateway of last resort. It tells the router where to send traffic when no more specific route exists (which is most Internet traffic).
+
+The default route has destination \`0.0.0.0/0\`, which matches every IP address (with the lowest priority — more specific routes always win).
+
+### Adding a Default Route
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254
+\`\`\`
+
+Here \`10.0.0.254\` is your ISP gateway address. Every packet destined for the Internet will be sent there.
+
+### Check Your Default Route
+
+\`\`\`
+/ip route print where dst-address=0.0.0.0/0
+\`\`\`
+
+## Adding Static Routes
+
+The general syntax is:
+
+\`\`\`
+/ip route add dst-address=<NETWORK/PREFIX> gateway=<NEXT-HOP-IP>
+\`\`\`
+
+### Example: Route to a Remote Network
+
+Suppose you have two offices connected via a VPN or leased line:
+
+- Your office: \`192.168.1.0/24\`
+- Remote office: \`192.168.2.0/24\`
+- The gateway to reach the remote office: \`10.10.10.2\`
+
+\`\`\`
+/ip route add dst-address=192.168.2.0/24 gateway=10.10.10.2 comment=route-to-remote-office
+\`\`\`
+
+Now packets going to \`192.168.2.x\` will be sent to \`10.10.10.2\`, which forwards them to the remote office.
+
+### Example: Multiple Hops
+
+If you need to reach \`172.16.0.0/16\` through \`192.168.1.254\`:
+
+\`\`\`
+/ip route add dst-address=172.16.0.0/16 gateway=192.168.1.254
+\`\`\`
+
+## Route Distance (Metric)
+
+Every route has a **distance** value (also called administrative distance or metric). Lower distance = higher priority.
+
+Default distances:
+
+| Route Type | Default Distance |
+|------------|-----------------|
+| Connected | 0 |
+| Static | 1 |
+| eBGP | 20 |
+| OSPF | 110 |
+| RIP | 120 |
+
+You can set the distance when adding a route:
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254 distance=1
+\`\`\`
+
+### Using Distance for Backup Routes (Floating Static Routes)
+
+You can add two routes to the same destination with different distances to create a primary/backup setup:
+
+\`\`\`
+# Primary route (distance 1 — used first)
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254 distance=1
+
+# Backup route (distance 5 — only used if primary is inactive)
+/ip route add dst-address=0.0.0.0/0 gateway=192.168.100.1 distance=5
+\`\`\`
+
+RouterOS will always use the route with lower distance when both are active. If the primary gateway fails (and RouterOS detects this via the check-gateway feature), it automatically switches to the backup.
+
+## The check-gateway Feature
+
+RouterOS can monitor whether a gateway is reachable and mark a route as inactive if it is not:
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254 check-gateway=ping
+\`\`\`
+
+With \`check-gateway=ping\`, RouterOS periodically pings the gateway. If it stops responding, the route is marked inactive and the next-best route takes over.
+
+## Longest Prefix Match
+
+When a packet arrives, RouterOS picks the most specific route (the longest prefix) that matches. For example:
+
+- Route A: \`10.0.0.0/8\` via gateway1
+- Route B: \`10.10.0.0/16\` via gateway2
+- Route C: \`10.10.10.0/24\` via gateway3
+
+A packet going to \`10.10.10.5\` will use Route C (most specific, longest prefix \`/24\`).
+A packet going to \`10.10.5.5\` will use Route B.
+A packet going to \`10.20.0.5\` will use Route A.
+
+## Removing and Modifying Static Routes
+
+Remove a route by number:
+
+\`\`\`
+/ip route remove 2
+\`\`\`
+
+Remove a specific route:
+
+\`\`\`
+/ip route remove [find dst-address=192.168.2.0/24]
+\`\`\`
+
+Modify a route:
+
+\`\`\`
+/ip route set 2 gateway=10.10.10.3
+\`\`\`
+
+## Disabling Routes
+
+You can disable a route without removing it (useful for testing):
+
+\`\`\`
+/ip route disable 2
+/ip route enable 2
+\`\`\`
+
+A disabled route shows with \`X\` flag in \`print\`.
+
+## Testing Routing with ping and traceroute
+
+Test if a destination is reachable:
+
+\`\`\`
+/ping 192.168.2.1 count=4
+\`\`\`
+
+Trace the path packets take:
+
+\`\`\`
+/tool traceroute 8.8.8.8
+\`\`\`
+
+This shows every hop along the path to the destination — very useful for diagnosing routing problems.
+
+## Viewing the Route Table With Filters
+
+Show only static routes:
+
+\`\`\`
+/ip route print where static
+\`\`\`
+
+Show only active routes:
+
+\`\`\`
+/ip route print where active
+\`\`\`
+
+## Summary
+
+Static routing in RouterOS:
+
+- View routes: \`/ip route print\`
+- Add default route: \`/ip route add dst-address=0.0.0.0/0 gateway=X.X.X.X\`
+- Add specific route: \`/ip route add dst-address=NETWORK/PREFIX gateway=X.X.X.X\`
+- Lower distance = higher priority
+- Use floating static routes (different distances) for backup paths
+- Use \`check-gateway=ping\` to automatically failover when a gateway goes down
+`,
+    contentFa: `
+## مسیریابی ایستا در RouterOS میکروتیک
+
+مسیریابی فرآیندی است که تعیین می‌کند یک بسته به کجا ارسال شود. RouterOS یک **جدول مسیریابی** نگه می‌دارد — لیستی از شبکه‌های شناخته‌شده و نحوه دسترسی به آنها.
+
+## جدول مسیریابی
+
+\`\`\`
+/ip route print
+\`\`\`
+
+خروجی نمونه:
+
+\`\`\`
+ #      DST-ADDRESS        GATEWAY         DISTANCE
+ 0 ADC  192.168.1.0/24     bridge          0
+ 1 ADC  10.0.0.0/30        ether1          0
+ 2 ADS  0.0.0.0/0          10.0.0.254      1
+\`\`\`
+
+درک پرچم‌ها:
+
+- \`A\` — فعال
+- \`D\` — پویا (خودکار اضافه شده)
+- \`C\` — Connected (وقتی IP اضافه می‌کنید خودکار ایجاد می‌شود)
+- \`S\` — Static (دستی اضافه شده)
+
+## مسیر پیش‌فرض (Default Route)
+
+مهم‌ترین مسیر ایستا، **مسیر پیش‌فرض** است. به روتر می‌گوید ترافیکی که مسیر مشخصی ندارد را کجا بفرستد.
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254
+\`\`\`
+
+\`10.0.0.254\` آدرس gateway ISP شماست.
+
+## اضافه کردن مسیر ایستا
+
+\`\`\`
+/ip route add dst-address=<NETWORK/PREFIX> gateway=<NEXT-HOP-IP>
+\`\`\`
+
+### مثال: مسیر به شبکه راه دور
+
+فرض کنید دو دفتر دارید:
+- دفتر شما: \`192.168.1.0/24\`
+- دفتر راه دور: \`192.168.2.0/24\`
+- Gateway برای رسیدن به دفتر راه دور: \`10.10.10.2\`
+
+\`\`\`
+/ip route add dst-address=192.168.2.0/24 gateway=10.10.10.2 comment=route-to-remote-office
+\`\`\`
+
+## Distance (فاصله / متریک)
+
+هر مسیر یک مقدار **distance** دارد. Distance کمتر = اولویت بیشتر.
+
+| نوع مسیر | Distance پیش‌فرض |
+|----------|----------------|
+| Connected | 0 |
+| Static | 1 |
+| OSPF | 110 |
+| RIP | 120 |
+
+### مسیر پشتیبان (Floating Static Route)
+
+دو مسیر به یک مقصد با distance متفاوت:
+
+\`\`\`
+# مسیر اصلی (distance 1 — اول استفاده می‌شود)
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254 distance=1
+
+# مسیر پشتیبان (distance 5 — فقط وقتی مسیر اصلی کار نمی‌کند)
+/ip route add dst-address=0.0.0.0/0 gateway=192.168.100.1 distance=5
+\`\`\`
+
+## check-gateway — نظارت بر gateway
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=10.0.0.254 check-gateway=ping
+\`\`\`
+
+با این تنظیم، RouterOS به‌طور دوره‌ای gateway را ping می‌کند. اگر پاسخ ندهد، مسیر غیرفعال می‌شود و مسیر پشتیبان فعال می‌گردد.
+
+## Longest Prefix Match
+
+RouterOS مشخص‌ترین مسیر را انتخاب می‌کند. اگر سه مسیر دارید:
+
+- \`10.0.0.0/8\` از gateway1
+- \`10.10.0.0/16\` از gateway2
+- \`10.10.10.0/24\` از gateway3
+
+بسته‌ای به \`10.10.10.5\` از مسیر سوم (طولانی‌ترین پیشوند) استفاده می‌کند.
+
+## حذف و تغییر مسیرها
+
+\`\`\`
+# حذف با شماره
+/ip route remove 2
+
+# حذف مسیر خاص
+/ip route remove [find dst-address=192.168.2.0/24]
+
+# تغییر gateway
+/ip route set 2 gateway=10.10.10.3
+\`\`\`
+
+## تست مسیریابی
+
+\`\`\`
+# پینگ
+/ping 192.168.2.1 count=4
+
+# مسیریابی را trace کنید
+/tool traceroute 8.8.8.8
+\`\`\`
+
+## جمع‌بندی
+
+مسیریابی ایستا در RouterOS:
+
+- \`print\` برای مشاهده جدول مسیریابی
+- \`add dst-address=0.0.0.0/0 gateway=X.X.X.X\` برای مسیر پیش‌فرض
+- \`add dst-address=NETWORK/PREFIX gateway=X.X.X.X\` برای مسیر خاص
+- Distance کمتر = اولویت بیشتر
+- از \`check-gateway=ping\` برای failover خودکار استفاده کنید
+`,
+  },
+  'mikrotik-wireless-ap-setup': {
+    contentEn: `
+## Setting Up a Wireless Access Point on MikroTik RouterOS
+
+MikroTik devices with built-in wireless (like the hAP ac series) can act as a Wi-Fi access point. This lesson covers how to configure basic wireless on RouterOS v7, including SSID, security (WPA2), frequency selection, and connecting to a bridge.
+
+## Checking Available Wireless Interfaces
+
+First, see what wireless interfaces are available:
+
+\`\`\`
+/interface wireless print
+\`\`\`
+
+Output example on an hAP ac2:
+
+\`\`\`
+ #    NAME      TYPE       ACTUAL-MTU  L2MTU  MAX-L2MTU  MAC-ADDRESS
+ 0    wlan1     wlan       1500        1600   2290       AA:BB:CC:DD:EE:01
+ 1    wlan2     wlan       1500        1600   2290       AA:BB:CC:DD:EE:02
+\`\`\`
+
+- \`wlan1\` is usually the 2.4 GHz radio
+- \`wlan2\` is usually the 5 GHz radio
+
+## Understanding Wireless Modes
+
+RouterOS wireless interfaces can operate in different modes:
+
+- \`ap-bridge\` — Access Point mode (allows multiple clients to connect) — **this is what you want for a standard AP**
+- \`station\` — Client mode (connects to another AP, like a Wi-Fi adapter)
+- \`bridge\` — Point-to-point bridge mode
+- \`station-bridge\` — Client mode with bridging support
+
+For a standard access point, use \`ap-bridge\`.
+
+## Step 1: Create a Security Profile (WPA2)
+
+Before configuring the wireless interface, create a security profile with your Wi-Fi password:
+
+\`\`\`
+/interface wireless security-profiles add name=my-wpa2 authentication-types=wpa2-psk mode=dynamic-keys wpa2-pre-shared-key=MySecurePassword123
+\`\`\`
+
+Parameters:
+
+- \`name=my-wpa2\` — name for this profile
+- \`authentication-types=wpa2-psk\` — WPA2 with Pre-Shared Key (standard home/office Wi-Fi)
+- \`mode=dynamic-keys\` — required for WPA2
+- \`wpa2-pre-shared-key=MySecurePassword123\` — your Wi-Fi password (8 to 63 characters)
+
+View security profiles:
+
+\`\`\`
+/interface wireless security-profiles print
+\`\`\`
+
+## Step 2: Configure the Wireless Interface
+
+Now configure the wireless interface to use AP mode with your settings:
+
+\`\`\`
+/interface wireless set wlan1 mode=ap-bridge ssid=MyNetwork band=2ghz-b/g/n channel-width=20/40mhz-XX frequency=auto security-profile=my-wpa2 disabled=no
+\`\`\`
+
+Parameters explained:
+
+- \`mode=ap-bridge\` — Access Point mode (allow multiple clients)
+- \`ssid=MyNetwork\` — your Wi-Fi network name (visible to devices)
+- \`band=2ghz-b/g/n\` — support 802.11b, g, and n clients (most compatible)
+- \`channel-width=20/40mhz-XX\` — allow 20 or 40 MHz channel width (40 MHz gives better speed)
+- \`frequency=auto\` — let RouterOS pick the best channel automatically
+- \`security-profile=my-wpa2\` — use the profile you created
+- \`disabled=no\` — enable the interface
+
+For the 5 GHz radio (wlan2):
+
+\`\`\`
+/interface wireless set wlan2 mode=ap-bridge ssid=MyNetwork-5G band=5ghz-a/n/ac channel-width=20/40/80mhz-XXXX frequency=auto security-profile=my-wpa2 disabled=no
+\`\`\`
+
+## Step 3: Add the Wireless Interface to a Bridge
+
+For your Wi-Fi clients to communicate with your wired LAN clients (and share the same subnet), add the wireless interface to the same bridge as your LAN ports:
+
+\`\`\`
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+\`\`\`
+
+Now wired devices on ether2–ether5 and wireless devices on wlan1/wlan2 are all on the same Layer 2 network and will get IPs from the same DHCP server.
+
+## Verifying the Wireless Interface
+
+Check the interface status:
+
+\`\`\`
+/interface wireless print
+\`\`\`
+
+Check connected clients:
+
+\`\`\`
+/interface wireless registration-table print
+\`\`\`
+
+This shows all devices currently connected to your access point, including their MAC address, signal strength (dBm), and TX/RX rates.
+
+## Frequency and Channel Selection
+
+### 2.4 GHz Channels
+
+The 2.4 GHz band has 11–14 channels (depending on country), but only channels **1, 6, and 11** are non-overlapping in a 20 MHz width. Using auto frequency lets RouterOS scan and pick the least congested channel.
+
+To manually set a specific channel:
+
+\`\`\`
+/interface wireless set wlan1 frequency=2412
+\`\`\`
+
+Common 2.4 GHz frequencies:
+- Channel 1: 2412 MHz
+- Channel 6: 2437 MHz
+- Channel 11: 2462 MHz
+
+### 5 GHz Channels
+
+The 5 GHz band has many more non-overlapping channels and is generally less congested. Frequencies range from 5180 MHz to 5825 MHz. Use \`frequency=auto\` to let RouterOS pick.
+
+## Country Setting (Important for Legal Compliance)
+
+Set your country to ensure RouterOS only uses frequencies legal in your country:
+
+\`\`\`
+/interface wireless set wlan1 country=iran
+/interface wireless set wlan2 country=iran
+\`\`\`
+
+Available countries:
+
+\`\`\`
+/interface wireless info country-info print
+\`\`\`
+
+## Hiding the SSID
+
+If you want to hide your network name (not broadcast it):
+
+\`\`\`
+/interface wireless set wlan1 hide-ssid=yes
+\`\`\`
+
+Note: hiding the SSID provides very little security — determined users can still find it. A strong password is much more important.
+
+## Full Example: Dual-Band Access Point Setup
+
+\`\`\`
+# Create security profile
+/interface wireless security-profiles add name=home-wifi authentication-types=wpa2-psk mode=dynamic-keys wpa2-pre-shared-key=SuperSecret99
+
+# Set country
+/interface wireless set wlan1 country=united-states
+/interface wireless set wlan2 country=united-states
+
+# Configure 2.4 GHz AP
+/interface wireless set wlan1 mode=ap-bridge ssid=HomeNet band=2ghz-b/g/n frequency=auto security-profile=home-wifi disabled=no
+
+# Configure 5 GHz AP
+/interface wireless set wlan2 mode=ap-bridge ssid=HomeNet-5G band=5ghz-a/n/ac frequency=auto security-profile=home-wifi disabled=no
+
+# Add both to bridge
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+\`\`\`
+
+## Summary
+
+Setting up a basic wireless AP on MikroTik:
+
+1. Create a security profile (WPA2 password): \`/interface wireless security-profiles add\`
+2. Configure the wireless interface: \`/interface wireless set wlan1 mode=ap-bridge ssid=...\`
+3. Add to bridge: \`/interface bridge port add interface=wlan1 bridge=bridge\`
+
+Use \`registration-table print\` to see connected clients and their signal strength.
+`,
+    contentFa: `
+## راه‌اندازی اکسس‌پوینت وایرلس در میکروتیک RouterOS
+
+دستگاه‌های میکروتیک با رادیو وایرلس داخلی (مثل سری hAP ac) می‌توانند به‌عنوان اکسس‌پوینت Wi-Fi عمل کنند.
+
+## بررسی اینترفیس‌های وایرلس
+
+\`\`\`
+/interface wireless print
+\`\`\`
+
+خروجی در hAP ac2:
+
+\`\`\`
+ #    NAME   TYPE   MAC-ADDRESS
+ 0    wlan1  wlan   AA:BB:CC:DD:EE:01
+ 1    wlan2  wlan   AA:BB:CC:DD:EE:02
+\`\`\`
+
+- \`wlan1\` معمولاً رادیو ۲.۴ گیگاهرتز
+- \`wlan2\` معمولاً رادیو ۵ گیگاهرتز
+
+## حالت‌های وایرلس
+
+- \`ap-bridge\` — حالت اکسس‌پوینت (چند کلاینت می‌تواند متصل شود) — **برای AP استاندارد**
+- \`station\` — حالت کلاینت (مثل آداپتور Wi-Fi)
+- \`station-bridge\` — حالت کلاینت با پشتیبانی bridging
+
+## مرحله ۱: ایجاد پروفایل امنیتی (WPA2)
+
+\`\`\`
+/interface wireless security-profiles add name=my-wpa2 authentication-types=wpa2-psk mode=dynamic-keys wpa2-pre-shared-key=MySecurePassword123
+\`\`\`
+
+- \`name=my-wpa2\` — نام پروفایل
+- \`authentication-types=wpa2-psk\` — WPA2 با Pre-Shared Key
+- \`wpa2-pre-shared-key\` — رمز Wi-Fi (۸ تا ۶۳ کاراکتر)
+
+## مرحله ۲: پیکربندی اینترفیس وایرلس
+
+\`\`\`
+/interface wireless set wlan1 mode=ap-bridge ssid=MyNetwork band=2ghz-b/g/n channel-width=20/40mhz-XX frequency=auto security-profile=my-wpa2 disabled=no
+\`\`\`
+
+- \`mode=ap-bridge\` — حالت اکسس‌پوینت
+- \`ssid=MyNetwork\` — نام شبکه Wi-Fi
+- \`band=2ghz-b/g/n\` — پشتیبانی از 802.11b/g/n
+- \`frequency=auto\` — انتخاب خودکار بهترین کانال
+
+برای رادیو ۵ گیگاهرتز:
+
+\`\`\`
+/interface wireless set wlan2 mode=ap-bridge ssid=MyNetwork-5G band=5ghz-a/n/ac channel-width=20/40/80mhz-XXXX frequency=auto security-profile=my-wpa2 disabled=no
+\`\`\`
+
+## مرحله ۳: اضافه کردن به Bridge
+
+برای اینکه کلاینت‌های وایرلس با شبکه سیمی در یک subnet باشند:
+
+\`\`\`
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+\`\`\`
+
+## بررسی کلاینت‌های متصل
+
+\`\`\`
+/interface wireless registration-table print
+\`\`\`
+
+این دستور همه دستگاه‌های متصل به AP را نشان می‌دهد، از جمله آدرس MAC و قدرت سیگنال.
+
+## انتخاب فرکانس و کانال
+
+### باند ۲.۴ گیگاهرتز
+
+فقط کانال‌های **۱، ۶ و ۱۱** در عرض ۲۰ مگاهرتز با هم تداخل ندارند. استفاده از \`frequency=auto\` توصیه می‌شود.
+
+\`\`\`
+/interface wireless set wlan1 frequency=2412   # کانال 1
+\`\`\`
+
+### باند ۵ گیگاهرتز
+
+باند ۵ گیگاهرتز کانال‌های بیشتری دارد و معمولاً شلوغ‌تری کمتری دارد.
+
+## تنظیم کشور (مهم برای انطباق قانونی)
+
+\`\`\`
+/interface wireless set wlan1 country=iran
+/interface wireless set wlan2 country=iran
+\`\`\`
+
+## مثال کامل: راه‌اندازی AP دوباند
+
+\`\`\`
+# ایجاد پروفایل امنیتی
+/interface wireless security-profiles add name=home-wifi authentication-types=wpa2-psk mode=dynamic-keys wpa2-pre-shared-key=SuperSecret99
+
+# تنظیم ۲.۴ گیگاهرتز
+/interface wireless set wlan1 mode=ap-bridge ssid=HomeNet band=2ghz-b/g/n frequency=auto security-profile=home-wifi disabled=no
+
+# تنظیم ۵ گیگاهرتز
+/interface wireless set wlan2 mode=ap-bridge ssid=HomeNet-5G band=5ghz-a/n/ac frequency=auto security-profile=home-wifi disabled=no
+
+# اضافه کردن به bridge
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+\`\`\`
+
+## جمع‌بندی
+
+راه‌اندازی AP وایرلس در میکروتیک:
+
+۱. ایجاد پروفایل امنیتی WPA2
+۲. پیکربندی اینترفیس وایرلس با SSID و security-profile
+۳. اضافه کردن اینترفیس به bridge
+
+از \`registration-table print\` برای مشاهده کلاینت‌های متصل استفاده کنید.
+`,
+  },
+  'mikrotik-bridge-configuration': {
+    contentEn: `
+## Bridging in MikroTik RouterOS: Connecting Multiple Ethernet Ports
+
+A bridge in networking is a virtual switch that connects multiple interfaces at Layer 2 (the Ethernet/MAC layer). When ports are bridged together, devices connected to any of those ports can communicate directly as if they were all on the same physical switch. This lesson explains when to use bridging, how to create and configure a bridge in RouterOS, and when to use routing instead.
+
+## Bridging vs Routing: When to Use Which?
+
+Understanding the difference is fundamental:
+
+### Bridging (Layer 2)
+- Devices on bridged ports are in the **same subnet** (e.g., all \`192.168.1.x\`)
+- Traffic between devices on bridged ports does not go through the RouterOS routing engine
+- The bridge acts like a switch — fast, transparent forwarding based on MAC addresses
+- Use bridging when you want all ports to act as one LAN
+
+### Routing (Layer 3)
+- Devices on different interfaces are in **different subnets** (e.g., \`192.168.1.x\` and \`10.0.0.x\`)
+- Traffic between subnets is processed by the RouterOS routing engine
+- Gives you full firewall control and visibility over inter-subnet traffic
+- Use routing when you need to separate traffic (VLANs, security zones, etc.)
+
+**Simple rule:** Same subnet = bridge. Different subnets = route.
+
+## Creating a Bridge Interface
+
+In RouterOS v7, creating a bridge is a three-step process:
+
+1. Create the bridge interface
+2. Add member ports to the bridge
+3. Assign an IP address to the bridge (not to the individual member ports)
+
+### Step 1: Create the Bridge
+
+\`\`\`
+/interface bridge add name=bridge comment=lan-bridge
+\`\`\`
+
+You can name it anything. \`bridge\` is the common convention for the main LAN bridge.
+
+View the bridge:
+
+\`\`\`
+/interface bridge print
+\`\`\`
+
+### Step 2: Add Ports to the Bridge
+
+Add whichever Ethernet ports you want in the LAN:
+
+\`\`\`
+/interface bridge port add interface=ether2 bridge=bridge
+/interface bridge port add interface=ether3 bridge=bridge
+/interface bridge port add interface=ether4 bridge=bridge
+/interface bridge port add interface=ether5 bridge=bridge
+\`\`\`
+
+Notice that ether1 is NOT added — it is kept separate as the WAN port.
+
+View bridge ports:
+
+\`\`\`
+/interface bridge port print
+\`\`\`
+
+Output example:
+
+\`\`\`
+Flags: X - disabled, I - inactive, D - dynamic, H - hw-offload
+ #     INTERFACE  BRIDGE   HW   PVID  PRIORITY   PATH-COST   HORIZON
+ 0   H ether2     bridge   yes  1     0x80       10          none
+ 1   H ether3     bridge   yes  1     0x80       10          none
+ 2   H ether4     bridge   yes  1     0x80       10          none
+ 3   H ether5     bridge   yes  1     0x80       10          none
+\`\`\`
+
+The \`H\` flag means hardware offload is active — the CRS switch chip handles bridging in hardware for maximum performance.
+
+### Step 3: Assign an IP to the Bridge Interface
+
+Instead of assigning IPs to ether2, ether3 etc. individually, assign one IP to the bridge:
+
+\`\`\`
+/ip address add address=192.168.1.1/24 interface=bridge
+\`\`\`
+
+This single IP serves as the gateway for all devices connected to any bridged port.
+
+## Adding Wireless to the Bridge
+
+To include wireless clients in the same LAN as wired clients:
+
+\`\`\`
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+\`\`\`
+
+Now wired (ether2–ether5) and wireless (wlan1, wlan2) devices are all in the same bridge and share the same subnet and DHCP server.
+
+## Hardware Offload
+
+On MikroTik devices with a built-in switch chip (most RouterBOARD devices), bridging can be offloaded to the hardware switch chip for much higher throughput than software bridging.
+
+RouterOS enables hardware offload automatically when it can. You can check the status with:
+
+\`\`\`
+/interface bridge port print
+\`\`\`
+
+Look for the \`H\` flag in the output — if present, hardware offload is active.
+
+To explicitly enable or disable hardware offload on a port:
+
+\`\`\`
+/interface bridge port set 0 hw=yes
+\`\`\`
+
+## Bridge MAC Address and STP
+
+### MAC Address
+
+When you create a bridge, RouterOS assigns it a MAC address (usually borrowed from the first port added). You can set it manually:
+
+\`\`\`
+/interface bridge set bridge auto-mac=no admin-mac=AA:BB:CC:DD:EE:01
+\`\`\`
+
+### Spanning Tree Protocol (STP)
+
+STP prevents bridging loops (which would crash your network). RouterOS supports:
+
+- \`none\` — no STP (use only when you have no loops possible)
+- \`stp\` — classic Spanning Tree Protocol
+- \`rstp\` — Rapid STP (faster convergence, recommended)
+
+Set STP mode:
+
+\`\`\`
+/interface bridge set bridge protocol-mode=rstp
+\`\`\`
+
+For a simple home/office setup with no redundant links, \`none\` works fine. For networks with multiple uplinks, use \`rstp\`.
+
+## VLAN-Aware Bridging (Brief Overview)
+
+RouterOS v7 bridges support VLAN filtering, which lets you run multiple VLANs on the same physical ports while still using hardware offload. This is a more advanced topic but worth knowing exists:
+
+\`\`\`
+/interface bridge set bridge vlan-filtering=yes
+\`\`\`
+
+When VLAN filtering is enabled, you configure VLAN membership per port using \`/interface bridge vlan\`.
+
+## Complete Example: 5-Port Home Router Bridge Setup
+
+Here is a typical configuration where ether1 is WAN and ether2–ether5 are LAN:
+
+\`\`\`
+# Create bridge
+/interface bridge add name=bridge protocol-mode=rstp
+
+# Add LAN ports to bridge
+/interface bridge port add interface=ether2 bridge=bridge hw=yes
+/interface bridge port add interface=ether3 bridge=bridge hw=yes
+/interface bridge port add interface=ether4 bridge=bridge hw=yes
+/interface bridge port add interface=ether5 bridge=bridge hw=yes
+
+# Add wireless to bridge (if device has wireless)
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+
+# Assign IP to the bridge
+/ip address add address=192.168.1.1/24 interface=bridge
+
+# Set up DHCP server on bridge
+/ip pool add name=lan-pool ranges=192.168.1.100-192.168.1.200
+/ip dhcp-server add name=dhcp-lan interface=bridge address-pool=lan-pool disabled=no
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=8.8.8.8
+\`\`\`
+
+## Troubleshooting Bridges
+
+### Check Which Ports Are in the Bridge
+
+\`\`\`
+/interface bridge port print
+\`\`\`
+
+### Check the Bridge MAC Table (ARP-like Layer 2 Table)
+
+\`\`\`
+/interface bridge host print
+\`\`\`
+
+This shows which MAC addresses have been learned on which bridge port.
+
+### Check Bridge Status
+
+\`\`\`
+/interface bridge print detail
+\`\`\`
+
+## Summary
+
+Bridging in RouterOS:
+
+- Use when you want multiple ports on the same subnet (acting as a switch)
+- Create bridge: \`/interface bridge add name=bridge\`
+- Add ports: \`/interface bridge port add interface=etherX bridge=bridge\`
+- Assign one IP to the bridge, not to individual ports
+- Enable hardware offload (\`hw=yes\`) for maximum performance
+- Use RSTP (\`protocol-mode=rstp\`) to prevent bridging loops
+- Bridge vs route: same subnet = bridge, different subnets = route
+`,
+    contentFa: `
+## پیکربندی Bridge در میکروتیک RouterOS
+
+Bridge در شبکه یک سوئیچ مجازی است که چند اینترفیس را در سطح لایه ۲ (اترنت/MAC) به هم متصل می‌کند. وقتی پورت‌ها bridge می‌شوند، دستگاه‌های متصل به هر پورت می‌توانند مستقیم با هم ارتباط برقرار کنند.
+
+## Bridge در مقابل Routing: کدام را انتخاب کنیم؟
+
+### Bridging (لایه ۲)
+- دستگاه‌ها در **یک subnet** هستند (مثلاً همه \`192.168.1.x\`)
+- ترافیک بین دستگاه‌های bridge شده از موتور مسیریابی RouterOS نمی‌گذرد
+- Bridge مثل سوئیچ عمل می‌کند — سریع و شفاف بر اساس آدرس MAC
+- **استفاده:** وقتی می‌خواهید همه پورت‌ها یک LAN باشند
+
+### Routing (لایه ۳)
+- دستگاه‌ها در **subnet‌های مختلف** هستند
+- ترافیک بین subnet‌ها از موتور مسیریابی می‌گذرد
+- کنترل کامل فایروال بر ترافیک بین subnet‌ها
+- **استفاده:** وقتی باید ترافیک را جدا کنید (VLAN، zone امنیتی)
+
+**قانون ساده:** یک subnet = bridge. چند subnet = route.
+
+## ایجاد Bridge
+
+### مرحله ۱: ایجاد اینترفیس Bridge
+
+\`\`\`
+/interface bridge add name=bridge comment=lan-bridge
+\`\`\`
+
+مشاهده:
+
+\`\`\`
+/interface bridge print
+\`\`\`
+
+### مرحله ۲: اضافه کردن پورت‌ها به Bridge
+
+\`\`\`
+/interface bridge port add interface=ether2 bridge=bridge
+/interface bridge port add interface=ether3 bridge=bridge
+/interface bridge port add interface=ether4 bridge=bridge
+/interface bridge port add interface=ether5 bridge=bridge
+\`\`\`
+
+توجه: ether1 اضافه نمی‌شود — به‌عنوان پورت WAN جداگانه باقی می‌ماند.
+
+مشاهده پورت‌های bridge:
+
+\`\`\`
+/interface bridge port print
+\`\`\`
+
+### مرحله ۳: تخصیص IP به Bridge
+
+به‌جای تخصیص IP به هر پورت، یک IP به bridge می‌دهیم:
+
+\`\`\`
+/ip address add address=192.168.1.1/24 interface=bridge
+\`\`\`
+
+## اضافه کردن وایرلس به Bridge
+
+برای اینکه کلاینت‌های وایرلس در همان شبکه کلاینت‌های سیمی باشند:
+
+\`\`\`
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+\`\`\`
+
+## Hardware Offload
+
+روی دستگاه‌های میکروتیک با تراشه سوئیچ داخلی، bridge می‌تواند به سخت‌افزار واگذار شود:
+
+پرچم \`H\` در خروجی \`port print\` نشان می‌دهد hardware offload فعال است.
+
+\`\`\`
+/interface bridge port set 0 hw=yes
+\`\`\`
+
+## Spanning Tree Protocol (STP)
+
+STP از حلقه‌های bridging جلوگیری می‌کند. RouterOS پشتیبانی می‌کند از:
+
+- \`none\` — بدون STP
+- \`rstp\` — Rapid STP (توصیه‌شده)
+
+\`\`\`
+/interface bridge set bridge protocol-mode=rstp
+\`\`\`
+
+## مثال کامل: راه‌اندازی روتر خانگی
+
+\`\`\`
+# ایجاد bridge
+/interface bridge add name=bridge protocol-mode=rstp
+
+# اضافه کردن پورت‌های LAN
+/interface bridge port add interface=ether2 bridge=bridge hw=yes
+/interface bridge port add interface=ether3 bridge=bridge hw=yes
+/interface bridge port add interface=ether4 bridge=bridge hw=yes
+/interface bridge port add interface=ether5 bridge=bridge hw=yes
+
+# اضافه کردن وایرلس (اگر دستگاه وایرلس دارد)
+/interface bridge port add interface=wlan1 bridge=bridge
+/interface bridge port add interface=wlan2 bridge=bridge
+
+# تخصیص IP به bridge
+/ip address add address=192.168.1.1/24 interface=bridge
+
+# راه‌اندازی DHCP سرور
+/ip pool add name=lan-pool ranges=192.168.1.100-192.168.1.200
+/ip dhcp-server add name=dhcp-lan interface=bridge address-pool=lan-pool disabled=no
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=8.8.8.8
+\`\`\`
+
+## عیب‌یابی Bridge
+
+\`\`\`
+# پورت‌های bridge
+/interface bridge port print
+
+# جدول MAC (لایه ۲)
+/interface bridge host print
+
+# وضعیت bridge
+/interface bridge print detail
+\`\`\`
+
+## جمع‌بندی
+
+Bridge در RouterOS:
+
+- وقتی چند پورت باید یک subnet باشند استفاده کنید
+- \`/interface bridge add name=bridge\` — ایجاد bridge
+- \`/interface bridge port add interface=etherX bridge=bridge\` — اضافه کردن پورت
+- فقط به bridge آدرس IP بدهید، نه به پورت‌های جداگانه
+- \`hw=yes\` برای hardware offload
+- \`protocol-mode=rstp\` برای جلوگیری از حلقه
+`,
+  },
+  'mikrotik-dns-resolver-setup': {
+    contentEn: `## Configuring DNS on RouterOS
+
+DNS (Domain Name System) is what allows your router and network devices to resolve domain names like \`google.com\` into IP addresses. Without proper DNS configuration, your MikroTik router will not be able to browse the internet by name, and neither will devices behind it if you use the router as their DNS server.
+
+This guide covers everything you need to know about setting up DNS on RouterOS v7 from scratch.
+
+## Setting DNS Servers
+
+The first step is to tell your router which DNS servers to use. These are typically provided by your ISP, but you can also use public DNS servers like Google (8.8.8.8) or Cloudflare (1.1.1.1).
+
+\`\`\`
+/ip dns set servers=8.8.8.8,8.8.4.4
+\`\`\`
+
+To verify the setting:
+
+\`\`\`
+/ip dns print
+\`\`\`
+
+You will see output similar to:
+
+\`\`\`
+      servers: 8.8.8.8,8.8.4.4
+allow-remote-requests: no
+    cache-size: 2048KiB
+ cache-max-ttl: 1w
+      cache-used: 28KiB
+\`\`\`
+
+## Enabling allow-remote-requests
+
+By default, the router only resolves DNS for itself. If you want devices on your LAN to use the router as their DNS server, you must enable \`allow-remote-requests\`:
+
+\`\`\`
+/ip dns set allow-remote-requests=yes
+\`\`\`
+
+This tells the router to accept DNS queries from other hosts on the network. Once enabled, you can point your DHCP server to hand out the router's LAN IP (e.g., 192.168.1.1) as the DNS server for clients.
+
+### Security Note
+
+When \`allow-remote-requests\` is enabled, make sure your firewall blocks DNS queries (UDP/TCP port 53) from the WAN interface so that external hosts cannot use your router as an open DNS resolver.
+
+\`\`\`
+/ip firewall filter add chain=input action=drop protocol=udp dst-port=53 in-interface=ether1 comment="Block external DNS"
+/ip firewall filter add chain=input action=drop protocol=tcp dst-port=53 in-interface=ether1 comment="Block external DNS TCP"
+\`\`\`
+
+Replace \`ether1\` with your actual WAN interface name.
+
+## Static DNS Entries
+
+Static DNS entries let you map hostnames to specific IP addresses manually. This is useful for internal services, so that devices on your network can reach a local server by name.
+
+\`\`\`
+/ip dns static add name=nas.local address=192.168.1.50
+/ip dns static add name=printer.local address=192.168.1.60
+\`\`\`
+
+To view all static entries:
+
+\`\`\`
+/ip dns static print
+\`\`\`
+
+You can also add CNAME-style aliases:
+
+\`\`\`
+/ip dns static add name=files.local cname=nas.local
+\`\`\`
+
+## DNS Caching Explained
+
+RouterOS has a built-in DNS cache. When a client asks the router to resolve a domain, the router queries the upstream DNS server, gets the answer, and stores it locally for future requests. This reduces latency and saves bandwidth.
+
+### Cache Settings
+
+- **cache-size**: How much memory to allocate for DNS cache (default 2048 KiB).
+- **cache-max-ttl**: Maximum time a record is kept in cache (default 1 week). Records with shorter TTLs from the server will expire sooner.
+
+To increase cache size:
+
+\`\`\`
+/ip dns set cache-size=4096KiB
+\`\`\`
+
+To check what is currently cached:
+
+\`\`\`
+/ip dns cache print
+\`\`\`
+
+To flush the DNS cache (useful after making static entry changes):
+
+\`\`\`
+/ip dns cache flush
+\`\`\`
+
+## Using Multiple DNS Servers
+
+You can specify multiple DNS servers separated by commas. RouterOS will try them in order:
+
+\`\`\`
+/ip dns set servers=1.1.1.1,8.8.8.8,9.9.9.9
+\`\`\`
+
+## Verifying DNS Resolution
+
+Test that DNS is working correctly from the router itself:
+
+\`\`\`
+/resolve google.com
+\`\`\`
+
+This should return an IP address quickly. If it times out, check your WAN connection and your DNS server settings.
+
+## Summary
+
+- Set upstream DNS servers with \`/ip dns set servers=...\`
+- Enable \`allow-remote-requests=yes\` to serve DNS to LAN clients
+- Add static entries with \`/ip dns static add\`
+- Protect your DNS port from external access with firewall rules
+- Monitor and flush the cache as needed with \`/ip dns cache print\` and \`/ip dns cache flush\`
+
+Proper DNS configuration is a foundation of a working network. Once set up, your router becomes a fast, local DNS resolver for all devices behind it.
+`,
+    contentFa: `## پیکربندی DNS در RouterOS
+
+DNS (سیستم نام دامنه) به روتر و دستگاه‌های شبکه اجازه می‌دهد که نام‌هایی مثل \`google.com\` را به آدرس IP تبدیل کنند. بدون تنظیم درست DNS، روتر MikroTik شما نمی‌تواند اینترنت را با نام دامنه مرور کند.
+
+## تنظیم سرور DNS
+
+\`\`\`
+/ip dns set servers=8.8.8.8,8.8.4.4
+\`\`\`
+
+برای مشاهده تنظیمات:
+
+\`\`\`
+/ip dns print
+\`\`\`
+
+## فعال کردن allow-remote-requests
+
+اگر می‌خواهید دستگاه‌های داخل شبکه از روتر به عنوان DNS استفاده کنند:
+
+\`\`\`
+/ip dns set allow-remote-requests=yes
+\`\`\`
+
+### نکته امنیتی
+
+وقتی این گزینه فعال است، حتماً با فایروال جلوی درخواست‌های DNS از اینترنت را بگیرید:
+
+\`\`\`
+/ip firewall filter add chain=input action=drop protocol=udp dst-port=53 in-interface=ether1 comment="Block external DNS"
+\`\`\`
+
+## ورودی‌های استاتیک DNS
+
+برای اینکه یک نام خاص همیشه به یک IP مشخص اشاره کند:
+
+\`\`\`
+/ip dns static add name=nas.local address=192.168.1.50
+/ip dns static add name=printer.local address=192.168.1.60
+\`\`\`
+
+مشاهده ورودی‌ها:
+
+\`\`\`
+/ip dns static print
+\`\`\`
+
+## کَش DNS
+
+RouterOS به صورت خودکار پاسخ‌های DNS را در حافظه ذخیره می‌کند تا درخواست‌های بعدی سریع‌تر پاسخ داده شوند. برای پاک کردن کَش:
+
+\`\`\`
+/ip dns cache flush
+\`\`\`
+
+برای افزایش اندازه کَش:
+
+\`\`\`
+/ip dns set cache-size=4096KiB
+\`\`\`
+
+## تست DNS
+
+برای اینکه مطمئن شوید DNS کار می‌کند:
+
+\`\`\`
+/resolve google.com
+\`\`\`
+
+اگر آدرس IP برگشت، تنظیمات درست است.
+
+## خلاصه
+
+- سرورهای DNS را با \`/ip dns set servers=...\` تنظیم کنید
+- برای سرویس‌دهی به کلاینت‌ها \`allow-remote-requests=yes\` را فعال کنید
+- ورودی‌های استاتیک برای سرورهای داخلی اضافه کنید
+- کَش را در صورت نیاز پاک کنید
+`,
+  },
+  'mikrotik-pppoe-client-isp': {
+    contentEn: `## Setting Up a PPPoE Client Connection to an ISP
+
+PPPoE (Point-to-Point Protocol over Ethernet) is one of the most common ways ISPs deliver internet access, especially for DSL and fiber connections. Your MikroTik router connects to the ISP by authenticating with a username and password over an Ethernet link.
+
+This guide walks you through setting up a PPPoE client on RouterOS v7.
+
+## What is PPPoE?
+
+PPPoE wraps your internet traffic inside PPP frames that are sent over Ethernet. Your ISP assigns you an IP address after authentication. The key advantage is that PPPoE handles authentication centrally at the ISP side, so they know exactly who is connected.
+
+## Prerequisites
+
+- A MikroTik router with at least one Ethernet port connected to the ISP modem or ONT (fiber box).
+- Your ISP-provided PPPoE username and password.
+
+## Creating the PPPoE Client Interface
+
+The command below creates a PPPoE client on \`ether1\` (your WAN port):
+
+\`\`\`
+/interface pppoe-client add name=pppoe-out1 interface=ether1 user=your_username password=your_password disabled=no add-default-route=yes use-peer-dns=yes
+\`\`\`
+
+Parameter breakdown:
+
+- **name**: Name for this PPPoE interface (e.g., \`pppoe-out1\`).
+- **interface**: The physical Ethernet port connected to the ISP (e.g., \`ether1\`).
+- **user**: Your PPPoE username from the ISP.
+- **password**: Your PPPoE password from the ISP.
+- **disabled=no**: Activates the connection immediately.
+- **add-default-route=yes**: Automatically adds a default gateway through the PPPoE link.
+- **use-peer-dns=yes**: Uses the DNS servers provided by the ISP after connection.
+
+## Verifying the Connection
+
+After adding the interface, check its status:
+
+\`\`\`
+/interface pppoe-client print detail
+\`\`\`
+
+Look for \`status: connected\` and an IP address assigned under \`remote-address\`. You can also run:
+
+\`\`\`
+/ip address print
+\`\`\`
+
+You should see a dynamic IP address on the \`pppoe-out1\` interface.
+
+Test connectivity from the router:
+
+\`\`\`
+/ping 8.8.8.8
+\`\`\`
+
+## MTU and MRU Considerations
+
+PPPoE adds an 8-byte header to each Ethernet frame. Standard Ethernet MTU is 1500 bytes, so PPPoE effectively reduces usable MTU to **1492 bytes**. If you leave MTU at 1500 on your LAN but the PPPoE link only supports 1492, large packets will be fragmented or dropped, causing slow speeds and issues with certain sites.
+
+### Fix with MSS Clamping
+
+The best fix is to clamp the TCP Maximum Segment Size (MSS) so that TCP connections automatically negotiate a smaller packet size:
+
+\`\`\`
+/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn action=change-mss new-mss=clamp-to-pmtu passthrough=yes comment="PPPoE MSS fix"
+\`\`\`
+
+This rule modifies SYN packets so TCP connections use an MSS that fits inside the PPPoE MTU.
+
+### Manually Setting MTU
+
+You can also set the MTU on the PPPoE interface explicitly:
+
+\`\`\`
+/interface pppoe-client set pppoe-out1 mtu=1492 mru=1492
+\`\`\`
+
+## Default Route via PPPoE
+
+When \`add-default-route=yes\` is set, RouterOS automatically creates a default route pointing through the PPPoE interface. You can verify this:
+
+\`\`\`
+/ip route print
+\`\`\`
+
+Look for a route with \`dst-address=0.0.0.0/0\` and \`gateway=pppoe-out1\`.
+
+If you have multiple WAN links, you may want to manage routes manually:
+
+\`\`\`
+/interface pppoe-client set pppoe-out1 add-default-route=no
+/ip route add dst-address=0.0.0.0/0 gateway=pppoe-out1 distance=1
+\`\`\`
+
+## Handling Disconnections
+
+PPPoE links can drop. RouterOS will try to reconnect automatically. To configure reconnection behavior:
+
+\`\`\`
+/interface pppoe-client set pppoe-out1 dial-on-demand=no
+\`\`\`
+
+With \`dial-on-demand=no\` (the default), the router always tries to keep the connection alive.
+
+## Protecting the WAN Interface
+
+Since \`pppoe-out1\` is your public-facing interface, make sure your firewall protects it:
+
+\`\`\`
+/ip firewall filter add chain=input in-interface=pppoe-out1 connection-state=invalid action=drop
+/ip firewall filter add chain=input in-interface=pppoe-out1 connection-state=established,related action=accept
+/ip firewall filter add chain=input in-interface=pppoe-out1 action=drop
+\`\`\`
+
+## Summary
+
+- Create PPPoE client with \`/interface pppoe-client add\`
+- Use \`add-default-route=yes\` to route traffic through the ISP
+- Fix MTU issues with MSS clamping or by setting MTU to 1492
+- Verify connection with \`/interface pppoe-client print detail\` and \`/ping\`
+- Protect the PPPoE interface with firewall rules
+
+PPPoE is simple to configure on MikroTik once you understand the parameters. Most ISP connections are up and running within minutes of entering your credentials.
+`,
+    contentFa: `## راه‌اندازی اتصال PPPoE به اینترنت
+
+PPPoE یکی از رایج‌ترین روش‌های اتصال به اینترنت است، به خصوص برای اشتراک‌های ADSL و فیبر نوری. روتر MikroTik شما با نام کاربری و رمز عبوری که ISP داده با اینترنت احراز هویت می‌کند.
+
+## پیش‌نیازها
+
+- یک پورت اترنت روتر به مودم یا ONT متصل باشد
+- نام کاربری و رمز عبور PPPoE از ISP
+
+## ساخت اینترفیس PPPoE
+
+\`\`\`
+/interface pppoe-client add name=pppoe-out1 interface=ether1 user=your_username password=your_password disabled=no add-default-route=yes use-peer-dns=yes
+\`\`\`
+
+توضیح پارامترها:
+
+- **name**: نام اینترفیس PPPoE
+- **interface**: پورت فیزیکی WAN (مثلاً ether1)
+- **user** و **password**: اطلاعات ورود از ISP
+- **add-default-route=yes**: مسیر پیش‌فرض از طریق PPPoE اضافه می‌شود
+- **use-peer-dns=yes**: از DNS ارائه‌شده توسط ISP استفاده کن
+
+## بررسی وضعیت اتصال
+
+\`\`\`
+/interface pppoe-client print detail
+\`\`\`
+
+باید \`status: connected\` را ببینید. همچنین:
+
+\`\`\`
+/ping 8.8.8.8
+\`\`\`
+
+## MTU در PPPoE
+
+PPPoE هدر ۸ بایتی اضافه می‌کند، پس MTU واقعی ۱۴۹۲ بایت است. برای جلوگیری از مشکل:
+
+\`\`\`
+/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn action=change-mss new-mss=clamp-to-pmtu passthrough=yes comment="PPPoE MSS fix"
+\`\`\`
+
+یا به صورت دستی:
+
+\`\`\`
+/interface pppoe-client set pppoe-out1 mtu=1492 mru=1492
+\`\`\`
+
+## مسیر پیش‌فرض
+
+برای بررسی مسیر پیش‌فرض:
+
+\`\`\`
+/ip route print
+\`\`\`
+
+باید مسیری با \`gateway=pppoe-out1\` وجود داشته باشد.
+
+## محافظت از واسط WAN
+
+\`\`\`
+/ip firewall filter add chain=input in-interface=pppoe-out1 connection-state=invalid action=drop
+/ip firewall filter add chain=input in-interface=pppoe-out1 connection-state=established,related action=accept
+/ip firewall filter add chain=input in-interface=pppoe-out1 action=drop
+\`\`\`
+
+## خلاصه
+
+- اینترفیس PPPoE را با \`/interface pppoe-client add\` بسازید
+- MTU را با MSS clamping تنظیم کنید
+- اتصال را با \`/ping\` تست کنید
+- با فایروال از اینترفیس WAN محافظت کنید
+`,
+  },
+  'mikrotik-user-management-security': {
+    contentEn: `## Managing RouterOS Users: Security Best Practices
+
+One of the most overlooked aspects of router security is user account management. By default, RouterOS comes with a single \`admin\` account with no password and full access. Leaving this default in place is a serious security risk on any network connected to the internet.
+
+This guide covers how to create and manage users securely on RouterOS v7.
+
+## Why User Management Matters
+
+- Default \`admin\` with no password is the first thing attackers try.
+- Different people (NOC staff, read-only viewers, automation accounts) need different access levels.
+- Audit trails are easier when each person has their own account.
+- Disabling the default admin reduces attack surface dramatically.
+
+## Viewing Existing Users and Groups
+
+\`\`\`
+/user print
+\`\`\`
+
+\`\`\`
+/user group print
+\`\`\`
+
+RouterOS has three built-in user groups:
+
+- **full**: Complete access to all RouterOS features.
+- **write**: Can change configuration but cannot manage users or access sensitive areas.
+- **read**: View-only access, cannot make any changes.
+
+## Creating a New Admin User
+
+Always create a named admin account before disabling the default \`admin\`:
+
+\`\`\`
+/user add name=netadmin group=full password=Str0ng!P@ssw0rd comment="Primary admin account"
+\`\`\`
+
+Choose a strong password — at least 12 characters, mixing uppercase, lowercase, numbers, and symbols.
+
+## Creating a Read-Only Account
+
+For monitoring staff or NOC personnel who should view but not change configuration:
+
+\`\`\`
+/user add name=monitor group=read password=M0n!t0rPass comment="Read-only monitoring account"
+\`\`\`
+
+## Creating a Custom Group
+
+If the built-in groups do not fit your needs, create a custom group with specific permissions:
+
+\`\`\`
+/user group add name=limited-ops policy=read,write,test,sniff
+\`\`\`
+
+Available policies include: \`local\`, \`telnet\`, \`ssh\`, \`ftp\`, \`reboot\`, \`read\`, \`write\`, \`policy\`, \`test\`, \`winbox\`, \`password\`, \`web\`, \`sniff\`, \`sensitive\`, \`api\`, \`romon\`, \`rest-api\`.
+
+## Disabling the Default admin Account
+
+After confirming your new admin account works (log in with it first!), disable the default:
+
+\`\`\`
+/user disable admin
+\`\`\`
+
+Or delete it entirely if you are confident:
+
+\`\`\`
+/user remove admin
+\`\`\`
+
+Warning: If you delete \`admin\` and then forget your new credentials, you will need to do a hard reset of the router. Always verify new accounts work before removing \`admin\`.
+
+## Restricting Access by IP Address
+
+You can limit where a user can log in from using the \`allowed-address\` field:
+
+\`\`\`
+/user set netadmin allowed-address=192.168.1.0/24
+\`\`\`
+
+This means \`netadmin\` can only log in from the 192.168.1.0/24 subnet. Attempts from other IPs will be rejected, even with the correct password.
+
+## SSH Key Authentication
+
+For even stronger security, use SSH public key authentication instead of passwords:
+
+\`\`\`
+/user ssh-keys import public-key-file=id_rsa.pub user=netadmin
+\`\`\`
+
+Upload the public key file first via FTP or SCP, then import it.
+
+## Password Policy
+
+RouterOS v7 does not enforce password complexity by default, but you can set a minimum password length:
+
+\`\`\`
+/user settings set minimum-password-length=12
+\`\`\`
+
+## Viewing Active Sessions
+
+See who is currently logged in:
+
+\`\`\`
+/user active print
+\`\`\`
+
+To kick an active session:
+
+\`\`\`
+/user active remove [find name=someuser]
+\`\`\`
+
+## Securing Management Access
+
+Combine user management with access controls on management services:
+
+\`\`\`
+/ip service set telnet disabled=yes
+/ip service set ftp disabled=yes
+/ip service set www disabled=yes
+/ip service set api disabled=yes
+/ip service set winbox address=192.168.1.0/24
+/ip service set ssh address=192.168.1.0/24
+\`\`\`
+
+Disable services you do not use, and restrict the ones you do use to trusted subnets.
+
+## Summary
+
+- Never leave the default \`admin\` account with no password.
+- Create named accounts with strong passwords.
+- Use the \`read\` group for monitoring-only accounts.
+- Restrict login by IP with \`allowed-address\`.
+- Disable unused management services.
+- Consider SSH key authentication for admin accounts.
+
+User management is a low-effort, high-impact security improvement. A few minutes of configuration can prevent unauthorized access to your router.
+`,
+    contentFa: `## مدیریت کاربران RouterOS: امنیت حساب‌های کاربری
+
+یکی از مهم‌ترین نکاتی که اغلب نادیده گرفته می‌شود، مدیریت حساب‌های کاربری روتر است. RouterOS به صورت پیش‌فرض یک حساب \`admin\` بدون رمز عبور دارد که دسترسی کامل را می‌دهد. این یک خطر امنیتی جدی است.
+
+## مشاهده کاربران و گروه‌ها
+
+\`\`\`
+/user print
+/user group print
+\`\`\`
+
+گروه‌های پیش‌فرض:
+- **full**: دسترسی کامل
+- **write**: تغییر تنظیمات بدون مدیریت کاربران
+- **read**: فقط مشاهده
+
+## ساخت کاربر ادمین جدید
+
+قبل از غیرفعال کردن \`admin\` پیش‌فرض، یک کاربر جدید بسازید:
+
+\`\`\`
+/user add name=netadmin group=full password=Str0ng!P@ssw0rd comment="Primary admin account"
+\`\`\`
+
+## ساخت کاربر فقط‌خواندنی
+
+\`\`\`
+/user add name=monitor group=read password=M0n!t0rPass comment="Read-only monitoring account"
+\`\`\`
+
+## غیرفعال کردن admin پیش‌فرض
+
+ابتدا با کاربر جدید لاگین کنید و مطمئن شوید که کار می‌کند، سپس:
+
+\`\`\`
+/user disable admin
+\`\`\`
+
+## محدود کردن دسترسی به IP مشخص
+
+\`\`\`
+/user set netadmin allowed-address=192.168.1.0/24
+\`\`\`
+
+## مشاهده جلسات فعال
+
+\`\`\`
+/user active print
+\`\`\`
+
+## امنیت سرویس‌های مدیریتی
+
+\`\`\`
+/ip service set telnet disabled=yes
+/ip service set ftp disabled=yes
+/ip service set winbox address=192.168.1.0/24
+/ip service set ssh address=192.168.1.0/24
+\`\`\`
+
+## خلاصه
+
+- هرگز \`admin\` بدون رمز نگذارید
+- کاربران نامگذاری‌شده با رمز قوی بسازید
+- دسترسی را با \`allowed-address\` محدود کنید
+- سرویس‌های غیرضروری را غیرفعال کنید
+`,
+  },
+  'mikrotik-backup-restore-export': {
+    contentEn: `## Backing Up and Restoring RouterOS Configuration
+
+Having a current backup of your router configuration is essential. Hardware can fail, misconfigurations can happen, and firmware upgrades can occasionally cause unexpected issues. A backup lets you recover quickly.
+
+RouterOS offers two distinct backup methods, each with different use cases.
+
+## Method 1: Binary Backup (/system backup)
+
+A binary backup saves the entire RouterOS configuration in a compressed binary file. This is the fastest method and captures everything, including passwords.
+
+### Creating a Backup
+
+\`\`\`
+/system backup save name=myrouter-2024-01-15
+\`\`\`
+
+This saves a file called \`myrouter-2024-01-15.backup\` to the router flash storage. To see it:
+
+\`\`\`
+/file print
+\`\`\`
+
+### Downloading the Backup
+
+You can download the \`.backup\` file via Winbox (Files menu) or SCP:
+
+\`\`\`
+scp admin@192.168.1.1:myrouter-2024-01-15.backup ./
+\`\`\`
+
+### Restoring from Binary Backup
+
+Upload the backup file to the router, then:
+
+\`\`\`
+/system backup load name=myrouter-2024-01-15.backup
+\`\`\`
+
+The router will reboot and restore the saved configuration. Note: This restores the configuration from the exact RouterOS version that created the backup. Restoring a backup from a very different version may cause issues.
+
+### Password Protection
+
+You can optionally add a password to the backup:
+
+\`\`\`
+/system backup save name=myrouter-2024-01-15 password=BackupPass123
+\`\`\`
+
+Then when restoring:
+
+\`\`\`
+/system backup load name=myrouter-2024-01-15.backup password=BackupPass123
+\`\`\`
+
+## Method 2: Export (/export)
+
+The export command generates a human-readable \`.rsc\` script file containing RouterOS commands that recreate the configuration. This is more portable and version-independent.
+
+### Full Export
+
+\`\`\`
+/export file=myrouter-export-2024-01-15
+\`\`\`
+
+This creates \`myrouter-export-2024-01-15.rsc\` — a plain text file you can open in any editor.
+
+### Exporting a Specific Section
+
+You can export just part of the configuration:
+
+\`\`\`
+/ip address export file=ip-addresses
+/ip firewall export file=firewall-rules
+/interface export file=interfaces
+\`\`\`
+
+### Viewing the Export Without Saving
+
+\`\`\`
+/export
+\`\`\`
+
+This prints the configuration to the terminal, useful for quickly reviewing settings.
+
+### Compact Export (Hides Defaults)
+
+\`\`\`
+/export compact file=myrouter-compact
+\`\`\`
+
+The compact flag only shows settings that differ from RouterOS defaults, making the file smaller and easier to read.
+
+### Restoring from Export
+
+Upload the \`.rsc\` file to the router, then import it:
+
+\`\`\`
+/import file=myrouter-export-2024-01-15.rsc
+\`\`\`
+
+This runs the commands in the file line by line. If your router already has conflicting configuration, some commands may fail — it is best to import onto a fresh or reset router.
+
+## Comparing the Two Methods
+
+| Feature | /system backup | /export |
+|---|---|---|
+| Format | Binary | Plain text (.rsc) |
+| Passwords | Included | Not included by default |
+| Version dependency | Yes | No (mostly) |
+| Human readable | No | Yes |
+| Partial backup | No | Yes |
+| Import on clean router | Yes | Yes |
+
+## Best Practices
+
+- **Schedule regular backups**: Use the RouterOS scheduler to run backups automatically.
+
+\`\`\`
+/system scheduler add name=weekly-backup interval=7d on-event="/system backup save name=auto-backup" start-time=00:00:00
+\`\`\`
+
+- **Store backups off-router**: Always download backups to a remote location. If the router dies, you cannot access files stored on it.
+- **Test restores**: Periodically verify your backup actually works by restoring it to a test router.
+- **Use both methods**: Keep a binary backup for fast recovery and an export for version portability.
+- **Name files with dates**: Include the date in the file name so you know which backup is most recent.
+
+## Sending Backups via Email
+
+RouterOS can email backups automatically:
+
+\`\`\`
+/tool e-mail set server=smtp.example.com from=router@example.com
+/system scheduler add name=email-backup interval=7d on-event="/system backup save name=weekly; /tool e-mail send to=admin@example.com subject=RouterBackup file=weekly.backup"
+\`\`\`
+
+## Summary
+
+- Use \`/system backup save\` for quick, complete binary backups.
+- Use \`/export\` for human-readable, portable configuration scripts.
+- Always store backups off the router.
+- Schedule automatic backups with \`/system scheduler\`.
+- Test your backups regularly to ensure they actually work.
+`,
+    contentFa: `## پشتیبان‌گیری و بازیابی تنظیمات RouterOS
+
+داشتن پشتیبان به‌روز از تنظیمات روتر ضروری است. RouterOS دو روش پشتیبان‌گیری دارد.
+
+## روش اول: پشتیبان باینری (/system backup)
+
+\`\`\`
+/system backup save name=myrouter-2024-01-15
+\`\`\`
+
+فایل \`myrouter-2024-01-15.backup\` در حافظه روتر ذخیره می‌شود.
+
+### بازیابی از پشتیبان باینری
+
+\`\`\`
+/system backup load name=myrouter-2024-01-15.backup
+\`\`\`
+
+روتر ری‌استارت می‌شود و تنظیمات بازیابی می‌شوند.
+
+### پشتیبان با رمز عبور
+
+\`\`\`
+/system backup save name=myrouter-2024-01-15 password=BackupPass123
+\`\`\`
+
+## روش دوم: Export (/export)
+
+فایل متنی قابل‌خواندن تولید می‌کند:
+
+\`\`\`
+/export file=myrouter-export-2024-01-15
+\`\`\`
+
+### Export بخشی از تنظیمات
+
+\`\`\`
+/ip address export file=ip-addresses
+/ip firewall export file=firewall-rules
+\`\`\`
+
+### Export فشرده (بدون مقادیر پیش‌فرض)
+
+\`\`\`
+/export compact file=myrouter-compact
+\`\`\`
+
+### بازیابی از Export
+
+\`\`\`
+/import file=myrouter-export-2024-01-15.rsc
+\`\`\`
+
+## بهترین روش‌ها
+
+- پشتیبان‌گیری خودکار با زمان‌بندی:
+
+\`\`\`
+/system scheduler add name=weekly-backup interval=7d on-event="/system backup save name=auto-backup" start-time=00:00:00
+\`\`\`
+
+- همیشه پشتیبان را از روتر دانلود کنید
+- هر دو روش را ترکیب کنید
+- نام فایل را با تاریخ مشخص کنید
+
+## خلاصه
+
+- برای پشتیبان کامل سریع از \`/system backup save\` استفاده کنید
+- برای فایل قابل‌ویرایش از \`/export\` استفاده کنید
+- پشتیبان‌ها را خارج از روتر نگهداری کنید
+- پشتیبان‌ها را به صورت خودکار زمان‌بندی کنید
+`,
+  },
+  'mikrotik-routeros-upgrade-safe': {
+    contentEn: `## Safely Upgrading RouterOS Firmware
+
+Keeping RouterOS up to date is important for security patches, bug fixes, and new features. However, upgrades should be done carefully — a failed upgrade can leave a router unreachable. This guide walks you through a safe upgrade process for RouterOS v7.
+
+## Before You Upgrade
+
+### 1. Check Current Version
+
+\`\`\`
+/system resource print
+\`\`\`
+
+Look for the \`version\` field. Also check:
+
+\`\`\`
+/system routerboard print
+\`\`\`
+
+This shows the RouterBOARD model and firmware version separately from the RouterOS software version.
+
+### 2. Take a Full Backup
+
+Always back up before upgrading:
+
+\`\`\`
+/system backup save name=pre-upgrade-backup
+\`\`\`
+
+Download this backup to your computer. If the upgrade fails, you may need it.
+
+### 3. Check Available Packages
+
+\`\`\`
+/system package print
+\`\`\`
+
+This shows all installed packages and their current versions.
+
+## Checking for Updates
+
+### Method 1: Check via RouterOS
+
+\`\`\`
+/system package update check-for-updates channel=stable
+\`\`\`
+
+Channels available:
+- **stable**: Recommended for production. Thoroughly tested releases.
+- **long-term**: Even more conservative. Bug fixes only for a specific major version.
+- **testing**: Beta releases. Do not use in production.
+- **development**: Nightly builds. Never use in production.
+
+### Method 2: Manual Download from MikroTik
+
+Go to https://mikrotik.com/download and download the correct package for your router architecture. Common architectures:
+- **arm**: Most modern home/office routers (hEX, RB4011, etc.)
+- **arm64**: Newer high-end devices
+- **mipsbe**: Older/budget devices (RB750, hAP lite)
+- **x86**: CHR (Cloud Hosted Router) and PC-based routers
+- **tile**: CCR series (Cloud Core Router)
+
+Check your architecture:
+
+\`\`\`
+/system resource print | grep architecture
+\`\`\`
+
+## Upgrading via RouterOS (Recommended for Most Users)
+
+If your router has internet access, the easiest method is to upgrade directly:
+
+\`\`\`
+/system package update check-for-updates channel=stable
+/system package update download
+\`\`\`
+
+Wait for the download to complete, then:
+
+\`\`\`
+/system package update install
+\`\`\`
+
+The router will reboot and install the new version.
+
+## Upgrading via Package Upload
+
+If you downloaded packages manually:
+
+1. Upload the \`.npk\` package file to the router (via Winbox Files, or SCP/FTP).
+2. Verify it appears in the file list:
+
+\`\`\`
+/file print
+\`\`\`
+
+3. Reboot to trigger the upgrade:
+
+\`\`\`
+/system reboot
+\`\`\`
+
+RouterOS installs any \`.npk\` files found in the root directory during boot.
+
+## Upgrading the RouterBOARD Firmware
+
+After upgrading RouterOS software, you should also upgrade the low-level RouterBOARD firmware:
+
+\`\`\`
+/system routerboard upgrade
+/system reboot
+\`\`\`
+
+This updates the bootloader and hardware-level firmware. It is separate from RouterOS and must be done after the RouterOS upgrade.
+
+## Rollback Plan
+
+### If the Router is Unreachable After Upgrade
+
+RouterOS has a built-in rollback feature — if the router reboots three times without a successful connection within a configured time, it can revert to the previous version. However, this is not always reliable.
+
+More reliable rollback steps:
+
+1. **Netinstall**: MikroTik's utility to reinstall RouterOS over the network. Requires physical access (press the reset button while powering on).
+2. **Restore from backup**: Use Netinstall to get a clean RouterOS, then restore your pre-upgrade backup.
+
+### Keeping the Old Version Available
+
+Before upgrading, note the old version number. You can download older RouterOS versions from https://mikrotik.com/download (scroll down for older releases).
+
+## Safe Upgrade Checklist
+
+- [ ] Check current version with \`/system resource print\`
+- [ ] Take and download a full backup
+- [ ] Verify the correct architecture package
+- [ ] Read the RouterOS changelog for breaking changes
+- [ ] Schedule the upgrade during a maintenance window
+- [ ] Have console/out-of-band access ready in case the router is unreachable
+- [ ] Test after upgrade: ping, DNS, NAT, firewall
+
+## Summary
+
+- Always back up before upgrading.
+- Use the \`stable\` channel for production routers.
+- Upgrade RouterOS first, then upgrade the RouterBOARD firmware.
+- Know your rollback plan before starting.
+- Read the changelog for any breaking changes in the new version.
+
+Routine upgrades on a planned maintenance window, with a backup ready, are low-risk and keep your network secure.
+`,
+    contentFa: `## ارتقاء ایمن RouterOS
+
+به‌روز نگه داشتن RouterOS برای امنیت و رفع اشکالات ضروری است. با این حال باید با احتیاط انجام شود.
+
+## قبل از ارتقاء
+
+### ۱. بررسی نسخه فعلی
+
+\`\`\`
+/system resource print
+\`\`\`
+
+### ۲. گرفتن پشتیبان کامل
+
+\`\`\`
+/system backup save name=pre-upgrade-backup
+\`\`\`
+
+این فایل را دانلود کنید.
+
+### ۳. بررسی پکیج‌های نصب‌شده
+
+\`\`\`
+/system package print
+\`\`\`
+
+## بررسی به‌روزرسانی‌ها
+
+\`\`\`
+/system package update check-for-updates channel=stable
+\`\`\`
+
+کانال‌ها:
+- **stable**: برای محیط تولید توصیه می‌شود
+- **long-term**: محافظه‌کارانه‌تر، فقط رفع اشکال
+- **testing**: نسخه بتا، برای تولید مناسب نیست
+
+## ارتقاء از طریق RouterOS
+
+\`\`\`
+/system package update check-for-updates channel=stable
+/system package update download
+/system package update install
+\`\`\`
+
+روتر ری‌استارت می‌شود و نسخه جدید نصب می‌شود.
+
+## ارتقاء RouterBOARD firmware
+
+بعد از ارتقاء RouterOS:
+
+\`\`\`
+/system routerboard upgrade
+/system reboot
+\`\`\`
+
+## چک‌لیست ارتقاء ایمن
+
+- نسخه فعلی را یادداشت کنید
+- پشتیبان کامل بگیرید و دانلود کنید
+- معماری درست را انتخاب کنید (arm, mipsbe, x86, ...)
+- changelog را بخوانید
+- در ساعات کم‌ترافیک انجام دهید
+- دسترسی کنسول داشته باشید
+
+## معماری روتر
+
+\`\`\`
+/system resource print | grep architecture
+\`\`\`
+
+## خلاصه
+
+- همیشه قبل از ارتقاء پشتیبان بگیرید
+- از کانال \`stable\` برای روترهای تولیدی استفاده کنید
+- بعد از RouterOS، firmware RouterBOARD را هم ارتقاء دهید
+- برنامه بازگشت داشته باشید
+`,
+  },
+  'mikrotik-logging-system-remote': {
+    contentEn: `## System Logging in RouterOS
+
+Logging is critical for troubleshooting, security auditing, and understanding what is happening on your network. RouterOS has a flexible logging system that can send logs to multiple destinations simultaneously.
+
+## Understanding the Logging System
+
+RouterOS logging works with two components:
+
+- **Log topics**: Categories of events (e.g., \`firewall\`, \`dhcp\`, \`system\`, \`interface\`).
+- **Log actions**: Where to send the log messages (memory, disk, console, email, remote syslog).
+
+## Viewing Logs
+
+The simplest way to see logs is:
+
+\`\`\`
+/log print
+\`\`\`
+
+To follow logs in real time:
+
+\`\`\`
+/log print follow
+\`\`\`
+
+To filter by topic:
+
+\`\`\`
+/log print where topics~"firewall"
+\`\`\`
+
+## Configuring Log Actions
+
+By default, RouterOS has four built-in log actions:
+
+- **memory**: Stores logs in RAM (lost on reboot). Default for most events.
+- **disk**: Stores logs in flash storage. Survives reboots but wears flash.
+- **echo**: Prints to the console terminal.
+- **remote**: Sends logs to a syslog server.
+
+View existing actions:
+
+\`\`\`
+/system logging action print
+\`\`\`
+
+### Configuring Memory Action
+
+\`\`\`
+/system logging action set memory memory-lines=1000
+\`\`\`
+
+This keeps the last 1000 log lines in memory.
+
+### Configuring Disk Action
+
+\`\`\`
+/system logging action set disk disk-lines-per-file=1000 disk-file-count=5 disk-file-name=router-log
+\`\`\`
+
+This creates up to 5 rotating log files with 1000 lines each.
+
+## Sending Logs to a Remote Syslog Server
+
+This is the most important feature for any serious network. Sending logs to a central syslog server means:
+
+- Logs survive router reboots or crashes.
+- You can correlate logs from multiple devices.
+- Logs are harder for an attacker to tamper with.
+
+### Step 1: Configure the Remote Action
+
+\`\`\`
+/system logging action add name=remote-syslog target=remote remote=192.168.1.100 remote-port=514 syslog-facility=local0 syslog-severity=auto bsd-syslog=no
+\`\`\`
+
+Parameters:
+- **remote**: IP of your syslog server (e.g., a Linux box running \`rsyslog\` or \`syslog-ng\`).
+- **remote-port**: Default syslog port is 514 (UDP).
+- **syslog-facility**: The syslog facility code (local0 through local7 are commonly used for network devices).
+- **bsd-syslog**: Set to \`yes\` for RFC 3164 (older) format, \`no\` for RFC 5424 (newer).
+
+### Step 2: Add Logging Rules to Use the Remote Action
+
+\`\`\`
+/system logging add topics=firewall action=remote-syslog
+/system logging add topics=system action=remote-syslog
+/system logging add topics=critical action=remote-syslog
+/system logging add topics=warning action=remote-syslog
+/system logging add topics=info action=remote-syslog
+\`\`\`
+
+### Step 3: Verify
+
+Check that log entries are appearing on your syslog server. On a Linux syslog server:
+
+\`\`\`bash
+tail -f /var/log/syslog | grep <router-ip>
+\`\`\`
+
+## What to Log and Why
+
+Not all log topics are equally useful. Here is a guide:
+
+| Topic | Why Log It |
+|---|---|
+| \`firewall\` | See blocked/accepted connections, detect attacks |
+| \`system\` | Track reboots, config changes, user logins |
+| \`dhcp\` | See which devices get IP addresses |
+| \`dns\` | Debug DNS resolution issues |
+| \`interface\` | Track link up/down events |
+| \`critical\` | Always log critical errors |
+| \`warning\` | Hardware warnings, resource issues |
+| \`info\` | General informational events |
+
+Avoid logging \`debug\` in production — it generates enormous volume and fills logs quickly.
+
+## Configuring Log Topics
+
+View current logging rules:
+
+\`\`\`
+/system logging print
+\`\`\`
+
+Add a logging rule for DHCP events going to memory and syslog:
+
+\`\`\`
+/system logging add topics=dhcp action=memory
+/system logging add topics=dhcp action=remote-syslog
+\`\`\`
+
+Remove a logging rule:
+
+\`\`\`
+/system logging remove [find topics="dhcp"]
+\`\`\`
+
+## Log Prefixes
+
+You can add a prefix to log messages for easier filtering:
+
+\`\`\`
+/system logging add topics=firewall action=remote-syslog prefix="FW:"
+\`\`\`
+
+## Logging Firewall Events
+
+To log specific firewall events, add the \`log\` action and a \`log-prefix\` to your firewall rules:
+
+\`\`\`
+/ip firewall filter add chain=input action=drop in-interface=pppoe-out1 log=yes log-prefix="WAN-DROP:"
+\`\`\`
+
+These events will appear in the log under the \`firewall\` topic.
+
+## Summary
+
+- View logs with \`/log print\` and \`/log print follow\`.
+- Configure actions with \`/system logging action\`.
+- Send logs to a remote syslog server for persistence and centralization.
+- Log \`firewall\`, \`system\`, \`critical\`, \`warning\`, and \`info\` at minimum.
+- Avoid debug logging in production.
+- Add log prefixes for easier searching.
+`,
+    contentFa: `## لاگ‌گیری سیستم در RouterOS
+
+لاگ‌گیری برای عیب‌یابی، امنیت و درک رویدادهای شبکه ضروری است.
+
+## مشاهده لاگ‌ها
+
+\`\`\`
+/log print
+\`\`\`
+
+برای دیدن لاگ‌ها به صورت زنده:
+
+\`\`\`
+/log print follow
+\`\`\`
+
+فیلتر بر اساس موضوع:
+
+\`\`\`
+/log print where topics~"firewall"
+\`\`\`
+
+## اکشن‌های لاگ‌گیری
+
+اکشن‌های پیش‌فرض:
+- **memory**: در RAM ذخیره می‌شود (با ری‌استارت پاک می‌شود)
+- **disk**: در فلش ذخیره می‌شود
+- **echo**: در کنسول نمایش می‌دهد
+- **remote**: به سرور syslog ارسال می‌شود
+
+مشاهده اکشن‌ها:
+
+\`\`\`
+/system logging action print
+\`\`\`
+
+## ارسال لاگ به سرور syslog از راه دور
+
+این مهم‌ترین قابلیت برای شبکه‌های جدی است:
+
+### مرحله ۱: پیکربندی اکشن remote
+
+\`\`\`
+/system logging action add name=remote-syslog target=remote remote=192.168.1.100 remote-port=514 syslog-facility=local0 syslog-severity=auto bsd-syslog=no
+\`\`\`
+
+### مرحله ۲: اضافه کردن قوانین لاگ
+
+\`\`\`
+/system logging add topics=firewall action=remote-syslog
+/system logging add topics=system action=remote-syslog
+/system logging add topics=critical action=remote-syslog
+/system logging add topics=warning action=remote-syslog
+\`\`\`
+
+## چه چیزی را لاگ بگیریم؟
+
+| موضوع | دلیل |
+|---|---|
+| \`firewall\` | شناسایی حملات |
+| \`system\` | ری‌استارت‌ها، تغییرات تنظیمات |
+| \`dhcp\` | پیگیری دستگاه‌های متصل |
+| \`interface\` | بررسی وضعیت اینترفیس‌ها |
+| \`critical\` | خطاهای بحرانی |
+
+از لاگ \`debug\` در محیط تولید استفاده نکنید.
+
+## لاگ رویدادهای فایروال
+
+\`\`\`
+/ip firewall filter add chain=input action=drop in-interface=pppoe-out1 log=yes log-prefix="WAN-DROP:"
+\`\`\`
+
+## خلاصه
+
+- لاگ‌ها را با \`/log print\` مشاهده کنید
+- برای ماندگاری، لاگ‌ها را به سرور syslog ارسال کنید
+- حداقل \`firewall\`، \`system\`، \`critical\` و \`warning\` را لاگ بگیرید
+`,
+  },
+  'mikrotik-snmp-monitoring-setup': {
+    contentEn: `## Enabling SNMP for Network Monitoring
+
+SNMP (Simple Network Management Protocol) allows external monitoring tools to query your MikroTik router for performance data, interface statistics, CPU usage, memory, and much more. Tools like LibreNMS, Zabbix, PRTG, and Grafana+Prometheus can use SNMP to build dashboards and send alerts.
+
+## What is SNMP?
+
+SNMP is a protocol designed to let network management software poll devices for information. A device running SNMP is called an **agent**. The monitoring server is called the **manager**. The manager sends requests to the agent, and the agent responds with data.
+
+Data in SNMP is organized in a tree structure called the **MIB (Management Information Base)**. Each piece of data has a unique identifier called an **OID (Object Identifier)**, like \`1.3.6.1.2.1.1.1.0\` (which is \`sysDescr\` — the system description).
+
+RouterOS v7 supports:
+- **SNMPv1**: Legacy, no security. Avoid if possible.
+- **SNMPv2c**: Most common. Uses community strings for basic authentication.
+- **SNMPv3**: Adds encryption and strong authentication. Recommended for security.
+
+## Enabling SNMP
+
+\`\`\`
+/snmp set enabled=yes
+\`\`\`
+
+## Configuring Community Strings (SNMPv2c)
+
+A community string acts like a password. By default, the community is \`public\` — change this immediately.
+
+\`\`\`
+/snmp community add name=monitoring-ro security=none read-access=yes write-access=no addresses=192.168.1.100
+\`\`\`
+
+Parameters:
+- **name**: The community string name (this IS the password for SNMPv2c).
+- **read-access=yes**: Allow reading data.
+- **write-access=no**: Never allow write access unless you specifically need it.
+- **addresses**: Restrict which IP can query this community (highly recommended).
+
+Remove or disable the default \`public\` community:
+
+\`\`\`
+/snmp community remove [find name=public]
+\`\`\`
+
+## Basic SNMP Settings
+
+\`\`\`
+/snmp set contact="Network Admin <admin@example.com>" location="Server Room A" engine-id=auto trap-version=2 trap-community=monitoring-ro
+\`\`\`
+
+- **contact**: Who to contact about this device.
+- **location**: Physical location of the router.
+- **engine-id**: Unique ID for this SNMP agent (auto-generate is fine).
+- **trap-version**: Version for SNMP traps (notifications sent from router to manager).
+
+## Verifying SNMP is Working
+
+From your monitoring server, test with \`snmpwalk\` (Linux):
+
+\`\`\`bash
+snmpwalk -v2c -c monitoring-ro 192.168.1.1 1.3.6.1.2.1.1
+\`\`\`
+
+This queries the system group OIDs and should return basic router information.
+
+Test a specific OID — system uptime:
+
+\`\`\`bash
+snmpget -v2c -c monitoring-ro 192.168.1.1 1.3.6.1.2.1.1.3.0
+\`\`\`
+
+## Useful MikroTik OIDs
+
+| OID | Description |
+|---|---|
+| \`1.3.6.1.2.1.1.1.0\` | System description |
+| \`1.3.6.1.2.1.1.3.0\` | System uptime |
+| \`1.3.6.1.2.1.1.5.0\` | System name |
+| \`1.3.6.1.2.1.2.2.1.10.X\` | Interface X received bytes |
+| \`1.3.6.1.2.1.2.2.1.16.X\` | Interface X transmitted bytes |
+| \`1.3.6.1.4.1.14988.1.1.1.1.0\` | CPU load (MikroTik MIB) |
+| \`1.3.6.1.4.1.14988.1.1.1.2.0\` | Free memory |
+
+MikroTik-specific OIDs start with \`1.3.6.1.4.1.14988\` (MikroTik enterprise OID).
+
+## Configuring SNMPv3 (Recommended)
+
+SNMPv3 adds user-based authentication and optional encryption:
+
+\`\`\`
+/snmp community add name=snmpv3-user security=SHA authentication-password=AuthPass123 encryption-password=EncPass123 encryption-protocol=AES read-access=yes addresses=192.168.1.100
+\`\`\`
+
+From the monitoring server:
+
+\`\`\`bash
+snmpwalk -v3 -u snmpv3-user -l authPriv -a SHA -A AuthPass123 -x AES -X EncPass123 192.168.1.1 1.3.6.1.2.1.1
+\`\`\`
+
+## Integrating with LibreNMS
+
+1. Install LibreNMS on your monitoring server.
+2. In LibreNMS, go to **Devices > Add Device**.
+3. Enter the router IP, select SNMPv2c (or v3), enter your community string.
+4. LibreNMS will auto-discover interfaces, CPU, memory, and more.
+5. Set up alerts for interface down, high CPU, memory issues.
+
+## Integrating with Zabbix
+
+1. In Zabbix, create a host with your router IP.
+2. Link the **Template Net MikroTik** template (available in Zabbix template library).
+3. Set the SNMP community macro \`{$SNMP_COMMUNITY}\` to your community string.
+4. Zabbix will automatically discover and monitor interfaces, CPU, memory, uptime.
+
+## Protecting SNMP
+
+SNMP v2c has no encryption — community strings are sent in plain text. Protect yourself:
+
+\`\`\`
+/ip firewall filter add chain=input protocol=udp dst-port=161 src-address=192.168.1.100 action=accept comment="Allow SNMP from monitor"
+/ip firewall filter add chain=input protocol=udp dst-port=161 action=drop comment="Block all other SNMP"
+\`\`\`
+
+Only allow your monitoring server to reach SNMP (UDP port 161).
+
+## Summary
+
+- Enable SNMP with \`/snmp set enabled=yes\`.
+- Change the default community string from \`public\` to something custom.
+- Restrict SNMP access to your monitoring server IP.
+- Use SNMPv3 when possible for security.
+- Integrate with LibreNMS, Zabbix, or similar for dashboards and alerts.
+- Block SNMP on the firewall from any unauthorized source.
+`,
+    contentFa: `## فعال کردن SNMP برای مانیتورینگ شبکه
+
+SNMP به ابزارهای مانیتورینگ اجازه می‌دهد اطلاعات روتر مثل CPU، حافظه و ترافیک اینترفیس‌ها را جمع‌آوری کنند. ابزارهایی مثل LibreNMS، Zabbix و Grafana از SNMP استفاده می‌کنند.
+
+## فعال کردن SNMP
+
+\`\`\`
+/snmp set enabled=yes
+\`\`\`
+
+## پیکربندی Community String
+
+Community string مثل رمز عبور است. مقدار پیش‌فرض \`public\` را تغییر دهید:
+
+\`\`\`
+/snmp community add name=monitoring-ro security=none read-access=yes write-access=no addresses=192.168.1.100
+\`\`\`
+
+Community پیش‌فرض را حذف کنید:
+
+\`\`\`
+/snmp community remove [find name=public]
+\`\`\`
+
+## تنظیمات پایه SNMP
+
+\`\`\`
+/snmp set contact="Network Admin <admin@example.com>" location="Server Room A" engine-id=auto trap-version=2 trap-community=monitoring-ro
+\`\`\`
+
+## تست SNMP
+
+از سرور مانیتورینگ:
+
+\`\`\`bash
+snmpwalk -v2c -c monitoring-ro 192.168.1.1 1.3.6.1.2.1.1
+\`\`\`
+
+## OIDهای مفید MikroTik
+
+| OID | توضیح |
+|---|---|
+| \`1.3.6.1.2.1.1.1.0\` | توضیحات سیستم |
+| \`1.3.6.1.2.1.1.3.0\` | آپتایم سیستم |
+| \`1.3.6.1.4.1.14988.1.1.1.1.0\` | بار CPU |
+| \`1.3.6.1.4.1.14988.1.1.1.2.0\` | حافظه آزاد |
+
+## SNMPv3 (توصیه‌شده)
+
+\`\`\`
+/snmp community add name=snmpv3-user security=SHA authentication-password=AuthPass123 encryption-password=EncPass123 encryption-protocol=AES read-access=yes addresses=192.168.1.100
+\`\`\`
+
+## محافظت از SNMP با فایروال
+
+\`\`\`
+/ip firewall filter add chain=input protocol=udp dst-port=161 src-address=192.168.1.100 action=accept comment="Allow SNMP from monitor"
+/ip firewall filter add chain=input protocol=udp dst-port=161 action=drop comment="Block all other SNMP"
+\`\`\`
+
+## خلاصه
+
+- SNMP را با \`/snmp set enabled=yes\` فعال کنید
+- Community string را تغییر دهید
+- دسترسی را به سرور مانیتورینگ محدود کنید
+- در صورت امکان از SNMPv3 استفاده کنید
+`,
+  },
+  'mikrotik-simple-queue-bandwidth': {
+    contentEn: `## Basic Bandwidth Limiting with Simple Queues
+
+If you have multiple users on your network and want to make sure no single user consumes all the bandwidth, Simple Queues are your first tool in RouterOS. They are easy to configure and effective for basic bandwidth management.
+
+## What is a Queue?
+
+A queue is a mechanism that controls how much data can flow through at a given time. By adding a queue for a specific IP address or subnet, you can set maximum upload and download speeds for that target.
+
+## Creating a Simple Queue
+
+The basic syntax is:
+
+\`\`\`
+/queue simple add name=limit-pc1 target=192.168.1.10/32 max-limit=5M/10M
+\`\`\`
+
+This creates a queue named \`limit-pc1\` that limits:
+- Upload (target to internet): 5 Mbps
+- Download (internet to target): 10 Mbps
+
+The format for \`max-limit\` is \`upload/download\`.
+
+## Limiting an Entire Subnet
+
+To limit all devices in a subnet:
+
+\`\`\`
+/queue simple add name=limit-guest-wifi target=192.168.10.0/24 max-limit=20M/50M
+\`\`\`
+
+All devices in the 192.168.10.0/24 range share a total of 20 Mbps up and 50 Mbps down.
+
+## Viewing Queues
+
+\`\`\`
+/queue simple print
+\`\`\`
+
+To see live statistics:
+
+\`\`\`
+/queue simple print stats
+\`\`\`
+
+This shows bytes and packets passed through each queue, and whether any traffic is being dropped.
+
+## Burst Limits
+
+Burst allows a user to temporarily exceed the max-limit for a short time. This makes browsing feel faster because small page loads complete quickly before the limit kicks in.
+
+\`\`\`
+/queue simple add name=limit-user1 target=192.168.1.20/32 max-limit=5M/10M burst-limit=10M/20M burst-threshold=3M/6M burst-time=8/8
+\`\`\`
+
+How burst works:
+- **burst-limit**: Maximum speed allowed during burst (10M up / 20M down).
+- **burst-threshold**: Average speed below which burst is allowed (3M up / 6M down).
+- **burst-time**: How many seconds the router averages traffic to decide if burst is available (8 seconds).
+
+If the average traffic over 8 seconds stays below \`burst-threshold\`, the router allows \`burst-limit\` speed. Once average traffic exceeds \`burst-threshold\`, it drops back to \`max-limit\`.
+
+## Priority Settings
+
+When multiple queues compete for bandwidth, priority determines which gets served first:
+
+\`\`\`
+/queue simple add name=voip-traffic target=192.168.1.30/32 max-limit=2M/2M priority=1/1
+/queue simple add name=bulk-download target=192.168.1.31/32 max-limit=10M/20M priority=8/8
+\`\`\`
+
+Priority 1 is highest, 8 is lowest. VoIP traffic will always be served before bulk downloads.
+
+## Limiting by MAC Address (via ARP)
+
+Simple queues target IP addresses, not MAC addresses directly. However, you can use static ARP entries to ensure a specific MAC always gets the same IP, then queue that IP.
+
+## Common Use Cases
+
+### Home Network
+
+Limit streaming device so it does not starve others:
+
+\`\`\`
+/queue simple add name=smart-tv target=192.168.1.50/32 max-limit=15M/30M comment="Smart TV limit"
+\`\`\`
+
+### Small Business
+
+Give each department a slice of bandwidth:
+
+\`\`\`
+/queue simple add name=accounts target=192.168.1.0/25 max-limit=20M/50M
+/queue simple add name=warehouse target=192.168.1.128/25 max-limit=10M/20M
+\`\`\`
+
+### Guest WiFi
+
+Ensure guest users get limited access:
+
+\`\`\`
+/queue simple add name=guests target=192.168.100.0/24 max-limit=5M/10M comment="Guest WiFi"
+\`\`\`
+
+## Disabling a Queue Temporarily
+
+\`\`\`
+/queue simple disable limit-pc1
+\`\`\`
+
+Re-enable:
+
+\`\`\`
+/queue simple enable limit-pc1
+\`\`\`
+
+## Removing a Queue
+
+\`\`\`
+/queue simple remove limit-pc1
+\`\`\`
+
+## Important Notes
+
+- Simple Queues match traffic after NAT. For typical home/office setups, target the LAN IP addresses.
+- Queue order matters: RouterOS processes queues top-to-bottom. More specific rules (single host /32) should come before broader rules (subnets).
+- Simple Queues add processing overhead. For large networks with hundreds of queues, consider using Queue Trees instead.
+
+## Summary
+
+- Create queues with \`/queue simple add target=... max-limit=...\`
+- Use \`upload/download\` format for max-limit.
+- Add burst settings for better user experience.
+- Use priority levels to prefer important traffic.
+- View stats with \`/queue simple print stats\`.
+- Disable with \`/queue simple disable name\`.
+`,
+    contentFa: `## محدود کردن پهنای باند با Simple Queue
+
+اگر می‌خواهید اطمینان حاصل کنید که هیچ کاربری تمام پهنای باند را نمی‌گیرد، Simple Queue ابزار اول شما در RouterOS است.
+
+## ساخت یک Simple Queue
+
+\`\`\`
+/queue simple add name=limit-pc1 target=192.168.1.10/32 max-limit=5M/10M
+\`\`\`
+
+این queue آپلود را به ۵ مگابیت و دانلود را به ۱۰ مگابیت محدود می‌کند.
+
+فرمت \`max-limit\` به صورت \`آپلود/دانلود\` است.
+
+## محدود کردن یک زیرشبکه
+
+\`\`\`
+/queue simple add name=limit-guest-wifi target=192.168.10.0/24 max-limit=20M/50M
+\`\`\`
+
+تمام دستگاه‌های این شبکه مجموعاً ۲۰ مگابیت آپلود و ۵۰ مگابیت دانلود دارند.
+
+## مشاهده Queueها
+
+\`\`\`
+/queue simple print
+/queue simple print stats
+\`\`\`
+
+## Burst (ترافیک موقت بالاتر)
+
+\`\`\`
+/queue simple add name=limit-user1 target=192.168.1.20/32 max-limit=5M/10M burst-limit=10M/20M burst-threshold=3M/6M burst-time=8/8
+\`\`\`
+
+Burst اجازه می‌دهد کاربر برای مدت کوتاهی بالاتر از حد مجاز برود.
+
+## اولویت‌بندی
+
+\`\`\`
+/queue simple add name=voip-traffic target=192.168.1.30/32 max-limit=2M/2M priority=1/1
+/queue simple add name=bulk-download target=192.168.1.31/32 max-limit=10M/20M priority=8/8
+\`\`\`
+
+اولویت ۱ بالاترین است. ترافیک VoIP همیشه قبل از دانلودهای سنگین سرویس می‌گیرد.
+
+## مثال‌های رایج
+
+### شبکه خانگی
+
+\`\`\`
+/queue simple add name=smart-tv target=192.168.1.50/32 max-limit=15M/30M comment="Smart TV limit"
+\`\`\`
+
+### شبکه اداری
+
+\`\`\`
+/queue simple add name=accounts target=192.168.1.0/25 max-limit=20M/50M
+/queue simple add name=guests target=192.168.100.0/24 max-limit=5M/10M
+\`\`\`
+
+## غیرفعال کردن موقت
+
+\`\`\`
+/queue simple disable limit-pc1
+/queue simple enable limit-pc1
+\`\`\`
+
+## خلاصه
+
+- queue را با \`/queue simple add\` بسازید
+- فرمت \`آپلود/دانلود\` برای max-limit استفاده کنید
+- با burst تجربه بهتری برای کاربران ایجاد کنید
+- اولویت‌بندی را برای ترافیک مهم تنظیم کنید
+`,
+  },
+  'mikrotik-pcq-fair-bandwidth': {
+    contentEn: `## Fair Bandwidth Sharing with PCQ (Per Connection Queue)
+
+While Simple Queues give each IP address a fixed bandwidth limit, PCQ (Per Connection Queue) takes a different approach: it automatically divides available bandwidth equally among active users or connections. This is ideal when you want fairness without manually creating a queue for every user.
+
+## What is PCQ?
+
+PCQ is a queuing discipline that splits bandwidth dynamically. Instead of assigning a fixed limit per user, PCQ observes all active flows and tries to give each one an equal share. If you have 10 users active, each gets roughly 1/10 of the total bandwidth.
+
+PCQ is particularly useful for:
+- Shared internet connections serving many users.
+- ISP-style fair access policies.
+- Preventing one heavy user from saturating the link while others are idle.
+
+## PCQ Concepts
+
+- **pcq-rate**: Optional maximum rate per sub-stream (each classified flow). Set to 0 for no per-stream limit.
+- **pcq-limit**: Queue depth per sub-stream (how many packets to buffer before dropping).
+- **pcq-classifier**: What field is used to classify flows into sub-streams. Options: \`src-address\`, \`dst-address\`, \`src-port\`, \`dst-port\`.
+- **pcq-total-limit**: Maximum total packets in the queue across all sub-streams.
+
+## Step 1: Create PCQ Queue Types
+
+First, define the PCQ queue types for download and upload:
+
+\`\`\`
+/queue type add name=pcq-download kind=pcq pcq-classifier=dst-address pcq-rate=0 pcq-limit=50 pcq-total-limit=2000
+/queue type add name=pcq-upload kind=pcq pcq-classifier=src-address pcq-rate=0 pcq-limit=50 pcq-total-limit=2000
+\`\`\`
+
+For download: classify by \`dst-address\` — each destination IP (your LAN users) gets a fair share.
+For upload: classify by \`src-address\` — each source IP (your LAN users) gets a fair share.
+
+## Step 2: Create a Queue Tree
+
+PCQ works best in a Queue Tree, which lets you set a total bandwidth limit and then apply PCQ within that total.
+
+First, mark all traffic from the WAN interface (for download) and to the WAN (for upload):
+
+\`\`\`
+/ip firewall mangle add chain=forward in-interface=pppoe-out1 action=mark-packet new-packet-mark=wan-download passthrough=yes
+/ip firewall mangle add chain=forward out-interface=pppoe-out1 action=mark-packet new-packet-mark=wan-upload passthrough=yes
+\`\`\`
+
+Then create the Queue Tree:
+
+\`\`\`
+/queue tree add name=total-download parent=global packet-mark=wan-download max-limit=100M queue=pcq-download
+/queue tree add name=total-upload parent=global packet-mark=wan-upload max-limit=20M queue=pcq-upload
+\`\`\`
+
+Set \`max-limit\` to your actual ISP connection speed (100M down / 20M up in this example).
+
+## How PCQ Distributes Bandwidth
+
+With the above setup and 100 Mbps total download:
+
+- 1 active user → gets 100 Mbps
+- 2 active users → each gets ~50 Mbps
+- 10 active users → each gets ~10 Mbps
+- 20 active users → each gets ~5 Mbps
+
+PCQ dynamically adjusts as users start and stop downloading.
+
+## Setting a Per-User Maximum with pcq-rate
+
+If you want each user to have a maximum (even when others are idle):
+
+\`\`\`
+/queue type set pcq-download pcq-rate=10M
+/queue type set pcq-upload pcq-rate=5M
+\`\`\`
+
+Now no single user can exceed 10 Mbps download or 5 Mbps upload, regardless of what others are doing.
+
+## Viewing Queue Statistics
+
+\`\`\`
+/queue tree print stats
+\`\`\`
+
+## Combining Simple Queue with PCQ
+
+You can combine both approaches:
+
+1. Use a Simple Queue to limit each user to a maximum (e.g., 20 Mbps).
+2. Use PCQ inside that limit to distribute fairly when multiple users are active.
+
+This requires Queue Trees with PCQ as the queue type on child queues.
+
+## PCQ vs Simple Queue: When to Use Which
+
+| Situation | Use |
+|---|---|
+| Fixed limit per user regardless of load | Simple Queue |
+| Fair sharing of a total bandwidth pool | PCQ |
+| ISP or shared connection with many users | PCQ |
+| Per-department limits with fairness within | Queue Tree + PCQ |
+
+## Troubleshooting PCQ
+
+- **All users get low speeds**: Check that \`max-limit\` on the Queue Tree matches your actual ISP speed.
+- **Classifier not working**: Make sure you use \`dst-address\` for download and \`src-address\` for upload.
+- **Mangle marks not matching**: Check that mangle rules are in \`forward\` chain and referencing the correct WAN interface.
+
+## Summary
+
+- PCQ dynamically divides bandwidth fairly among active users.
+- Create PCQ queue types with \`/queue type add kind=pcq\`.
+- Use Queue Trees to apply PCQ to a total bandwidth limit.
+- Use mangle marks to identify upload and download traffic.
+- Set \`pcq-rate\` to cap per-user speed.
+- PCQ is ideal for shared connections and ISP-style fairness.
+`,
+    contentFa: `## تقسیم منصفانه پهنای باند با PCQ
+
+در حالی که Simple Queue به هر IP یک محدودیت ثابت می‌دهد، PCQ پهنای باند را به صورت خودکار و برابر بین کاربران فعال تقسیم می‌کند.
+
+## PCQ چیست؟
+
+PCQ (Per Connection Queue) یک روش صف‌بندی است که ترافیک را بین کاربران فعال به طور مساوی تقسیم می‌کند. اگر ۱۰ کاربر فعال باشند، هر کدام یک‌دهم پهنای باند را می‌گیرند.
+
+## مرحله ۱: ایجاد انواع Queue PCQ
+
+\`\`\`
+/queue type add name=pcq-download kind=pcq pcq-classifier=dst-address pcq-rate=0 pcq-limit=50 pcq-total-limit=2000
+/queue type add name=pcq-upload kind=pcq pcq-classifier=src-address pcq-rate=0 pcq-limit=50 pcq-total-limit=2000
+\`\`\`
+
+برای دانلود: از \`dst-address\` (آدرس مقصد = کاربران LAN) استفاده کنید.
+برای آپلود: از \`src-address\` (آدرس منبع = کاربران LAN) استفاده کنید.
+
+## مرحله ۲: علامت‌گذاری ترافیک با Mangle
+
+\`\`\`
+/ip firewall mangle add chain=forward in-interface=pppoe-out1 action=mark-packet new-packet-mark=wan-download passthrough=yes
+/ip firewall mangle add chain=forward out-interface=pppoe-out1 action=mark-packet new-packet-mark=wan-upload passthrough=yes
+\`\`\`
+
+## مرحله ۳: ایجاد Queue Tree
+
+\`\`\`
+/queue tree add name=total-download parent=global packet-mark=wan-download max-limit=100M queue=pcq-download
+/queue tree add name=total-upload parent=global packet-mark=wan-upload max-limit=20M queue=pcq-upload
+\`\`\`
+
+\`max-limit\` را با سرعت واقعی اینترنت خود تنظیم کنید.
+
+## نحوه تقسیم پهنای باند
+
+با ۱۰۰ مگابیت دانلود:
+- ۱ کاربر فعال: ۱۰۰ مگابیت
+- ۲ کاربر فعال: هر کدام ۵۰ مگابیت
+- ۱۰ کاربر فعال: هر کدام ۱۰ مگابیت
+
+## محدودیت حداکثر برای هر کاربر
+
+\`\`\`
+/queue type set pcq-download pcq-rate=10M
+/queue type set pcq-upload pcq-rate=5M
+\`\`\`
+
+## مشاهده آمار
+
+\`\`\`
+/queue tree print stats
+\`\`\`
+
+## مقایسه PCQ و Simple Queue
+
+| وضعیت | استفاده از |
+|---|---|
+| محدودیت ثابت برای هر کاربر | Simple Queue |
+| تقسیم منصفانه بین کاربران | PCQ |
+| اتصال مشترک با کاربران زیاد | PCQ |
+
+## خلاصه
+
+- PCQ پهنای باند را به طور پویا بین کاربران تقسیم می‌کند
+- Queue type را با \`/queue type add kind=pcq\` بسازید
+- از Queue Tree برای اعمال PCQ بر کل پهنای باند استفاده کنید
+- از Mangle برای شناسایی ترافیک آپلود و دانلود استفاده کنید
+`,
+  },
+  'mikrotik-address-list-dynamic': {
+    contentEn: `## Address Lists in RouterOS
+
+Address lists are one of the most powerful and flexible features in RouterOS. They let you group IP addresses together and then reference that group in firewall rules, routing policies, or other configurations. This eliminates the need to write repetitive rules for each individual IP.
+
+## What is an Address List?
+
+An address list is simply a named collection of IP addresses, ranges, or subnets. Instead of writing a firewall rule for each address individually, you write one rule that references the list.
+
+## Creating Static Address Lists
+
+### Adding Single IPs
+
+\`\`\`
+/ip firewall address-list add list=trusted-admins address=192.168.1.10 comment="Admin workstation"
+/ip firewall address-list add list=trusted-admins address=192.168.1.11 comment="Backup admin laptop"
+\`\`\`
+
+### Adding Subnets
+
+\`\`\`
+/ip firewall address-list add list=internal-networks address=192.168.1.0/24
+/ip firewall address-list add list=internal-networks address=192.168.2.0/24
+/ip firewall address-list add list=internal-networks address=10.0.0.0/8
+\`\`\`
+
+### Adding IP Ranges
+
+\`\`\`
+/ip firewall address-list add list=blocked-users address=192.168.1.100-192.168.1.120
+\`\`\`
+
+## Viewing Address Lists
+
+\`\`\`
+/ip firewall address-list print
+\`\`\`
+
+To filter by list name:
+
+\`\`\`
+/ip firewall address-list print where list=trusted-admins
+\`\`\`
+
+## Using Address Lists in Firewall Rules
+
+Once you have a list, reference it with \`src-address-list\` or \`dst-address-list\` in firewall rules:
+
+\`\`\`
+/ip firewall filter add chain=input src-address-list=trusted-admins action=accept comment="Allow admin access"
+/ip firewall filter add chain=input src-address-list=blocked-users action=drop comment="Block restricted users"
+\`\`\`
+
+### Blocking an Entire List from Internet Access
+
+\`\`\`
+/ip firewall filter add chain=forward src-address-list=blocked-users out-interface=pppoe-out1 action=drop comment="Block internet for restricted users"
+\`\`\`
+
+## Dynamic Address List Entries
+
+Dynamic entries are added and removed automatically, either by firewall rules or by other RouterOS features. They are identified by a \`D\` flag in the address list.
+
+### Adding Entries Dynamically via Firewall
+
+You can add IPs to an address list dynamically using the \`add-src-to-address-list\` or \`add-dst-to-address-list\` action in firewall rules.
+
+Example — detect port scanners and block them:
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1d comment="Detect port scanners"
+/ip firewall filter add chain=input src-address-list=port-scanners action=drop comment="Drop port scanners"
+\`\`\`
+
+The first rule adds any IP that triggers the port scan detector to the \`port-scanners\` list for 1 day. The second rule drops all traffic from that list.
+
+### Timeout-Based Dynamic Entries
+
+The \`address-list-timeout\` parameter controls how long a dynamically added entry stays in the list:
+
+- \`address-list-timeout=30m\` — entry expires after 30 minutes.
+- \`address-list-timeout=1d\` — entry expires after 1 day.
+- \`address-list-timeout=00:00:00\` or \`0\` — entry never expires (permanent dynamic entry).
+
+### Brute Force Protection Example
+
+Block IPs that attempt too many SSH connections:
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh-blacklist action=drop comment="Drop SSH brute force"
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh-stage3 action=add-src-to-address-list address-list=ssh-blacklist address-list-timeout=10d comment="Stage 3 to blacklist"
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh-stage2 action=add-src-to-address-list address-list=ssh-stage3 address-list-timeout=1m
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh-stage1 action=add-src-to-address-list address-list=ssh-stage2 address-list-timeout=1m
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new action=add-src-to-address-list address-list=ssh-stage1 address-list-timeout=1m
+\`\`\`
+
+This creates a staged system: after 3 new SSH connections within 1 minute, the IP is blacklisted for 10 days.
+
+## Removing Entries
+
+Remove a specific static entry:
+
+\`\`\`
+/ip firewall address-list remove [find list=blocked-users address=192.168.1.105]
+\`\`\`
+
+Remove all entries in a list:
+
+\`\`\`
+/ip firewall address-list remove [find list=port-scanners]
+\`\`\`
+
+## Address Lists and NAT
+
+You can also use address lists in NAT rules:
+
+\`\`\`
+/ip firewall nat add chain=srcnat src-address-list=internal-networks action=masquerade out-interface=pppoe-out1
+\`\`\`
+
+This applies NAT masquerade for all subnets in the \`internal-networks\` list.
+
+## Address Lists for Routing
+
+Address lists can feed into routing marks using mangle:
+
+\`\`\`
+/ip firewall mangle add chain=prerouting src-address-list=vip-users action=mark-routing new-routing-mark=vip-route
+\`\`\`
+
+## Common Use Cases Summary
+
+- **Whitelist**: Allow specific IPs to access management services.
+- **Blacklist**: Block known bad IPs or dynamic attackers.
+- **Port scanner detection**: Auto-block scanners.
+- **Brute force protection**: Stage-based SSH/Winbox brute force blocking.
+- **Group NAT**: Apply NAT to multiple subnets via one list.
+- **Policy routing**: Route specific users through different WAN links.
+
+## Summary
+
+- Create lists with \`/ip firewall address-list add list=name address=...\`
+- Reference lists in firewall rules with \`src-address-list\` or \`dst-address-list\`.
+- Add dynamic entries using \`add-src-to-address-list\` action.
+- Control lifetime with \`address-list-timeout\`.
+- Use lists to simplify complex firewall policies and enable automated security responses.
+`,
+    contentFa: `## Address List در RouterOS
+
+Address List یکی از قدرتمندترین ویژگی‌های RouterOS است که به شما اجازه می‌دهد آدرس‌های IP را در گروه‌های نامگذاری‌شده جمع کنید و در قوانین فایروال از آن‌ها استفاده کنید.
+
+## ساخت Address List استاتیک
+
+### اضافه کردن IP تکی
+
+\`\`\`
+/ip firewall address-list add list=trusted-admins address=192.168.1.10 comment="Admin workstation"
+/ip firewall address-list add list=trusted-admins address=192.168.1.11 comment="Backup admin laptop"
+\`\`\`
+
+### اضافه کردن زیرشبکه
+
+\`\`\`
+/ip firewall address-list add list=internal-networks address=192.168.1.0/24
+/ip firewall address-list add list=internal-networks address=192.168.2.0/24
+\`\`\`
+
+## مشاهده Address List
+
+\`\`\`
+/ip firewall address-list print
+\`\`\`
+
+## استفاده از Address List در قوانین فایروال
+
+\`\`\`
+/ip firewall filter add chain=input src-address-list=trusted-admins action=accept comment="Allow admin access"
+/ip firewall filter add chain=input src-address-list=blocked-users action=drop comment="Block restricted users"
+\`\`\`
+
+## ورودی‌های داینامیک
+
+می‌توانید IP‌ها را به صورت خودکار به لیست اضافه کنید:
+
+### مثال: شناسایی port scanner
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1d comment="Detect port scanners"
+/ip firewall filter add chain=input src-address-list=port-scanners action=drop comment="Drop port scanners"
+\`\`\`
+
+### مثال: محافظت از SSH در برابر Brute Force
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh-blacklist action=drop comment="Drop SSH brute force"
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh-stage3 action=add-src-to-address-list address-list=ssh-blacklist address-list-timeout=10d comment="Stage 3 to blacklist"
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new action=add-src-to-address-list address-list=ssh-stage1 address-list-timeout=1m
+\`\`\`
+
+## تایم‌اوت برای ورودی‌های داینامیک
+
+- \`address-list-timeout=30m\`: ورودی بعد از ۳۰ دقیقه پاک می‌شود
+- \`address-list-timeout=1d\`: ورودی بعد از ۱ روز پاک می‌شود
+- \`address-list-timeout=0\`: ورودی دائمی است
+
+## حذف ورودی‌ها
+
+\`\`\`
+/ip firewall address-list remove [find list=port-scanners]
+\`\`\`
+
+## کاربردهای رایج
+
+- **Whitelist**: اجازه دسترسی به IPs مورد اعتماد
+- **Blacklist**: بلاک کردن IPهای مخرب
+- **شناسایی port scanner**: بلاک خودکار اسکنرها
+- **محافظت از brute force**: بلاک مراحل‌دار SSH
+- **NAT گروهی**: اعمال NAT به چندین زیرشبکه
+
+## خلاصه
+
+- لیست‌ها را با \`/ip firewall address-list add\` بسازید
+- در قوانین فایروال از \`src-address-list\` یا \`dst-address-list\` استفاده کنید
+- با \`add-src-to-address-list\` ورودی‌های داینامیک اضافه کنید
+- طول عمر ورودی‌ها را با \`address-list-timeout\` کنترل کنید
+`,
+  },
+  'mikrotik-layer7-protocol-filter': {
+    contentEn: `## Layer7 Protocol Filter in MikroTik Firewall
+
+Layer7 protocol matching is a powerful feature in RouterOS that lets you inspect packet payloads and match traffic based on patterns in the data — not just IP addresses and ports. This is useful for blocking specific applications, games, or websites by recognizing their traffic signatures.
+
+## What is Layer7 Matching?
+
+Traditional firewall rules work at Layer 3 (IP) and Layer 4 (TCP/UDP ports). Layer7 goes deeper — it reads the actual content of packets to find patterns. In RouterOS, you define a regex (regular expression) pattern, and the firewall checks packet data against it.
+
+### Where It Lives
+
+\`\`\`
+/ip firewall layer7-protocol
+\`\`\`
+
+This is where you define your patterns. Then you reference those patterns inside regular firewall filter rules.
+
+## Creating a Layer7 Pattern
+
+\`\`\`
+/ip firewall layer7-protocol add name=block-youtube regexp="^.*(youtube\.com|googlevideo\.com).*$"
+\`\`\`
+
+This defines a pattern called \`block-youtube\` that matches traffic containing "youtube.com" or "googlevideo.com" in the payload.
+
+### Applying It in a Firewall Rule
+
+\`\`\`
+/ip firewall filter add chain=forward layer7-protocol=block-youtube action=drop comment="Block YouTube"
+\`\`\`
+
+This rule drops any forwarded traffic that matches the Layer7 pattern.
+
+## Blocking an App by Pattern
+
+Here is an example blocking Telegram:
+
+\`\`\`
+/ip firewall layer7-protocol add name=block-telegram regexp="^.*(149\.154\.|91\.108\.).*$"
+\`\`\`
+
+This matches Telegram's known IP ranges in packet data. A better approach for IP blocking is address-lists, but Layer7 can catch patterns that IP rules miss.
+
+### Blocking HTTP Host Headers
+
+For plain HTTP traffic, you can match the Host header:
+
+\`\`\`
+/ip firewall layer7-protocol add name=block-facebook regexp="^.*(facebook\.com|fbcdn\.net).*$"
+\`\`\`
+
+\`\`\`
+/ip firewall filter add chain=forward layer7-protocol=block-facebook action=drop comment="Block Facebook HTTP"
+\`\`\`
+
+Note: This works only for unencrypted HTTP. HTTPS traffic is encrypted, so the hostname is in the TLS SNI field, not visible as plain text in most cases.
+
+## Using Layer7 with Address Lists
+
+You can combine Layer7 with address lists for smarter rules:
+
+\`\`\`
+/ip firewall layer7-protocol add name=detect-torrent regexp="^(\x13BitTorrent protocol|azver\x01$|get /scrape\?info_hash=)"
+\`\`\`
+
+\`\`\`
+/ip firewall filter add chain=forward layer7-protocol=detect-torrent action=add-src-to-address-list address-list=torrent-users address-list-timeout=1h
+/ip firewall filter add chain=forward src-address-list=torrent-users action=drop
+\`\`\`
+
+This detects torrent traffic, adds the source IP to a list, then blocks all traffic from that IP for one hour.
+
+## Performance Considerations
+
+Layer7 matching is **expensive** in terms of CPU usage. Here is why:
+
+- RouterOS must inspect the payload of every packet, not just headers
+- Regex matching is computationally heavier than simple IP/port checks
+- RouterOS checks the first **10 packets** (or first 2KB of data) in a connection by default — if no match is found, it stops checking that connection
+
+### Tips to Minimize Performance Impact
+
+- **Place Layer7 rules after other rules** — use IP/port filtering first to reduce the number of packets reaching Layer7 rules
+- **Use connection state matching** — only inspect new connections:
+
+\`\`\`
+/ip firewall filter add chain=forward connection-state=new layer7-protocol=block-youtube action=drop
+\`\`\`
+
+- **Avoid complex regex** — keep patterns simple and specific
+- **Test on low-traffic routers first** — on busy networks, Layer7 can spike CPU to 100%
+
+## Limitations of Layer7
+
+1. **Does not work with encrypted traffic** — HTTPS, QUIC, and most modern apps use encryption, making payload inspection ineffective
+2. **Only inspects first packets** — if the signature appears later in the stream, it will be missed
+3. **False positives** — broad regex patterns may accidentally block legitimate traffic
+4. **Not a replacement for a proper content filter** — for reliable content filtering, use dedicated solutions like DNS-based filtering or a proxy
+
+## Viewing Layer7 Patterns
+
+\`\`\`
+/ip firewall layer7-protocol print
+\`\`\`
+
+Output example:
+\`\`\`
+# NAME                     REGEXP
+0 block-youtube            ^.*(youtube\.com|googlevideo\.com).*$
+1 block-facebook           ^.*(facebook\.com|fbcdn\.net).*$
+\`\`\`
+
+## Practical Example: Block Gaming Traffic
+
+\`\`\`
+/ip firewall layer7-protocol add name=block-steam regexp="^.*(steampowered\.com|steamcontent\.com).*$"
+
+/ip firewall filter add chain=forward layer7-protocol=block-steam action=drop comment="Block Steam downloads"
+\`\`\`
+
+## Summary
+
+- Layer7 lets you match traffic by payload content using regex
+- Define patterns under \`/ip firewall layer7-protocol\`
+- Reference patterns in firewall filter rules
+- Best used for HTTP (unencrypted) traffic detection
+- Always place Layer7 rules late in the chain to protect CPU performance
+- For modern encrypted apps, DNS filtering is more effective
+`,
+    contentFa: `## فیلتر پروتکل لایه ۷ در فایروال میکروتیک
+
+فیلتر لایه ۷ (Layer7) یکی از ویژگی‌های پیشرفته RouterOS است که به شما امکان می‌دهد محتوای بسته‌های شبکه را بررسی کنید و بر اساس الگوهای موجود در داده، ترافیک را شناسایی و مسدود کنید.
+
+## لایه ۷ چیست؟
+
+قوانین معمول فایروال روی لایه ۳ (IP) و لایه ۴ (پورت‌های TCP/UDP) کار می‌کنند. لایه ۷ عمیق‌تر می‌رود و محتوای واقعی بسته‌ها را برای یافتن الگو بررسی می‌کند. در RouterOS، شما یک الگوی regex تعریف می‌کنید و فایروال داده‌های بسته را با آن مقایسه می‌کند.
+
+### محل تنظیم
+
+\`\`\`
+/ip firewall layer7-protocol
+\`\`\`
+
+## ساخت یک الگوی لایه ۷
+
+\`\`\`
+/ip firewall layer7-protocol add name=block-youtube regexp="^.*(youtube\.com|googlevideo\.com).*$"
+\`\`\`
+
+### اعمال در قانون فایروال
+
+\`\`\`
+/ip firewall filter add chain=forward layer7-protocol=block-youtube action=drop comment="Block YouTube"
+\`\`\`
+
+## مسدود کردن فیسبوک (HTTP)
+
+\`\`\`
+/ip firewall layer7-protocol add name=block-facebook regexp="^.*(facebook\.com|fbcdn\.net).*$"
+/ip firewall filter add chain=forward layer7-protocol=block-facebook action=drop
+\`\`\`
+
+توجه: این روش فقط برای ترافیک HTTP رمزنگاری‌نشده کار می‌کند. ترافیک HTTPS رمزگذاری شده است.
+
+## ترکیب با لیست آدرس
+
+\`\`\`
+/ip firewall layer7-protocol add name=detect-torrent regexp="^(\x13BitTorrent protocol)"
+/ip firewall filter add chain=forward layer7-protocol=detect-torrent action=add-src-to-address-list address-list=torrent-users address-list-timeout=1h
+/ip firewall filter add chain=forward src-address-list=torrent-users action=drop
+\`\`\`
+
+## ملاحظات عملکردی
+
+لایه ۷ از نظر پردازنده **سنگین** است:
+
+- RouterOS باید محتوای هر بسته را بررسی کند
+- به‌طور پیش‌فرض فقط **۱۰ بسته اول** هر اتصال را بررسی می‌کند
+- روی شبکه‌های پرترافیک می‌تواند CPU را به ۱۰۰٪ برساند
+
+### نکات بهینه‌سازی
+
+- قوانین لایه ۷ را **بعد از** قوانین IP/پورت قرار دهید
+- فقط اتصالات جدید را بررسی کنید:
+
+\`\`\`
+/ip firewall filter add chain=forward connection-state=new layer7-protocol=block-youtube action=drop
+\`\`\`
+
+## محدودیت‌های لایه ۷
+
+- با ترافیک رمزگذاری‌شده (HTTPS) کار نمی‌کند
+- فقط بسته‌های اول اتصال را بررسی می‌کند
+- ممکن است الگوهای کلی، ترافیک معتبر را هم مسدود کنند
+- برای فیلترینگ قابل‌اطمینان، از DNS filtering یا پروکسی استفاده کنید
+
+## نمایش الگوها
+
+\`\`\`
+/ip firewall layer7-protocol print
+\`\`\`
+
+## خلاصه
+
+- لایه ۷ ترافیک را بر اساس محتوای payload شناسایی می‌کند
+- الگوها را زیر \`/ip firewall layer7-protocol\` تعریف کنید
+- بهترین کارایی برای ترافیک HTTP رمزنگاری‌نشده است
+- قوانین لایه ۷ را در انتهای زنجیره قرار دهید تا CPU کمتر مصرف شود
+`,
+  },
+  'mikrotik-netwatch-monitoring': {
+    contentEn: `## Using Netwatch to Monitor Host Availability in MikroTik
+
+Netwatch is a built-in RouterOS tool that continuously monitors whether a host (IP address) is reachable. When a host goes down or comes back up, Netwatch can automatically run scripts — making it perfect for alerting, failover switching, and automated responses.
+
+## What Netwatch Does
+
+Netwatch sends ICMP ping packets to a target IP at a set interval. If the host stops responding, Netwatch triggers an "down" script. When it responds again, it triggers an "up" script.
+
+### Where to Find It
+
+\`\`\`
+/tool netwatch
+\`\`\`
+
+## Adding a Netwatch Entry
+
+\`\`\`
+/tool netwatch add host=8.8.8.8 interval=30s timeout=1s up-script="" down-script="" comment="Monitor Google DNS"
+\`\`\`
+
+Parameters:
+- \`host\` — IP address to monitor
+- \`interval\` — how often to check (e.g., \`30s\`, \`1m\`)
+- \`timeout\` — how long to wait for a reply before marking as down
+- \`up-script\` — script to run when host comes back up
+- \`down-script\` — script to run when host goes down
+
+## Viewing Netwatch Status
+
+\`\`\`
+/tool netwatch print
+\`\`\`
+
+Example output:
+\`\`\`
+# HOST       STATUS  SINCE
+0 8.8.8.8   up      Jun/29/2026 10:00:05
+1 192.168.1.1 down  Jun/29/2026 09:45:12
+\`\`\`
+
+## Practical Use Case 1: Failover Trigger
+
+Suppose you have two WAN connections. When the primary WAN gateway goes down, you want to switch to the backup route.
+
+First, set up two default routes:
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=203.0.113.1 distance=1 comment="Primary WAN"
+/ip route add dst-address=0.0.0.0/0 gateway=198.51.100.1 distance=2 comment="Backup WAN"
+\`\`\`
+
+Then add a Netwatch entry to monitor the primary gateway:
+\`\`\`
+/tool netwatch add host=203.0.113.1 interval=10s timeout=2s   down-script="/ip route set [find comment="Primary WAN"] distance=10"   up-script="/ip route set [find comment="Primary WAN"] distance=1"
+\`\`\`
+
+When the primary goes down, its route distance increases to 10, making the backup route (distance=2) the active path. When primary recovers, distance goes back to 1.
+
+## Practical Use Case 2: Send a Log Entry
+
+\`\`\`
+/tool netwatch add host=192.168.10.1 interval=60s   down-script="/log warning message="Server 192.168.10.1 is DOWN!""   up-script="/log info message="Server 192.168.10.1 is back UP.""
+\`\`\`
+
+This writes to the RouterOS log whenever the server changes state.
+
+## Practical Use Case 3: Disable an Interface on Failure
+
+\`\`\`
+/tool netwatch add host=10.0.0.1 interval=20s   down-script="/interface disable ether2"   up-script="/interface enable ether2"
+\`\`\`
+
+## Practical Use Case 4: Trigger an Email Alert
+
+If you have email configured (see the email alerts post), you can send a notification:
+
+\`\`\`
+/tool netwatch add host=8.8.8.8 interval=30s   down-script="/tool e-mail send to="admin@example.com" subject="WAN DOWN" body="Primary WAN is unreachable!""   up-script="/tool e-mail send to="admin@example.com" subject="WAN UP" body="Primary WAN restored.""
+\`\`\`
+
+## Using Scripts Stored Separately
+
+For complex actions, store the logic in a named script and call it from Netwatch:
+
+\`\`\`
+/system script add name=wan-failover-down source={
+  /ip route set [find comment="Primary WAN"] distance=10
+  /log warning message="WAN Failover activated"
+}
+
+/tool netwatch add host=203.0.113.1 interval=10s   down-script="/system script run wan-failover-down"
+\`\`\`
+
+This keeps your Netwatch entries clean and the logic maintainable.
+
+## Important Notes
+
+- Netwatch uses **ICMP ping** — if a firewall blocks ICMP on the target, Netwatch will incorrectly show the host as down
+- The \`timeout\` must be less than \`interval\`
+- Scripts run as the **system user** with full RouterOS permissions — be careful with what you put in them
+- On RouterOS v7, Netwatch also supports **TCP** checking (not just ICMP):
+
+\`\`\`
+/tool netwatch add host=192.168.1.100 port=80 type=tcp-conn interval=30s   down-script="/log warning message="Web server port 80 down""
+\`\`\`
+
+## Checking Netwatch History
+
+\`\`\`
+/tool netwatch print detail
+\`\`\`
+
+This shows extended information including the last check time and status history.
+
+## Summary
+
+- Netwatch monitors host reachability with configurable ping intervals
+- Triggers \`up-script\` and \`down-script\` on state changes
+- Perfect for failover routing, alerting, and automated responses
+- Use TCP checking for service-level monitoring (RouterOS v7)
+- Store complex logic in named scripts and call them from Netwatch
+`,
+    contentFa: `## مانیتورینگ با Netwatch در میکروتیک
+
+Netwatch یک ابزار داخلی RouterOS است که به‌طور مداوم وضعیت دسترسی به یک هاست (آدرس IP) را بررسی می‌کند. وقتی هاستی از دسترس خارج می‌شود یا برمی‌گردد، Netwatch می‌تواند اسکریپت اجرا کند.
+
+## چطور کار می‌کند
+
+Netwatch بسته‌های ICMP ping را به IP هدف ارسال می‌کند. اگر هاست پاسخ ندهد، اسکریپت "down" اجرا می‌شود. وقتی دوباره پاسخ دهد، اسکریپت "up" اجرا می‌شود.
+
+\`\`\`
+/tool netwatch
+\`\`\`
+
+## افزودن یک ورودی Netwatch
+
+\`\`\`
+/tool netwatch add host=8.8.8.8 interval=30s timeout=1s comment="Monitor Google DNS"
+\`\`\`
+
+## مشاهده وضعیت
+
+\`\`\`
+/tool netwatch print
+\`\`\`
+
+## کاربرد عملی ۱: سوئیچ خودکار WAN
+
+برای failover بین دو WAN:
+
+\`\`\`
+/ip route add dst-address=0.0.0.0/0 gateway=203.0.113.1 distance=1 comment="Primary WAN"
+/ip route add dst-address=0.0.0.0/0 gateway=198.51.100.1 distance=2 comment="Backup WAN"
+
+/tool netwatch add host=203.0.113.1 interval=10s timeout=2s   down-script="/ip route set [find comment="Primary WAN"] distance=10"   up-script="/ip route set [find comment="Primary WAN"] distance=1"
+\`\`\`
+
+وقتی WAN اصلی قطع شود، مسیر backup فعال می‌شود.
+
+## کاربرد عملی ۲: ثبت لاگ
+
+\`\`\`
+/tool netwatch add host=192.168.10.1 interval=60s   down-script="/log warning message="Server is DOWN!""   up-script="/log info message="Server is UP.""
+\`\`\`
+
+## کاربرد عملی ۳: ارسال ایمیل هشدار
+
+\`\`\`
+/tool netwatch add host=8.8.8.8 interval=30s   down-script="/tool e-mail send to="admin@example.com" subject="WAN DOWN" body="WAN is unreachable!""
+\`\`\`
+
+## استفاده از اسکریپت‌های جداگانه
+
+برای منطق پیچیده‌تر، اسکریپت را جداگانه ذخیره کنید:
+
+\`\`\`
+/system script add name=wan-down source={
+  /ip route set [find comment="Primary WAN"] distance=10
+  /log warning message="Failover activated"
+}
+
+/tool netwatch add host=203.0.113.1 interval=10s   down-script="/system script run wan-down"
+\`\`\`
+
+## بررسی TCP (RouterOS v7)
+
+در نسخه ۷، می‌توانید پورت TCP را نیز بررسی کنید:
+
+\`\`\`
+/tool netwatch add host=192.168.1.100 port=80 type=tcp-conn interval=30s   down-script="/log warning message="Web server down""
+\`\`\`
+
+## نکات مهم
+
+- Netwatch از ICMP ping استفاده می‌کند — اگر فایروال مقصد ICMP را مسدود کند، هاست به اشتباه down نشان داده می‌شود
+- \`timeout\` باید کمتر از \`interval\` باشد
+- اسکریپت‌ها با دسترسی کامل سیستم اجرا می‌شوند
+
+## خلاصه
+
+- Netwatch دسترسی به هاست‌ها را با فاصله زمانی قابل تنظیم بررسی می‌کند
+- در تغییر وضعیت، \`up-script\` یا \`down-script\` اجرا می‌کند
+- برای failover، هشدار و پاسخ خودکار بسیار مفید است
+`,
+  },
+  'mikrotik-scheduler-scripting': {
+    contentEn: `## RouterOS Scripting and the Scheduler
+
+RouterOS has a built-in scripting language and a scheduler that lets you automate repetitive tasks. From simple daily reboots to complex network automation, scripts and the scheduler are essential tools for any MikroTik administrator.
+
+## RouterOS Scripting Basics
+
+RouterOS scripts are sequences of CLI commands. You store them under \`/system script\` and run them manually or on a schedule.
+
+### Creating a Script
+
+\`\`\`
+/system script add name=my-first-script source={
+  /log info message="Hello from script!"
+}
+\`\`\`
+
+### Running a Script Manually
+
+\`\`\`
+/system script run my-first-script
+\`\`\`
+
+### Viewing All Scripts
+
+\`\`\`
+/system script print
+\`\`\`
+
+## Script Syntax Basics
+
+RouterOS uses its own scripting syntax:
+
+### Variables
+
+\`\`\`
+:local myVar "Hello"
+:log info $myVar
+\`\`\`
+
+### Conditional Logic
+
+\`\`\`
+:if ([:ping 8.8.8.8 count=1] = 0) do={
+  :log warning "Google DNS unreachable"
+} else={
+  :log info "Google DNS reachable"
+}
+\`\`\`
+
+### Loops
+
+\`\`\`
+:for i from=1 to=5 do={
+  :log info ("Iteration: " . $i)
+}
+\`\`\`
+
+### String Concatenation
+
+\`\`\`
+:local ip "192.168.1.1"
+:log info ("Gateway is: " . $ip)
+\`\`\`
+
+## Practical Script Examples
+
+### Example 1: Daily Backup
+
+\`\`\`
+/system script add name=daily-backup source={
+  /system backup save name=("backup-" . [:pick [/system clock get date] 0 10])
+  :log info "Backup completed"
+}
+\`\`\`
+
+This creates a backup file named with today's date.
+
+### Example 2: Clear DNS Cache
+
+\`\`\`
+/system script add name=clear-dns source={
+  /ip dns cache flush
+  :log info "DNS cache cleared"
+}
+\`\`\`
+
+### Example 3: Restart a Specific Interface
+
+\`\`\`
+/system script add name=restart-ether1 source={
+  /interface disable ether1
+  :delay 3s
+  /interface enable ether1
+  :log info "ether1 restarted"
+}
+\`\`\`
+
+### Example 4: Block an IP Address
+
+\`\`\`
+/system script add name=block-suspicious source={
+  /ip firewall address-list add list=blocked address=10.0.0.99 timeout=1h
+  :log warning "Blocked 10.0.0.99 for 1 hour"
+}
+\`\`\`
+
+## The Scheduler
+
+The scheduler runs scripts at defined times or intervals automatically.
+
+\`\`\`
+/system scheduler
+\`\`\`
+
+### Adding a Scheduled Task
+
+\`\`\`
+/system scheduler add name=daily-reboot interval=1d start-time=03:00:00   on-event="/system reboot" comment="Reboot at 3am daily"
+\`\`\`
+
+Parameters:
+- \`name\` — identifier for the task
+- \`interval\` — how often to run (\`1d\` = daily, \`1h\` = hourly, \`00:05:00\` = every 5 minutes)
+- \`start-time\` — time of day to first run
+- \`start-date\` — optional specific start date
+- \`on-event\` — the command or script to run
+
+### Schedule a Stored Script
+
+\`\`\`
+/system scheduler add name=run-backup interval=1d start-time=02:00:00   on-event="/system script run daily-backup"
+\`\`\`
+
+### Schedule Every 5 Minutes
+
+\`\`\`
+/system scheduler add name=check-dns interval=00:05:00   on-event="/system script run clear-dns"
+\`\`\`
+
+### Schedule a One-Time Task
+
+\`\`\`
+/system scheduler add name=one-time-task start-date=2026/07/01 start-time=10:00:00   interval=0 on-event="/system script run my-first-script"
+\`\`\`
+
+Setting \`interval=0\` means it runs once and stops.
+
+### Viewing the Schedule
+
+\`\`\`
+/system scheduler print
+\`\`\`
+
+Example output:
+\`\`\`
+# NAME          START-DATE   START-TIME INTERVAL  ON-EVENT
+0 daily-reboot  jan/01/1970  03:00:00   1d        /system reboot
+1 run-backup    jan/01/1970  02:00:00   1d        /system script run daily-backup
+\`\`\`
+
+## Useful Built-in Functions
+
+### Get Current Time
+
+\`\`\`
+:local now [/system clock get time]
+:log info ("Current time: " . $now)
+\`\`\`
+
+### Get Interface Status
+
+\`\`\`
+:local status [/interface get ether1 running]
+:if ($status = true) do={ :log info "ether1 is up" }
+\`\`\`
+
+### Find and Modify Objects
+
+\`\`\`
+/ip route set [find dst-address="0.0.0.0/0" comment="Primary WAN"] distance=10
+\`\`\`
+
+The \`[find ...]\` construct lets you select objects by property and pass them to another command.
+
+## Debugging Scripts
+
+Use \`:put\` to print values during testing in the terminal:
+
+\`\`\`
+:local x 42
+:put $x
+\`\`\`
+
+Use \`/system script run\` in the terminal to test scripts before scheduling them.
+
+## Security Considerations
+
+- Scripts run with **full administrative access** — treat them like root commands
+- Avoid storing passwords in scripts when possible
+- Use \`/log\` liberally inside scripts so you have an audit trail
+
+## Summary
+
+- Scripts are stored under \`/system script\` and contain RouterOS CLI commands
+- The scheduler (\`/system scheduler\`) runs scripts automatically on a time or interval basis
+- Use \`:local\`, \`:if\`, \`:for\`, and \`:delay\` for logic and flow control
+- Common uses: daily backup, periodic reboots, interface restarts, failover triggers
+- Always test scripts manually before scheduling them
+`,
+    contentFa: `## اسکریپت‌نویسی و زمان‌بند در RouterOS
+
+RouterOS یک زبان اسکریپت داخلی و یک زمان‌بند (Scheduler) دارد که به شما امکان می‌دهد وظایف تکراری را خودکار کنید.
+
+## ایجاد اسکریپت
+
+\`\`\`
+/system script add name=my-first-script source={
+  /log info message="Hello from script!"
+}
+\`\`\`
+
+### اجرای دستی اسکریپت
+
+\`\`\`
+/system script run my-first-script
+\`\`\`
+
+## مبانی سینتکس اسکریپت
+
+### متغیرها
+
+\`\`\`
+:local myVar "Hello"
+:log info $myVar
+\`\`\`
+
+### منطق شرطی
+
+\`\`\`
+:if ([:ping 8.8.8.8 count=1] = 0) do={
+  :log warning "DNS unreachable"
+} else={
+  :log info "DNS reachable"
+}
+\`\`\`
+
+### حلقه
+
+\`\`\`
+:for i from=1 to=5 do={
+  :log info ("Step: " . $i)
+}
+\`\`\`
+
+## نمونه‌های عملی
+
+### بکاپ روزانه
+
+\`\`\`
+/system script add name=daily-backup source={
+  /system backup save name=("backup-" . [:pick [/system clock get date] 0 10])
+  :log info "Backup done"
+}
+\`\`\`
+
+### پاکسازی کش DNS
+
+\`\`\`
+/system script add name=clear-dns source={
+  /ip dns cache flush
+  :log info "DNS cache cleared"
+}
+\`\`\`
+
+### ریستارت اینترفیس
+
+\`\`\`
+/system script add name=restart-ether1 source={
+  /interface disable ether1
+  :delay 3s
+  /interface enable ether1
+}
+\`\`\`
+
+## زمان‌بند (Scheduler)
+
+\`\`\`
+/system scheduler add name=daily-reboot interval=1d start-time=03:00:00   on-event="/system reboot" comment="Reboot at 3am"
+\`\`\`
+
+### زمان‌بندی اسکریپت ذخیره‌شده
+
+\`\`\`
+/system scheduler add name=run-backup interval=1d start-time=02:00:00   on-event="/system script run daily-backup"
+\`\`\`
+
+### هر ۵ دقیقه یک‌بار
+
+\`\`\`
+/system scheduler add name=check-dns interval=00:05:00   on-event="/system script run clear-dns"
+\`\`\`
+
+### اجرای یک‌باره
+
+\`\`\`
+/system scheduler add name=one-time start-date=2026/07/01 start-time=10:00:00   interval=0 on-event="/system script run my-first-script"
+\`\`\`
+
+## مشاهده زمان‌بند
+
+\`\`\`
+/system scheduler print
+\`\`\`
+
+## نکات امنیتی
+
+- اسکریپت‌ها با **دسترسی کامل مدیریتی** اجرا می‌شوند
+- از \`/log\` داخل اسکریپت‌ها استفاده کنید تا سابقه داشته باشید
+- قبل از زمان‌بندی، اسکریپت را دستی تست کنید
+
+## خلاصه
+
+- اسکریپت‌ها زیر \`/system script\` ذخیره می‌شوند
+- زمان‌بند (\`/system scheduler\`) آن‌ها را به‌صورت خودکار اجرا می‌کند
+- کاربردها: بکاپ روزانه، ریبوت دوره‌ای، ریستارت اینترفیس، failover
+`,
+  },
+  'mikrotik-email-alerts-setup': {
+    contentEn: `## Sending Email Alerts from RouterOS
+
+RouterOS has a built-in email client that can send messages through any SMTP server. Combined with scripts and Netwatch, you can set up automatic email alerts for network events like link failures, high CPU usage, or unauthorized access attempts.
+
+## Configuring the Email Client
+
+All email settings live under:
+
+\`\`\`
+/tool e-mail
+\`\`\`
+
+### Basic SMTP Configuration
+
+\`\`\`
+/tool e-mail set server=smtp.gmail.com port=587   start-tls=yes   from=router@example.com   user=router@example.com   password=your-app-password
+\`\`\`
+
+Parameters:
+- \`server\` — SMTP server hostname or IP
+- \`port\` — typically 587 (STARTTLS) or 465 (SSL) or 25 (plain)
+- \`start-tls\` — enable STARTTLS encryption (\`yes\` recommended)
+- \`from\` — the sender email address shown to recipients
+- \`user\` — SMTP login username (usually the email address)
+- \`password\` — SMTP password or app password
+
+### View Current Settings
+
+\`\`\`
+/tool e-mail print
+\`\`\`
+
+## Using Gmail as SMTP
+
+Gmail requires an **App Password** (not your regular password) when two-factor authentication is enabled.
+
+1. Go to your Google Account → Security → App Passwords
+2. Create an app password for "Mail" on "Other device"
+3. Use that 16-character password in RouterOS
+
+\`\`\`
+/tool e-mail set server=smtp.gmail.com port=587   start-tls=yes   from=youraddress@gmail.com   user=youraddress@gmail.com   password=abcd1234efgh5678
+\`\`\`
+
+## Sending a Test Email
+
+\`\`\`
+/tool e-mail send to="admin@example.com" subject="Test from MikroTik" body="This is a test email."
+\`\`\`
+
+Wait a few seconds and check your inbox. If it does not arrive, check \`/log\` for errors:
+
+\`\`\`
+/log print where topics~"e-mail"
+\`\`\`
+
+## Triggering Alerts from Scripts
+
+### Alert When a Script Runs
+
+\`\`\`
+/system script add name=send-alert source={
+  /tool e-mail send     to="admin@example.com"     subject="MikroTik Alert"     body="An important event occurred on the router."
+}
+\`\`\`
+
+### High CPU Alert
+
+Combine with the scheduler to check CPU usage periodically:
+
+\`\`\`
+/system script add name=cpu-alert source={
+  :local cpu [/system resource get cpu-load]
+  :if ($cpu > 80) do={
+    /tool e-mail send       to="admin@example.com"       subject="High CPU Alert"       body=("CPU load is: " . $cpu . "%")
+  }
+}
+
+/system scheduler add name=cpu-check interval=5m   on-event="/system script run cpu-alert"
+\`\`\`
+
+### Interface Down Alert
+
+\`\`\`
+/system script add name=ether1-down-alert source={
+  /tool e-mail send     to="admin@example.com"     subject="Interface Down"     body="ether1 has gone down on the router!"
+}
+\`\`\`
+
+Use this with Netwatch or an interface monitoring script.
+
+## Triggering Email from Netwatch
+
+\`\`\`
+/tool netwatch add host=8.8.8.8 interval=30s timeout=2s   down-script="/tool e-mail send to="admin@example.com" subject="WAN DOWN" body="Primary WAN is unreachable!""   up-script="/tool e-mail send to="admin@example.com" subject="WAN UP" body="Primary WAN is back online.""
+\`\`\`
+
+Note the escaped quotes (\`"\`) inside the netwatch script strings.
+
+## Including System Information in Emails
+
+\`\`\`
+/system script add name=status-email source={
+  :local cpu [/system resource get cpu-load]
+  :local mem [/system resource get free-memory]
+  :local uptime [/system resource get uptime]
+  :local body ("CPU: " . $cpu . "% | Free Mem: " . $mem . " | Uptime: " . $uptime)
+  /tool e-mail send     to="admin@example.com"     subject="Daily Router Status"     body=$body
+}
+
+/system scheduler add name=daily-status interval=1d start-time=07:00:00   on-event="/system script run status-email"
+\`\`\`
+
+This sends a daily status report every morning.
+
+## Troubleshooting Email
+
+If emails are not sending:
+
+1. **Check the log** for SMTP errors:
+\`\`\`
+/log print where topics~"e-mail"
+\`\`\`
+
+2. **Verify DNS** — the router must be able to resolve smtp.gmail.com:
+\`\`\`
+/ip dns cache print
+:put [:resolve smtp.gmail.com]
+\`\`\`
+
+3. **Check firewall** — outbound port 587 or 465 must not be blocked
+
+4. **Try port 25** if 587 fails — some ISPs block non-standard SMTP ports outbound
+
+5. **Use IP instead of hostname** if DNS is the issue:
+\`\`\`
+/tool e-mail set server=74.125.133.109
+\`\`\`
+
+## Security Tips
+
+- Do not store your main email password on the router — use app passwords or a dedicated account
+- Consider creating a dedicated "router alerts" Gmail or similar account
+- Rotate app passwords periodically
+- Limit who can access \`/tool e-mail\` settings via user profiles
+
+## Summary
+
+- Configure SMTP under \`/tool e-mail set\`
+- Send emails with \`/tool e-mail send to=... subject=... body=...\`
+- Use Gmail with App Passwords for easy setup
+- Combine with scripts and Netwatch for automatic event-based alerts
+- Check \`/log\` for SMTP errors when troubleshooting
+`,
+    contentFa: `## ارسال ایمیل هشدار از RouterOS
+
+RouterOS یک کلاینت ایمیل داخلی دارد که می‌تواند از طریق هر سرور SMTP پیام ارسال کند. با ترکیب آن با اسکریپت‌ها و Netwatch، می‌توانید هشدارهای خودکار برای رویدادهای شبکه تنظیم کنید.
+
+## پیکربندی کلاینت ایمیل
+
+\`\`\`
+/tool e-mail set server=smtp.gmail.com port=587   start-tls=yes   from=router@example.com   user=router@example.com   password=your-app-password
+\`\`\`
+
+### مشاهده تنظیمات فعلی
+
+\`\`\`
+/tool e-mail print
+\`\`\`
+
+## استفاده از Gmail
+
+Gmail به **App Password** نیاز دارد (نه رمز عبور اصلی):
+
+1. به تنظیمات گوگل بروید → Security → App Passwords
+2. یک App Password برای "Mail" بسازید
+3. آن رمز ۱۶ کاراکتری را در RouterOS استفاده کنید
+
+\`\`\`
+/tool e-mail set server=smtp.gmail.com port=587   start-tls=yes   from=youraddress@gmail.com   user=youraddress@gmail.com   password=abcd1234efgh5678
+\`\`\`
+
+## ارسال ایمیل آزمایشی
+
+\`\`\`
+/tool e-mail send to="admin@example.com" subject="Test" body="This is a test."
+\`\`\`
+
+برای بررسی خطاها:
+
+\`\`\`
+/log print where topics~"e-mail"
+\`\`\`
+
+## هشدار CPU بالا
+
+\`\`\`
+/system script add name=cpu-alert source={
+  :local cpu [/system resource get cpu-load]
+  :if ($cpu > 80) do={
+    /tool e-mail send       to="admin@example.com"       subject="High CPU"       body=("CPU: " . $cpu . "%")
+  }
+}
+
+/system scheduler add name=cpu-check interval=5m   on-event="/system script run cpu-alert"
+\`\`\`
+
+## ایمیل از Netwatch
+
+\`\`\`
+/tool netwatch add host=8.8.8.8 interval=30s timeout=2s   down-script="/tool e-mail send to="admin@example.com" subject="WAN DOWN" body="WAN unreachable!""   up-script="/tool e-mail send to="admin@example.com" subject="WAN UP" body="WAN restored.""
+\`\`\`
+
+## گزارش وضعیت روزانه
+
+\`\`\`
+/system script add name=status-email source={
+  :local cpu [/system resource get cpu-load]
+  :local uptime [/system resource get uptime]
+  :local body ("CPU: " . $cpu . "% | Uptime: " . $uptime)
+  /tool e-mail send to="admin@example.com" subject="Daily Status" body=$body
+}
+
+/system scheduler add name=daily-status interval=1d start-time=07:00:00   on-event="/system script run status-email"
+\`\`\`
+
+## عیب‌یابی
+
+- لاگ را بررسی کنید: \`/log print where topics~"e-mail"\`
+- مطمئن شوید DNS کار می‌کند: \`:put [:resolve smtp.gmail.com]\`
+- بررسی کنید پورت ۵۸۷ در فایروال مسدود نیست
+
+## خلاصه
+
+- تنظیمات SMTP زیر \`/tool e-mail set\` قرار می‌گیرند
+- با \`/tool e-mail send\` ایمیل ارسال کنید
+- برای Gmail از App Password استفاده کنید
+- با اسکریپت‌ها و Netwatch هشدارهای خودکار بسازید
+`,
+  },
+  'mikrotik-graphing-traffic': {
+    contentEn: `## Traffic Graphing with RouterOS Tools
+
+RouterOS includes a built-in graphing tool that generates traffic graphs for interfaces and queues. These graphs help you visualize bandwidth usage over time directly from the router — no external software needed for basic monitoring.
+
+## Enabling the Graphing Tool
+
+\`\`\`
+/tool graphing
+\`\`\`
+
+This is where you configure what to graph and who can view the graphs.
+
+### Add Interface Graphing
+
+\`\`\`
+/tool graphing interface add interface=ether1 store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+Parameters:
+- \`interface\` — which interface to graph (use \`all\` for all interfaces)
+- \`store-on-disk\` — save historical data to disk
+- \`allow-address\` — which IP addresses can view the graphs
+
+### Graph All Interfaces at Once
+
+\`\`\`
+/tool graphing interface add interface=all store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+### Add Queue Graphing
+
+\`\`\`
+/tool graphing queue add simple-queue=my-queue store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+This graphs the traffic passing through a simple queue.
+
+## Viewing the Graphs
+
+Graphs are accessible through the RouterOS web interface (WebFig):
+
+1. Open a browser and go to \`http://[router-ip]/graphs/\`
+2. You will see a list of graphed interfaces and queues
+3. Click on any item to view its traffic graph
+4. The graph shows traffic in and out over time (minutes, hours, days)
+
+The URL pattern is:
+\`\`\`
+http://192.168.88.1/graphs/iface/ether1/
+http://192.168.88.1/graphs/queue/my-queue/
+\`\`\`
+
+## Resource Graphing
+
+You can also graph router resources like CPU and memory:
+
+\`\`\`
+/tool graphing resource add store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+View at:
+\`\`\`
+http://192.168.88.1/graphs/resource/
+\`\`\`
+
+This shows CPU load, memory usage, and disk usage over time.
+
+## Configuring Access Control
+
+By default, restrict graphs to your management network:
+
+\`\`\`
+/tool graphing interface add interface=all store-on-disk=yes allow-address=192.168.88.0/24
+\`\`\`
+
+Only devices on the 192.168.88.0/24 subnet can view the graphs.
+
+## Viewing All Graphing Configurations
+
+\`\`\`
+/tool graphing interface print
+/tool graphing queue print
+/tool graphing resource print
+\`\`\`
+
+## Data Retention
+
+RouterOS stores graphing data in three resolutions:
+- **5-minute averages** — kept for about 2 days
+- **Hourly averages** — kept for about 14 days
+- **Daily averages** — kept indefinitely (or until disk runs out)
+
+On routers with limited flash storage, be mindful of enabling \`store-on-disk\` for many interfaces.
+
+## Limitations of Built-in Graphing
+
+The RouterOS graphing tool is useful for quick checks but has limitations:
+
+- No alerting when traffic exceeds thresholds
+- Limited customization of graph appearance
+- No aggregation across multiple routers
+- Graphs are only accessible via web browser
+
+## External Tools: MRTG and Similar
+
+For more advanced monitoring, external tools are commonly used with MikroTik:
+
+### SNMP-Based Monitoring
+
+Enable SNMP on the router:
+\`\`\`
+/snmp set enabled=yes contact="admin@example.com" location="Server Room"
+/snmp community set 0 name=public addresses=192.168.88.0/24
+\`\`\`
+
+Then use external tools that poll SNMP:
+
+- **MRTG** (Multi Router Traffic Grapher) — classic, generates HTML traffic graphs
+- **Cacti** — web-based, more flexible SNMP graphing
+- **Zabbix** — full monitoring platform, includes graphing
+- **Grafana + InfluxDB** — modern dashboard with beautiful graphs
+- **The Dude** — MikroTik's own free network monitoring tool
+
+### Using The Dude
+
+The Dude is MikroTik's free network monitoring application:
+
+1. Download The Dude from mikrotik.com/thedude
+2. Install on a Windows PC or run as a RouterOS package
+3. It auto-discovers devices and creates a network map
+4. Provides traffic graphs, alerts, and service monitoring
+
+### Enabling The Dude as a RouterOS Package
+
+\`\`\`
+/dude set enabled=yes
+\`\`\`
+
+Access via \`http://[router-ip]:8080/\` or the Dude desktop client.
+
+## Quick Bandwidth Check via CLI
+
+For a quick real-time bandwidth reading without graphs:
+
+\`\`\`
+/interface monitor-traffic ether1
+\`\`\`
+
+Output updates every second showing current Rx/Tx rates.
+
+Or use the torch tool for per-protocol breakdown:
+
+\`\`\`
+/tool torch interface=ether1
+\`\`\`
+
+## Summary
+
+- Enable interface graphing with \`/tool graphing interface add\`
+- View graphs in a browser at \`http://[router-ip]/graphs/\`
+- Also graph CPU/memory with \`/tool graphing resource add\`
+- Restrict access using \`allow-address\`
+- For advanced monitoring, use SNMP with Cacti, Zabbix, or Grafana
+- The Dude is MikroTik's own free monitoring tool
+- For real-time CLI monitoring, use \`/interface monitor-traffic\`
+`,
+    contentFa: `## نمودار ترافیک با ابزارهای RouterOS
+
+RouterOS یک ابزار نمودار داخلی دارد که گراف‌های ترافیکی برای اینترفیس‌ها و صف‌ها ایجاد می‌کند. این نمودارها به شما کمک می‌کنند مصرف پهنای باند را در طول زمان مشاهده کنید.
+
+## فعال‌سازی ابزار Graphing
+
+### افزودن نمودار اینترفیس
+
+\`\`\`
+/tool graphing interface add interface=ether1 store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+### نمودار تمام اینترفیس‌ها
+
+\`\`\`
+/tool graphing interface add interface=all store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+### نمودار صف
+
+\`\`\`
+/tool graphing queue add simple-queue=my-queue store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+## مشاهده نمودارها
+
+در مرورگر به آدرس زیر بروید:
+
+\`\`\`
+http://192.168.88.1/graphs/
+http://192.168.88.1/graphs/iface/ether1/
+\`\`\`
+
+## نمودار منابع سیستم
+
+\`\`\`
+/tool graphing resource add store-on-disk=yes allow-address=0.0.0.0/0
+\`\`\`
+
+آدرس:
+\`\`\`
+http://192.168.88.1/graphs/resource/
+\`\`\`
+
+CPU، حافظه و دیسک را نشان می‌دهد.
+
+## کنترل دسترسی
+
+\`\`\`
+/tool graphing interface add interface=all store-on-disk=yes allow-address=192.168.88.0/24
+\`\`\`
+
+فقط دستگاه‌های شبکه مدیریت می‌توانند نمودارها را ببینند.
+
+## محدودیت‌های ابزار داخلی
+
+- هشدار برای تجاوز از آستانه ترافیک ندارد
+- سفارشی‌سازی محدود
+- فقط از طریق مرورگر قابل دسترس است
+
+## ابزارهای خارجی
+
+### فعال‌سازی SNMP
+
+\`\`\`
+/snmp set enabled=yes
+/snmp community set 0 name=public addresses=192.168.88.0/24
+\`\`\`
+
+ابزارهای رایج:
+
+- **Cacti** — نمودار SNMP قابل انعطاف
+- **Zabbix** — پلتفرم مانیتورینگ کامل
+- **Grafana + InfluxDB** — داشبورد مدرن
+- **The Dude** — ابزار رایگان خود میکروتیک
+
+### The Dude
+
+\`\`\`
+/dude set enabled=yes
+\`\`\`
+
+دسترسی: \`http://[router-ip]:8080/\`
+
+## بررسی سریع پهنای باند در CLI
+
+\`\`\`
+/interface monitor-traffic ether1
+\`\`\`
+
+یا برای تفکیک بر اساس پروتکل:
+
+\`\`\`
+/tool torch interface=ether1
+\`\`\`
+
+## خلاصه
+
+- نمودار اینترفیس را با \`/tool graphing interface add\` فعال کنید
+- نمودارها را در \`http://[router-ip]/graphs/\` ببینید
+- برای مانیتورینگ پیشرفته از SNMP با Cacti یا Zabbix استفاده کنید
+- The Dude ابزار رایگان میکروتیک برای مانیتورینگ شبکه است
+`,
+  },
+  'mikrotik-capsman-wifi-central': {
+    contentEn: `## Centralized Wireless Management with CAPsMAN
+
+CAPsMAN (Controlled Access Point System Manager) is MikroTik's solution for managing multiple wireless access points from a single central controller. Instead of configuring each AP individually, you configure everything on the controller and push settings to all APs automatically.
+
+## How CAPsMAN Works
+
+- **CAPsMAN Controller** — a MikroTik router or device running the CAPsMAN manager. This is where all wireless configuration lives.
+- **CAP (Controlled Access Point)** — a MikroTik wireless device that connects to the controller and receives its configuration. The CAP itself has no local wireless config.
+- Communication between CAP and controller uses the MNDP/discovery protocol over Layer 2 (same network) or can be tunneled over IP.
+
+## Benefits Over Standalone AP Configuration
+
+- Change SSID, password, or security settings once — all APs update automatically
+- Central visibility of all connected clients across all APs
+- Seamless roaming (clients can move between APs without reconnecting)
+- Easier firmware updates across all APs
+- Consistent configuration — no risk of misconfigured individual APs
+
+## Setting Up the CAPsMAN Controller
+
+Run these commands on your main MikroTik router (the controller):
+
+### Step 1: Enable the CAPsMAN Package
+
+On RouterOS v7, CAPsMAN is built in. Just enable it:
+
+\`\`\`
+/caps-man manager set enabled=yes
+\`\`\`
+
+Verify it is running:
+
+\`\`\`
+/caps-man manager print
+\`\`\`
+
+### Step 2: Create a Security Profile
+
+\`\`\`
+/caps-man security add name=sec-wpa2   authentication-types=wpa2-psk   passphrase=YourWiFiPassword123
+\`\`\`
+
+### Step 3: Create a Channel Configuration
+
+\`\`\`
+/caps-man channel add name=ch-2g band=2ghz-b/g/n frequency=2437 width=20mhz
+\`\`\`
+
+For 5GHz:
+\`\`\`
+/caps-man channel add name=ch-5g band=5ghz-a/n/ac frequency=5180 width=80mhz
+\`\`\`
+
+### Step 4: Create a Datapath
+
+The datapath controls how wireless traffic is forwarded:
+
+\`\`\`
+/caps-man datapath add name=dp-local local-forwarding=yes
+\`\`\`
+
+\`local-forwarding=yes\` means clients' traffic is forwarded locally on the CAP (better performance, no tunnel to controller needed).
+
+### Step 5: Create a Configuration Profile
+
+\`\`\`
+/caps-man configuration add name=cfg-home   ssid=MyHomeNetwork   security=sec-wpa2   channel=ch-2g   datapath=dp-local   mode=ap
+\`\`\`
+
+### Step 6: Create Provisioning Rules
+
+Provisioning rules tell CAPsMAN which configuration to assign to each CAP when it connects:
+
+\`\`\`
+/caps-man provisioning add action=create-dynamic-enabled master-configuration=cfg-home
+\`\`\`
+
+This applies \`cfg-home\` to any CAP that connects to this controller.
+
+### Step 7: View Connected CAPs
+
+\`\`\`
+/caps-man remote-cap print
+\`\`\`
+
+## Setting Up a CAP Device
+
+Run these on each access point that will be managed by CAPsMAN:
+
+### Step 1: Enable CAP Mode
+
+\`\`\`
+/interface wireless cap set enabled=yes   interfaces=wlan1   discovery-interfaces=ether1   caps-man-addresses=192.168.88.1
+\`\`\`
+
+Parameters:
+- \`interfaces\` — the wireless interface to put under CAPsMAN control
+- \`discovery-interfaces\` — which interface to use to find the controller
+- \`caps-man-addresses\` — IP of the controller (leave empty for auto-discovery on same L2)
+
+### Step 2: Verify the CAP is Connected
+
+On the controller:
+\`\`\`
+/caps-man remote-cap print
+\`\`\`
+
+You should see the CAP listed with status \`running\`.
+
+## Multiple SSIDs with CAPsMAN
+
+Create multiple configuration profiles and use virtual interfaces:
+
+\`\`\`
+/caps-man configuration add name=cfg-guest   ssid=GuestNetwork   security=sec-guest   datapath=dp-guest   mode=ap
+
+/caps-man provisioning add action=create-dynamic-enabled   master-configuration=cfg-home   slave-configurations=cfg-guest
+\`\`\`
+
+This creates two SSIDs on each CAP — main network and guest network.
+
+## Viewing Connected Wireless Clients
+
+On the controller, see all clients across all APs:
+
+\`\`\`
+/caps-man registration-table print
+\`\`\`
+
+## CAPsMAN vs Standalone — When to Use Which
+
+| Situation | Recommendation |
+|-----------|----------------|
+| Single AP at home | Standalone (simpler) |
+| 2-3 APs in a home | Either works, CAPsMAN helps with consistency |
+| Office with 5+ APs | CAPsMAN strongly recommended |
+| Different VLANs per SSID | CAPsMAN (easier to manage) |
+| Seamless roaming needed | CAPsMAN required |
+
+## Troubleshooting
+
+If a CAP is not connecting to the controller:
+
+1. Check that both are on the same Layer 2 network, or set \`caps-man-addresses\` explicitly
+2. Verify the CAPsMAN manager is enabled: \`/caps-man manager print\`
+3. Check for firewall rules blocking UDP 5246 (CAPsMAN control port)
+4. Confirm the wireless package is installed on the CAP
+
+## Summary
+
+- CAPsMAN centralizes wireless management for multiple APs
+- Controller runs \`/caps-man manager set enabled=yes\`
+- Define security, channel, datapath, and configuration profiles on the controller
+- Provisioning rules auto-assign configurations to connecting CAPs
+- CAPs run \`/interface wireless cap set enabled=yes\`
+- View all APs and clients from the controller with \`/caps-man remote-cap print\`
+`,
+    contentFa: `## مدیریت متمرکز وایرلس با CAPsMAN
+
+CAPsMAN (Controlled Access Point System Manager) راه‌حل میکروتیک برای مدیریت چندین اکسس‌پوینت از یک کنترلر مرکزی است.
+
+## نحوه کار
+
+- **کنترلر CAPsMAN** — روتر یا دستگاه میکروتیکی که تمام پیکربندی وایرلس روی آن قرار دارد
+- **CAP** — دستگاه وایرلس میکروتیکی که به کنترلر متصل می‌شود و تنظیمات را از آن دریافت می‌کند
+
+## مزایا نسبت به پیکربندی مستقل
+
+- تغییر SSID یا رمز عبور یک‌بار برای همه AP‌ها
+- دید مرکزی از تمام کلاینت‌های متصل
+- رومینگ بدون قطع اتصال
+- به‌روزرسانی فریم‌ور یکجا برای همه AP‌ها
+
+## راه‌اندازی کنترلر CAPsMAN
+
+### مرحله ۱: فعال‌سازی CAPsMAN
+
+\`\`\`
+/caps-man manager set enabled=yes
+\`\`\`
+
+### مرحله ۲: پروفایل امنیتی
+
+\`\`\`
+/caps-man security add name=sec-wpa2   authentication-types=wpa2-psk   passphrase=YourWiFiPassword123
+\`\`\`
+
+### مرحله ۳: پیکربندی کانال
+
+\`\`\`
+/caps-man channel add name=ch-2g band=2ghz-b/g/n frequency=2437 width=20mhz
+\`\`\`
+
+### مرحله ۴: Datapath
+
+\`\`\`
+/caps-man datapath add name=dp-local local-forwarding=yes
+\`\`\`
+
+### مرحله ۵: پروفایل پیکربندی
+
+\`\`\`
+/caps-man configuration add name=cfg-home   ssid=MyHomeNetwork   security=sec-wpa2   channel=ch-2g   datapath=dp-local   mode=ap
+\`\`\`
+
+### مرحله ۶: قوانین Provisioning
+
+\`\`\`
+/caps-man provisioning add action=create-dynamic-enabled master-configuration=cfg-home
+\`\`\`
+
+### مرحله ۷: مشاهده CAP‌های متصل
+
+\`\`\`
+/caps-man remote-cap print
+\`\`\`
+
+## راه‌اندازی دستگاه CAP
+
+روی هر اکسس‌پوینت:
+
+\`\`\`
+/interface wireless cap set enabled=yes   interfaces=wlan1   discovery-interfaces=ether1   caps-man-addresses=192.168.88.1
+\`\`\`
+
+## مشاهده کلاینت‌های متصل
+
+\`\`\`
+/caps-man registration-table print
+\`\`\`
+
+## عیب‌یابی
+
+اگر CAP به کنترلر متصل نشد:
+- بررسی کنید هر دو روی یک شبکه Layer 2 هستند
+- CAPsMAN manager فعال باشد: \`/caps-man manager print\`
+- پورت UDP 5246 در فایروال مسدود نباشد
+
+## خلاصه
+
+- CAPsMAN مدیریت وایرلس چندین AP را متمرکز می‌کند
+- کنترلر با \`/caps-man manager set enabled=yes\` فعال می‌شود
+- پروفایل‌های امنیت، کانال و پیکربندی روی کنترلر تعریف می‌شوند
+- CAP‌ها با \`/interface wireless cap set enabled=yes\` فعال می‌شوند
+`,
+  },
+  'mikrotik-vlan-trunk-access': {
+    contentEn: `## VLANs on MikroTik: Trunk and Access Ports
+
+VLANs (Virtual Local Area Networks) let you segment a single physical network into multiple isolated logical networks. This is essential for separating office departments, guest networks, IoT devices, and management traffic.
+
+## VLAN Basics
+
+- **VLAN ID (VID)** — a number (1–4094) that tags traffic as belonging to a specific VLAN
+- **Tagged port (trunk)** — carries traffic for multiple VLANs, each packet has a VLAN tag
+- **Untagged port (access)** — connects to end devices (PCs, printers), traffic for one VLAN only, no tag added
+- **Trunk link** — a connection between switches (or switch and router) carrying multiple VLANs
+
+## VLAN Implementation on MikroTik (Bridge Method)
+
+Modern MikroTik devices (RouterOS v7) use the **bridge VLAN filtering** method, which is the recommended approach.
+
+### Topology Example
+
+\`\`\`
+Internet
+   |
+[MikroTik Router]
+   |
+ ether1 (WAN)
+ ether2 (trunk to switch/other devices)
+ ether3 (access port — VLAN 10, Office)
+ ether4 (access port — VLAN 20, Guest)
+\`\`\`
+
+We will set up:
+- VLAN 10: Office network (192.168.10.0/24)
+- VLAN 20: Guest network (192.168.20.0/24)
+
+### Step 1: Create a Bridge
+
+\`\`\`
+/interface bridge add name=br-main vlan-filtering=no
+\`\`\`
+
+We start with \`vlan-filtering=no\` — enable it at the end to avoid locking yourself out.
+
+### Step 2: Add Ports to the Bridge
+
+\`\`\`
+/interface bridge port add bridge=br-main interface=ether2
+/interface bridge port add bridge=br-main interface=ether3
+/interface bridge port add bridge=br-main interface=ether4
+\`\`\`
+
+### Step 3: Configure VLAN Membership
+
+Set ether2 as a trunk (tagged for VLANs 10 and 20):
+\`\`\`
+/interface bridge vlan add bridge=br-main vlan-ids=10 tagged=ether2
+/interface bridge vlan add bridge=br-main vlan-ids=20 tagged=ether2
+\`\`\`
+
+Set ether3 as access for VLAN 10 (untagged):
+\`\`\`
+/interface bridge vlan set [find vlan-ids=10] untagged=ether3
+\`\`\`
+
+Set ether4 as access for VLAN 20 (untagged):
+\`\`\`
+/interface bridge vlan set [find vlan-ids=20] untagged=ether4
+\`\`\`
+
+### Step 4: Set PVID on Access Ports
+
+PVID is the default VLAN assigned to untagged incoming traffic on a port:
+
+\`\`\`
+/interface bridge port set [find interface=ether3] pvid=10
+/interface bridge port set [find interface=ether4] pvid=20
+\`\`\`
+
+### Step 5: Create VLAN Interfaces on the Bridge
+
+These are used for routing between VLANs and assigning IP addresses:
+
+\`\`\`
+/interface vlan add name=vlan10 vlan-id=10 interface=br-main
+/interface vlan add name=vlan20 vlan-id=20 interface=br-main
+\`\`\`
+
+### Step 6: Assign IP Addresses
+
+\`\`\`
+/ip address add address=192.168.10.1/24 interface=vlan10
+/ip address add address=192.168.20.1/24 interface=vlan20
+\`\`\`
+
+### Step 7: Set Up DHCP for Each VLAN
+
+\`\`\`
+/ip pool add name=pool10 ranges=192.168.10.10-192.168.10.254
+/ip pool add name=pool20 ranges=192.168.20.10-192.168.20.254
+
+/ip dhcp-server add name=dhcp10 interface=vlan10 address-pool=pool10
+/ip dhcp-server add name=dhcp20 interface=vlan20 address-pool=pool20
+
+/ip dhcp-server network add address=192.168.10.0/24 gateway=192.168.10.1 dns-server=8.8.8.8
+/ip dhcp-server network add address=192.168.20.0/24 gateway=192.168.20.1 dns-server=8.8.8.8
+\`\`\`
+
+### Step 8: Enable VLAN Filtering on the Bridge
+
+\`\`\`
+/interface bridge set br-main vlan-filtering=yes
+\`\`\`
+
+This activates VLAN enforcement. Do this last — after all VLAN settings are in place — to avoid losing access to the router.
+
+## Firewall Rules Between VLANs
+
+By default, traffic can route between VLANs through the router. To isolate the guest network:
+
+\`\`\`
+/ip firewall filter add chain=forward in-interface=vlan20 out-interface=vlan10 action=drop comment="Block Guest to Office"
+/ip firewall filter add chain=forward in-interface=vlan20 out-interface=vlan20 action=accept
+/ip firewall filter add chain=forward in-interface=vlan20 action=accept out-interface=!vlan10
+\`\`\`
+
+Or simpler — block guest to all internal:
+\`\`\`
+/ip firewall filter add chain=forward in-interface=vlan20 dst-address=192.168.10.0/24 action=drop
+\`\`\`
+
+## Verifying VLAN Configuration
+
+\`\`\`
+/interface bridge vlan print
+\`\`\`
+
+Output:
+\`\`\`
+# BRIDGE   VLAN-IDS  CURRENT-TAGGED  CURRENT-UNTAGGED
+0 br-main  10        ether2          ether3
+1 br-main  20        ether2          ether4
+\`\`\`
+
+## Classic VLAN Interface Method (Alternative)
+
+On older setups or for simpler use cases, you can create VLAN interfaces directly on physical interfaces:
+
+\`\`\`
+/interface vlan add name=vlan10-on-ether2 vlan-id=10 interface=ether2
+/ip address add address=192.168.10.1/24 interface=vlan10-on-ether2
+\`\`\`
+
+This works but the bridge method is preferred for modern deployments.
+
+## Summary
+
+- VLANs segment your network into isolated logical groups
+- Use bridge VLAN filtering in RouterOS v7 for proper VLAN support
+- Tagged ports (trunks) carry multiple VLANs; untagged ports (access) carry one
+- Create VLAN interfaces on the bridge for routing and DHCP
+- Always enable \`vlan-filtering=yes\` last to avoid losing router access
+- Use firewall rules to control inter-VLAN traffic
+`,
+    contentFa: `## VLAN در میکروتیک: پورت‌های Trunk و Access
+
+VLAN (شبکه محلی مجازی) به شما امکان می‌دهد یک شبکه فیزیکی را به چندین شبکه منطقی مجزا تقسیم کنید.
+
+## مفاهیم اساسی
+
+- **VLAN ID** — عددی (۱ تا ۴۰۹۴) که ترافیک را برچسب‌گذاری می‌کند
+- **پورت Tagged (trunk)** — ترافیک چندین VLAN را حمل می‌کند
+- **پورت Untagged (access)** — به دستگاه‌های نهایی متصل می‌شود، فقط یک VLAN
+
+## پیاده‌سازی VLAN با Bridge (روش توصیه‌شده در RouterOS v7)
+
+### توپولوژی مثال
+
+- VLAN 10: شبکه اداری (192.168.10.0/24)
+- VLAN 20: شبکه مهمان (192.168.20.0/24)
+- ether2: تراکنک (tagged برای هر دو VLAN)
+- ether3: access برای VLAN 10
+- ether4: access برای VLAN 20
+
+### مرحله ۱: ایجاد Bridge
+
+\`\`\`
+/interface bridge add name=br-main vlan-filtering=no
+\`\`\`
+
+### مرحله ۲: افزودن پورت‌ها به Bridge
+
+\`\`\`
+/interface bridge port add bridge=br-main interface=ether2
+/interface bridge port add bridge=br-main interface=ether3
+/interface bridge port add bridge=br-main interface=ether4
+\`\`\`
+
+### مرحله ۳: تنظیم عضویت VLAN
+
+\`\`\`
+/interface bridge vlan add bridge=br-main vlan-ids=10 tagged=ether2
+/interface bridge vlan add bridge=br-main vlan-ids=20 tagged=ether2
+/interface bridge vlan set [find vlan-ids=10] untagged=ether3
+/interface bridge vlan set [find vlan-ids=20] untagged=ether4
+\`\`\`
+
+### مرحله ۴: تنظیم PVID
+
+\`\`\`
+/interface bridge port set [find interface=ether3] pvid=10
+/interface bridge port set [find interface=ether4] pvid=20
+\`\`\`
+
+### مرحله ۵: ایجاد اینترفیس‌های VLAN
+
+\`\`\`
+/interface vlan add name=vlan10 vlan-id=10 interface=br-main
+/interface vlan add name=vlan20 vlan-id=20 interface=br-main
+\`\`\`
+
+### مرحله ۶: آدرس IP
+
+\`\`\`
+/ip address add address=192.168.10.1/24 interface=vlan10
+/ip address add address=192.168.20.1/24 interface=vlan20
+\`\`\`
+
+### مرحله ۷: DHCP
+
+\`\`\`
+/ip pool add name=pool10 ranges=192.168.10.10-192.168.10.254
+/ip dhcp-server add name=dhcp10 interface=vlan10 address-pool=pool10
+/ip dhcp-server network add address=192.168.10.0/24 gateway=192.168.10.1
+\`\`\`
+
+### مرحله ۸: فعال‌سازی VLAN Filtering (آخرین مرحله)
+
+\`\`\`
+/interface bridge set br-main vlan-filtering=yes
+\`\`\`
+
+## جداسازی ترافیک بین VLAN‌ها
+
+\`\`\`
+/ip firewall filter add chain=forward in-interface=vlan20 dst-address=192.168.10.0/24 action=drop
+\`\`\`
+
+## بررسی پیکربندی
+
+\`\`\`
+/interface bridge vlan print
+\`\`\`
+
+## خلاصه
+
+- VLAN شبکه را به بخش‌های منطقی مجزا تقسیم می‌کند
+- از Bridge VLAN Filtering در RouterOS v7 استفاده کنید
+- پورت‌های Tagged چندین VLAN را حمل می‌کنند؛ پورت‌های Untagged یک VLAN
+- \`vlan-filtering=yes\` را **آخر** فعال کنید
+`,
+  },
+  'mikrotik-ipsec-ikev2-setup': {
+    contentEn: `## Basic IPsec IKEv2 VPN Setup on MikroTik
+
+IPsec (Internet Protocol Security) is a standard for encrypting and authenticating IP traffic. IKEv2 is the modern key exchange protocol used with IPsec — it is faster, more secure, and more reliable than the older IKEv1. This guide covers a simple setup for beginners.
+
+## IPsec Concepts (Simplified)
+
+- **Phase 1 (IKE SA)** — the two routers authenticate each other and agree on encryption parameters. Configured via "peers" and "proposals."
+- **Phase 2 (IPsec SA)** — the actual data tunnel is established. Configured via "policies."
+- **Pre-shared Key (PSK)** — a shared password used to authenticate both sides (simplest method for beginners)
+- **Proposal** — the set of encryption algorithms to use (e.g., AES-256, SHA-256)
+
+## Scenario: Site-to-Site IKEv2 VPN
+
+We will connect two offices:
+
+- **Site A (Router A):** WAN IP 203.0.113.1, LAN 192.168.1.0/24
+- **Site B (Router B):** WAN IP 198.51.100.1, LAN 192.168.2.0/24
+
+Goal: devices on both LANs can communicate securely through the VPN.
+
+## Configuration on Router A
+
+### Step 1: Create an IPsec Proposal
+
+\`\`\`
+/ip ipsec proposal add name=prop-ikev2   auth-algorithms=sha256   enc-algorithms=aes-256-cbc   lifetime=1h   pfs-group=modp2048
+\`\`\`
+
+### Step 2: Create a Peer
+
+\`\`\`
+/ip ipsec peer add name=site-b-peer   address=198.51.100.1   exchange-mode=ike2   profile=default
+\`\`\`
+
+### Step 3: Create an Identity (Pre-Shared Key)
+
+\`\`\`
+/ip ipsec identity add peer=site-b-peer   auth-method=pre-shared-key   secret=MyStrongSharedKey123!
+\`\`\`
+
+### Step 4: Create a Policy
+
+The policy defines which traffic should be encrypted:
+
+\`\`\`
+/ip ipsec policy add src-address=192.168.1.0/24   dst-address=192.168.2.0/24   peer=site-b-peer   proposal=prop-ikev2   action=encrypt   tunnel=yes
+\`\`\`
+
+### Step 5: Disable NAT for VPN Traffic
+
+Add a NAT bypass rule so VPN traffic is not masqueraded:
+
+\`\`\`
+/ip firewall nat add chain=srcnat src-address=192.168.1.0/24   dst-address=192.168.2.0/24 action=accept place-before=0
+\`\`\`
+
+This rule must be placed **before** the masquerade rule.
+
+## Configuration on Router B
+
+Mirror the configuration with reversed addresses:
+
+### Proposal (same as Router A)
+
+\`\`\`
+/ip ipsec proposal add name=prop-ikev2   auth-algorithms=sha256   enc-algorithms=aes-256-cbc   lifetime=1h   pfs-group=modp2048
+\`\`\`
+
+### Peer
+
+\`\`\`
+/ip ipsec peer add name=site-a-peer   address=203.0.113.1   exchange-mode=ike2   profile=default
+\`\`\`
+
+### Identity
+
+\`\`\`
+/ip ipsec identity add peer=site-a-peer   auth-method=pre-shared-key   secret=MyStrongSharedKey123!
+\`\`\`
+
+### Policy (reversed src/dst)
+
+\`\`\`
+/ip ipsec policy add src-address=192.168.2.0/24   dst-address=192.168.1.0/24   peer=site-a-peer   proposal=prop-ikev2   action=encrypt   tunnel=yes
+\`\`\`
+
+### NAT Bypass
+
+\`\`\`
+/ip firewall nat add chain=srcnat src-address=192.168.2.0/24   dst-address=192.168.1.0/24 action=accept place-before=0
+\`\`\`
+
+## Verifying the IPsec Tunnel
+
+### Check Active SAs (Security Associations)
+
+\`\`\`
+/ip ipsec active-peers print
+\`\`\`
+
+You should see the peer with status \`established\`.
+
+### Check Installed Policies
+
+\`\`\`
+/ip ipsec policy print
+\`\`\`
+
+Look for \`ph2-count: 1\` which means Phase 2 is established.
+
+### Check Statistics
+
+\`\`\`
+/ip ipsec statistics print
+\`\`\`
+
+Shows packets encrypted/decrypted — if these counters increase when you ping across the tunnel, it is working.
+
+## Testing the Tunnel
+
+From a device on Site A's LAN (192.168.1.x), ping a device on Site B:
+
+\`\`\`
+ping 192.168.2.1
+\`\`\`
+
+If it works, the tunnel is up. If not, check:
+
+\`\`\`
+/log print where topics~"ipsec"
+\`\`\`
+
+## IPsec Profile Configuration
+
+The \`default\` profile works for most setups, but you can customize:
+
+\`\`\`
+/ip ipsec profile add name=ikev2-profile   dh-group=modp2048   enc-algorithm=aes-256   hash-algorithm=sha256   lifetime=8h   nat-traversal=yes
+\`\`\`
+
+Enable \`nat-traversal=yes\` if either router is behind NAT.
+
+## Firewall for IPsec
+
+Make sure these ports/protocols are allowed on the WAN interface:
+
+\`\`\`
+/ip firewall filter add chain=input protocol=udp dst-port=500 action=accept comment="IKE"
+/ip firewall filter add chain=input protocol=udp dst-port=4500 action=accept comment="IPsec NAT-T"
+/ip firewall filter add chain=input protocol=ipsec-esp action=accept comment="IPsec ESP"
+\`\`\`
+
+## Summary
+
+- IPsec IKEv2 provides encrypted tunnels between sites
+- Configure: proposal → peer → identity → policy on each router
+- Src/dst addresses in policies are reversed on each end
+- Add NAT bypass before the masquerade rule
+- Verify with \`/ip ipsec active-peers print\`
+- Use \`nat-traversal=yes\` if behind NAT
+- Check logs with \`/log print where topics~"ipsec"\` for troubleshooting
+`,
+    contentFa: `## راه‌اندازی VPN IPsec IKEv2 در میکروتیک
+
+IPsec یک استاندارد برای رمزگذاری و احراز هویت ترافیک IP است. IKEv2 پروتکل مدرن تبادل کلید است که سریع‌تر و امن‌تر از IKEv1 می‌باشد.
+
+## مفاهیم اساسی
+
+- **فاز ۱ (IKE SA)** — دو روتر یکدیگر را احراز هویت می‌کنند
+- **فاز ۲ (IPsec SA)** — تونل داده واقعی برقرار می‌شود
+- **Pre-shared Key (PSK)** — رمز مشترک برای احراز هویت
+
+## سناریو: VPN Site-to-Site
+
+- **سایت A:** WAN 203.0.113.1، LAN 192.168.1.0/24
+- **سایت B:** WAN 198.51.100.1، LAN 192.168.2.0/24
+
+## پیکربندی روتر A
+
+### مرحله ۱: Proposal
+
+\`\`\`
+/ip ipsec proposal add name=prop-ikev2   auth-algorithms=sha256   enc-algorithms=aes-256-cbc   lifetime=1h   pfs-group=modp2048
+\`\`\`
+
+### مرحله ۲: Peer
+
+\`\`\`
+/ip ipsec peer add name=site-b-peer   address=198.51.100.1   exchange-mode=ike2   profile=default
+\`\`\`
+
+### مرحله ۳: Identity (کلید مشترک)
+
+\`\`\`
+/ip ipsec identity add peer=site-b-peer   auth-method=pre-shared-key   secret=MyStrongSharedKey123!
+\`\`\`
+
+### مرحله ۴: Policy
+
+\`\`\`
+/ip ipsec policy add src-address=192.168.1.0/24   dst-address=192.168.2.0/24   peer=site-b-peer   proposal=prop-ikev2   action=encrypt   tunnel=yes
+\`\`\`
+
+### مرحله ۵: غیرفعال‌سازی NAT برای ترافیک VPN
+
+\`\`\`
+/ip firewall nat add chain=srcnat src-address=192.168.1.0/24   dst-address=192.168.2.0/24 action=accept place-before=0
+\`\`\`
+
+## پیکربندی روتر B (معکوس)
+
+\`\`\`
+/ip ipsec peer add name=site-a-peer address=203.0.113.1 exchange-mode=ike2 profile=default
+/ip ipsec identity add peer=site-a-peer auth-method=pre-shared-key secret=MyStrongSharedKey123!
+/ip ipsec policy add src-address=192.168.2.0/24 dst-address=192.168.1.0/24   peer=site-a-peer proposal=prop-ikev2 action=encrypt tunnel=yes
+/ip firewall nat add chain=srcnat src-address=192.168.2.0/24   dst-address=192.168.1.0/24 action=accept place-before=0
+\`\`\`
+
+## بررسی تونل
+
+\`\`\`
+/ip ipsec active-peers print
+\`\`\`
+
+باید peer را با وضعیت \`established\` ببینید.
+
+\`\`\`
+/ip ipsec statistics print
+\`\`\`
+
+اگر شمارنده‌های رمزگذاری/رمزگشایی افزایش یابند، تونل کار می‌کند.
+
+## فایروال برای IPsec
+
+\`\`\`
+/ip firewall filter add chain=input protocol=udp dst-port=500 action=accept
+/ip firewall filter add chain=input protocol=udp dst-port=4500 action=accept
+/ip firewall filter add chain=input protocol=ipsec-esp action=accept
+\`\`\`
+
+## خلاصه
+
+- IPsec IKEv2 تونل‌های رمزگذاری‌شده بین سایت‌ها ایجاد می‌کند
+- پیکربندی: proposal → peer → identity → policy روی هر روتر
+- آدرس‌های src/dst در policy‌ها روی هر طرف معکوس می‌شوند
+- قبل از قانون masquerade، NAT bypass اضافه کنید
+`,
+  },
+  'mikrotik-pptp-l2tp-vpn-server': {
+    contentEn: `## Setting Up PPTP and L2TP VPN Servers on MikroTik
+
+RouterOS supports several VPN protocols for remote access. This guide covers PPTP and L2TP — two older but still commonly used protocols. Understanding both helps you choose the right one and configure it correctly.
+
+## Important Security Note
+
+**PPTP is considered insecure** and should not be used for sensitive data. Its encryption has known vulnerabilities and it is easily blocked by firewalls and ISPs.
+
+**L2TP/IPsec is the recommended choice** — L2TP alone provides no encryption, but when combined with IPsec (which RouterOS does automatically), it becomes a reasonably secure protocol.
+
+Use these protocols when:
+- Connecting legacy clients that do not support IKEv2
+- Quick remote access for non-critical access
+- Compatibility is more important than maximum security
+
+For maximum security, use IKEv2 (see the IPsec IKEv2 guide).
+
+## Part 1: Setting Up the PPTP Server
+
+### Enable the PPTP Server
+
+\`\`\`
+/interface pptp-server server set enabled=yes authentication=mschap2   default-profile=default-encryption
+\`\`\`
+
+Parameters:
+- \`authentication=mschap2\` — use MS-CHAPv2 (most compatible)
+- \`default-profile\` — the profile controlling IP, DNS, compression settings
+
+### Create a User Account
+
+VPN users are managed under \`/ppp secret\`:
+
+\`\`\`
+/ppp secret add name=vpnuser1 password=SecurePass123   service=pptp   local-address=192.168.100.1   remote-address=192.168.100.10   comment="Remote user 1"
+\`\`\`
+
+Parameters:
+- \`service=pptp\` — this account is for PPTP only
+- \`local-address\` — the IP assigned to the router's end of the tunnel
+- \`remote-address\` — the IP assigned to the client
+
+### Alternative: Use an IP Pool for Multiple Users
+
+\`\`\`
+/ip pool add name=pptp-pool ranges=192.168.100.10-192.168.100.50
+
+/ppp profile add name=pptp-profile   local-address=192.168.100.1   remote-address=pptp-pool   dns-server=8.8.8.8
+
+/ppp secret add name=vpnuser1 password=Pass1 service=pptp profile=pptp-profile
+/ppp secret add name=vpnuser2 password=Pass2 service=pptp profile=pptp-profile
+\`\`\`
+
+### Firewall Rule for PPTP
+
+Allow incoming PPTP connections on the WAN:
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp dst-port=1723 action=accept   comment="Allow PPTP"
+/ip firewall filter add chain=input protocol=gre action=accept   comment="Allow GRE for PPTP"
+\`\`\`
+
+PPTP uses TCP port 1723 and GRE protocol (IP protocol 47).
+
+### View Connected PPTP Clients
+
+\`\`\`
+/interface pptp-server print
+\`\`\`
+
+Or see active connections:
+
+\`\`\`
+/ppp active print
+\`\`\`
+
+## Part 2: Setting Up the L2TP/IPsec Server
+
+L2TP combined with IPsec is more secure than PPTP. RouterOS handles the IPsec part automatically when you enable the \`ipsec-secret\`.
+
+### Enable the L2TP Server
+
+\`\`\`
+/interface l2tp-server server set enabled=yes   authentication=mschap2   default-profile=default-encryption   ipsec-secret=IPsecSharedKey123   use-ipsec=required
+\`\`\`
+
+Parameters:
+- \`ipsec-secret\` — the pre-shared key for IPsec. All clients use this same key (in addition to their username/password)
+- \`use-ipsec=required\` — require IPsec encryption (reject plain L2TP without IPsec)
+
+### Create User Accounts for L2TP
+
+\`\`\`
+/ip pool add name=l2tp-pool ranges=192.168.200.10-192.168.200.50
+
+/ppp profile add name=l2tp-profile   local-address=192.168.200.1   remote-address=l2tp-pool   dns-server=8.8.8.8   use-compression=no
+
+/ppp secret add name=vpnuser1 password=SecurePass123   service=l2tp   profile=l2tp-profile
+
+/ppp secret add name=vpnuser2 password=AnotherPass456   service=l2tp   profile=l2tp-profile
+\`\`\`
+
+### Firewall Rules for L2TP/IPsec
+
+\`\`\`
+/ip firewall filter add chain=input protocol=udp dst-port=1701 action=accept   comment="L2TP"
+/ip firewall filter add chain=input protocol=udp dst-port=500 action=accept   comment="IKE for IPsec"
+/ip firewall filter add chain=input protocol=udp dst-port=4500 action=accept   comment="IPsec NAT-T"
+/ip firewall filter add chain=input protocol=ipsec-esp action=accept   comment="IPsec ESP"
+\`\`\`
+
+### View Connected L2TP Clients
+
+\`\`\`
+/interface l2tp-server print
+/ppp active print
+\`\`\`
+
+## Connecting from a Client
+
+### Windows — L2TP/IPsec
+
+1. Go to Settings → Network & Internet → VPN → Add a VPN connection
+2. VPN provider: Windows (built-in)
+3. VPN type: L2TP/IPsec with pre-shared key
+4. Pre-shared key: \`IPsecSharedKey123\` (your ipsec-secret)
+5. Username/password: the credentials from \`/ppp secret\`
+
+### Windows — PPTP
+
+1. Same path, VPN type: PPTP
+2. Enter the router's WAN IP as the server address
+3. Enter username and password
+
+### macOS and iOS
+
+Both support L2TP/IPsec natively in the VPN settings.
+
+### Android
+
+Android supports L2TP/IPsec in Settings → Network → VPN.
+
+## Using the Same Account for Both Protocols
+
+If you set \`service=any\`, the account works for both PPTP and L2TP:
+
+\`\`\`
+/ppp secret add name=vpnuser1 password=SecurePass123   service=any   profile=l2tp-profile
+\`\`\`
+
+## Monitoring VPN Usage
+
+See all active VPN sessions:
+
+\`\`\`
+/ppp active print detail
+\`\`\`
+
+Output includes username, interface, uptime, and bytes transferred.
+
+See VPN usage in the log:
+
+\`\`\`
+/log print where topics~"ppp"
+\`\`\`
+
+## Assigning a Specific IP to a User
+
+If you always want the same IP for a user:
+
+\`\`\`
+/ppp secret set [find name=vpnuser1] remote-address=192.168.200.25
+\`\`\`
+
+This overrides the pool and always gives this user 192.168.200.25.
+
+## Summary
+
+- PPTP: easy to set up but **insecure** — use only for legacy compatibility
+- L2TP/IPsec: more secure, recommended for remote access
+- Users are managed under \`/ppp secret\`
+- Enable PPTP with \`/interface pptp-server server set enabled=yes\`
+- Enable L2TP with \`/interface l2tp-server server set enabled=yes ipsec-secret=...\`
+- Always open required firewall ports on the WAN interface
+- Monitor connections with \`/ppp active print\`
+`,
+    contentFa: `## راه‌اندازی سرور VPN با PPTP و L2TP در میکروتیک
+
+RouterOS از چندین پروتکل VPN برای دسترسی از راه دور پشتیبانی می‌کند. این راهنما PPTP و L2TP را پوشش می‌دهد.
+
+## نکته امنیتی مهم
+
+**PPTP ناامن است** — رمزگذاری آن آسیب‌پذیری‌های شناخته‌شده دارد و نباید برای داده‌های حساس استفاده شود.
+
+**L2TP/IPsec توصیه می‌شود** — L2TP به تنهایی رمزگذاری ندارد، اما RouterOS به‌صورت خودکار IPsec را با آن ترکیب می‌کند.
+
+## بخش ۱: راه‌اندازی سرور PPTP
+
+### فعال‌سازی سرور
+
+\`\`\`
+/interface pptp-server server set enabled=yes authentication=mschap2   default-profile=default-encryption
+\`\`\`
+
+### ایجاد کاربر
+
+\`\`\`
+/ppp secret add name=vpnuser1 password=SecurePass123   service=pptp   local-address=192.168.100.1   remote-address=192.168.100.10
+\`\`\`
+
+### استفاده از IP Pool
+
+\`\`\`
+/ip pool add name=pptp-pool ranges=192.168.100.10-192.168.100.50
+
+/ppp profile add name=pptp-profile   local-address=192.168.100.1   remote-address=pptp-pool   dns-server=8.8.8.8
+
+/ppp secret add name=vpnuser1 password=Pass1 service=pptp profile=pptp-profile
+\`\`\`
+
+### قوانین فایروال
+
+\`\`\`
+/ip firewall filter add chain=input protocol=tcp dst-port=1723 action=accept
+/ip firewall filter add chain=input protocol=gre action=accept
+\`\`\`
+
+## بخش ۲: راه‌اندازی سرور L2TP/IPsec
+
+### فعال‌سازی سرور
+
+\`\`\`
+/interface l2tp-server server set enabled=yes   authentication=mschap2   default-profile=default-encryption   ipsec-secret=IPsecSharedKey123   use-ipsec=required
+\`\`\`
+
+- \`ipsec-secret\` — کلید مشترک برای IPsec
+- \`use-ipsec=required\` — L2TP بدون IPsec رد می‌شود
+
+### ایجاد کاربران
+
+\`\`\`
+/ip pool add name=l2tp-pool ranges=192.168.200.10-192.168.200.50
+
+/ppp profile add name=l2tp-profile   local-address=192.168.200.1   remote-address=l2tp-pool   dns-server=8.8.8.8
+
+/ppp secret add name=vpnuser1 password=SecurePass123 service=l2tp profile=l2tp-profile
+\`\`\`
+
+### قوانین فایروال L2TP/IPsec
+
+\`\`\`
+/ip firewall filter add chain=input protocol=udp dst-port=1701 action=accept
+/ip firewall filter add chain=input protocol=udp dst-port=500 action=accept
+/ip firewall filter add chain=input protocol=udp dst-port=4500 action=accept
+/ip firewall filter add chain=input protocol=ipsec-esp action=accept
+\`\`\`
+
+## اتصال از کلاینت
+
+### ویندوز — L2TP/IPsec
+
+1. Settings → Network → VPN → Add a VPN connection
+2. نوع VPN: L2TP/IPsec with pre-shared key
+3. کلید مشترک: \`IPsecSharedKey123\`
+4. نام کاربری و رمز عبور از \`/ppp secret\`
+
+### ویندوز — PPTP
+
+1. همان مسیر، نوع VPN: PPTP
+2. آدرس IP WAN روتر
+
+## مشاهده کاربران متصل
+
+\`\`\`
+/ppp active print detail
+\`\`\`
+
+## خلاصه
+
+- PPTP: راحت اما **ناامن** — فقط برای سازگاری با سیستم‌های قدیمی
+- L2TP/IPsec: امن‌تر، توصیه‌شده برای دسترسی از راه دور
+- کاربران زیر \`/ppp secret\` مدیریت می‌شوند
+- پورت‌های لازم را در فایروال WAN باز کنید
+- اتصالات را با \`/ppp active print\` مانیتور کنید
+`,
+  },
+  'mikrotik-daily-maintenance-checklist': {
+    contentEn: `## MikroTik Daily Maintenance Checklist
+
+Preventive maintenance separates networks that run for years without issues from those that fail at the worst possible moment. This checklist covers the key things to verify regularly on every MikroTik router you manage.
+
+### 1. Check System Resources
+
+\`\`\`
+/system resource print
+\`\`\`
+
+Look for:
+- **CPU**: sustained load above 80% is a warning sign (firewall rules, logging, or traffic flooding the CPU)
+- **Memory**: RouterOS needs free memory; if free RAM drops below ~20 MB, investigate
+- **Uptime**: note when the device last rebooted — unexpected reboots indicate power issues or crashes
+
+### 2. Review Active Logs
+
+\`\`\`
+/log print where severity=warning
+/log print where severity=error
+/log print where severity=critical
+\`\`\`
+
+Look for recurring error messages, authentication failures, or interface errors. One error occasionally is fine; the same error every few minutes needs investigation.
+
+### 3. Check Interface Status
+
+\`\`\`
+/interface print
+/interface ethernet print stats
+\`\`\`
+
+Look for unexpected \`R\` (running=no) interfaces, or high error/drop counters which indicate physical layer problems (bad cable, duplex mismatch, or SFP issues).
+
+### 4. Verify All Tunnels and WAN Connections
+
+\`\`\`
+/interface pppoe-client print
+/ip ipsec active-peers print
+/interface wireguard peers print
+\`\`\`
+
+Check that all VPN tunnels and WAN connections are active. Automated monitoring (Netwatch) should alert you if they drop, but a visual check is good habit.
+
+### 5. Check DHCP Leases and Pool Exhaustion
+
+\`\`\`
+/ip pool print
+/ip dhcp-server lease print count-only
+\`\`\`
+
+If your DHCP pool only has a handful of addresses left, you may be approaching exhaustion. Investigate stale leases or expand the pool before clients start failing to get IPs.
+
+### 6. Review Firewall Connection Table
+
+\`\`\`
+/ip firewall connection print count-only
+\`\`\`
+
+A dramatically higher connection count than usual may indicate a scanning attack, malware on a client, or a DoS event. Normal counts vary by network size.
+
+### 7. Check Queue Drops
+
+\`\`\`
+/queue simple print stats
+\`\`\`
+
+High packet drop percentages mean your bandwidth limits are actively throttling traffic — either expected (your policy is working) or unexpected (a new bandwidth consumer appeared).
+
+### 8. Verify DNS Resolution
+
+\`\`\`
+/resolve google.com
+\`\`\`
+
+If this fails, DNS is broken — clients will experience "no internet" symptoms even though routing may be fine.
+
+### 9. Confirm NTP Sync
+
+\`\`\`
+/system ntp client print
+\`\`\`
+
+Confirm the time is accurate. Log timestamps from a clock-drifted router are useless for security forensics.
+
+### 10. Check Available Disk Space (for devices with storage)
+
+\`\`\`
+/disk print
+/file print
+\`\`\`
+
+Old backup and export files accumulate. Purge backups older than 30-90 days.
+
+### Quick Health Summary Command
+
+Combine multiple checks into one terminal session:
+
+\`\`\`
+/system resource print
+/interface print
+/ip route print where active=yes
+/ip firewall connection print count-only
+/log print where severity=warning count-only
+\`\`\`
+
+Running through this checklist takes under 5 minutes but catches 90% of problems before they become incidents. Build it into your weekly routine or, better yet, automate these checks with a monitoring system that alerts you proactively.`,
+    contentFa: `## چک‌لیست نگهداری روزانه میکروتیک
+
+نگهداری پیشگیرانه شبکه‌هایی را که سال‌ها بدون مشکل کار می‌کنند از آن‌هایی که در بدترین لحظه ممکن خراب می‌شوند جدا می‌کند. این چک‌لیست کارهای کلیدی است که باید به‌طور منظم روی هر روتر میکروتیک که مدیریت می‌کنید بررسی کنید.
+
+### ۱. بررسی منابع سیستم
+
+\`\`\`
+/system resource print
+\`\`\`
+
+دنبال اینها بگردید:
+- **CPU**: بار پایدار بالای ۸۰٪ یک هشدار است (قوانین فایروال، لاگ‌گیری یا سیل ترافیک روی CPU)
+- **حافظه**: RouterOS به رم آزاد نیاز دارد؛ اگر رم آزاد زیر ~۲۰ مگابایت افتاد، بررسی کنید
+- **Uptime**: توجه کنید دستگاه آخرین بار چه زمانی ریبوت کرد — ریبوت‌های غیرمنتظره نشان‌دهنده مشکلات برق یا کرش است
+
+### ۲. بررسی لاگ‌های فعال
+
+\`\`\`
+/log print where severity=warning
+/log print where severity=error
+/log print where severity=critical
+\`\`\`
+
+دنبال پیام‌های خطای تکرارشونده، شکست‌های احراز هویت یا خطاهای اینترفیس بگردید.
+
+### ۳. بررسی وضعیت اینترفیس
+
+\`\`\`
+/interface print
+/interface ethernet print stats
+\`\`\`
+
+دنبال اینترفیس‌های غیرمنتظره با \`running=no\` یا شمارنده‌های خطا/drop بالا بگردید.
+
+### ۴. بررسی همه تونل‌ها و اتصالات WAN
+
+\`\`\`
+/interface pppoe-client print
+/ip ipsec active-peers print
+/interface wireguard peers print
+\`\`\`
+
+بررسی کنید همه تونل‌های VPN و اتصالات WAN فعال هستند.
+
+### ۵. بررسی Lease‌های DHCP و اتمام Pool
+
+\`\`\`
+/ip pool print
+/ip dhcp-server lease print count-only
+\`\`\`
+
+اگر pool DHCP شما فقط چند آدرس خالی دارد، ممکن است به اتمام نزدیک باشید.
+
+### ۶. بررسی تعداد اتصالات فایروال
+
+\`\`\`
+/ip firewall connection print count-only
+\`\`\`
+
+تعداد اتصال به‌طور چشمگیر بالاتر از معمول ممکن است نشان‌دهنده حمله اسکن، بدافزار روی کلاینت یا رویداد DoS باشد.
+
+### ۷. بررسی Drop‌های Queue
+
+\`\`\`
+/queue simple print stats
+\`\`\`
+
+درصد drop بسته بالا یعنی محدودیت‌های پهنای‌باند شما فعالانه ترافیک را محدود می‌کنند.
+
+### ۸. تأیید تفسیر DNS
+
+\`\`\`
+/resolve google.com
+\`\`\`
+
+اگر این شکست خورد، DNS خراب است — کلاینت‌ها علائم "اینترنت ندارم" خواهند داشت حتی اگر روتینگ درست باشد.
+
+### ۹. تأیید همگام‌سازی NTP
+
+\`\`\`
+/system ntp client print
+\`\`\`
+
+### ۱۰. بررسی فضای دیسک موجود
+
+\`\`\`
+/disk print
+/file print
+\`\`\`
+
+فایل‌های بکاپ و export قدیمی را پاک کنید.
+
+گذراندن این چک‌لیست کمتر از ۵ دقیقه طول می‌کشد اما ۹۰٪ مشکلات را قبل از اینکه به حادثه تبدیل شوند تشخیص می‌دهد. آن را در برنامه هفتگی خود بگنجانید یا بهتر از آن، با یک سیستم مانیتورینگ که فعالانه به شما هشدار می‌دهد خودکار کنید.`,
+  },
+  'mikrotik-config-backup-automation-ftp': {
+    contentEn: `## Automating Config Backup Upload to FTP in MikroTik
+
+Manual backups only help if someone remembers to run them. Automating the backup process — and uploading it off-device — ensures you always have a recent config to recover from, even if the hardware fails completely.
+
+### Step 1: Configure Email or FTP for Off-Device Storage
+
+For FTP upload, RouterOS has a built-in FTP client. Set up a script that creates the backup then uploads it:
+
+\`\`\`
+/system script add name=backup-and-upload source={
+  :local filename ("backup-" . [:tostr [/system clock get date]])
+  /system backup save name=$filename
+  /tool fetch upload=yes address=192.168.10.100 src-path=($filename . ".backup") dst-path=("/backups/" . $filename . ".backup") user=ftpuser password=ftppass mode=ftp
+}
+\`\`\`
+
+### Step 2: Schedule the Script
+
+\`\`\`
+/system scheduler add name=weekly-backup interval=7d start-time=02:00:00 on-event=backup-and-upload
+\`\`\`
+
+### Step 3: Email Backup (Alternative)
+
+If you have no FTP server, email the backup directly:
+
+\`\`\`
+/tool e-mail set address=smtp.gmail.com port=587 user=yourbot@gmail.com password=AppPassword from=yourbot@gmail.com
+
+/system script add name=backup-email source={
+  :local filename ("backup-" . [:tostr [/system clock get date]])
+  /system backup save name=$filename
+  /tool e-mail send to=admin@example.com subject=("RouterBackup " . $filename) file=($filename . ".backup")
+}
+\`\`\`
+
+For Gmail, use an App Password (requires 2FA enabled on the account).
+
+### Step 4: Export Script Config (Readable Text)
+
+Include an export alongside the binary backup for human-readable recovery:
+
+\`\`\`
+/system script add name=backup-and-export source={
+  :local date [:tostr [/system clock get date]]
+  :local bname ("backup-" . $date)
+  :local ename ("export-" . $date)
+  /system backup save name=$bname
+  /export file=$ename
+  /tool fetch upload=yes address=192.168.10.100 src-path=($bname . ".backup") dst-path=("/backups/" . $bname . ".backup") user=ftpuser password=ftppass mode=ftp
+  /tool fetch upload=yes address=192.168.10.100 src-path=($ename . ".rsc") dst-path=("/backups/" . $ename . ".rsc") user=ftpuser password=ftppass mode=ftp
+}
+\`\`\`
+
+### Cleaning Up Old Local Files
+
+Add cleanup to the script to prevent filling internal storage:
+
+\`\`\`
+  :foreach f in=[/file find where name~"backup-"] do={
+    :if ([:totime [/file get $f creation-time]] < ([:totime [/system clock get time]] - 30d)) do={
+      /file remove $f
+    }
+  }
+\`\`\`
+
+(RouterOS scripting date/time arithmetic can be complex — a simpler approach is to only keep the latest 3 backups by listing and removing old ones by index.)
+
+### Testing the Backup Job
+
+Run it manually first to confirm it works before relying on the scheduler:
+
+\`\`\`
+/system script run backup-and-upload
+\`\`\`
+
+Check the Files area and your FTP server to confirm both the backup file was created and uploaded.
+
+### Verification Tip
+
+Periodically restore a backup in a CHR test VM to verify the backup is actually restorable. A backup file that exists but can't be restored is worthless.
+
+Automated off-device backups cost almost nothing in setup time and can save days of reconfiguration work after a hardware failure or accidental config change.`,
+    contentFa: `## خودکارسازی آپلود بکاپ تنظیمات به FTP در میکروتیک
+
+بکاپ‌های دستی فقط کمک می‌کنند اگر کسی به یادشان بیاید. خودکارسازی فرآیند بکاپ — و آپلود آن خارج از دستگاه — اطمینان می‌دهد که همیشه یک تنظیمات اخیر برای بازیابی دارید، حتی اگر سخت‌افزار کاملاً خراب شود.
+
+### مرحله ۱: تنظیم FTP یا ایمیل برای ذخیره‌سازی خارج از دستگاه
+
+برای آپلود FTP، RouterOS یک کلاینت FTP داخلی دارد:
+
+\`\`\`
+/system script add name=backup-and-upload source={
+  :local filename ("backup-" . [:tostr [/system clock get date]])
+  /system backup save name=$filename
+  /tool fetch upload=yes address=192.168.10.100 src-path=($filename . ".backup") dst-path=("/backups/" . $filename . ".backup") user=ftpuser password=ftppass mode=ftp
+}
+\`\`\`
+
+### مرحله ۲: زمان‌بندی اسکریپت
+
+\`\`\`
+/system scheduler add name=weekly-backup interval=7d start-time=02:00:00 on-event=backup-and-upload
+\`\`\`
+
+### مرحله ۳: بکاپ ایمیل (جایگزین)
+
+اگر سرور FTP ندارید، مستقیماً بکاپ را ایمیل کنید:
+
+\`\`\`
+/tool e-mail set address=smtp.gmail.com port=587 user=yourbot@gmail.com password=AppPassword from=yourbot@gmail.com
+
+/system script add name=backup-email source={
+  :local filename ("backup-" . [:tostr [/system clock get date]])
+  /system backup save name=$filename
+  /tool e-mail send to=admin@example.com subject=("RouterBackup " . $filename) file=($filename . ".backup")
+}
+\`\`\`
+
+برای Gmail از App Password استفاده کنید.
+
+### مرحله ۴: Export اسکریپت تنظیمات
+
+یک export کنار بکاپ باینری برای بازیابی خوانا اضافه کنید:
+
+\`\`\`
+/system script add name=backup-and-export source={
+  :local date [:tostr [/system clock get date]]
+  :local bname ("backup-" . $date)
+  :local ename ("export-" . $date)
+  /system backup save name=$bname
+  /export file=$ename
+  /tool fetch upload=yes address=192.168.10.100 src-path=($bname . ".backup") dst-path=("/backups/" . $bname . ".backup") user=ftpuser password=ftppass mode=ftp
+}
+\`\`\`
+
+### آزمایش کار بکاپ
+
+قبل از اتکا به scheduler، ابتدا دستی اجرا کنید:
+
+\`\`\`
+/system script run backup-and-upload
+\`\`\`
+
+بخش Files و سرور FTP خود را بررسی کنید تا تأیید کنید هم فایل بکاپ ایجاد شده و هم آپلود شده.
+
+### نکته تأیید
+
+به‌صورت دوره‌ای یک بکاپ را در یک VM آزمایشی CHR بازگردانید تا تأیید کنید بکاپ واقعاً قابل بازگردانی است. یک فایل بکاپ که وجود دارد اما قابل بازگردانی نیست بی‌ارزش است.
+
+بکاپ‌های خودکار خارج از دستگاه تقریباً هیچ هزینه راه‌اندازی ندارند و می‌توانند روزها کار بازپیکربندی بعد از خرابی سخت‌افزار را نجات دهند.`,
+  },
+  'mikrotik-internet-troubleshooting': {
+    contentEn: `## Troubleshooting Internet Connectivity on MikroTik
+
+"The Internet is down" is the most common complaint in any network. Before calling your ISP, work through this structured diagnostic process to determine if the problem is in your router, your ISP connection, or further upstream.
+
+### Step 1: Verify the WAN Interface Has an IP
+
+\`\`\`
+/ip address print
+\`\`\`
+
+If your WAN interface (ether1, pppoe-out1) has no IP address, the ISP link is down or misconfigured.
+
+For DHCP WAN:
+\`\`\`
+/ip dhcp-client print
+\`\`\`
+
+For PPPoE:
+\`\`\`
+/interface pppoe-client print status
+\`\`\`
+
+### Step 2: Check the Default Route
+
+\`\`\`
+/ip route print where dst-address=0.0.0.0/0
+\`\`\`
+
+Without an active (\`A\`) default route, the router has no path to the Internet. Check if the WAN interface is up.
+
+### Step 3: Ping the ISP Gateway
+
+\`\`\`
+/ip route print  # note the gateway IP
+/ping 203.0.113.1  # ping the gateway
+\`\`\`
+
+If the gateway doesn't respond, the problem is on the ISP link — modem, fiber ONT, or the ISP's router. Try power-cycling the modem and waiting 2 minutes.
+
+### Step 4: Ping a Public IP (Bypassing DNS)
+
+\`\`\`
+/ping 8.8.8.8
+\`\`\`
+
+If the ISP gateway responds but 8.8.8.8 doesn't, your ISP may be filtering or routing is broken upstream. Contact your ISP.
+
+### Step 5: Test DNS Resolution
+
+\`\`\`
+/resolve google.com
+\`\`\`
+
+If step 4 (ping by IP) works but \`resolve\` fails, DNS is broken. Check:
+
+\`\`\`
+/ip dns print
+\`\`\`
+
+Ensure \`servers\` has valid IPs. Try manually resolving with a different server:
+
+\`\`\`
+/resolve google.com server=8.8.8.8
+\`\`\`
+
+### Step 6: Check Client Connectivity Separately
+
+If the router itself has Internet, but clients don't:
+
+\`\`\`
+# From a client, can it reach the router?
+/ping 192.168.10.1  # from client
+
+# Can clients reach the router's LAN IP?
+/ping 192.168.10.50  # from router to a client
+\`\`\`
+
+If clients can reach the router but not Internet: check NAT masquerade and the firewall forward chain.
+
+\`\`\`
+/ip firewall nat print
+/ip firewall filter print
+\`\`\`
+
+### Step 7: Check for Firewall Blocking
+
+The firewall might block traffic from clients going out:
+
+\`\`\`
+/ip firewall filter print where chain=forward
+\`\`\`
+
+Missing "established/related" accept rule is a common issue after firewall edits.
+
+### Common Root Causes Summary
+
+| Symptom | Likely Cause |
+|---------|--------------|
+| WAN has no IP | ISP link down, modem/ONT issue |
+| No default route | WAN interface down |
+| Gateway unreachable | Physical WAN issue |
+| IP ping works, DNS fails | DNS server misconfigured |
+| Router has internet, clients don't | NAT or forward chain firewall issue |
+| Intermittent drops | MTU issue (PPPoE), ISP line quality |
+
+Work top-down: WAN physical → WAN IP → routing → NAT → firewall → DNS. Most issues are found in the first three steps.`,
+    contentFa: `## عیب‌یابی اتصال اینترنت در میکروتیک
+
+"اینترنت قطع است" رایج‌ترین شکایت در هر شبکه‌ای است. قبل از تماس با ISP، این فرآیند تشخیصی ساختاریافته را طی کنید تا مشخص کنید مشکل در روتر، اتصال ISP یا بالادست‌تر است.
+
+### مرحله ۱: بررسی داشتن آی‌پی اینترفیس WAN
+
+\`\`\`
+/ip address print
+\`\`\`
+
+اگر اینترفیس WAN (ether1، pppoe-out1) آی‌پی ندارد، لینک ISP قطع یا اشتباه تنظیم شده.
+
+برای WAN DHCP:
+\`\`\`
+/ip dhcp-client print
+\`\`\`
+
+برای PPPoE:
+\`\`\`
+/interface pppoe-client print status
+\`\`\`
+
+### مرحله ۲: بررسی مسیر پیش‌فرض
+
+\`\`\`
+/ip route print where dst-address=0.0.0.0/0
+\`\`\`
+
+بدون یک مسیر پیش‌فرض فعال (\`A\`)، روتر هیچ مسیری به اینترنت ندارد.
+
+### مرحله ۳: Ping گیت‌وی ISP
+
+\`\`\`
+/ping 203.0.113.1
+\`\`\`
+
+اگر گیت‌وی پاسخ نمی‌دهد، مشکل روی لینک ISP است. مودم را خاموش-روشن کرده و ۲ دقیقه صبر کنید.
+
+### مرحله ۴: Ping یک آی‌پی عمومی (بدون DNS)
+
+\`\`\`
+/ping 8.8.8.8
+\`\`\`
+
+اگر گیت‌وی ISP پاسخ می‌دهد اما 8.8.8.8 نه، ISP ممکن است فیلتر کند یا روتینگ بالادست خراب باشد.
+
+### مرحله ۵: آزمایش تفسیر DNS
+
+\`\`\`
+/resolve google.com
+\`\`\`
+
+اگر مرحله ۴ (ping با آی‌پی) کار می‌کند اما \`resolve\` شکست می‌خورد، DNS خراب است:
+
+\`\`\`
+/ip dns print
+/resolve google.com server=8.8.8.8
+\`\`\`
+
+### مرحله ۶: بررسی اتصال کلاینت‌ها به‌طور جداگانه
+
+اگر روتر اینترنت دارد اما کلاینت‌ها ندارند:
+
+\`\`\`
+/ip firewall nat print
+/ip firewall filter print
+\`\`\`
+
+قانون missing "established/related" accept بعد از ویرایش‌های فایروال یک مشکل رایج است.
+
+### خلاصه دلایل رایج
+
+| علائم | دلیل احتمالی |
+|---------|--------------|
+| WAN آی‌پی ندارد | لینک ISP قطع، مشکل مودم/ONT |
+| مسیر پیش‌فرض وجود ندارد | اینترفیس WAN قطع است |
+| گیت‌وی غیرقابل دسترس | مشکل فیزیکی WAN |
+| Ping IP کار می‌کند، DNS خراب | DNS اشتباه تنظیم |
+| روتر اینترنت دارد، کلاینت‌ها ندارند | مشکل NAT یا فایروال forward chain |
+| قطعی‌های متناوب | مشکل MTU (PPPoE)، کیفیت خط ISP |
+
+از بالا به پایین کار کنید: WAN فیزیکی → آی‌پی WAN → روتینگ → NAT → فایروال → DNS. بیشتر مشکلات در سه مرحله اول پیدا می‌شوند.`,
+  },
+  'mikrotik-bandwidth-usage-monitor': {
+    contentEn: `## Monitoring Bandwidth Usage on MikroTik
+
+Knowing who is using your bandwidth and how much helps you plan capacity, spot anomalies, and enforce fair usage. MikroTik offers several built-in tools for bandwidth monitoring, from real-time sniffers to historical graphing.
+
+### Real-Time: The Torch Tool
+
+The Torch is RouterOS's packet sniffer and traffic monitor. In Winbox: Tools → Torch. On CLI:
+
+\`\`\`
+/tool torch interface=ether1 ip-protocol=any
+\`\`\`
+
+This shows live traffic per IP/protocol with source and destination, making it easy to see exactly what a specific IP is doing right now.
+
+### Per-Interface Traffic with Graphing
+
+Enable the built-in traffic graphs for any interface:
+
+\`\`\`
+/tool graphing interface add interface=ether1 store-on-disk=yes
+\`\`\`
+
+Then browse to \`http://routerip/graphs/\` (or use Winbox → Tools → Graphing) to see historical in/out traffic charts.
+
+### Accounting: Track Per-IP Bandwidth Usage
+
+RouterOS has a built-in IP accounting feature that tracks how much data each IP address sent and received:
+
+\`\`\`
+/ip accounting set enabled=yes account-local-traffic=no threshold=256
+\`\`\`
+
+View current stats:
+
+\`\`\`
+/ip accounting snapshot take
+/ip accounting print
+\`\`\`
+
+This shows per-IP byte counts since the last reset. Reset with:
+
+\`\`\`
+/ip accounting clear
+\`\`\`
+
+### Queue Statistics for Per-User Tracking
+
+If you have per-IP Simple Queues, each queue's stats give you per-user consumption:
+
+\`\`\`
+/queue simple print stats
+\`\`\`
+
+### SNMP + LibreNMS/Zabbix for Historical Trending
+
+The most powerful approach for long-term capacity planning:
+
+1. Enable SNMP as covered in the SNMP post
+2. Add the router to LibreNMS or Zabbix
+3. The platform polls interface counters every 5 minutes and stores them in a database
+4. You get traffic graphs, 95th percentile calculations, and trend reports
+
+### Bandwidth Usage by Protocol
+
+Use Mangle to mark traffic by type, then see queue or accounting stats per mark:
+
+\`\`\`
+/ip firewall mangle add chain=forward protocol=tcp dst-port=80,443 action=mark-packet new-packet-mark=http-traffic passthrough=yes
+/ip firewall mangle add chain=forward protocol=udp dst-port=53 action=mark-packet new-packet-mark=dns-traffic passthrough=yes
+\`\`\`
+
+Then in queue stats, you see separate counters for HTTP vs DNS vs everything else.
+
+### Setting Up Usage Alerts
+
+Use Netwatch or a Scheduler script to check a threshold and send an alert:
+
+\`\`\`
+/system script add name=check-bandwidth source={
+  :local bps [/interface get ether1 rx-byte]
+  :if ($bps > 900000000) do={
+    /tool e-mail send to=admin@example.com subject="WAN Near Saturation" body="ether1 rx high"
+  }
+}
+/system scheduler add name=bw-check interval=5m on-event=check-bandwidth
+\`\`\`
+
+Bandwidth visibility is the first step in capacity management. Without data, you're guessing — with data, you can make informed decisions about upgrading links, enforcing QoS, or investigating anomalies.`,
+    contentFa: `## مانیتورینگ مصرف پهنای‌باند در میکروتیک
+
+دانستن اینکه چه کسی پهنای‌باند شما را مصرف می‌کند و چقدر، به برنامه‌ریزی ظرفیت، تشخیص ناهنجاری‌ها و اعمال استفاده منصفانه کمک می‌کند. میکروتیک چندین ابزار داخلی برای مانیتورینگ پهنای‌باند ارائه می‌دهد.
+
+### Real-Time: ابزار Torch
+
+Torch ابزار packet sniffer و مانیتور ترافیک RouterOS است. در Winbox: Tools → Torch. در CLI:
+
+\`\`\`
+/tool torch interface=ether1 ip-protocol=any
+\`\`\`
+
+ترافیک زنده per-IP/protocol با مبدا و مقصد نشان می‌دهد.
+
+### ترافیک Per-Interface با Graphing
+
+\`\`\`
+/tool graphing interface add interface=ether1 store-on-disk=yes
+\`\`\`
+
+سپس به \`http://routerip/graphs/\` بروید تا نمودارهای تاریخی ترافیک in/out را ببینید.
+
+### Accounting: ردیابی مصرف پهنای‌باند Per-IP
+
+\`\`\`
+/ip accounting set enabled=yes account-local-traffic=no threshold=256
+\`\`\`
+
+مشاهده آمار فعلی:
+
+\`\`\`
+/ip accounting snapshot take
+/ip accounting print
+\`\`\`
+
+این تعداد بایت per-IP از آخرین ریست نشان می‌دهد.
+
+### آمار Queue برای ردیابی Per-User
+
+\`\`\`
+/queue simple print stats
+\`\`\`
+
+### SNMP + LibreNMS/Zabbix برای Trend تاریخی
+
+قدرتمندترین رویکرد برای برنامه‌ریزی ظرفیت بلندمدت:
+
+۱. SNMP را فعال کنید
+۲. روتر را به LibreNMS یا Zabbix اضافه کنید
+۳. پلتفرم هر ۵ دقیقه شمارنده‌های اینترفیس را poll می‌کند
+۴. نمودارهای ترافیک، محاسبات صدک ۹۵ و گزارش‌های trend می‌گیرید
+
+### تنظیم هشدارهای مصرف
+
+\`\`\`
+/system script add name=check-bandwidth source={
+  :local bps [/interface get ether1 rx-byte]
+  :if ($bps > 900000000) do={
+    /tool e-mail send to=admin@example.com subject="WAN Near Saturation" body="ether1 rx high"
+  }
+}
+/system scheduler add name=bw-check interval=5m on-event=check-bandwidth
+\`\`\`
+
+دیدگاه پهنای‌باند اولین قدم در مدیریت ظرفیت است. بدون داده، دارید حدس می‌زنید — با داده می‌توانید تصمیمات آگاهانه درباره ارتقاء لینک‌ها، اعمال QoS یا بررسی ناهنجاری‌ها بگیرید.`,
+  },
+  'mikrotik-ip-pool-dhcp-management': {
+    contentEn: `## IP Pool and DHCP Management on MikroTik
+
+Effective DHCP management keeps your network running smoothly. This post covers routine DHCP administration tasks: managing pools, cleaning stale leases, tracking clients, and handling IP conflicts.
+
+### Reviewing Pool Utilization
+
+\`\`\`
+/ip pool used print
+/ip pool print
+\`\`\`
+
+Compare \`used\` against the pool's range to gauge utilization. A pool nearing exhaustion means some clients will fail to get IPs.
+
+### Listing All Active Leases
+
+\`\`\`
+/ip dhcp-server lease print
+\`\`\`
+
+Add status filters:
+
+\`\`\`
+/ip dhcp-server lease print where status=bound      # active leases
+/ip dhcp-server lease print where status=waiting    # expiring/pending
+\`\`\`
+
+### Clearing Stale Leases
+
+Old devices leave stale leases in your table. Manual cleanup:
+
+\`\`\`
+/ip dhcp-server lease remove [find status=waiting]
+/ip dhcp-server lease remove [find last-seen>1d]
+\`\`\`
+
+Or adjust lease time so stale entries expire faster:
+
+\`\`\`
+/ip dhcp-server network set [find] lease-time=12h
+\`\`\`
+
+### Converting a Dynamic Lease to Static
+
+When a device should always get the same IP:
+
+\`\`\`
+/ip dhcp-server lease make-static [find address=192.168.10.55]
+\`\`\`
+
+This locks that device's MAC to that IP. Alternatively, add manually:
+
+\`\`\`
+/ip dhcp-server lease add address=192.168.10.55 mac-address=AA:BB:CC:DD:EE:FF server=dhcp1
+\`\`\`
+
+### Searching for a Device by MAC
+
+\`\`\`
+/ip dhcp-server lease print where mac-address="AA:BB:CC:DD:EE:FF"
+\`\`\`
+
+Useful when a user reports connectivity problems — find their IP from MAC address.
+
+### Finding Duplicate IPs
+
+IP conflicts cause mysterious connectivity problems. Use ARP to find duplicates:
+
+\`\`\`
+/ip arp print
+\`\`\`
+
+If two MACs share the same IP, you have a conflict. Check for rogue DHCP servers or static IP assignments overlapping with the pool.
+
+### Expanding the Pool When Running Low
+
+\`\`\`
+/ip pool set dhcp_pool ranges=192.168.10.10-192.168.10.250
+\`\`\`
+
+Or add a second pool range:
+
+\`\`\`
+/ip pool add name=dhcp_pool2 ranges=192.168.20.10-192.168.20.200
+/ip dhcp-server set dhcp1 address-pool=dhcp_pool,dhcp_pool2
+\`\`\`
+
+### DHCP Lease Notification Script
+
+Get notified when a new device joins:
+
+\`\`\`
+/system script add name=new-lease-alert source={
+  :local mac [/ip dhcp-server lease get [find where dynamic=yes] mac-address]
+  /tool e-mail send to=admin@example.com subject=("New device: " . $mac) body=($mac . " got IP")
+}
+/ip dhcp-server set dhcp1 lease-script=new-lease-alert
+\`\`\`
+
+### Blocking Specific Devices from DHCP
+
+Add a static lease with an IP outside your pool to effectively block a MAC from getting an IP:
+
+\`\`\`
+/ip dhcp-server lease add mac-address=BA:D0:FF:EN:DE:D0 address=192.168.10.254 server=dhcp1 comment=blocked
+\`\`\`
+
+Or use the \`/ip dhcp-server lease make-permanent\` approach and then add a firewall rule blocking that IP.
+
+Clean DHCP management prevents mysterious "no internet" calls and IP conflict incidents. Make lease table review part of your monthly maintenance routine.`,
+    contentFa: `## مدیریت IP Pool و DHCP در میکروتیک
+
+مدیریت مؤثر DHCP شبکه شما را روان نگه می‌دارد. این پست کارهای مدیریتی روتین DHCP را پوشش می‌دهد: مدیریت pool‌ها، پاک کردن lease‌های منسوخ، ردیابی کلاینت‌ها و مدیریت تعارض آی‌پی.
+
+### بررسی استفاده از Pool
+
+\`\`\`
+/ip pool used print
+/ip pool print
+\`\`\`
+
+\`used\` را با محدوده pool مقایسه کنید. Pool نزدیک به اتمام یعنی برخی کلاینت‌ها نمی‌توانند آی‌پی بگیرند.
+
+### فهرست همه Lease‌های فعال
+
+\`\`\`
+/ip dhcp-server lease print where status=bound
+\`\`\`
+
+### پاک کردن Lease‌های منسوخ
+
+\`\`\`
+/ip dhcp-server lease remove [find status=waiting]
+/ip dhcp-server lease remove [find last-seen>1d]
+\`\`\`
+
+### تبدیل Lease پویا به استاتیک
+
+\`\`\`
+/ip dhcp-server lease make-static [find address=192.168.10.55]
+\`\`\`
+
+### جست‌وجوی دستگاه با آدرس MAC
+
+\`\`\`
+/ip dhcp-server lease print where mac-address="AA:BB:CC:DD:EE:FF"
+\`\`\`
+
+مفید وقتی کاربری مشکل اتصال گزارش می‌دهد.
+
+### یافتن آی‌پی‌های تکراری
+
+\`\`\`
+/ip arp print
+\`\`\`
+
+اگر دو MAC آی‌پی یکسان داشته باشند، تعارض دارید.
+
+### گسترش Pool هنگام کمبود
+
+\`\`\`
+/ip pool set dhcp_pool ranges=192.168.10.10-192.168.10.250
+\`\`\`
+
+### اسکریپت اعلان Lease جدید
+
+\`\`\`
+/ip dhcp-server set dhcp1 lease-script=new-lease-alert
+\`\`\`
+
+### مسدود کردن دستگاه‌های خاص از DHCP
+
+یک lease استاتیک با آی‌پی خارج از pool اضافه کنید تا یک MAC را از گرفتن آی‌پی مسدود کنید.
+
+مدیریت تمیز DHCP از تماس‌های "اینترنت ندارم" و حوادث تعارض آی‌پی رازآلود جلوگیری می‌کند.`,
+  },
+  'mikrotik-interface-status-monitor': {
+    contentEn: `## Monitoring Interface Status on MikroTik
+
+Interface up/down events are often the first indicator of network problems. Monitoring interface status proactively — and getting alerted when something goes down — is a core network operations skill.
+
+### Viewing Interface Status in Real Time
+
+\`\`\`
+/interface print
+/interface ethernet print
+\`\`\`
+
+The \`R\` flag next to an interface means it is running (link is up). Absence of \`R\` means the link is down.
+
+### Checking Interface Statistics
+
+\`\`\`
+/interface ethernet print stats
+\`\`\`
+
+Look for:
+- \`rx-error\`, \`tx-error\`: hardware or duplex errors
+- \`rx-drop\`, \`tx-drop\`: queue overflow (traffic shaping issue)
+- \`tx-queue-drop\`: high output congestion
+
+Steadily growing error counters indicate a physical problem.
+
+### Monitoring a Specific Interface
+
+\`\`\`
+/interface ethernet monitor ether1
+\`\`\`
+
+This shows real-time link speed, duplex, and status — essential when troubleshooting physical connectivity.
+
+### Using Netwatch to Alert on Interface Down
+
+While Netwatch is primarily for ping-based monitoring, you can combine Scheduler with interface checks:
+
+\`\`\`
+/system script add name=check-interfaces source={
+  :foreach i in=[/interface find where running=no type=ether] do={
+    :local name [/interface get $i name]
+    /tool e-mail send to=admin@example.com subject=("Interface DOWN: " . $name) body=$name
+  }
+}
+/system scheduler add name=iface-monitor interval=5m on-event=check-interfaces
+\`\`\`
+
+This emails you if any Ethernet interface goes down.
+
+### Automatic Interface Bounce on Error Threshold
+
+If an interface accumulates errors beyond a threshold, reset it:
+
+\`\`\`
+/system script add name=check-errors source={
+  :local errs [/interface ethernet get ether2 rx-error]
+  :if ($errs > 10000) do={
+    /interface disable ether2
+    :delay 3s
+    /interface enable ether2
+    /tool e-mail send to=admin@example.com subject="ether2 error threshold - bounced" body=("errors: " . $errs)
+  }
+}
+\`\`\`
+
+### SNMP for Interface Monitoring
+
+The most scalable approach is SNMP polling via LibreNMS or Zabbix. These platforms automatically alert you when any interface status changes, show historical uptime/downtime, and trend error counters.
+
+Key SNMP OIDs for interfaces:
+- \`IF-MIB::ifOperStatus.X\` — operational state (1=up, 2=down)
+- \`IF-MIB::ifInErrors.X\` — incoming error counter
+- \`IF-MIB::ifInOctets.X\` — incoming byte counter
+
+### Graphing Interface Traffic
+
+\`\`\`
+/tool graphing interface add interface=ether1 store-on-disk=yes
+\`\`\`
+
+Browse \`http://routerip/graphs/iface/ether1/\` for hourly, daily, weekly, and monthly traffic graphs.
+
+### Log-Based Interface Monitoring
+
+RouterOS logs all interface up/down events by default:
+
+\`\`\`
+/log print where topics~"interface"
+\`\`\`
+
+Search for \`link up\` and \`link down\` messages to understand when an interface toggled.
+
+Early detection of interface problems prevents outages from becoming major incidents. Set up at least basic alerting — even an email when an interface goes down — before you need it.`,
+    contentFa: `## مانیتورینگ وضعیت اینترفیس در میکروتیک
+
+رویدادهای up/down اینترفیس اغلب اولین نشانه مشکلات شبکه هستند. مانیتورینگ پیشگیرانه وضعیت اینترفیس و دریافت هشدار هنگام قطع آن یک مهارت اصلی عملیات شبکه است.
+
+### مشاهده وضعیت اینترفیس در Real-Time
+
+\`\`\`
+/interface print
+/interface ethernet print
+\`\`\`
+
+پرچم \`R\` کنار یک اینترفیس یعنی در حال اجرا (لینک بالا) است.
+
+### بررسی آمار اینترفیس
+
+\`\`\`
+/interface ethernet print stats
+\`\`\`
+
+دنبال:
+- \`rx-error\`، \`tx-error\`: خطاهای سخت‌افزاری یا duplex
+- \`rx-drop\`، \`tx-drop\`: سرریز queue (مشکل traffic shaping)
+- \`tx-queue-drop\`: ازدحام خروجی بالا
+
+### مانیتورینگ یک اینترفیس خاص
+
+\`\`\`
+/interface ethernet monitor ether1
+\`\`\`
+
+سرعت لینک real-time، duplex و وضعیت — ضروری برای عیب‌یابی اتصال فیزیکی.
+
+### استفاده از Scheduler برای هشدار قطع اینترفیس
+
+\`\`\`
+/system script add name=check-interfaces source={
+  :foreach i in=[/interface find where running=no type=ether] do={
+    :local name [/interface get $i name]
+    /tool e-mail send to=admin@example.com subject=("Interface DOWN: " . $name) body=$name
+  }
+}
+/system scheduler add name=iface-monitor interval=5m on-event=check-interfaces
+\`\`\`
+
+### SNMP برای مانیتورینگ اینترفیس
+
+مقیاس‌پذیرترین رویکرد، SNMP polling از طریق LibreNMS یا Zabbix است. این پلتفرم‌ها به‌طور خودکار هنگام تغییر وضعیت هر اینترفیس هشدار می‌دهند.
+
+### Graphing ترافیک اینترفیس
+
+\`\`\`
+/tool graphing interface add interface=ether1 store-on-disk=yes
+\`\`\`
+
+### مانیتورینگ مبتنی بر لاگ
+
+\`\`\`
+/log print where topics~"interface"
+\`\`\`
+
+تشخیص زودهنگام مشکلات اینترفیس از تبدیل قطعی‌ها به حوادث اصلی جلوگیری می‌کند.`,
+  },
+  'mikrotik-routeros-update-routine': {
+    contentEn: `## RouterOS Update Routine: Keeping Firmware Current
+
+Updating RouterOS regularly is not optional — it is part of responsible network management. This post covers how to build a repeatable, safe update process that fits into your operational workflow.
+
+### Monthly Firmware Review Checklist
+
+1. **Check current version**: \`/system resource print\`
+2. **Check latest stable**: visit mikrotik.com/download and check your hardware's channel
+3. **Read the changelog**: mikrotik.com/changelog — look for security fixes relevant to your setup
+4. **Assess risk**: major version? patch? check community forums for reports of issues
+
+### Update Channels
+
+RouterOS has three release channels:
+
+- **Stable**: thoroughly tested, recommended for production
+- **Long-term (LTS)**: older version with extended support, maximum stability
+- **Testing (Candidate)**: early access to new features — avoid in production
+
+For most environments, stay on **Stable**.
+
+### Pre-Update Steps
+
+\`\`\`
+# 1. Take a backup
+/system backup save name=("pre-upgrade-" . [:tostr [/system clock get date]])
+
+# 2. Note your current version
+/system resource print
+
+# 3. Check disk space for download
+/disk print
+/file print
+\`\`\`
+
+### Update via CLI
+
+\`\`\`
+/system package update check-for-updates channel=stable
+/system package update download
+\`\`\`
+
+Wait for download to complete, then install (causes reboot):
+
+\`\`\`
+/system package update install
+\`\`\`
+
+### Update Multiple Routers Efficiently
+
+For managing many devices, use The Dude (MikroTik's free network monitoring tool) or a simple bash loop with SSH:
+
+\`\`\`bash
+for ip in 192.168.1.1 192.168.2.1 192.168.3.1; do
+  ssh admin@$ip "/system package update download; /system package update install"
+done
+\`\`\`
+
+Or use Ansible with the community.routeros collection for proper change management.
+
+### Post-Update Verification
+
+After reboot:
+
+\`\`\`
+/system resource print  # confirm new version
+/interface print         # all interfaces still up?
+/ip route print         # routing table intact?
+/ip firewall filter print count-only  # rule count matches?
+\`\`\`
+
+Compare with pre-upgrade \`/export\` if anything seems different.
+
+### Handling Failed Updates
+
+If the router doesn't come back after an update:
+
+1. Console access (physical serial or Winbox over another path)
+2. Check for package compatibility errors in the log
+3. Use NetInstall as a last resort to reinstall clean RouterOS
+
+### Scheduling Automatic Updates (Use With Caution)
+
+RouterOS can check and download updates automatically, but don't enable automatic **install** without a maintenance window plan:
+
+\`\`\`
+/system package update set channel=stable
+# Check-only automation (don't auto-install in production):
+/system scheduler add name=check-updates interval=1w on-event="/system package update check-for-updates"
+\`\`\`
+
+Review and manually install during planned windows to avoid surprise reboots during business hours.
+
+Keeping firmware current is boring until it isn't — a patched CVE prevented is far better than an emergency incident response after a compromise.`,
+    contentFa: `## روتین آپدیت RouterOS: نگه‌داشتن فریمور به‌روز
+
+به‌روزرسانی منظم RouterOS اختیاری نیست — بخشی از مدیریت مسئولانه شبکه است. این پست نحوه ساخت یک فرآیند آپدیت تکرارپذیر و ایمن را پوشش می‌دهد.
+
+### چک‌لیست بررسی ماهانه فریمور
+
+۱. **بررسی نسخه فعلی**: \`/system resource print\`
+۲. **بررسی آخرین stable**: mikrotik.com/download
+۳. **خواندن changelog**: mikrotik.com/changelog
+۴. **ارزیابی ریسک**: نسخه اصلی؟ پچ؟
+
+### کانال‌های آپدیت
+
+RouterOS سه کانال انتشار دارد:
+- **Stable**: کاملاً آزمایش‌شده، توصیه‌شده برای محیط تولید
+- **Long-term (LTS)**: نسخه قدیمی‌تر با پشتیبانی گسترده
+- **Testing**: دسترسی زودهنگام به قابلیت‌های جدید — در محیط تولید اجتناب کنید
+
+### مراحل قبل از آپدیت
+
+\`\`\`
+/system backup save name=("pre-upgrade-" . [:tostr [/system clock get date]])
+/system resource print
+/disk print
+\`\`\`
+
+### آپدیت از طریق CLI
+
+\`\`\`
+/system package update check-for-updates channel=stable
+/system package update download
+/system package update install
+\`\`\`
+
+### تأیید بعد از آپدیت
+
+\`\`\`
+/system resource print
+/interface print
+/ip route print
+/ip firewall filter print count-only
+\`\`\`
+
+با \`/export\` قبل از آپگرید مقایسه کنید اگر چیزی متفاوت به‌نظر می‌رسد.
+
+### مدیریت آپدیت‌های شکست‌خورده
+
+اگر روتر بعد از آپدیت برنگشت:
+۱. دسترسی کنسول (سریال فیزیکی)
+۲. بررسی خطاهای سازگاری پکیج در لاگ
+۳. استفاده از NetInstall به‌عنوان آخرین راه‌چاره
+
+به‌روز نگه‌داشتن فریمور کسل‌کننده است تا وقتی نباشد — یک CVE پچ‌شده جلوگیری‌شده بسیار بهتر از یک واکنش اضطراری به حادثه بعد از compromise است.`,
+  },
+  'mikrotik-firewall-rule-cleanup': {
+    contentEn: `## Firewall Rule Cleanup and Maintenance on MikroTik
+
+Firewall rule sets grow organically over time. Without periodic cleanup, you end up with hundreds of rules — many redundant, some conflicting, and a few that haven't matched a packet in years. A bloated firewall is harder to audit, slower to process, and full of hidden assumptions that may no longer be valid.
+
+### Audit Step 1: Find Rules That Never Match
+
+RouterOS tracks packet and byte counters per rule. A rule with 0 bytes and 0 packets since the last reboot likely either never applies or was made redundant by a rule above it:
+
+\`\`\`
+/ip firewall filter print stats where bytes=0
+/ip firewall nat print stats where bytes=0
+\`\`\`
+
+Before deleting a zero-hit rule, understand **why** it never matched — it might be correct (a rule for a scenario that hasn't happened yet) or obsolete.
+
+### Audit Step 2: Find Disabled Rules
+
+\`\`\`
+/ip firewall filter print where disabled=yes
+\`\`\`
+
+Disabled rules are noise. Either re-enable them (with documentation of why they exist) or delete them permanently.
+
+### Audit Step 3: Identify Duplicates
+
+Manually review the rule list for overlapping conditions:
+
+\`\`\`
+/ip firewall filter print
+\`\`\`
+
+Look for rules with identical matching criteria (same chain, same src/dst addresses, same ports) — one will always shadow the other.
+
+### Audit Step 4: Review Rule Comments
+
+Rules without comments are technical debt. Add comments to every non-obvious rule:
+
+\`\`\`
+/ip firewall filter set [find where comment=""] comment="review-me"
+\`\`\`
+
+Then investigate each "review-me" rule and document its purpose or delete it.
+
+### Rebuilding a Clean Ruleset
+
+For heavily cluttered rulesets, sometimes the cleanest approach is to export, edit the .rsc file in a text editor to produce a clean, ordered, commented set, test it in a CHR lab, then import cleanly:
+
+\`\`\`
+/export file=current-firewall
+# edit current-firewall.rsc in external editor
+/ip firewall filter remove [find]  # clear all (dangerous — have console access!)
+/import file=clean-firewall.rsc
+\`\`\`
+
+### Ordering Rules for Performance
+
+RouterOS evaluates rules in order. Place frequently-matching rules (established/related, the busiest subnet) near the top:
+
+\`\`\`
+/ip firewall filter move [find comment="established-related"] destination=0
+\`\`\`
+
+This reduces the average number of rules evaluated per packet.
+
+### Using Connection State Efficiently
+
+The most impactful optimization: one rule handles all established/related traffic at position 0:
+
+\`\`\`
+/ip firewall filter add chain=forward connection-state=established,related action=accept place-before=0
+\`\`\`
+
+This single rule eliminates the need to re-evaluate most traffic against the rest of the ruleset.
+
+### Documenting Your Firewall Policy
+
+Maintain a simple table outside RouterOS documenting what your firewall is supposed to do:
+
+| Rule | Purpose | Direction | Action |
+|------|---------|-----------|--------|
+| Allow LAN to Internet | All clients can browse | forward in:ether2, out:ether1 | accept |
+| Drop WAN to LAN unsolicited | No inbound from WAN | forward in:ether1 | drop |
+
+This policy document helps you recognize when rules violate intent versus when intent itself needs updating.
+
+Firewall maintenance is not glamorous, but a clean, documented, minimal ruleset is more secure and more maintainable than a tangled accumulation of historical changes.`,
+    contentFa: `## پاکسازی و نگهداری قوانین فایروال در میکروتیک
+
+مجموعه قوانین فایروال در طول زمان به‌طور ارگانیک رشد می‌کند. بدون پاکسازی دوره‌ای، با صدها قانون می‌مانید — بسیاری اضافی، برخی متعارض، و چند تا که سال‌هاست با هیچ بسته‌ای تطابق نداشته‌اند.
+
+### مرحله ممیزی ۱: یافتن قوانینی که هرگز تطابق ندارند
+
+\`\`\`
+/ip firewall filter print stats where bytes=0
+/ip firewall nat print stats where bytes=0
+\`\`\`
+
+قبل از حذف یک قانون با صفر ضربه، بفهمید **چرا** هرگز تطابق نداشته.
+
+### مرحله ممیزی ۲: یافتن قوانین غیرفعال
+
+\`\`\`
+/ip firewall filter print where disabled=yes
+\`\`\`
+
+قوانین غیرفعال سروصدا هستند. آن‌ها را دوباره فعال کنید (با مستندات) یا به‌طور دائمی حذف کنید.
+
+### مرحله ممیزی ۳: شناسایی موارد تکراری
+
+\`\`\`
+/ip firewall filter print
+\`\`\`
+
+دنبال قوانین با شرایط تطابق یکسان بگردید — یکی همیشه دیگری را سایه می‌اندازد.
+
+### مرحله ممیزی ۴: بررسی کامنت‌های قوانین
+
+قوانین بدون کامنت بدهی فنی هستند:
+
+\`\`\`
+/ip firewall filter set [find where comment=""] comment="review-me"
+\`\`\`
+
+### مرتب‌سازی قوانین برای کارایی
+
+قوانین پرتطابق را در بالا قرار دهید (established/related، پرترافیک‌ترین ساب‌نت):
+
+\`\`\`
+/ip firewall filter move [find comment="established-related"] destination=0
+\`\`\`
+
+### استفاده کارآمد از Connection State
+
+مهم‌ترین بهینه‌سازی:
+
+\`\`\`
+/ip firewall filter add chain=forward connection-state=established,related action=accept place-before=0
+\`\`\`
+
+این یک قانون نیاز به ارزیابی مجدد اکثر ترافیک در برابر بقیه مجموعه قوانین را حذف می‌کند.
+
+یک مجموعه قوانین تمیز، مستندشده و حداقلی امن‌تر و قابل نگهداری‌تر از انباشت ترکیب‌شده تغییرات تاریخی است.`,
+  },
+  'mikrotik-torch-traffic-analysis': {
+    contentEn: `## Using Torch for Real-Time Traffic Analysis on MikroTik
+
+Torch is RouterOS's built-in packet analysis tool — think of it as a lightweight version of Wireshark focused on traffic summarization. It shows you what IP addresses and protocols are using your bandwidth **right now**, making it invaluable for troubleshooting, identifying bandwidth hogs, and spotting unusual traffic.
+
+### Starting Torch on an Interface
+
+In Winbox: Tools → Torch, select interface, click Start.
+
+On CLI:
+
+\`\`\`
+/tool torch interface=ether1
+\`\`\`
+
+This shows all traffic on ether1 grouped by IP/protocol.
+
+### Filtering Torch Output
+
+\`\`\`
+# By protocol
+/tool torch interface=ether1 ip-protocol=tcp
+
+# By port
+/tool torch interface=ether1 port=80,443
+
+# By specific IP
+/tool torch interface=ether1 src-address=192.168.10.50
+
+# By destination
+/tool torch interface=ether1 dst-address=8.8.8.8
+\`\`\`
+
+### Understanding Torch Output Fields
+
+- **Src. Address**: source IP
+- **Dst. Address**: destination IP
+- **Protocol**: TCP, UDP, ICMP, etc.
+- **Src. Port / Dst. Port**: port numbers
+- **Tx Rate / Rx Rate**: current bandwidth consumption
+- **Tx / Rx Packets**: packet counts
+
+### Common Torch Use Cases
+
+**Case 1: Finding the bandwidth hog**
+
+\`\`\`
+/tool torch interface=ether1 ip-protocol=any
+\`\`\`
+
+Sort by Tx Rate. The top entries are your heaviest consumers right now.
+
+**Case 2: Confirming a firewall rule works**
+
+Apply a Torch filter for the traffic you just blocked. If it still shows traffic passing, your firewall rule isn't working as expected.
+
+**Case 3: Identifying unusual protocols**
+
+Filter for protocols you don't expect:
+
+\`\`\`
+/tool torch interface=ether1 ip-protocol=gre
+\`\`\`
+
+GRE, ESP, or unusual UDP traffic might indicate a VPN tunnel, or it could indicate unauthorized tunneling.
+
+**Case 4: Troubleshooting a specific client**
+
+\`\`\`
+/tool torch interface=bridge1 src-address=192.168.10.25
+\`\`\`
+
+See everything that one client is sending and where it's going.
+
+### Torch vs Other Tools
+
+| Tool | Purpose |
+|------|---------|
+| Torch | Real-time traffic snapshot per flow |
+| Graphing | Historical traffic rates per interface |
+| Accounting | Total bytes per IP over time |
+| Connection Print | Current connection state table |
+| Sniffer | Full packet capture (like Wireshark) |
+
+### Running Packet Capture (Advanced)
+
+For detailed per-packet analysis beyond what Torch shows:
+
+\`\`\`
+/tool sniffer start interface=ether1 filter-ip-address=192.168.10.50
+/tool sniffer stop
+/tool sniffer save file=capture.pcap
+\`\`\`
+
+Download the .pcap file and open in Wireshark for deep analysis.
+
+Torch takes 30 seconds to learn and instantly answers the question everyone asks during a network problem: "What traffic is actually flowing right now?" Make it your first diagnostic tool.`,
+    contentFa: `## استفاده از Torch برای تحلیل ترافیک Real-Time در میکروتیک
+
+Torch ابزار تحلیل بسته داخلی RouterOS است — مثل یک نسخه سبک‌تر از Wireshark با تمرکز بر خلاصه ترافیک. نشان می‌دهد **همین الان** کدام آدرس‌های آی‌پی و پروتکل‌ها پهنای‌باند شما را مصرف می‌کنند.
+
+### شروع Torch روی یک اینترفیس
+
+در Winbox: Tools → Torch، اینترفیس را انتخاب کنید، Start کنید.
+
+در CLI:
+
+\`\`\`
+/tool torch interface=ether1
+\`\`\`
+
+### فیلترکردن خروجی Torch
+
+\`\`\`
+/tool torch interface=ether1 ip-protocol=tcp
+/tool torch interface=ether1 port=80,443
+/tool torch interface=ether1 src-address=192.168.10.50
+\`\`\`
+
+### فیلدهای خروجی Torch
+
+- **Src./Dst. Address**: آی‌پی مبدا/مقصد
+- **Protocol**: TCP، UDP، ICMP و غیره
+- **Tx Rate / Rx Rate**: مصرف پهنای‌باند فعلی
+
+### کاربردهای رایج Torch
+
+**پیدا کردن کسی که پهنای‌باند را می‌خورد:**
+\`\`\`
+/tool torch interface=ether1 ip-protocol=any
+\`\`\`
+بر اساس Tx Rate مرتب کنید.
+
+**تأیید کار کردن یک قانون فایروال:**
+فیلتر Torch را برای ترافیکی که تازه بلاک کردید اعمال کنید.
+
+**شناسایی پروتکل‌های غیرمعمول:**
+\`\`\`
+/tool torch interface=ether1 ip-protocol=gre
+\`\`\`
+
+**عیب‌یابی یک کلاینت خاص:**
+\`\`\`
+/tool torch interface=bridge1 src-address=192.168.10.25
+\`\`\`
+
+### Packet Capture (پیشرفته)
+
+\`\`\`
+/tool sniffer start interface=ether1 filter-ip-address=192.168.10.50
+/tool sniffer stop
+/tool sniffer save file=capture.pcap
+\`\`\`
+
+Torch 30 ثانیه طول می‌کشد یاد بگیرید و فوراً به سؤالی که همه هنگام مشکل شبکه می‌پرسند جواب می‌دهد: "همین الان چه ترافیکی واقعاً جاری است؟"`,
+  },
+  'mikrotik-certificate-management': {
+    contentEn: `## Certificate Management on MikroTik RouterOS
+
+Certificates in RouterOS are used for HTTPS (WebFig over SSL), IPsec/IKEv2 VPN authentication, SSTP VPN, and the API over TLS. Understanding how to create, import, and manage certificates prevents expired-certificate outages and enables secure encrypted management.
+
+### Types of Certificates in RouterOS
+
+1. **Self-signed**: created on the router, not trusted by browsers by default
+2. **CA-signed**: signed by an internal CA or public CA (Let's Encrypt), trusted by clients
+3. **Imported**: external certificates uploaded to the router
+
+### Creating a Self-Signed CA and Certificate
+
+\`\`\`
+# Create the CA certificate
+/certificate add name=my-ca common-name=MyCA key-size=4096 days-valid=3650 key-usage=crl-sign,key-cert-sign
+/certificate sign my-ca
+
+# Create a server certificate signed by the CA
+/certificate add name=webfig-cert common-name=router.lab.local days-valid=365 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
+/certificate sign webfig-cert ca=my-ca
+\`\`\`
+
+### Assigning Certificate to HTTPS (WebFig)
+
+\`\`\`
+/ip service set www-ssl certificate=webfig-cert disabled=no
+/ip service disable www
+\`\`\`
+
+Now WebFig is available on HTTPS. Install the CA certificate on client browsers to make it trusted without a warning.
+
+### Importing an External Certificate
+
+Upload the certificate file via Winbox Files, then:
+
+\`\`\`
+/certificate import file-name=domain.crt passphrase=""
+/certificate import file-name=domain.key passphrase=""
+\`\`\`
+
+After import, set the certificate's name:
+
+\`\`\`
+/certificate set [find where name~"domain"] name=my-imported-cert
+\`\`\`
+
+### Checking Certificate Status
+
+\`\`\`
+/certificate print detail
+\`\`\`
+
+Look at:
+- \`invalid-before\` / \`invalid-after\`: validity window
+- \`trusted\`: whether this cert is trusted
+- \`fingerprint\`: use to verify against what your CA issued
+
+### Renewing Expiring Certificates
+
+RouterOS doesn't auto-renew certificates. Set a reminder (or a Scheduler script) to check 30 days before expiry:
+
+\`\`\`
+/system scheduler add name=cert-check interval=7d on-event={
+  :foreach cert in=[/certificate find] do={
+    :local expiry [/certificate get $cert invalid-after]
+    :log info ("Certificate " . [/certificate get $cert name] . " expires " . $expiry)
+  }
+}
+\`\`\`
+
+### Let's Encrypt via ACME (RouterOS v7.x)
+
+RouterOS v7 added support for ACME protocol for automatic Let's Encrypt certificate management:
+
+\`\`\`
+/certificate acme set account-key-size=2048
+/certificate acme add domain=router.example.com
+/certificate acme issue domain=router.example.com
+\`\`\`
+
+This requires the router to be publicly accessible on port 80 (HTTP-01 challenge) or DNS-01 challenge setup.
+
+### Using Certificates for VPN (IKEv2)
+
+When configuring IKEv2 IPsec with certificate authentication instead of pre-shared keys:
+
+\`\`\`
+/ip ipsec identity add auth-method=digital-signature certificate=webfig-cert remote-certificate=client-cert
+\`\`\`
+
+Certificate-based VPN authentication is more secure than PSK (no shared secrets to leak) and scales better for large deployments.
+
+Managing certificates proactively prevents the scenario where your management interface becomes unavailable because a certificate expired at midnight on a Friday.`,
+    contentFa: `## مدیریت گواهی‌نامه در MikroTik RouterOS
+
+گواهی‌نامه‌ها در RouterOS برای HTTPS (WebFig روی SSL)، احراز هویت IPsec/IKEv2 VPN، SSTP VPN و API روی TLS استفاده می‌شوند.
+
+### انواع گواهی‌نامه در RouterOS
+
+۱. **Self-signed**: روی روتر ایجاد می‌شود، به‌طور پیش‌فرض توسط مرورگرها مورد اعتماد نیست
+۲. **CA-signed**: توسط CA داخلی یا عمومی (Let's Encrypt) امضا شده
+۳. **Imported**: گواهی‌نامه‌های خارجی آپلودشده به روتر
+
+### ساخت CA Self-Signed و گواهی‌نامه
+
+\`\`\`
+/certificate add name=my-ca common-name=MyCA key-size=4096 days-valid=3650 key-usage=crl-sign,key-cert-sign
+/certificate sign my-ca
+
+/certificate add name=webfig-cert common-name=router.lab.local days-valid=365 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
+/certificate sign webfig-cert ca=my-ca
+\`\`\`
+
+### اختصاص گواهی‌نامه به HTTPS (WebFig)
+
+\`\`\`
+/ip service set www-ssl certificate=webfig-cert disabled=no
+/ip service disable www
+\`\`\`
+
+### وارد کردن یک گواهی‌نامه خارجی
+
+\`\`\`
+/certificate import file-name=domain.crt passphrase=""
+/certificate import file-name=domain.key passphrase=""
+/certificate set [find where name~"domain"] name=my-imported-cert
+\`\`\`
+
+### بررسی وضعیت گواهی‌نامه
+
+\`\`\`
+/certificate print detail
+\`\`\`
+
+دنبال \`invalid-before\`/\`invalid-after\` و \`trusted\` بگردید.
+
+### تجدید گواهی‌نامه‌های در حال انقضا
+
+RouterOS گواهی‌نامه‌ها را به‌طور خودکار تجدید نمی‌کند. یک یادآوری یا اسکریپت Scheduler برای ۳۰ روز قبل از انقضا تنظیم کنید.
+
+### Let's Encrypt از طریق ACME (RouterOS v7.x)
+
+\`\`\`
+/certificate acme add domain=router.example.com
+/certificate acme issue domain=router.example.com
+\`\`\`
+
+### استفاده از گواهی‌نامه برای VPN (IKEv2)
+
+احراز هویت VPN مبتنی بر گواهی‌نامه امن‌تر از PSK است و برای استقرارهای بزرگ بهتر مقیاس‌پذیر است.
+
+مدیریت پیشگیرانه گواهی‌نامه از سناریویی که رابط مدیریتی شما به‌خاطر انقضای گواهی‌نامه در نیمه‌شب جمعه غیردسترسی می‌شود جلوگیری می‌کند.`,
+  },
+  'mikrotik-attack-types-overview': {
+    contentEn: `## Types of Attacks Against MikroTik Devices
+
+MikroTik routers are powerful and widely deployed, which also makes them attractive targets for attackers. Understanding what attacks are used against MikroTik devices is the first step toward defending them.
+
+### 1. Brute Force Attacks
+
+Attackers use automated tools to try thousands of username/password combinations against:
+- **Winbox** (port 8291)
+- **SSH** (port 22)
+- **Telnet** (port 23)
+- **HTTP/HTTPS WebFig** (ports 80/443)
+
+If the default admin account has no password (factory default), the device is compromised instantly.
+
+### 2. Exploitation of Known Vulnerabilities
+
+Several critical CVEs have been discovered in RouterOS:
+
+| CVE | Year | Type | Impact |
+|-----|------|------|--------|
+| CVE-2018-14847 | 2018 | Winbox auth bypass | Read credentials from memory |
+| CVE-2019-3977 | 2019 | Downgrade attack | Force old vulnerable RouterOS |
+| CVE-2019-3978 | 2019 | DNS cache poisoning | Man-in-the-middle |
+| CVE-2023-30799 | 2023 | Privilege escalation | Root on RouterOS |
+
+### 3. Credential Theft via Winbox Exploit
+
+The **Chimay Blue** exploit (CVE-2018-14847) allowed unauthenticated attackers to read the user database file from RouterOS, exposing all usernames and passwords in plaintext. Devices running RouterOS < 6.42.1 are vulnerable.
+
+### 4. Man-in-the-Middle (MITM) Attacks
+
+Attackers on the same network segment can:
+- ARP-spoof to intercept traffic
+- Capture Winbox sessions (older Winbox used no encryption)
+- Inject routes via BGP if the router peers with untrusted neighbors
+
+### 5. Botnet Recruitment (Mēris Botnet)
+
+In 2021 MikroTik routers were weaponized into the **Mēris botnet**, which conducted record-breaking DDoS attacks. Attackers exploited unpatched routers (CVE-2018-14847) and installed SOCKS proxies to route attack traffic.
+
+### 6. Port Scanning and Service Fingerprinting
+
+Attackers use tools like Shodan, nmap, and masscan to find MikroTik devices exposed on the internet. Once identified, they probe for:
+- Open Winbox port
+- Default credentials
+- Outdated RouterOS banners
+
+\`\`\`bash
+# What attackers run against your router (for awareness):
+nmap -sV -p 22,23,80,443,8291 <target-ip>
+\`\`\`
+
+### 7. DNS Hijacking
+
+Compromised MikroTik routers have been used to change DNS settings, redirecting users to malicious sites. This was observed in the **VPNFilter** malware campaign.
+
+### 8. DDoS Amplification
+
+MikroTik devices with open DNS resolvers or NTP services can be abused for amplification attacks — the attacker sends small spoofed packets and the router sends large replies to the victim.
+
+### Mitigation Summary
+
+- **Patch RouterOS** to the latest stable version.
+- **Change default credentials** immediately.
+- **Disable unused services** (Telnet, FTP, API if not needed).
+- **Restrict management access** to trusted IPs only.
+- **Use strong firewall rules** to block management ports from WAN.
+
+The following posts in this series go deep on each mitigation technique.`,
+    contentFa: `## انواع حملات علیه دستگاه‌های میکروتیک
+
+روترهای میکروتیک قدرتمند و پرکاربرد هستند، که همین موضوع آن‌ها را به هدف جذابی برای مهاجمان تبدیل می‌کند. درک اینکه چه حملاتی علیه دستگاه‌های میکروتیک استفاده می‌شود، اولین قدم برای دفاع از آن‌هاست.
+
+### ۱. حملات Brute Force
+
+مهاجمان از ابزارهای خودکار استفاده می‌کنند تا هزاران ترکیب نام‌کاربری/رمزعبور را در برابر این سرویس‌ها امتحان کنند:
+- **Winbox** (پورت ۸۲۹۱)
+- **SSH** (پورت ۲۲)
+- **Telnet** (پورت ۲۳)
+- **HTTP/HTTPS WebFig** (پورت‌های ۸۰/۴۴۳)
+
+اگر حساب admin پیش‌فرض رمزعبور نداشته باشد (تنظیمات کارخانه)، دستگاه فوراً در اختیار مهاجم قرار می‌گیرد.
+
+### ۲. بهره‌برداری از آسیب‌پذیری‌های شناخته‌شده
+
+چندین CVE بحرانی در RouterOS کشف شده:
+
+| CVE | سال | نوع | تأثیر |
+|-----|------|------|--------|
+| CVE-2018-14847 | ۲۰۱۸ | دور زدن احراز هویت Winbox | خواندن اعتبارنامه از حافظه |
+| CVE-2019-3977 | ۲۰۱۹ | حمله Downgrade | اجبار به نسخه قدیمی آسیب‌پذیر |
+| CVE-2019-3978 | ۲۰۱۹ | مسموم‌سازی کش DNS | مرد میانی |
+| CVE-2023-30799 | ۲۰۲۳ | افزایش امتیاز | دسترسی root به RouterOS |
+
+### ۳. سرقت اعتبارنامه از طریق اکسپلویت Winbox
+
+اکسپلویت **Chimay Blue** (CVE-2018-14847) به مهاجمان بدون احراز هویت اجازه می‌داد فایل پایگاه داده کاربران RouterOS را بخوانند و همه نام‌های کاربری و رمزهای عبور به‌صورت متن ساده افشا می‌شدند. دستگاه‌هایی که RouterOS < 6.42.1 دارند آسیب‌پذیرند.
+
+### ۴. حملات مرد میانی (MITM)
+
+مهاجمانی که در یک شبکه هستند می‌توانند:
+- ARP spoofing انجام دهند تا ترافیک را رهگیری کنند
+- جلسات Winbox را ضبط کنند (نسخه‌های قدیمی Winbox رمزنگاری نداشتند)
+- از طریق BGP مسیرهای جعلی تزریق کنند
+
+### ۵. جذب در بات‌نت (بات‌نت Mēris)
+
+در سال ۲۰۲۱ روترهای میکروتیک به بات‌نت **Mēris** تبدیل شدند که حملات DDoS رکوردشکن انجام داد. مهاجمان روترهای بدون وصله (CVE-2018-14847) را اکسپلویت کردند و پروکسی SOCKS نصب کردند.
+
+### ۶. اسکن پورت و شناسایی سرویس
+
+مهاجمان از ابزارهایی مثل Shodan، nmap و masscan استفاده می‌کنند تا دستگاه‌های میکروتیک در اینترنت را پیدا کنند:
+
+\`\`\`bash
+# چیزی که مهاجمان علیه روتر شما اجرا می‌کنند (برای آگاهی):
+nmap -sV -p 22,23,80,443,8291 <target-ip>
+\`\`\`
+
+### ۷. هایجک DNS
+
+روترهای میکروتیک هک‌شده برای تغییر تنظیمات DNS استفاده شده‌اند که کاربران را به سایت‌های مخرب هدایت می‌کند. این در کمپین بدافزار **VPNFilter** مشاهده شد.
+
+### ۸. تقویت DDoS
+
+دستگاه‌های میکروتیک با DNS resolver باز یا سرویس‌های NTP می‌توانند برای حملات تقویت سوءاستفاده شوند.
+
+### خلاصه اقدامات پیشگیرانه
+
+- **RouterOS را به آخرین نسخه پایدار به‌روز کنید.**
+- **اعتبارنامه‌های پیش‌فرض را فوراً تغییر دهید.**
+- **سرویس‌های استفاده‌نشده را غیرفعال کنید** (Telnet، FTP، API).
+- **دسترسی مدیریتی را محدود کنید** فقط به IPهای مورد اعتماد.
+- **از قوانین فایروال قوی استفاده کنید** تا پورت‌های مدیریتی از WAN مسدود شوند.
+
+پست‌های بعدی این سری به‌صورت عمیق هر تکنیک محافظتی را بررسی می‌کنند.`,
+  },
+  'mikrotik-brute-force-protection': {
+    contentEn: `## Protecting MikroTik Against Brute Force Attacks
+
+Brute force attacks try thousands of login combinations against your management interfaces. This post shows you how to detect and block them automatically using RouterOS firewall rules.
+
+### How Brute Force Works
+
+An attacker runs a tool like Hydra or Medusa:
+
+\`\`\`bash
+hydra -l admin -P /usr/share/wordlists/rockyou.txt 192.168.1.1 ssh
+\`\`\`
+
+Within minutes they can attempt tens of thousands of passwords. Without protection, RouterOS will try each one.
+
+### Step 1 — Rename or Disable the Default Admin
+
+\`\`\`
+/user set [find name=admin] name=netadmin
+\`\`\`
+
+Or create a new admin and disable the default:
+
+\`\`\`
+/user add name=netadmin password=Str0ng!Pass group=full
+/user disable admin
+\`\`\`
+
+### Step 2 — SSH Brute Force Protection with Address Lists
+
+This technique uses address lists to temporarily ban IPs that fail SSH login too many times:
+
+\`\`\`
+/ip firewall filter
+
+# Stage 1: If IP is already in the blocklist, drop immediately
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_blacklist action=drop comment="Drop SSH blacklist"
+
+# Stage 2: Third failure within 1 minute → blacklist for 10 days
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_stage3 action=add-src-to-address-list address-list=ssh_blacklist address-list-timeout=10d comment="SSH stage3 → blacklist"
+
+# Stage 3: Second failure → move to stage 3
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_stage2 action=add-src-to-address-list address-list=ssh_stage3 address-list-timeout=1m
+
+# Stage 4: First failure → move to stage 2
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_stage1 action=add-src-to-address-list address-list=ssh_stage2 address-list-timeout=1m
+
+# Stage 5: New connection attempt → add to stage 1
+add chain=input protocol=tcp dst-port=22 connection-state=new action=add-src-to-address-list address-list=ssh_stage1 address-list-timeout=1m
+\`\`\`
+
+### Step 3 — Winbox Brute Force Protection
+
+Apply the same logic to Winbox port 8291:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=8291 src-address-list=winbox_blacklist action=drop comment="Drop Winbox blacklist"
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage3 action=add-src-to-address-list address-list=winbox_blacklist address-list-timeout=10d
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage2 action=add-src-to-address-list address-list=wb_stage3 address-list-timeout=1m
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage1 action=add-src-to-address-list address-list=wb_stage2 address-list-timeout=1m
+add chain=input protocol=tcp dst-port=8291 connection-state=new action=add-src-to-address-list address-list=wb_stage1 address-list-timeout=1m
+\`\`\`
+
+### Step 4 — Rate Limit New Connections
+
+An alternative (or complement) is to rate-limit new connections per source IP:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=22 connection-state=new action=jump jump-target=ssh-rate
+/ip firewall filter
+add chain=ssh-rate src-address-list=ssh-rl action=drop
+add chain=ssh-rate action=add-src-to-address-list address-list=ssh-rl address-list-timeout=60s limit=3,5:packet
+add chain=ssh-rate action=accept
+\`\`\`
+
+### Step 5 — Change Default Ports
+
+Move SSH from 22 to a non-standard port:
+
+\`\`\`
+/ip service set ssh port=22222
+\`\`\`
+
+This won't stop a determined attacker but eliminates most automated scanners.
+
+### Step 6 — Whitelist Your Management IP
+
+The most effective protection: only allow your own IP to reach management services:
+
+\`\`\`
+/ip firewall filter
+add chain=input src-address=203.0.113.10 action=accept comment="My management IP"
+add chain=input protocol=tcp dst-port=22,8291,80,443 action=drop comment="Block all management from WAN"
+\`\`\`
+
+### Verify the Blacklist is Working
+
+\`\`\`
+/ip firewall address-list print where list=ssh_blacklist
+\`\`\`
+
+You should see IPs accumulating if any brute force is hitting the router.
+
+### Summary Checklist
+
+- [ ] Renamed/disabled default admin
+- [ ] SSH brute force stages configured
+- [ ] Winbox brute force stages configured
+- [ ] Management restricted to whitelist IPs
+- [ ] Default service ports changed`,
+    contentFa: `## محافظت از میکروتیک در برابر حملات Brute Force
+
+حملات brute force هزاران ترکیب ورود به سیستم را روی رابط‌های مدیریتی شما امتحان می‌کنند. این پست نشان می‌دهد چطور با استفاده از قوانین فایروال RouterOS، آن‌ها را به‌صورت خودکار شناسایی و مسدود کنید.
+
+### چطور Brute Force کار می‌کند
+
+مهاجم ابزاری مثل Hydra یا Medusa اجرا می‌کند:
+
+\`\`\`bash
+hydra -l admin -P /usr/share/wordlists/rockyou.txt 192.168.1.1 ssh
+\`\`\`
+
+در عرض چند دقیقه می‌تواند ده‌ها هزار رمز عبور را امتحان کند. بدون محافظت، RouterOS هر کدام را امتحان می‌کند.
+
+### مرحله ۱ — تغییر نام یا غیرفعال کردن admin پیش‌فرض
+
+\`\`\`
+/user set [find name=admin] name=netadmin
+\`\`\`
+
+یا یک admin جدید بسازید و admin پیش‌فرض را غیرفعال کنید:
+
+\`\`\`
+/user add name=netadmin password=Str0ng!Pass group=full
+/user disable admin
+\`\`\`
+
+### مرحله ۲ — محافظت SSH با Address Lists
+
+این تکنیک از address list ها برای قرنطینه موقت IPهایی که چند بار در SSH شکست خورده‌اند استفاده می‌کند:
+
+\`\`\`
+/ip firewall filter
+
+# مرحله ۱: اگر IP در لیست سیاه است، فوراً drop کن
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_blacklist action=drop comment="Drop SSH blacklist"
+
+# مرحله ۲: سومین شکست در ۱ دقیقه → blacklist برای ۱۰ روز
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_stage3 action=add-src-to-address-list address-list=ssh_blacklist address-list-timeout=10d
+
+# مرحله ۳: دومین شکست → انتقال به stage 3
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_stage2 action=add-src-to-address-list address-list=ssh_stage3 address-list-timeout=1m
+
+# مرحله ۴: اولین شکست → انتقال به stage 2
+add chain=input protocol=tcp dst-port=22 src-address-list=ssh_stage1 action=add-src-to-address-list address-list=ssh_stage2 address-list-timeout=1m
+
+# مرحله ۵: اتصال جدید → اضافه به stage 1
+add chain=input protocol=tcp dst-port=22 connection-state=new action=add-src-to-address-list address-list=ssh_stage1 address-list-timeout=1m
+\`\`\`
+
+### مرحله ۳ — محافظت Winbox
+
+همان منطق را برای پورت Winbox 8291 اعمال کنید:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=8291 src-address-list=winbox_blacklist action=drop
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage3 action=add-src-to-address-list address-list=winbox_blacklist address-list-timeout=10d
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage2 action=add-src-to-address-list address-list=wb_stage3 address-list-timeout=1m
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage1 action=add-src-to-address-list address-list=wb_stage2 address-list-timeout=1m
+add chain=input protocol=tcp dst-port=8291 connection-state=new action=add-src-to-address-list address-list=wb_stage1 address-list-timeout=1m
+\`\`\`
+
+### مرحله ۴ — تغییر پورت‌های پیش‌فرض
+
+SSH را از ۲۲ به یک پورت غیر استاندارد منتقل کنید:
+
+\`\`\`
+/ip service set ssh port=22222
+\`\`\`
+
+### مرحله ۵ — Whitelist IP مدیریتی
+
+مؤثرترین راه: فقط به IP خودتان اجازه دهید به سرویس‌های مدیریتی دسترسی داشته باشد:
+
+\`\`\`
+/ip firewall filter
+add chain=input src-address=203.0.113.10 action=accept comment="IP مدیریتی من"
+add chain=input protocol=tcp dst-port=22,8291,80,443 action=drop comment="مسدود کردن مدیریت از WAN"
+\`\`\`
+
+### تأیید عملکرد Blacklist
+
+\`\`\`
+/ip firewall address-list print where list=ssh_blacklist
+\`\`\`
+
+باید IPهایی را ببینید که در حال تجمع هستند اگر brute force روی روتر در حال اتفاق باشد.`,
+  },
+  'mikrotik-port-knocking-setup': {
+    contentEn: `## Port Knocking on MikroTik
+
+Port knocking is a method of opening ports on a firewall by sending a sequence of connection attempts to pre-defined closed ports. Until the correct knock sequence is sent, management ports appear completely closed — even to scanners.
+
+### How Port Knocking Works
+
+1. Your management port (e.g., SSH on 22) is blocked by default.
+2. You "knock" on a sequence of ports — e.g., 1111, 2222, 3333.
+3. The firewall tracks the sequence. If all three are knocked in order within a time window, your IP is added to an "allowed" list.
+4. SSH is then open to your IP for a limited time.
+
+### Implementing Port Knocking in RouterOS
+
+We use address lists and firewall rules to track the knock sequence:
+
+\`\`\`
+/ip firewall filter
+
+# Rule 1: Accept SSH for IPs that completed the sequence
+add chain=input protocol=tcp dst-port=22 src-address-list=knock_allowed action=accept comment="SSH open for knockers"
+
+# Rule 2: Stage 3 knock — final knock adds to allowed list
+add chain=input protocol=tcp dst-port=3333 src-address-list=knock_stage2 action=add-src-to-address-list address-list=knock_allowed address-list-timeout=30m comment="Knock stage 3 → allowed"
+
+# Rule 3: Stage 2 knock
+add chain=input protocol=tcp dst-port=2222 src-address-list=knock_stage1 action=add-src-to-address-list address-list=knock_stage2 address-list-timeout=15s comment="Knock stage 2"
+
+# Rule 4: Stage 1 knock — first knock
+add chain=input protocol=tcp dst-port=1111 connection-state=new action=add-src-to-address-list address-list=knock_stage1 address-list-timeout=15s comment="Knock stage 1"
+
+# Rule 5: Drop SSH from everyone else
+add chain=input protocol=tcp dst-port=22 action=drop comment="Default drop SSH"
+\`\`\`
+
+**Key parameters:**
+- \`address-list-timeout=15s\` — the user must complete the sequence within 15 seconds
+- \`address-list-timeout=30m\` — SSH access is granted for 30 minutes
+
+### Sending the Knock Sequence
+
+**From Linux:**
+\`\`\`bash
+knock 203.0.113.1 1111 2222 3333
+\`\`\`
+(requires \`knockd\` client: \`apt install knockd\`)
+
+Or using nmap:
+\`\`\`bash
+nmap -Pn --host-timeout 100 --max-retries 0 -p 1111 203.0.113.1
+nmap -Pn --host-timeout 100 --max-retries 0 -p 2222 203.0.113.1
+nmap -Pn --host-timeout 100 --max-retries 0 -p 3333 203.0.113.1
+\`\`\`
+
+**From Windows (PowerShell):**
+\`\`\`powershell
+$ip = "203.0.113.1"
+foreach ($port in 1111,2222,3333) {
+    try { [System.Net.Sockets.TcpClient]::new($ip, $port) } catch {}
+    Start-Sleep -Milliseconds 200
+}
+\`\`\`
+
+### Verify It Works
+
+After knocking, check if your IP is in the allowed list:
+\`\`\`
+/ip firewall address-list print where list=knock_allowed
+\`\`\`
+
+Then try SSHing in — it should work. After the 30-minute timeout, the entry disappears and SSH closes again.
+
+### Important Notes
+
+- Port knocking is **security through obscurity** — it delays attackers but does not replace strong passwords or key-based SSH auth.
+- Combine it with SSH key authentication for maximum security.
+- Choose non-obvious port numbers (not 1111, 2222 — use random high ports in production).
+
+### Combining with SSH Key Auth
+
+\`\`\`
+/ip ssh set strong-crypto=yes
+\`\`\`
+
+Upload your public key to the router:
+\`\`\`
+/user ssh-keys import public-key-file=id_rsa.pub user=netadmin
+\`\`\`
+
+Now even if someone discovers the knock sequence, they still need the private key.`,
+    contentFa: `## Port Knocking در میکروتیک
+
+Port Knocking روشی است برای باز کردن پورت‌ها روی فایروال با ارسال یک دنباله از تلاش‌های اتصال به پورت‌های بسته از پیش تعریف‌شده. تا زمانی که دنباله صحیح knock ارسال نشود، پورت‌های مدیریتی کاملاً بسته به نظر می‌رسند.
+
+### چطور Port Knocking کار می‌کند
+
+۱. پورت مدیریتی شما (مثلاً SSH روی ۲۲) به‌طور پیش‌فرض مسدود است.
+۲. یک دنباله از پورت‌ها را knock می‌کنید — مثلاً ۱۱۱۱، ۲۲۲۲، ۳۳۳۳.
+۳. فایروال دنباله را دنبال می‌کند. اگر هر سه به ترتیب در یک پنجره زمانی زده شوند، IP شما به لیست "مجاز" اضافه می‌شود.
+۴. سپس SSH برای IP شما برای مدت محدود باز می‌شود.
+
+### پیاده‌سازی Port Knocking در RouterOS
+
+\`\`\`
+/ip firewall filter
+
+# قانون ۱: قبول SSH برای IPهایی که دنباله را کامل کرده‌اند
+add chain=input protocol=tcp dst-port=22 src-address-list=knock_allowed action=accept comment="SSH open for knockers"
+
+# قانون ۲: knock مرحله ۳ — knock نهایی به لیست مجاز اضافه می‌کند
+add chain=input protocol=tcp dst-port=3333 src-address-list=knock_stage2 action=add-src-to-address-list address-list=knock_allowed address-list-timeout=30m
+
+# قانون ۳: knock مرحله ۲
+add chain=input protocol=tcp dst-port=2222 src-address-list=knock_stage1 action=add-src-to-address-list address-list=knock_stage2 address-list-timeout=15s
+
+# قانون ۴: knock مرحله ۱ — اولین knock
+add chain=input protocol=tcp dst-port=1111 connection-state=new action=add-src-to-address-list address-list=knock_stage1 address-list-timeout=15s
+
+# قانون ۵: Drop SSH برای بقیه
+add chain=input protocol=tcp dst-port=22 action=drop comment="Default drop SSH"
+\`\`\`
+
+### ارسال دنباله knock
+
+**از لینوکس:**
+\`\`\`bash
+knock 203.0.113.1 1111 2222 3333
+\`\`\`
+
+یا با استفاده از nmap:
+\`\`\`bash
+nmap -Pn --host-timeout 100 --max-retries 0 -p 1111 203.0.113.1
+nmap -Pn --host-timeout 100 --max-retries 0 -p 2222 203.0.113.1
+nmap -Pn --host-timeout 100 --max-retries 0 -p 3333 203.0.113.1
+\`\`\`
+
+**از ویندوز (PowerShell):**
+\`\`\`powershell
+$ip = "203.0.113.1"
+foreach ($port in 1111,2222,3333) {
+    try { [System.Net.Sockets.TcpClient]::new($ip, $port) } catch {}
+    Start-Sleep -Milliseconds 200
+}
+\`\`\`
+
+### تأیید عملکرد
+
+بعد از knock، بررسی کنید IP شما در لیست مجاز است:
+\`\`\`
+/ip firewall address-list print where list=knock_allowed
+\`\`\`
+
+### نکات مهم
+
+- Port knocking **امنیت از طریق مبهم‌سازی** است — مهاجمان را تأخیر می‌دهد اما جایگزین رمزهای قوی یا احراز هویت SSH با کلید نمی‌شود.
+- برای امنیت حداکثری آن را با احراز هویت کلید SSH ترکیب کنید.
+- در محیط تولید از شماره پورت‌های تصادفی بالا استفاده کنید (نه ۱۱۱۱ و ۲۲۲۲).`,
+  },
+  'mikrotik-firewall-hardening-checklist': {
+    contentEn: `## MikroTik Firewall Hardening Checklist
+
+A newly configured MikroTik device — even with IP addresses and routing set up — is not secure by default. This post gives you a complete hardening checklist that you can apply to any MikroTik router.
+
+### 1. Set a Strong Admin Password
+
+\`\`\`
+/user set [find name=admin] password=V3ryStr0ng!P@ss
+\`\`\`
+
+Or create a new admin and disable the default:
+\`\`\`
+/user add name=netadmin password=V3ryStr0ng!P@ss group=full
+/user disable admin
+\`\`\`
+
+### 2. Disable Unused Services
+
+Turn off every service you do not actively use:
+
+\`\`\`
+/ip service
+set telnet disabled=yes
+set ftp disabled=yes
+set www disabled=yes       # WebFig HTTP — use HTTPS instead
+set api disabled=yes
+set api-ssl disabled=yes   # Enable only if you use API
+set ssh port=2222          # Change from default 22
+set www-ssl port=4443      # Change HTTPS port
+\`\`\`
+
+### 3. Restrict Services to Management IP
+
+Bind each active service to your management IP only:
+
+\`\`\`
+/ip service
+set ssh address=192.168.88.0/24
+set www-ssl address=192.168.88.0/24
+set winbox address=192.168.88.0/24
+\`\`\`
+
+### 4. Baseline Firewall Input Chain
+
+This is the core protection for the router itself:
+
+\`\`\`
+/ip firewall filter
+
+# Allow established/related (keep existing sessions working)
+add chain=input connection-state=established,related action=accept
+
+# Drop invalid packets
+add chain=input connection-state=invalid action=drop
+
+# Allow ICMP ping (optional — remove to hide the router)
+add chain=input protocol=icmp action=accept
+
+# Allow management from LAN only
+add chain=input src-address=192.168.88.0/24 action=accept
+
+# Drop everything else to input
+add chain=input action=drop comment="Default deny input"
+\`\`\`
+
+### 5. Baseline Firewall Forward Chain
+
+Protect traffic forwarded through the router:
+
+\`\`\`
+/ip firewall filter
+add chain=forward connection-state=established,related action=accept
+add chain=forward connection-state=invalid action=drop
+# Add specific allow rules here for your network
+add chain=forward action=drop comment="Default deny forward"
+\`\`\`
+
+### 6. Disable Neighbor Discovery (if not needed)
+
+MikroTik's **Neighbor Discovery Protocol (MNDP)** announces the device on the network. Disable on WAN:
+
+\`\`\`
+/ip neighbor discovery-settings set discover-interface-list=LAN
+\`\`\`
+
+### 7. Disable MAC Server on WAN
+
+MAC-based Winbox access should only work on LAN:
+
+\`\`\`
+/tool mac-server set allowed-interface-list=LAN
+/tool mac-server ping set enabled=no
+\`\`\`
+
+### 8. Disable Bandwidth Test Server
+
+\`\`\`
+/tool bandwidth-server set enabled=no
+\`\`\`
+
+### 9. Enable Firewall for Bridge Traffic
+
+If using bridges, enable firewall processing for bridged packets:
+
+\`\`\`
+/bridge settings set use-ip-firewall=yes
+\`\`\`
+
+### 10. Secure DNS
+
+If not running a public DNS server, restrict DNS queries:
+
+\`\`\`
+/ip dns set allow-remote-requests=no
+\`\`\`
+
+### 11. Protect Against Common Attacks
+
+\`\`\`
+/ip firewall filter
+# Block port scanners
+add chain=input protocol=tcp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w
+add chain=input src-address-list=port-scanners action=drop
+
+# Block invalid TCP flags
+add chain=input protocol=tcp tcp-flags=!fin,!syn,!rst,!ack action=drop
+\`\`\`
+
+### 12. Enable Strong Crypto for SSH and Winbox
+
+\`\`\`
+/ip ssh set strong-crypto=yes
+\`\`\`
+
+### Hardening Verification Checklist
+
+After applying:
+\`\`\`
+/ip service print                    # Verify disabled services
+/ip firewall filter print            # Verify filter rules
+/tool mac-server print               # Verify MAC server restricted
+/ip neighbor discovery-settings print # Verify discovery restricted
+/ip dns print                        # Verify remote requests disabled
+\`\`\`
+
+Save config immediately after hardening:
+\`\`\`
+/system backup save name=post-hardening
+\`\`\``,
+    contentFa: `## چک‌لیست سخت‌افزاری فایروال میکروتیک
+
+یک دستگاه میکروتیک تازه پیکربندی‌شده — حتی با آی‌پی و روتینگ تنظیم‌شده — به‌طور پیش‌فرض امن نیست. این پست یک چک‌لیست کامل hardening ارائه می‌دهد که می‌توانید روی هر روتر میکروتیک اعمال کنید.
+
+### ۱. تنظیم رمز عبور قوی برای ادمین
+
+\`\`\`
+/user set [find name=admin] password=V3ryStr0ng!P@ss
+\`\`\`
+
+یا یک ادمین جدید بسازید و admin پیش‌فرض را غیرفعال کنید:
+\`\`\`
+/user add name=netadmin password=V3ryStr0ng!P@ss group=full
+/user disable admin
+\`\`\`
+
+### ۲. غیرفعال کردن سرویس‌های استفاده‌نشده
+
+هر سرویسی که فعالانه استفاده نمی‌کنید را خاموش کنید:
+
+\`\`\`
+/ip service
+set telnet disabled=yes
+set ftp disabled=yes
+set www disabled=yes
+set api disabled=yes
+set api-ssl disabled=yes
+set ssh port=2222
+set www-ssl port=4443
+\`\`\`
+
+### ۳. محدود کردن سرویس‌ها به IP مدیریتی
+
+هر سرویس فعال را فقط به IP مدیریتی شما متصل کنید:
+
+\`\`\`
+/ip service
+set ssh address=192.168.88.0/24
+set www-ssl address=192.168.88.0/24
+set winbox address=192.168.88.0/24
+\`\`\`
+
+### ۴. فایروال پایه برای Input Chain
+
+\`\`\`
+/ip firewall filter
+
+# قبول established/related
+add chain=input connection-state=established,related action=accept
+
+# Drop پکت‌های invalid
+add chain=input connection-state=invalid action=drop
+
+# قبول ICMP
+add chain=input protocol=icmp action=accept
+
+# قبول مدیریت فقط از LAN
+add chain=input src-address=192.168.88.0/24 action=accept
+
+# Drop همه بقیه
+add chain=input action=drop comment="Default deny input"
+\`\`\`
+
+### ۵. فایروال پایه برای Forward Chain
+
+\`\`\`
+/ip firewall filter
+add chain=forward connection-state=established,related action=accept
+add chain=forward connection-state=invalid action=drop
+add chain=forward action=drop comment="Default deny forward"
+\`\`\`
+
+### ۶. غیرفعال کردن Neighbor Discovery روی WAN
+
+\`\`\`
+/ip neighbor discovery-settings set discover-interface-list=LAN
+\`\`\`
+
+### ۷. غیرفعال کردن MAC Server روی WAN
+
+\`\`\`
+/tool mac-server set allowed-interface-list=LAN
+/tool mac-server ping set enabled=no
+\`\`\`
+
+### ۸. غیرفعال کردن Bandwidth Test Server
+
+\`\`\`
+/tool bandwidth-server set enabled=no
+\`\`\`
+
+### ۹. محدود کردن DNS
+
+\`\`\`
+/ip dns set allow-remote-requests=no
+\`\`\`
+
+### ۱۰. فعال کردن رمزنگاری قوی برای SSH
+
+\`\`\`
+/ip ssh set strong-crypto=yes
+\`\`\`
+
+### تأیید بعد از Hardening
+
+\`\`\`
+/ip service print
+/ip firewall filter print
+/tool mac-server print
+/ip dns print
+\`\`\`
+
+فوراً بعد از hardening پیکربندی را ذخیره کنید:
+\`\`\`
+/system backup save name=post-hardening
+\`\`\``,
+  },
+  'mikrotik-ddos-protection-scripts': {
+    contentEn: `## DDoS Protection Scripts for MikroTik
+
+MikroTik RouterOS can be configured to detect and mitigate volumetric DDoS attacks. This post covers practical scripts and rules you can deploy immediately.
+
+### Understanding DDoS on MikroTik
+
+When a DDoS attack hits your router:
+- CPU spikes to 100%
+- Legitimate traffic is dropped
+- The router may become unresponsive
+
+RouterOS can't stop a true volumetric attack at the link level, but it can protect itself and route traffic more intelligently.
+
+### 1. Block Fragmented Packets
+
+DDoS attacks often use fragmented IP packets to overwhelm the router:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp dst-port=0-65535 fragment=yes action=drop comment="Drop fragmented UDP"
+add chain=input protocol=tcp fragment=yes action=drop comment="Drop fragmented TCP"
+\`\`\`
+
+### 2. Connection Rate Limiting
+
+Limit the number of new connections per second from a single IP:
+
+\`\`\`
+/ip firewall filter
+add chain=input connection-state=new action=jump jump-target=conn-rate-limit
+/ip firewall filter
+add chain=conn-rate-limit src-address-list=conn-flood action=drop
+add chain=conn-rate-limit action=add-src-to-address-list address-list=conn-flood address-list-timeout=5m limit=20,10:packet
+add chain=conn-rate-limit action=accept
+\`\`\`
+
+Explanation: If a single IP creates more than 20 new connections in 10 seconds, it gets blacklisted for 5 minutes.
+
+### 3. ICMP Flood Protection
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=icmp icmp-options=8:0 action=jump jump-target=icmp-rate
+/ip firewall filter
+add chain=icmp-rate src-address-list=icmp-flood action=drop
+add chain=icmp-rate action=add-src-to-address-list address-list=icmp-flood address-list-timeout=5m limit=10,5:packet
+add chain=icmp-rate action=accept
+\`\`\`
+
+### 4. SYN Flood Protection
+
+SYN floods exploit the TCP handshake. Detect and block them:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp tcp-flags=syn connection-state=new action=jump jump-target=syn-protect
+/ip firewall filter
+add chain=syn-protect src-address-list=syn-flood action=drop
+add chain=syn-protect action=add-src-to-address-list address-list=syn-flood address-list-timeout=10m limit=50,5:packet
+add chain=syn-protect action=accept
+\`\`\`
+
+### 5. UDP Flood Protection
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp action=jump jump-target=udp-protect
+/ip firewall filter
+add chain=udp-protect src-address-list=udp-flood action=drop
+add chain=udp-protect action=add-src-to-address-list address-list=udp-flood address-list-timeout=10m limit=100,50:packet
+add chain=udp-protect action=accept
+\`\`\`
+
+### 6. Block Bogon IP Addresses
+
+Bogons are IP ranges that should never appear on the internet. Block them at input:
+
+\`\`\`
+/ip firewall address-list
+add list=bogons address=0.0.0.0/8
+add list=bogons address=10.0.0.0/8
+add list=bogons address=100.64.0.0/10
+add list=bogons address=127.0.0.0/8
+add list=bogons address=169.254.0.0/16
+add list=bogons address=172.16.0.0/12
+add list=bogons address=192.0.0.0/24
+add list=bogons address=192.168.0.0/16
+add list=bogons address=198.18.0.0/15
+add list=bogons address=240.0.0.0/4
+
+/ip firewall filter
+add chain=input src-address-list=bogons action=drop comment="Drop bogon sources"
+add chain=forward src-address-list=bogons action=drop
+\`\`\`
+
+### 7. Automatic DDoS Detection Script
+
+This script monitors connection counts and alerts you:
+
+\`\`\`
+/system script
+add name=ddos-check source={
+    :local conns [/ip firewall connection print count-only]
+    :if ($conns > 5000) do={
+        /log warning "DDoS suspected: $conns active connections"
+        /tool e-mail send to="admin@example.com" subject="DDoS Alert" body="$conns connections active on router"
+    }
+}
+
+/system scheduler
+add name=ddos-monitor interval=1m on-event=ddos-check
+\`\`\`
+
+### 8. CPU Protection — Drop if Overloaded
+
+\`\`\`
+/ip firewall filter
+add chain=input action=drop comment="Overload protection" disabled=yes
+\`\`\`
+
+During an attack you can temporarily enable this rule to drop all non-essential input traffic, protecting the router's CPU while you investigate.
+
+### Testing Your Rules
+
+Check address lists to see if IPs are being flagged:
+\`\`\`
+/ip firewall address-list print where list~"flood"
+\`\`\`
+
+Check connection count:
+\`\`\`
+/ip firewall connection print count-only
+\`\`\`
+
+Monitor CPU:
+\`\`\`
+/system resource print
+\`\`\``,
+    contentFa: `## اسکریپت‌های محافظت در برابر DDoS برای میکروتیک
+
+RouterOS میکروتیک می‌تواند برای شناسایی و کاهش حملات DDoS حجمی پیکربندی شود. این پست اسکریپت‌ها و قوانین عملی را که می‌توانید فوراً اجرا کنید پوشش می‌دهد.
+
+### ۱. مسدود کردن بسته‌های Fragmented
+
+حملات DDoS اغلب از بسته‌های IP fragmented استفاده می‌کنند:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp dst-port=0-65535 fragment=yes action=drop comment="Drop fragmented UDP"
+add chain=input protocol=tcp fragment=yes action=drop comment="Drop fragmented TCP"
+\`\`\`
+
+### ۲. محدود کردن نرخ اتصال
+
+تعداد اتصالات جدید در ثانیه از یک IP را محدود کنید:
+
+\`\`\`
+/ip firewall filter
+add chain=input connection-state=new action=jump jump-target=conn-rate-limit
+/ip firewall filter
+add chain=conn-rate-limit src-address-list=conn-flood action=drop
+add chain=conn-rate-limit action=add-src-to-address-list address-list=conn-flood address-list-timeout=5m limit=20,10:packet
+add chain=conn-rate-limit action=accept
+\`\`\`
+
+### ۳. محافظت در برابر ICMP Flood
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=icmp icmp-options=8:0 action=jump jump-target=icmp-rate
+/ip firewall filter
+add chain=icmp-rate src-address-list=icmp-flood action=drop
+add chain=icmp-rate action=add-src-to-address-list address-list=icmp-flood address-list-timeout=5m limit=10,5:packet
+add chain=icmp-rate action=accept
+\`\`\`
+
+### ۴. محافظت در برابر SYN Flood
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp tcp-flags=syn connection-state=new action=jump jump-target=syn-protect
+/ip firewall filter
+add chain=syn-protect src-address-list=syn-flood action=drop
+add chain=syn-protect action=add-src-to-address-list address-list=syn-flood address-list-timeout=10m limit=50,5:packet
+add chain=syn-protect action=accept
+\`\`\`
+
+### ۵. محافظت در برابر UDP Flood
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp action=jump jump-target=udp-protect
+/ip firewall filter
+add chain=udp-protect src-address-list=udp-flood action=drop
+add chain=udp-protect action=add-src-to-address-list address-list=udp-flood address-list-timeout=10m limit=100,50:packet
+add chain=udp-protect action=accept
+\`\`\`
+
+### ۶. مسدود کردن IPهای Bogon
+
+\`\`\`
+/ip firewall address-list
+add list=bogons address=0.0.0.0/8
+add list=bogons address=10.0.0.0/8
+add list=bogons address=127.0.0.0/8
+add list=bogons address=169.254.0.0/16
+add list=bogons address=172.16.0.0/12
+add list=bogons address=192.168.0.0/16
+add list=bogons address=240.0.0.0/4
+
+/ip firewall filter
+add chain=input src-address-list=bogons action=drop comment="Drop bogon sources"
+add chain=forward src-address-list=bogons action=drop
+\`\`\`
+
+### ۷. اسکریپت تشخیص خودکار DDoS
+
+\`\`\`
+/system script
+add name=ddos-check source={
+    :local conns [/ip firewall connection print count-only]
+    :if ($conns > 5000) do={
+        /log warning "DDoS suspected: $conns active connections"
+    }
+}
+
+/system scheduler
+add name=ddos-monitor interval=1m on-event=ddos-check
+\`\`\`
+
+### بررسی قوانین
+
+\`\`\`
+/ip firewall address-list print where list~"flood"
+/ip firewall connection print count-only
+/system resource print
+\`\`\``,
+  },
+  'mikrotik-chimay-blue-vulnerability': {
+    contentEn: `## CVE-2018-14847: The Chimay Blue MikroTik Vulnerability
+
+In April 2018, a WikiLeaks release called "Vault 7" exposed a CIA exploit for MikroTik routers. This exploit, later publicly known as **Chimay Blue**, targets a critical vulnerability in the Winbox protocol that allows unauthenticated remote attackers to read arbitrary files from RouterOS — including the user database.
+
+### What Is CVE-2018-14847?
+
+- **Type**: Authentication bypass / arbitrary file read
+- **Protocol**: Winbox (port 8291)
+- **Affected versions**: RouterOS below 6.42.1 (Long-term), 6.43 (Stable)
+- **Authentication required**: None — fully unauthenticated
+- **Impact**: Attacker reads \`/flash/rw/store/user.dat\` — the credential database — exposing all usernames and passwords in plaintext
+
+### How the Exploit Works (Technical Overview)
+
+The Winbox protocol has a message-based API. CVE-2018-14847 exploits a flaw in how Winbox message handler \`ecos.mvc\` processes certain message types:
+
+1. Attacker sends a specially crafted Winbox message without authenticating.
+2. The handler processes it as if the user were already authenticated.
+3. The attacker requests the file \`/flash/rw/store/user.dat\`.
+4. RouterOS returns the file content — which contains all user credentials.
+
+Public proof-of-concept code was released within days of the WikiLeaks disclosure. Tools like **Chimay-Blue** on GitHub implement the exploit as a Python script.
+
+### How to Check If Your Device Is Vulnerable
+
+From the router CLI:
+\`\`\`
+/system routeros print
+\`\`\`
+
+If the version is below **6.42.1** (for Long-term track) or **6.43** (for Stable track), the device is vulnerable.
+
+From an external tool, attackers use:
+\`\`\`bash
+python3 chimay-blue.py 192.168.1.1
+\`\`\`
+
+A vulnerable device returns credential data immediately.
+
+### Immediate Remediation — Upgrade RouterOS
+
+This is the only true fix:
+
+\`\`\`
+/system package update set channel=long-term
+/system package update check-for-updates
+/system package update install
+\`\`\`
+
+The device reboots after installation. Verify afterward:
+\`\`\`
+/system routeros print
+\`\`\`
+
+### Additional Mitigations
+
+**1. Block Winbox from WAN immediately:**
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=8291 src-address=!192.168.88.0/24 action=drop comment="Block Winbox from WAN"
+\`\`\`
+
+**2. If you cannot patch immediately — disable Winbox:**
+\`\`\`
+/ip service set winbox disabled=yes
+\`\`\`
+
+Then use SSH or WebFig (HTTPS) for management.
+
+**3. Check if you were already compromised:**
+
+Look for unknown scheduled tasks, scripts, or firewall rules:
+\`\`\`
+/system scheduler print
+/system script print
+/ip firewall filter print
+/ip socks print       # SOCKS proxy — sign of Mēris botnet infection
+\`\`\`
+
+Check for unknown users:
+\`\`\`
+/user print
+\`\`\`
+
+If you find SOCKS proxy enabled or unknown scripts, the device has likely been compromised. **Perform a full netinstall (clean install) rather than just upgrading.**
+
+### The Mēris Botnet Connection
+
+In 2021, researchers found that devices exploited via CVE-2018-14847 were being recruited into the **Mēris botnet** — a massive DDoS-as-a-service platform. Infected devices had:
+- SOCKS4 proxies enabled on port 5678
+- Persistent scripts surviving reboots
+- Scheduled tasks calling out to C2 servers
+
+### Lessons Learned
+
+1. Keep RouterOS updated — this exploit was patched in April 2018 but millions of devices ran unpatched for years.
+2. **Never expose Winbox to the internet.**
+3. Monitor for unexpected configuration changes.
+4. Segment management traffic to a dedicated VLAN.`,
+    contentFa: `## CVE-2018-14847: آسیب‌پذیری Chimay Blue در میکروتیک
+
+در آوریل ۲۰۱۸، یک افشاگری WikiLeaks با نام "Vault 7" یک اکسپلویت سیا برای روترهای میکروتیک را فاش کرد. این اکسپلویت، که بعداً با نام **Chimay Blue** شناخته شد، یک آسیب‌پذیری بحرانی در پروتکل Winbox را هدف قرار می‌دهد که به مهاجمان از راه دور بدون احراز هویت اجازه می‌دهد فایل‌های دلخواه از RouterOS را بخوانند — از جمله پایگاه داده کاربران.
+
+### CVE-2018-14847 چیست؟
+
+- **نوع**: دور زدن احراز هویت / خواندن فایل دلخواه
+- **پروتکل**: Winbox (پورت ۸۲۹۱)
+- **نسخه‌های آسیب‌پذیر**: RouterOS زیر 6.42.1 (Long-term)، 6.43 (Stable)
+- **احراز هویت موردنیاز**: هیچ — کاملاً بدون احراز هویت
+- **تأثیر**: مهاجم فایل \`/flash/rw/store/user.dat\` را می‌خواند — پایگاه داده اعتبارنامه — که همه نام‌های کاربری و رمزهای عبور را به‌صورت متن ساده افشا می‌کند
+
+### بررسی آسیب‌پذیر بودن دستگاه
+
+از CLI روتر:
+\`\`\`
+/system routeros print
+\`\`\`
+
+اگر نسخه زیر **6.42.1** (برای Long-term) یا **6.43** (برای Stable) است، دستگاه آسیب‌پذیر است.
+
+### رفع فوری — ارتقاء RouterOS
+
+این تنها راه‌حل واقعی است:
+
+\`\`\`
+/system package update set channel=long-term
+/system package update check-for-updates
+/system package update install
+\`\`\`
+
+### اقدامات کاهش ریسک اضافی
+
+**۱. مسدود کردن فوری Winbox از WAN:**
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=8291 src-address=!192.168.88.0/24 action=drop comment="Block Winbox from WAN"
+\`\`\`
+
+**۲. اگر نمی‌توانید فوری وصله بزنید — Winbox را غیرفعال کنید:**
+\`\`\`
+/ip service set winbox disabled=yes
+\`\`\`
+
+**۳. بررسی اینکه آیا قبلاً مورد نفوذ قرار گرفته‌اید:**
+
+دنبال task، اسکریپت یا قوانین فایروال ناشناخته بگردید:
+\`\`\`
+/system scheduler print
+/system script print
+/ip firewall filter print
+/ip socks print
+\`\`\`
+
+کاربران ناشناخته را بررسی کنید:
+\`\`\`
+/user print
+\`\`\`
+
+اگر پروکسی SOCKS فعال یا اسکریپت‌های ناشناخته پیدا کردید، دستگاه احتمالاً مورد نفوذ قرار گرفته. **به جای صرفاً ارتقاء، یک netinstall کامل (نصب تمیز) انجام دهید.**
+
+### ارتباط با بات‌نت Mēris
+
+در سال ۲۰۲۱، محققان متوجه شدند دستگاه‌هایی که از طریق CVE-2018-14847 اکسپلویت شده بودند به بات‌نت **Mēris** جذب می‌شوند. دستگاه‌های آلوده داشتند:
+- پروکسی‌های SOCKS4 فعال روی پورت ۵۶۷۸
+- اسکریپت‌های ماندگار که از ریبوت جان سالم به در می‌بردند
+- Task های زمان‌بندی‌شده که با سرورهای C2 ارتباط برقرار می‌کردند
+
+### درس‌های آموخته‌شده
+
+۱. RouterOS را به‌روز نگه دارید.
+۲. **هرگز Winbox را در اینترنت expose نکنید.**
+۳. تغییرات پیکربندی غیرمنتظره را رصد کنید.
+۴. ترافیک مدیریتی را در یک VLAN اختصاصی ایزوله کنید.`,
+  },
+  'mikrotik-winbox-exploit-protection': {
+    contentEn: `## Protecting MikroTik Against Winbox Exploits
+
+Winbox is the native MikroTik GUI client that communicates over a proprietary protocol on TCP port 8291. While convenient, it has been the attack surface for several critical vulnerabilities. This post covers how to protect your devices.
+
+### Why Winbox Is a Risk
+
+- Port 8291 is specific to MikroTik — instantly identifies your device as a MikroTik to any scanner.
+- Historical exploits (CVE-2018-14847) targeted the Winbox protocol directly.
+- Brute force attacks against Winbox authentication are common.
+- Older Winbox clients transmitted credentials with weak encryption.
+
+### Immediate Protections
+
+**1. Block Winbox from the Internet (WAN)**
+
+This is non-negotiable. Winbox should never be reachable from the WAN:
+
+\`\`\`
+/ip firewall filter
+add chain=input in-interface=ether1-wan protocol=tcp dst-port=8291 action=drop comment="Block Winbox from WAN"
+\`\`\`
+
+Or using address-based approach (allow only LAN):
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=8291 src-address=!192.168.0.0/16 action=drop comment="Winbox LAN only"
+\`\`\`
+
+**2. Restrict Winbox to Specific Management IPs**
+
+\`\`\`
+/ip service set winbox address=192.168.88.10/32
+\`\`\`
+
+This tells RouterOS to only respond to Winbox connections from 192.168.88.10.
+
+**3. Change the Winbox Port**
+
+Winbox port can be changed to confuse automated scanners:
+\`\`\`
+/ip service set winbox port=18291
+\`\`\`
+
+Then connect in Winbox using \`192.168.1.1:18291\`.
+
+**4. Keep RouterOS Patched**
+
+All known Winbox exploits have been patched in updated versions. Maintain the latest release:
+\`\`\`
+/system package update install
+\`\`\`
+
+**5. Use HTTPS (WebFig) or SSH Instead**
+
+For remote management consider disabling Winbox entirely and using encrypted alternatives:
+
+\`\`\`
+/ip service set winbox disabled=yes
+/ip service set www-ssl disabled=no address=203.0.113.10/32
+\`\`\`
+
+WebFig over HTTPS is strongly encrypted and less attack-surface than Winbox.
+
+### Detecting Winbox Brute Force
+
+Monitor your logs for repeated Winbox connection failures:
+
+\`\`\`
+/log print where message~"winbox"
+\`\`\`
+
+Add a brute force detection rule (see the brute force post for full config):
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=8291 src-address-list=winbox_blacklist action=drop
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage3 action=add-src-to-address-list address-list=winbox_blacklist address-list-timeout=10d
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage2 action=add-src-to-address-list address-list=wb_stage3 address-list-timeout=1m
+add chain=input protocol=tcp dst-port=8291 src-address-list=wb_stage1 action=add-src-to-address-list address-list=wb_stage2 address-list-timeout=1m
+add chain=input protocol=tcp dst-port=8291 connection-state=new action=add-src-to-address-list address-list=wb_stage1 address-list-timeout=1m
+\`\`\`
+
+### Use the Latest Winbox Client
+
+Old Winbox clients (v2.x) lack modern encryption. Always download the latest Winbox binary from the MikroTik official site or from your router:
+
+\`\`\`
+http://192.168.88.1/winbox/WinBox.exe
+\`\`\`
+
+The latest Winbox (v3.x and v4.x) uses stronger session encryption.
+
+### VPN-Only Management (Best Practice)
+
+The most secure approach for remote management:
+
+1. Configure a WireGuard or IPsec VPN on the router.
+2. **Do not expose any management port** (SSH, Winbox, WebFig) to the internet.
+3. Connect via VPN first, then manage the router as if you are on the LAN.
+
+\`\`\`
+# After WireGuard is configured, restrict all management to VPN subnet
+/ip service set winbox address=10.0.0.0/24   # VPN subnet only
+/ip service set ssh address=10.0.0.0/24
+\`\`\`
+
+### Summary
+
+| Protection | Priority |
+|------------|----------|
+| Block Winbox from WAN | Critical |
+| Restrict Winbox to management IP | High |
+| Keep RouterOS updated | High |
+| Brute force detection rules | High |
+| Change Winbox port | Medium |
+| Use VPN for remote management | Best Practice |`,
+    contentFa: `## محافظت از میکروتیک در برابر اکسپلویت‌های Winbox
+
+Winbox کلاینت GUI بومی میکروتیک است که از طریق یک پروتکل اختصاصی روی پورت TCP 8291 ارتباط برقرار می‌کند. این پورت چندین آسیب‌پذیری بحرانی داشته. این پست نشان می‌دهد چطور دستگاه‌های خود را محافظت کنید.
+
+### محافظت‌های فوری
+
+**۱. مسدود کردن Winbox از اینترنت (WAN)**
+
+این غیرقابل معامله است. Winbox هرگز نباید از WAN قابل دسترس باشد:
+
+\`\`\`
+/ip firewall filter
+add chain=input in-interface=ether1-wan protocol=tcp dst-port=8291 action=drop comment="Block Winbox from WAN"
+\`\`\`
+
+**۲. محدود کردن Winbox به IPهای مدیریتی خاص**
+
+\`\`\`
+/ip service set winbox address=192.168.88.10/32
+\`\`\`
+
+**۳. تغییر پورت Winbox**
+
+\`\`\`
+/ip service set winbox port=18291
+\`\`\`
+
+**۴. نگه‌داشتن RouterOS در آخرین نسخه**
+
+\`\`\`
+/system package update install
+\`\`\`
+
+**۵. استفاده از HTTPS یا SSH به جای Winbox**
+
+برای مدیریت از راه دور، در نظر بگیرید Winbox را کاملاً غیرفعال کنید:
+
+\`\`\`
+/ip service set winbox disabled=yes
+/ip service set www-ssl disabled=no address=203.0.113.10/32
+\`\`\`
+
+### مدیریت فقط از طریق VPN (بهترین روش)
+
+امن‌ترین رویکرد برای مدیریت از راه دور:
+
+۱. یک VPN WireGuard یا IPsec روی روتر پیکربندی کنید.
+۲. **هیچ پورت مدیریتی را** در اینترنت expose نکنید.
+۳. ابتدا از طریق VPN وصل شوید، سپس روتر را مثل اینکه روی LAN هستید مدیریت کنید.
+
+\`\`\`
+/ip service set winbox address=10.0.0.0/24
+/ip service set ssh address=10.0.0.0/24
+\`\`\`
+
+### خلاصه
+
+| محافظت | اولویت |
+|--------|--------|
+| مسدود کردن Winbox از WAN | بحرانی |
+| محدود کردن به IP مدیریتی | بالا |
+| به‌روز نگه داشتن RouterOS | بالا |
+| قوانین تشخیص brute force | بالا |
+| تغییر پورت Winbox | متوسط |
+| استفاده از VPN برای مدیریت از راه دور | بهترین روش |`,
+  },
+  'mikrotik-intrusion-detection-logs': {
+    contentEn: `## Using MikroTik Logs for Intrusion Detection
+
+RouterOS has a powerful logging system. By configuring it properly, you can detect intrusion attempts, unauthorized access, and suspicious activity — all from the router's own logs.
+
+### How RouterOS Logging Works
+
+Logs are generated by **topics** and can be sent to multiple **targets**:
+- **Memory** (default, limited to ~150 entries)
+- **Disk** (flash storage — use sparingly on routers with limited flash)
+- **Remote Syslog server** (recommended for production)
+- **Email**
+
+### Setting Up Remote Syslog
+
+Forward all logs to a central syslog server (e.g., running rsyslog or Graylog):
+
+\`\`\`
+/system logging action
+add name=remote-syslog target=remote remote=192.168.88.200 remote-port=514 src-address=0.0.0.0 bsd-syslog=yes syslog-facility=local0
+
+/system logging
+add topics=info action=remote-syslog
+add topics=warning action=remote-syslog
+add topics=error action=remote-syslog
+add topics=critical action=remote-syslog
+\`\`\`
+
+### Key Log Topics for Security
+
+| Topic | What It Shows |
+|-------|---------------|
+| \`system\` | Login attempts, config changes |
+| \`account\` | Successful and failed logins |
+| \`firewall\` | Matched firewall rules |
+| \`manager\` | Winbox session events |
+| \`pptp,l2tp,ipsec\` | VPN connection events |
+
+### Enable Firewall Rule Logging
+
+Add \`log=yes\` and \`log-prefix\` to critical firewall rules:
+
+\`\`\`
+/ip firewall filter
+add chain=input action=drop log=yes log-prefix="INPUT-DROP:" comment="Log all dropped input"
+add chain=input src-address-list=ssh_blacklist protocol=tcp dst-port=22 action=drop log=yes log-prefix="SSH-BLACKLIST:"
+\`\`\`
+
+Now every dropped packet generates a log entry.
+
+### Log Analysis: What to Look For
+
+**Failed login attempts:**
+\`\`\`
+/log print where message~"login failure"
+\`\`\`
+
+Output example:
+\`\`\`
+10:23:45 account,info: netadmin failed to log in from 1.2.3.4 via ssh
+\`\`\`
+
+**Firewall drops:**
+\`\`\`
+/log print where message~"INPUT-DROP"
+\`\`\`
+
+**Winbox connection events:**
+\`\`\`
+/log print where message~"winbox"
+\`\`\`
+
+**Configuration changes (very important):**
+\`\`\`
+/log print where topics~"system"
+\`\`\`
+
+This shows every config change — who made it, what was changed, when.
+
+### Detect Unauthorized Config Changes
+
+Create a script that checks for new scripts, users, or scheduler entries:
+
+\`\`\`
+/system script
+add name=sec-audit source={
+    :local userCount [/user print count-only]
+    :local scriptCount [/system script print count-only]
+    :local schedCount [/system scheduler print count-only]
+    /log info message="SEC-AUDIT: users=$userCount scripts=$scriptCount schedulers=$schedCount"
+}
+
+/system scheduler add name=sec-audit interval=15m on-event=sec-audit
+\`\`\`
+
+If counts suddenly increase, investigate immediately.
+
+### Email Alerts on Critical Events
+
+\`\`\`
+/system logging action
+add name=email-critical target=email email=admin@example.com
+
+/system logging
+add topics=critical action=email-critical
+add topics=error action=email-critical
+\`\`\`
+
+Configure email settings first:
+\`\`\`
+/tool e-mail set server=smtp.example.com port=587 from=router@example.com user=user password=pass
+\`\`\`
+
+### Log Firewall Hits by Address List
+
+Log when an IP hits your brute force blacklist:
+
+\`\`\`
+/ip firewall filter
+add chain=input src-address-list=ssh_blacklist protocol=tcp dst-port=22 action=drop log=yes log-prefix="BLACKLIST-HIT:"
+\`\`\`
+
+Then monitor:
+\`\`\`
+/log print where message~"BLACKLIST-HIT"
+\`\`\`
+
+### Exporting Logs
+
+For compliance or long-term analysis, export logs:
+
+\`\`\`
+/log print file=security-log
+\`\`\`
+
+This writes the log to a file you can download via FTP or SCP.
+
+### Summary: Intrusion Detection Checklist
+
+- [ ] Remote syslog server configured
+- [ ] \`account\` and \`system\` topics forwarded to syslog
+- [ ] Firewall drop rules have \`log=yes\`
+- [ ] Email alerts for critical events
+- [ ] Regular log review scheduled
+- [ ] Baseline script monitoring unexpected config changes`,
+    contentFa: `## استفاده از لاگ‌های میکروتیک برای تشخیص نفوذ
+
+RouterOS سیستم لاگ‌گیری قدرتمندی دارد. با پیکربندی صحیح آن، می‌توانید تلاش‌های نفوذ، دسترسی‌های غیرمجاز و فعالیت‌های مشکوک را — همه از لاگ‌های خود روتر — شناسایی کنید.
+
+### تنظیم Remote Syslog
+
+همه لاگ‌ها را به یک سرور syslog مرکزی ارسال کنید:
+
+\`\`\`
+/system logging action
+add name=remote-syslog target=remote remote=192.168.88.200 remote-port=514 bsd-syslog=yes syslog-facility=local0
+
+/system logging
+add topics=info action=remote-syslog
+add topics=warning action=remote-syslog
+add topics=error action=remote-syslog
+add topics=critical action=remote-syslog
+\`\`\`
+
+### فعال کردن لاگ‌گیری قوانین فایروال
+
+\`log=yes\` و \`log-prefix\` را به قوانین فایروال بحرانی اضافه کنید:
+
+\`\`\`
+/ip firewall filter
+add chain=input action=drop log=yes log-prefix="INPUT-DROP:"
+add chain=input src-address-list=ssh_blacklist protocol=tcp dst-port=22 action=drop log=yes log-prefix="SSH-BLACKLIST:"
+\`\`\`
+
+### تجزیه و تحلیل لاگ: چه چیزی باید جستجو کرد
+
+**تلاش‌های ناموفق ورود:**
+\`\`\`
+/log print where message~"login failure"
+\`\`\`
+
+**Drop های فایروال:**
+\`\`\`
+/log print where message~"INPUT-DROP"
+\`\`\`
+
+**تغییرات پیکربندی:**
+\`\`\`
+/log print where topics~"system"
+\`\`\`
+
+### شناسایی تغییرات پیکربندی غیرمجاز
+
+یک اسکریپت بسازید که کاربران، اسکریپت‌ها یا scheduler جدید را بررسی کند:
+
+\`\`\`
+/system script
+add name=sec-audit source={
+    :local userCount [/user print count-only]
+    :local scriptCount [/system script print count-only]
+    :local schedCount [/system scheduler print count-only]
+    /log info message="SEC-AUDIT: users=$userCount scripts=$scriptCount schedulers=$schedCount"
+}
+
+/system scheduler add name=sec-audit interval=15m on-event=sec-audit
+\`\`\`
+
+### هشدارهای ایمیل برای رویدادهای بحرانی
+
+\`\`\`
+/system logging action
+add name=email-critical target=email email=admin@example.com
+
+/system logging
+add topics=critical action=email-critical
+add topics=error action=email-critical
+\`\`\`
+
+### چک‌لیست تشخیص نفوذ
+
+- [ ] سرور syslog از راه دور پیکربندی شده
+- [ ] موضوعات \`account\` و \`system\` به syslog ارسال می‌شوند
+- [ ] قوانین drop فایروال \`log=yes\` دارند
+- [ ] هشدارهای ایمیل برای رویدادهای بحرانی
+- [ ] بررسی منظم لاگ برنامه‌ریزی شده`,
+  },
+  'mikrotik-vpn-security-hardening': {
+    contentEn: `## VPN Security Hardening on MikroTik
+
+VPNs are only as secure as how they are configured. A poorly secured VPN endpoint can be exploited just as easily as any other exposed service. This post covers hardening for the VPN types most commonly used on MikroTik.
+
+### WireGuard Security Hardening
+
+WireGuard is the most secure and modern VPN option in RouterOS v7.
+
+**Generate strong keys:**
+WireGuard keys are generated automatically when you create the interface — no configuration needed. Never share the private key.
+
+**Restrict the listening port:**
+\`\`\`
+/interface wireguard
+add name=wg-vpn listen-port=13231 private-key="<auto-generated>"
+\`\`\`
+
+Choose a non-standard port (not 51820, the default, which scanners look for).
+
+**Bind peers to specific IPs:**
+\`\`\`
+/interface wireguard peers
+add interface=wg-vpn public-key="peer-pub-key" allowed-address=10.0.0.2/32 endpoint-address=0.0.0.0 endpoint-port=0
+\`\`\`
+
+\`allowed-address=10.0.0.2/32\` means only that specific VPN IP can authenticate with that key.
+
+**Firewall rules for WireGuard:**
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp dst-port=13231 action=accept comment="WireGuard"
+add chain=input in-interface=wg-vpn action=accept comment="Allow VPN traffic"
+\`\`\`
+
+### IPsec IKEv2 Security Hardening
+
+**Use strong proposal settings:**
+\`\`\`
+/ip ipsec proposal
+set default auth-algorithms=sha256 enc-algorithms=aes-256-cbc pfs-group=modp2048
+
+/ip ipsec profile
+set default dh-group=modp2048 enc-algorithm=aes-256 hash-algorithm=sha256 dpd-interval=30s dpd-maximum-failures=5
+\`\`\`
+
+**Avoid weak algorithms — disable these:**
+\`\`\`
+/ip ipsec proposal
+set default enc-algorithms=aes-256-cbc  # Remove 3des, aes-128, etc.
+\`\`\`
+
+**Use certificate-based auth instead of PSK (pre-shared key):**
+
+PSKs can be brute-forced if weak. Certificates provide stronger authentication:
+\`\`\`
+/ip ipsec peer
+set [find] auth-method=rsa-signature
+\`\`\`
+
+**IP source filtering — only allow VPN from expected regions:**
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp dst-port=500,4500 src-address-list=allowed-vpn-sources action=accept
+add chain=input protocol=udp dst-port=500,4500 action=drop
+\`\`\`
+
+### PPTP/L2TP Security Notes
+
+**PPTP is deprecated — avoid it:**
+PPTP uses MPPE which has known cryptographic weaknesses. MS-CHAPv2 (the authentication protocol) can be cracked offline. If you have PPTP, migrate to L2TP+IPsec or WireGuard.
+
+**If you must use L2TP, always require IPsec:**
+\`\`\`
+/interface l2tp-server server
+set enabled=yes use-ipsec=required ipsec-secret=VeryStr0ngSecret123!
+\`\`\`
+
+\`use-ipsec=required\` rejects any L2TP connection that doesn't have IPsec encryption.
+
+### Firewall Rules for VPN Services
+
+Only expose VPN ports — never management ports — to the internet:
+
+\`\`\`
+/ip firewall filter
+# WireGuard
+add chain=input protocol=udp dst-port=13231 action=accept
+
+# IPsec IKE
+add chain=input protocol=udp dst-port=500,4500 action=accept
+
+# L2TP
+add chain=input protocol=udp dst-port=1701 src-address-list=known-l2tp action=accept
+
+# Block all other input from WAN
+add chain=input in-interface=ether1-wan action=drop
+\`\`\`
+
+### VPN User Management
+
+Create separate VPN users with minimal permissions:
+
+\`\`\`
+/ppp secret
+add name=vpnuser1 password=Str0ng!VPN profile=vpn-profile service=any
+\`\`\`
+
+Use profiles to restrict what VPN users can access:
+\`\`\`
+/ppp profile
+add name=vpn-profile local-address=10.0.0.1 remote-address=vpn-pool dns-server=8.8.8.8
+\`\`\`
+
+### Monitoring VPN Activity
+
+Check active VPN connections:
+\`\`\`
+/interface wireguard peers print         # WireGuard connected peers
+/ip ipsec active-peers print             # IPsec active sessions
+/ppp active print                        # PPTP/L2TP active sessions
+\`\`\`
+
+Log VPN events:
+\`\`\`
+/system logging
+add topics=pppoe,pptp,l2tp,ipsec action=remote-syslog
+\`\`\`
+
+### Summary Checklist
+
+- [ ] WireGuard: non-default port, peers bound to specific IPs
+- [ ] IPsec: strong proposals (AES-256, SHA-256, DH group 14+)
+- [ ] No PPTP in production
+- [ ] L2TP requires IPsec
+- [ ] VPN ports firewalled — no other WAN exposure
+- [ ] VPN user accounts with strong passwords
+- [ ] VPN events logged to syslog`,
+    contentFa: `## سخت‌سازی امنیتی VPN در میکروتیک
+
+VPN ها فقط به اندازه‌ای که پیکربندی شده‌اند امن هستند. یک endpoint VPN با پیکربندی ضعیف می‌تواند به‌همان راحتی هر سرویس exposed دیگری اکسپلویت شود. این پست hardening برای رایج‌ترین نوع‌های VPN در میکروتیک را پوشش می‌دهد.
+
+### سخت‌سازی WireGuard
+
+**پورت غیراستاندارد انتخاب کنید:**
+\`\`\`
+/interface wireguard
+add name=wg-vpn listen-port=13231 private-key="<auto-generated>"
+\`\`\`
+
+**Peerها را به IPهای خاص محدود کنید:**
+\`\`\`
+/interface wireguard peers
+add interface=wg-vpn public-key="peer-pub-key" allowed-address=10.0.0.2/32
+\`\`\`
+
+**قوانین فایروال برای WireGuard:**
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp dst-port=13231 action=accept comment="WireGuard"
+add chain=input in-interface=wg-vpn action=accept
+\`\`\`
+
+### سخت‌سازی IPsec IKEv2
+
+**از تنظیمات proposal قوی استفاده کنید:**
+\`\`\`
+/ip ipsec proposal
+set default auth-algorithms=sha256 enc-algorithms=aes-256-cbc pfs-group=modp2048
+
+/ip ipsec profile
+set default dh-group=modp2048 enc-algorithm=aes-256 hash-algorithm=sha256
+\`\`\`
+
+### نکات امنیتی PPTP/L2TP
+
+**PPTP منسوخ است — از آن اجتناب کنید:**
+PPTP از MPPE استفاده می‌کند که ضعف‌های رمزنگاری شناخته‌شده دارد.
+
+**اگر مجبورید L2TP استفاده کنید، همیشه IPsec الزامی کنید:**
+\`\`\`
+/interface l2tp-server server
+set enabled=yes use-ipsec=required ipsec-secret=VeryStr0ngSecret123!
+\`\`\`
+
+### قوانین فایروال برای سرویس‌های VPN
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=udp dst-port=13231 action=accept
+add chain=input protocol=udp dst-port=500,4500 action=accept
+add chain=input in-interface=ether1-wan action=drop
+\`\`\`
+
+### چک‌لیست
+
+- [ ] WireGuard: پورت غیراستاندارد، peerها محدود به IPهای خاص
+- [ ] IPsec: proposal های قوی (AES-256، SHA-256، DH group 14+)
+- [ ] بدون PPTP در محیط تولید
+- [ ] L2TP نیازمند IPsec
+- [ ] پورت‌های VPN فایروال شده
+- [ ] حساب‌های کاربری VPN با رمزهای قوی
+- [ ] رویدادهای VPN به syslog لاگ می‌شوند`,
+  },
+  'mikrotik-port-scan-detection-blocking': {
+    contentEn: `## Detecting and Blocking Port Scanners on MikroTik
+
+Port scanners probe your router looking for open services. RouterOS has a built-in Port Scan Detection (PSD) module and additional firewall techniques to automatically detect and block scanners.
+
+### Method 1: Built-in PSD Module
+
+RouterOS includes a \`psd\` firewall matcher that detects port scanning behavior:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w comment="Detect TCP port scan"
+add chain=input protocol=udp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w comment="Detect UDP port scan"
+add chain=input src-address-list=port-scanners action=drop comment="Drop port scanners"
+\`\`\`
+
+PSD parameters: \`21,3s,3,1\` means:
+- \`21\`: weight threshold (21 = scanning lots of ports)
+- \`3s\`: time period to observe
+- \`3\`: low port weight (ports < 1024 count more)
+- \`1\`: high port weight (ports ≥ 1024)
+
+### Method 2: Catch Unused Port Access (Honeypot Technique)
+
+Add rules that flag any IP attempting to connect to ports you **never use**:
+
+\`\`\`
+/ip firewall filter
+# Flag connections to known unused ports as suspicious
+add chain=input protocol=tcp dst-port=23 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-TELNET:"
+add chain=input protocol=tcp dst-port=21 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-FTP:"
+add chain=input protocol=tcp dst-port=25 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-SMTP:"
+add chain=input protocol=tcp dst-port=445 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-SMB:"
+\`\`\`
+
+If Telnet (23), FTP (21), SMTP (25), SMB (445) are not running, any connection attempt is a scanner.
+
+### Method 3: Detect Nmap OS Fingerprinting
+
+Nmap uses specific probe packets. Detect invalid TCP flag combinations:
+
+\`\`\`
+/ip firewall filter
+# Nmap XMAS scan (FIN, URG, PSH all set)
+add chain=input protocol=tcp tcp-flags=fin,urg,psh action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w log=yes log-prefix="XMAS-SCAN:"
+
+# Null scan (no flags set)
+add chain=input protocol=tcp tcp-flags=!fin,!syn,!rst,!psh,!ack,!urg action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w log=yes log-prefix="NULL-SCAN:"
+
+# FIN scan
+add chain=input protocol=tcp tcp-flags=fin action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w log=yes log-prefix="FIN-SCAN:"
+\`\`\`
+
+### Method 4: Rate-Limit SYN Packets
+
+Port scanners send SYN packets rapidly. Limit them:
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp tcp-flags=syn connection-state=new action=jump jump-target=syn-scan-detect
+/ip firewall filter
+add chain=syn-scan-detect src-address-list=port-scanners action=drop
+add chain=syn-scan-detect action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w limit=100,50:packet
+add chain=syn-scan-detect action=accept
+\`\`\`
+
+This blacklists any IP that sends more than 100 SYN packets in 50 seconds.
+
+### Viewing Detected Scanners
+
+\`\`\`
+/ip firewall address-list print where list=port-scanners
+\`\`\`
+
+You'll typically see many entries — especially if your WAN IP is public.
+
+### Checking Logs
+
+\`\`\`
+/log print where message~"SCAN"
+\`\`\`
+
+### Script: Auto-Alert on New Port Scanners
+
+\`\`\`
+/system script
+add name=scan-alert source={
+    :local count [/ip firewall address-list print count-only where list=port-scanners]
+    /log warning message="Port scanner count: $count"
+}
+/system scheduler add name=scan-alert interval=1h on-event=scan-alert
+\`\`\`
+
+### Important Notes
+
+- Place port scanner detection rules **early in the input chain** — before your accept rules — so scanners are blocked before they reach any open service.
+- Whitelist your own management IPs to avoid accidentally blocking yourself:
+
+\`\`\`
+/ip firewall filter
+add chain=input src-address=192.168.88.10 action=accept comment="Management IP - never block" place-before=0
+\`\`\`
+
+### Summary
+
+| Technique | Detects |
+|-----------|---------|
+| PSD module | Rapid multi-port scanning |
+| Unused port honeypot | Any probe on closed service ports |
+| Invalid TCP flags | Nmap XMAS/NULL/FIN scans |
+| SYN rate limiting | High-speed SYN scanners |`,
+    contentFa: `## شناسایی و مسدود کردن اسکنرهای پورت در میکروتیک
+
+اسکنرهای پورت روتر شما را برای یافتن سرویس‌های باز بررسی می‌کنند. RouterOS یک ماژول تشخیص اسکن پورت (PSD) داخلی و تکنیک‌های اضافی فایروال دارد.
+
+### روش ۱: ماژول PSD داخلی
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w comment="Detect TCP port scan"
+add chain=input protocol=udp psd=21,3s,3,1 action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w
+add chain=input src-address-list=port-scanners action=drop comment="Drop port scanners"
+\`\`\`
+
+### روش ۲: دستگیری دسترسی به پورت‌های استفاده‌نشده
+
+\`\`\`
+/ip firewall filter
+add chain=input protocol=tcp dst-port=23 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-TELNET:"
+add chain=input protocol=tcp dst-port=21 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-FTP:"
+add chain=input protocol=tcp dst-port=445 action=add-src-to-address-list address-list=port-scanners address-list-timeout=1w log=yes log-prefix="SCAN-SMB:"
+\`\`\`
+
+### روش ۳: تشخیص اسکن‌های Nmap
+
+\`\`\`
+/ip firewall filter
+# XMAS scan
+add chain=input protocol=tcp tcp-flags=fin,urg,psh action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w log=yes log-prefix="XMAS-SCAN:"
+
+# Null scan
+add chain=input protocol=tcp tcp-flags=!fin,!syn,!rst,!psh,!ack,!urg action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w log=yes log-prefix="NULL-SCAN:"
+
+# FIN scan
+add chain=input protocol=tcp tcp-flags=fin action=add-src-to-address-list address-list=port-scanners address-list-timeout=2w log=yes log-prefix="FIN-SCAN:"
+\`\`\`
+
+### مشاهده اسکنرهای شناسایی‌شده
+
+\`\`\`
+/ip firewall address-list print where list=port-scanners
+\`\`\`
+
+### نکات مهم
+
+- قوانین تشخیص اسکنر را **اول در input chain** قرار دهید.
+- IP مدیریتی خود را whitelist کنید تا تصادفاً خودتان را مسدود نکنید:
+
+\`\`\`
+/ip firewall filter
+add chain=input src-address=192.168.88.10 action=accept comment="Management IP - never block" place-before=0
+\`\`\`
+
+### خلاصه
+
+| تکنیک | چه چیزی شناسایی می‌کند |
+|--------|----------------------|
+| ماژول PSD | اسکن سریع چندپورتی |
+| Honeypot پورت استفاده‌نشده | هر probe روی پورت‌های سرویس بسته |
+| Flag های TCP نامعتبر | اسکن‌های XMAS/NULL/FIN Nmap |
+| محدودیت نرخ SYN | اسکنرهای SYN سرعت بالا |`,
+  },
 }
