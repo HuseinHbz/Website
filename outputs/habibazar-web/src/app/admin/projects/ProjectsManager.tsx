@@ -46,6 +46,11 @@ export function ProjectsManager() {
     toast(t('deleted')); load()
   }
 
+  async function toggle(p: Project) {
+    await fetch('/api/admin/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, active: !p.active }) })
+    toast(t('saved')); load()
+  }
+
   function set<K extends keyof Project>(k: K, v: Project[K]) { setEditing((e) => ({ ...e, [k]: v })) }
   const galleryUrls = parseGallery(editing.gallery)
   function setGallery(urls: string[]) { set('gallery', JSON.stringify(urls)) }
@@ -80,6 +85,7 @@ export function ProjectsManager() {
               <TD>
                 <div className="flex gap-2">
                   <Btn size="sm" variant="secondary" onClick={() => { setEditing(p); setModal(true) }}>{t('edit')}</Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => toggle(p)}>{p.active ? '⏸' : '▶'}</Btn>
                   <Btn size="sm" variant="danger" onClick={() => del(p.id!)}>{t('delete')}</Btn>
                 </div>
               </TD>

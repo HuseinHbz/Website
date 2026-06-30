@@ -44,6 +44,11 @@ export function TimelineManager() {
     toast(t('deleted')); load()
   }
 
+  async function toggle(item: Item) {
+    await fetch('/api/admin/timeline', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, active: !item.active }) })
+    toast(t('saved')); load()
+  }
+
   return (
     <>
       <ToastContainer />
@@ -65,6 +70,7 @@ export function TimelineManager() {
                 <TD>
                   <div className="flex gap-2">
                     <Btn size="sm" variant="secondary" onClick={() => { setEditing(item); setModal(true) }}>{t('edit')}</Btn>
+                    <Btn size="sm" variant="secondary" onClick={() => toggle(item)}>{item.active ? '⏸' : '▶'}</Btn>
                     <Btn size="sm" variant="danger" onClick={() => del(item.id!)}>{t('delete')}</Btn>
                   </div>
                 </TD>

@@ -38,6 +38,11 @@ export function ServicesManager() {
     toast(t('deleted')); load()
   }
 
+  async function toggle(s: Service) {
+    await fetch('/api/admin/services', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, active: !s.active }) })
+    toast(t('saved')); load()
+  }
+
   function set<K extends keyof Service>(k: K, v: Service[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
   return (
@@ -57,6 +62,7 @@ export function ServicesManager() {
               <TD>
                 <div className="flex gap-2">
                   <Btn size="sm" variant="secondary" onClick={() => { setEditing(s); setModal(true) }}>{t('edit')}</Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => toggle(s)}>{s.active ? '⏸' : '▶'}</Btn>
                   <Btn size="sm" variant="danger" onClick={() => del(s.id!)}>{t('delete')}</Btn>
                 </div>
               </TD>

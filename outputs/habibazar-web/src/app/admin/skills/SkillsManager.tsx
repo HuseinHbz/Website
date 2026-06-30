@@ -57,6 +57,16 @@ export function SkillsManager() {
     toast(t('deleted')); loadCerts()
   }
 
+  async function toggleSkill(s: Skill) {
+    await fetch('/api/admin/skills', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, active: !s.active }) })
+    toast(t('saved')); loadSkills()
+  }
+
+  async function toggleCert(c: Cert) {
+    await fetch('/api/admin/certifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, active: !c.active }) })
+    toast(t('saved')); loadCerts()
+  }
+
   return (
     <>
       <ToastContainer />
@@ -93,6 +103,7 @@ export function SkillsManager() {
                 <TD>
                   <div className="flex gap-2">
                     <Btn size="sm" variant="secondary" onClick={() => { setEditS(s); setModal(true) }}>{t('edit')}</Btn>
+                    <Btn size="sm" variant="secondary" onClick={() => toggleSkill(s)}>{s.active ? '⏸' : '▶'}</Btn>
                     <Btn size="sm" variant="danger" onClick={() => delSkill(s.id!)}>{t('delete')}</Btn>
                   </div>
                 </TD>
@@ -112,6 +123,7 @@ export function SkillsManager() {
                 <TD>
                   <div className="flex gap-2">
                     <Btn size="sm" variant="secondary" onClick={() => { setEditC(c); setModal(true) }}>{t('edit')}</Btn>
+                    <Btn size="sm" variant="secondary" onClick={() => toggleCert(c)}>{c.active ? '⏸' : '▶'}</Btn>
                     <Btn size="sm" variant="danger" onClick={() => delCert(c.id!)}>{t('delete')}</Btn>
                   </div>
                 </TD>

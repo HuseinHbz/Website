@@ -34,6 +34,11 @@ export function ClientsManager() {
     toast(t('deleted')); load()
   }
 
+  async function toggle(c: Client) {
+    await fetch('/api/admin/clients', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, active: !c.active }) })
+    toast(t('saved')); load()
+  }
+
   function set<K extends keyof Client>(k: K, v: Client[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
   return (
@@ -52,6 +57,7 @@ export function ClientsManager() {
               <TD>
                 <div className="flex gap-2">
                   <Btn size="sm" variant="secondary" onClick={() => { setEditing(c); setModal(true) }}>{t('edit')}</Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => toggle(c)}>{c.active ? '⏸' : '▶'}</Btn>
                   <Btn size="sm" variant="danger" onClick={() => del(c.id!)}>{t('delete')}</Btn>
                 </div>
               </TD>
