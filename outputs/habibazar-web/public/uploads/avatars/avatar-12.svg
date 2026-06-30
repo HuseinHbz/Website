@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg12" cx="50%" cy="50%"><stop offset="0%" stop-color="#001a0d"/><stop offset="100%" stop-color="#000805"/></radialGradient>
+    <filter id="gf12"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="glow12"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg12)"/>
+  <!-- forest/elf background -->
+  <circle cx="80" cy="80" r="70" fill="#10b981" opacity="0.04" filter="url(#gf12)"/>
+  <!-- elf ears -->
+  <path d="M57,58 Q44,52 42,44 Q50,48 60,55" fill="#10b981" opacity="0.3" stroke="#34d399" stroke-width="0.8"/>
+  <path d="M103,58 Q116,52 118,44 Q110,48 100,55" fill="#10b981" opacity="0.3" stroke="#34d399" stroke-width="0.8"/>
+  <!-- hood/cloak -->
+  <path d="M40,130 Q50,90 80,82 Q110,90 120,130" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="0.8"/>
+  <!-- face -->
+  <ellipse cx="80" cy="65" rx="22" ry="24" fill="#10b981" opacity="0.08" stroke="#34d399" stroke-width="1"/>
+  <!-- almond eyes -->
+  <path d="M65,62 Q72,58 78,62 Q72,66 65,62 Z" fill="#10b981" opacity="0.9" filter="url(#glow12)"/>
+  <path d="M82,62 Q88,58 95,62 Q88,66 82,62 Z" fill="#10b981" opacity="0.9" filter="url(#glow12)"/>
+  <ellipse cx="71" cy="62" rx="3" ry="2" fill="#a7f3d0"/>
+  <ellipse cx="88" cy="62" rx="3" ry="2" fill="#a7f3d0"/>
+  <!-- bow on back -->
+  <path d="M55,88 Q80,78 105,88" fill="none" stroke="#10b981" stroke-width="1.5" opacity="0.5"/>
+  <path d="M80,78 L80,100" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+  <!-- leaf crown -->
+  <path d="M65,47 Q72,38 80,42 Q88,38 95,47" fill="none" stroke="#34d399" stroke-width="1" opacity="0.7"/>
+  <ellipse cx="80" cy="40" rx="5" ry="7" fill="#10b981" opacity="0.3" transform="rotate(0 80 40)"/>
+  <ellipse cx="70" cy="44" rx="4" ry="6" fill="#10b981" opacity="0.25" transform="rotate(-30 70 44)"/>
+  <ellipse cx="90" cy="44" rx="4" ry="6" fill="#10b981" opacity="0.25" transform="rotate(30 90 44)"/>
+  <text x="80" y="148" text-anchor="middle" fill="#34d399" font-size="7" font-weight="700" font-family="monospace">ELF-12</text>
+</svg>

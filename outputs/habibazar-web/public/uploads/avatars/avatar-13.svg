@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg13" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a0808"/><stop offset="100%" stop-color="#080303"/></radialGradient>
+    <filter id="gf13"><feGaussianBlur stdDeviation="6"/></filter>
+    <linearGradient id="blade13" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#94a3b8"/><stop offset="100%" stop-color="#475569"/></linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg13)"/>
+  <!-- warrior aura -->
+  <circle cx="80" cy="80" r="65" fill="#ef4444" opacity="0.04" filter="url(#gf13)"/>
+  <circle cx="80" cy="80" r="72" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.25" stroke-dasharray="4 4"/>
+  <!-- knight helmet -->
+  <rect x="58" y="38" width="44" height="50" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+  <rect x="62" y="42" width="36" height="10" rx="3" fill="#334155" stroke="#64748b" stroke-width="0.8"/>
+  <!-- visor slit -->
+  <rect x="65" y="54" width="30" height="5" rx="2.5" fill="#ef4444" opacity="0.8"/>
+  <line x1="67" y1="56.5" x2="93" y2="56.5" stroke="#fca5a5" stroke-width="1" opacity="0.6"/>
+  <!-- helmet details -->
+  <line x1="80" y1="42" x2="80" y2="88" stroke="#64748b" stroke-width="1.5"/>
+  <rect x="62" y="68" width="36" height="15" rx="2" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <!-- plume -->
+  <path d="M80,38 Q75,25 72,15 Q78,22 80,30 Q82,22 88,15 Q85,25 80,38" fill="#ef4444" opacity="0.6"/>
+  <!-- shoulders/armor -->
+  <path d="M40,120 Q48,90 58,85" fill="none" stroke="#475569" stroke-width="12" stroke-linecap="round" opacity="0.5"/>
+  <path d="M120,120 Q112,90 102,85" fill="none" stroke="#475569" stroke-width="12" stroke-linecap="round" opacity="0.5"/>
+  <!-- shield hint -->
+  <rect x="40" y="100" width="18" height="22" rx="3" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.5"/>
+  <line x1="40" y1="111" x2="58" y2="111" stroke="#ef4444" stroke-width="0.6" opacity="0.4"/>
+  <text x="80" y="148" text-anchor="middle" fill="#94a3b8" font-size="7" font-weight="700" font-family="monospace">KNIGHT-13</text>
+</svg>

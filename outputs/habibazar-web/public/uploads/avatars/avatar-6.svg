@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="bg6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0d0d1a"/><stop offset="100%" stop-color="#050510"/></linearGradient>
+    <linearGradient id="lg6a" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+    <linearGradient id="lg6b" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#10b981"/></linearGradient>
+    <filter id="gf6"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg6)"/>
+  <!-- kaleidoscope pattern -->
+  <g opacity="0.8">
+    <polygon points="80,20 106,55 80,55" fill="url(#lg6a)" opacity="0.6"/>
+    <polygon points="80,20 54,55 80,55" fill="url(#lg6b)" opacity="0.6"/>
+    <polygon points="80,140 106,105 80,105" fill="url(#lg6b)" opacity="0.6"/>
+    <polygon points="80,140 54,105 80,105" fill="url(#lg6a)" opacity="0.6"/>
+    <polygon points="20,80 55,54 55,80" fill="url(#lg6a)" opacity="0.5"/>
+    <polygon points="20,80 55,106 55,80" fill="url(#lg6b)" opacity="0.5"/>
+    <polygon points="140,80 105,54 105,80" fill="url(#lg6b)" opacity="0.5"/>
+    <polygon points="140,80 105,106 105,80" fill="url(#lg6a)" opacity="0.5"/>
+  </g>
+  <!-- center diamond -->
+  <polygon points="80,55 105,80 80,105 55,80" fill="url(#lg6a)" opacity="0.15" stroke="url(#lg6a)" stroke-width="1.5"/>
+  <polygon points="80,63 97,80 80,97 63,80" fill="url(#lg6b)" opacity="0.2" stroke="url(#lg6b)" stroke-width="1"/>
+  <circle cx="80" cy="80" r="10" fill="url(#lg6a)" opacity="0.9"/>
+  <circle cx="80" cy="80" r="6" fill="white" opacity="0.4"/>
+  <!-- outer ring -->
+  <circle cx="80" cy="80" r="72" fill="none" stroke="url(#lg6a)" stroke-width="1" opacity="0.4"/>
+  <text x="80" y="153" text-anchor="middle" fill="#818cf8" font-size="7" font-weight="700" font-family="monospace">GEO-06</text>
+</svg>

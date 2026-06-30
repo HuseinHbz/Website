@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="bg16" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0d0d1a"/><stop offset="100%" stop-color="#060610"/></linearGradient>
+    <linearGradient id="line16" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg16)"/>
+  <circle cx="80" cy="80" r="74" fill="none" stroke="url(#line16)" stroke-width="1.5" opacity="0.4"/>
+  <!-- minimal portrait line art -->
+  <!-- head -->
+  <path d="M65,35 Q65,25 80,24 Q95,25 95,35 L96,60 Q96,75 80,78 Q64,75 64,60 Z" fill="none" stroke="url(#line16)" stroke-width="1.8"/>
+  <!-- neck/shoulder -->
+  <path d="M73,78 L70,90 Q55,95 45,115" fill="none" stroke="url(#line16)" stroke-width="1.8"/>
+  <path d="M87,78 L90,90 Q105,95 115,115" fill="none" stroke="url(#line16)" stroke-width="1.8"/>
+  <line x1="70" y1="90" x2="90" y2="90" stroke="url(#line16)" stroke-width="1.8"/>
+  <!-- features - minimal -->
+  <!-- eyes -->
+  <line x1="70" y1="52" x2="76" y2="52" stroke="url(#line16)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="84" y1="52" x2="90" y2="52" stroke="url(#line16)" stroke-width="2" stroke-linecap="round"/>
+  <!-- nose -->
+  <path d="M80,55 L78,63 L82,63" fill="none" stroke="url(#line16)" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- mouth -->
+  <path d="M74,68 Q80,72 86,68" fill="none" stroke="url(#line16)" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- hair lines -->
+  <path d="M65,40 Q60,30 65,24 Q72,20 80,20" fill="none" stroke="url(#line16)" stroke-width="1.5"/>
+  <path d="M95,40 Q100,30 95,24 Q88,20 80,20" fill="none" stroke="url(#line16)" stroke-width="1.5"/>
+  <text x="80" y="140" text-anchor="middle" fill="#818cf8" font-size="7" font-weight="700" font-family="monospace">LINE-16</text>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs><radialGradient id="wi" cx="50%" cy="90%"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/></radialGradient></defs>
+  <!-- wifi waves -->
+  <circle cx="28" cy="44" r="32" fill="none" stroke="#06b6d4" stroke-width="1.2" opacity="0.12" stroke-dasharray="none"/>
+  <path d="M8,30 Q28,10 48,30" fill="none" stroke="#06b6d4" stroke-width="1.8" stroke-linecap="round" opacity="0.4"/>
+  <path d="M14,36 Q28,20 42,36" fill="none" stroke="#06b6d4" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
+  <path d="M20,42 Q28,30 36,42" fill="none" stroke="#67e8f9" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="28" cy="46" r="3.5" fill="#06b6d4" opacity="0.9"/>
+  <circle cx="28" cy="46" r="1.8" fill="#67e8f9"/>
+  <!-- signal strength indicator -->
+  <rect x="10" y="48" width="3" height="4" rx="1" fill="#06b6d4" opacity="0.4"/>
+  <rect x="15" y="46" width="3" height="6" rx="1" fill="#06b6d4" opacity="0.6"/>
+  <rect x="20" y="44" width="3" height="8" rx="1" fill="#06b6d4" opacity="0.8"/>
+</svg>

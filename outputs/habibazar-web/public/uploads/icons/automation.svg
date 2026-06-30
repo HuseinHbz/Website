@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs><linearGradient id="ai" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#818cf8"/></linearGradient></defs>
+  <!-- gear large -->
+  <circle cx="24" cy="26" r="10" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="24" cy="26" r="5" fill="#6366f1" opacity="0.15"/>
+  <circle cx="24" cy="26" r="3" fill="#818cf8" opacity="0.8"/>
+  <!-- gear teeth -->
+  <g stroke="#6366f1" stroke-width="2" stroke-linecap="round" opacity="0.7">
+    <line x1="24" y1="14" x2="24" y2="16"/><line x1="24" y1="36" x2="24" y2="38"/>
+    <line x1="12" y1="26" x2="14" y2="26"/><line x1="34" y1="26" x2="36" y2="26"/>
+    <line x1="15.5" y1="17.5" x2="17" y2="19"/><line x1="31" y1="33" x2="32.5" y2="34.5"/>
+    <line x1="32.5" y1="17.5" x2="31" y2="19"/><line x1="17" y1="33" x2="15.5" y2="34.5"/>
+  </g>
+  <!-- small gear -->
+  <circle cx="40" cy="36" r="7" fill="none" stroke="#06b6d4" stroke-width="1.2" opacity="0.5"/>
+  <circle cx="40" cy="36" r="3.5" fill="#06b6d4" opacity="0.12"/>
+  <circle cx="40" cy="36" r="2" fill="#67e8f9" opacity="0.8"/>
+  <g stroke="#06b6d4" stroke-width="1.5" stroke-linecap="round" opacity="0.6">
+    <line x1="40" y1="27" x2="40" y2="29"/><line x1="40" y1="43" x2="40" y2="45"/>
+    <line x1="31" y1="36" x2="33" y2="36"/><line x1="47" y1="36" x2="49" y2="36"/>
+  </g>
+  <!-- connection -->
+  <line x1="33" y1="30" x2="36" y2="33" stroke="#818cf8" stroke-width="1" opacity="0.4"/>
+  <!-- play arrow -->
+  <polygon points="20,24 20,28 24,26" fill="#fff" opacity="0.5"/>
+</svg>

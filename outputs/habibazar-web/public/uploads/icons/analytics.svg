@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs><linearGradient id="anli" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+  <!-- axes -->
+  <line x1="12" y1="10" x2="12" y2="44" stroke="#4a4a6a" stroke-width="1"/>
+  <line x1="12" y1="44" x2="48" y2="44" stroke="#4a4a6a" stroke-width="1"/>
+  <!-- bars -->
+  <rect x="16" y="32" width="5" height="12" rx="1.5" fill="#6366f1" opacity="0.7"/>
+  <rect x="23" y="24" width="5" height="20" rx="1.5" fill="#818cf8" opacity="0.8"/>
+  <rect x="30" y="18" width="5" height="26" rx="1.5" fill="url(#anli)" opacity="0.9"/>
+  <rect x="37" y="26" width="5" height="18" rx="1.5" fill="#06b6d4" opacity="0.7"/>
+  <!-- trend line -->
+  <polyline points="18,34 25,26 32,20 39,28" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- dots -->
+  <circle cx="18" cy="34" r="2" fill="#f59e0b"/>
+  <circle cx="25" cy="26" r="2" fill="#f59e0b"/>
+  <circle cx="32" cy="20" r="2.5" fill="#f59e0b"/>
+  <circle cx="39" cy="28" r="2" fill="#f59e0b"/>
+  <!-- up arrow -->
+  <path d="M44,14 L48,10 L52,14" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="48" y1="10" x2="48" y2="20" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

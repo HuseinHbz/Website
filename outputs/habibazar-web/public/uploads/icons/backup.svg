@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs><linearGradient id="bi" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#059669"/></linearGradient></defs>
+  <!-- disk base -->
+  <ellipse cx="28" cy="36" rx="16" ry="5" fill="url(#bi)" opacity="0.15" stroke="#10b981" stroke-width="1"/>
+  <rect x="12" y="22" width="32" height="14" rx="2" fill="url(#bi)" opacity="0.08" stroke="#10b981" stroke-width="1.2"/>
+  <ellipse cx="28" cy="22" rx="16" ry="5" fill="#10b981" opacity="0.15" stroke="#10b981" stroke-width="1"/>
+  <ellipse cx="28" cy="22" rx="10" ry="3" fill="#10b981" opacity="0.2"/>
+  <!-- refresh arrow -->
+  <path d="M20,12 Q28,8 36,12" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+  <path d="M36,12 L36,17" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+  <path d="M36,8 L36,12 L40,12" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- check mark on disk -->
+  <path d="M22,32 L26,36 L34,28" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

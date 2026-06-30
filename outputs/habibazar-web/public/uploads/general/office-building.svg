@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160">
+  <rect width="220" height="160" fill="#06060e"/>
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#0d0d2a"/><stop offset="100%" stop-color="#06060e"/></linearGradient>
+    <linearGradient id="bldg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.25"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0.08"/></linearGradient>
+  </defs>
+  <rect width="220" height="100" fill="url(#sky)"/>
+  <!-- moon -->
+  <circle cx="185" cy="20" r="10" fill="#e2e8f0" opacity="0.15"/>
+  <circle cx="191" cy="17" r="8" fill="#06060e"/>
+  <!-- stars -->
+  <circle cx="30" cy="15" r="1" fill="white" opacity="0.5"/>
+  <circle cx="60" cy="8" r="0.8" fill="white" opacity="0.4"/>
+  <circle cx="110" cy="12" r="1" fill="white" opacity="0.3"/>
+  <circle cx="150" cy="6" r="0.8" fill="white" opacity="0.5"/>
+  <!-- ground -->
+  <rect x="0" y="120" width="220" height="40" fill="#080810"/>
+  <line x1="0" y1="120" x2="220" y2="120" stroke="#6366f1" stroke-width="0.8" opacity="0.4"/>
+  <!-- main building -->
+  <rect x="75" y="30" width="70" height="90" fill="url(#bldg)" stroke="#6366f1" stroke-width="1"/>
+  <!-- windows grid -->
+  <g fill="#6366f1" opacity="0.35">
+    <rect x="82" y="37" width="10" height="8" rx="1"/><rect x="96" y="37" width="10" height="8" rx="1"/><rect x="110" y="37" width="10" height="8" rx="1"/><rect x="124" y="37" width="10" height="8" rx="1"/>
+    <rect x="82" y="50" width="10" height="8" rx="1"/><rect x="96" y="50" width="10" height="8" rx="1"/><rect x="110" y="50" width="10" height="8" rx="1"/><rect x="124" y="50" width="10" height="8" rx="1"/>
+    <rect x="82" y="63" width="10" height="8" rx="1"/><rect x="96" y="63" width="10" height="8" rx="1"/><rect x="124" y="63" width="10" height="8" rx="1"/>
+    <rect x="82" y="76" width="10" height="8" rx="1"/><rect x="110" y="76" width="10" height="8" rx="1"/><rect x="124" y="76" width="10" height="8" rx="1"/>
+  </g>
+  <!-- lit window -->
+  <rect x="110" y="63" width="10" height="8" rx="1" fill="#f59e0b" opacity="0.7"/>
+  <rect x="96" y="76" width="10" height="8" rx="1" fill="#f59e0b" opacity="0.5"/>
+  <!-- antenna -->
+  <line x1="110" y1="30" x2="110" y2="16" stroke="#6366f1" stroke-width="1.5"/>
+  <circle cx="110" cy="14" r="2" fill="#6366f1" opacity="0.8"/>
+  <!-- side building left -->
+  <rect x="30" y="55" width="42" height="65" fill="url(#bldg)" stroke="#6366f1" stroke-width="0.8" opacity="0.7"/>
+  <g fill="#6366f1" opacity="0.2">
+    <rect x="35" y="62" width="8" height="6" rx="1"/><rect x="46" y="62" width="8" height="6" rx="1"/><rect x="57" y="62" width="8" height="6" rx="1"/>
+    <rect x="35" y="72" width="8" height="6" rx="1"/><rect x="57" y="72" width="8" height="6" rx="1"/>
+    <rect x="35" y="82" width="8" height="6" rx="1"/><rect x="46" y="82" width="8" height="6" rx="1"/>
+  </g>
+  <!-- side building right -->
+  <rect x="148" y="60" width="38" height="60" fill="url(#bldg)" stroke="#6366f1" stroke-width="0.8" opacity="0.7"/>
+  <g fill="#6366f1" opacity="0.2">
+    <rect x="153" y="66" width="7" height="5" rx="1"/><rect x="163" y="66" width="7" height="5" rx="1"/>
+    <rect x="153" y="76" width="7" height="5" rx="1"/><rect x="174" y="66" width="7" height="5" rx="1"/>
+  </g>
+  <!-- road -->
+  <rect x="0" y="128" width="220" height="12" fill="#0a0a14"/>
+  <line x1="0" y1="134" x2="220" y2="134" stroke="#f59e0b" stroke-width="0.6" opacity="0.3" stroke-dasharray="8 6"/>
+  <text x="110" y="155" text-anchor="middle" fill="#6366f1" font-size="7" font-family="monospace" opacity="0.6">ENTERPRISE HQ</text>
+</svg>

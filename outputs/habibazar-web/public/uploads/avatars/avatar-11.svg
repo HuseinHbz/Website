@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg11" cx="40%" cy="30%"><stop offset="0%" stop-color="#0d1a2e"/><stop offset="100%" stop-color="#03070e"/></radialGradient>
+    <radialGradient id="dragon11" cx="50%" cy="50%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.3"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></radialGradient>
+    <filter id="gf11"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="fire11"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg11)"/>
+  <!-- dragon aura -->
+  <circle cx="80" cy="80" r="65" fill="url(#dragon11)" filter="url(#gf11)"/>
+  <!-- dragon silhouette -->
+  <!-- body -->
+  <path d="M80,70 Q95,65 105,75 Q110,85 100,92 Q90,98 80,90 Q70,98 60,92 Q50,85 55,75 Q65,65 80,70 Z" fill="#ef4444" opacity="0.25" stroke="#ef4444" stroke-width="1" filter="url(#fire11)"/>
+  <!-- head -->
+  <path d="M80,45 Q92,42 96,52 Q98,60 90,64 Q85,66 80,65 Q75,66 70,64 Q62,60 64,52 Q68,42 80,45 Z" fill="#ef4444" opacity="0.4" stroke="#fca5a5" stroke-width="1"/>
+  <!-- horns -->
+  <path d="M74,46 Q70,34 72,28" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
+  <path d="M86,46 Q90,34 88,28" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
+  <!-- eyes fire -->
+  <circle cx="74" cy="55" r="5" fill="#ef4444" opacity="0.5" filter="url(#gf11)"/>
+  <circle cx="86" cy="55" r="5" fill="#ef4444" opacity="0.5" filter="url(#gf11)"/>
+  <circle cx="74" cy="55" r="3" fill="#fca5a5"/>
+  <circle cx="86" cy="55" r="3" fill="#fca5a5"/>
+  <circle cx="74" cy="55" r="1.5" fill="#fff"/>
+  <circle cx="86" cy="55" r="1.5" fill="#fff"/>
+  <!-- wings -->
+  <path d="M60,75 Q40,55 30,40 Q45,50 55,68" fill="#ef4444" opacity="0.2" stroke="#ef4444" stroke-width="0.8"/>
+  <path d="M100,75 Q120,55 130,40 Q115,50 105,68" fill="#ef4444" opacity="0.2" stroke="#ef4444" stroke-width="0.8"/>
+  <!-- tail -->
+  <path d="M78,92 Q70,108 60,118 Q65,112 72,110 Q74,118 68,128" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <!-- fire breath glow -->
+  <circle cx="80" cy="110" r="20" fill="#f97316" opacity="0.07" filter="url(#gf11)"/>
+  <text x="80" y="148" text-anchor="middle" fill="#fca5a5" font-size="7" font-weight="700" font-family="monospace">DRAGON-11</text>
+</svg>

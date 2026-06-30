@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 90">
+  <rect width="140" height="90" fill="#08080f"/>
+  <defs>
+    <linearGradient id="clg19" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#06b6d4" stop-opacity="0.5"/></linearGradient>
+    <radialGradient id="clr19" cx="50%" cy="50%"><stop offset="0%" stop-color="#06b6d4" stop-opacity="0.2"/><stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/></radialGradient>
+    <filter id="clf19"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+  <!-- glow bg -->
+  <ellipse cx="70" cy="42" rx="35" ry="30" fill="#06b6d4" opacity="0.07" filter="url(#clf19)"/>
+  <!-- logo mark -->
+  <circle cx="70" cy="38" r="22" fill="#06b6d4" opacity="0.08" stroke="#06b6d4" stroke-width="1.5"/>
+  <circle cx="70" cy="38" r="16" fill="none" stroke="#06b6d4" stroke-width="0.6" opacity="0.4" stroke-dasharray="3 3"/>
+  <!-- letters -->
+  <text x="70" y="44" text-anchor="middle" fill="url(#clg19)" font-size="16" font-weight="900" font-family="system-ui,sans-serif" letter-spacing="-1">OM</text>
+  <!-- company name -->
+  <text x="70" y="72" text-anchor="middle" fill="#06b6d4" font-size="8" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="2" opacity="0.9">OMNICLOUD</text>
+  <!-- tagline -->
+  <text x="70" y="82" text-anchor="middle" fill="#06b6d4" font-size="5" font-family="monospace" opacity="0.45">ENTERPRISE · IT · SOLUTIONS</text>
+  <!-- decorative line -->
+  <line x1="35" y1="76" x2="105" y2="76" stroke="#06b6d4" stroke-width="0.6" opacity="0.25"/>
+  <!-- corner marks -->
+  <line x1="8" y1="8" x2="20" y2="8" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="8" y1="8" x2="8" y2="20" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="132" y1="8" x2="120" y2="8" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="132" y1="8" x2="132" y2="20" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="8" y1="82" x2="20" y2="82" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="8" y1="82" x2="8" y2="70" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="132" y1="82" x2="120" y2="82" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+  <line x1="132" y1="82" x2="132" y2="70" stroke="#06b6d4" stroke-width="1" opacity="0.35"/>
+</svg>

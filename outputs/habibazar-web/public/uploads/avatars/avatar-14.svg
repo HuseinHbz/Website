@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg14" cx="50%" cy="50%"><stop offset="0%" stop-color="#0d1a2e"/><stop offset="100%" stop-color="#030710"/></radialGradient>
+    <radialGradient id="spirit14" cx="50%" cy="50%"><stop offset="0%" stop-color="#06b6d4" stop-opacity="0.5"/><stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/></radialGradient>
+    <filter id="gf14"><feGaussianBlur stdDeviation="8"/></filter>
+    <filter id="glow14"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg14)"/>
+  <!-- spirit aura -->
+  <circle cx="80" cy="75" r="55" fill="url(#spirit14)" filter="url(#gf14)"/>
+  <!-- ethereal/ghost shape -->
+  <path d="M60,45 Q60,30 80,28 Q100,30 100,45 L100,100 Q95,110 90,108 Q85,106 80,112 Q75,106 70,108 Q65,110 60,100 Z" fill="#06b6d4" opacity="0.12" stroke="#06b6d4" stroke-width="1" filter="url(#glow14)"/>
+  <!-- face -->
+  <ellipse cx="80" cy="62" rx="18" ry="20" fill="#06b6d4" opacity="0.08"/>
+  <!-- glowing hollow eyes -->
+  <ellipse cx="72" cy="58" rx="6" ry="7" fill="#06b6d4" opacity="0.6" filter="url(#glow14)"/>
+  <ellipse cx="88" cy="58" rx="6" ry="7" fill="#06b6d4" opacity="0.6" filter="url(#glow14)"/>
+  <ellipse cx="72" cy="58" rx="3" ry="4" fill="black" opacity="0.8"/>
+  <ellipse cx="88" cy="58" rx="3" ry="4" fill="black" opacity="0.8"/>
+  <!-- wisps -->
+  <path d="M45,65 Q35,70 30,65 Q40,60 50,68" fill="#06b6d4" opacity="0.3" stroke="#67e8f9" stroke-width="0.6"/>
+  <path d="M115,65 Q125,70 130,65 Q120,60 110,68" fill="#06b6d4" opacity="0.3" stroke="#67e8f9" stroke-width="0.6"/>
+  <!-- floating particles -->
+  <circle cx="55" cy="40" r="2" fill="#67e8f9" opacity="0.6" filter="url(#glow14)"/>
+  <circle cx="105" cy="35" r="1.5" fill="#67e8f9" opacity="0.5"/>
+  <circle cx="48" cy="55" r="1" fill="#67e8f9" opacity="0.4"/>
+  <circle cx="112" cy="50" r="1.2" fill="#67e8f9" opacity="0.4"/>
+  <text x="80" y="140" text-anchor="middle" fill="#67e8f9" font-size="7" font-weight="700" font-family="monospace">SPIRIT-14</text>
+</svg>

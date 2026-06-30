@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg5" cx="50%" cy="40%"><stop offset="0%" stop-color="#0a1525"/><stop offset="100%" stop-color="#030508"/></radialGradient>
+    <radialGradient id="fire5" cx="50%" cy="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.4"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></radialGradient>
+    <filter id="gf5"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="sharp5"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg5)"/>
+  <circle cx="80" cy="80" r="78" fill="none" stroke="#f59e0b" stroke-width="1" opacity="0.3"/>
+  <!-- flame aura -->
+  <ellipse cx="80" cy="110" rx="45" ry="35" fill="url(#fire5)" filter="url(#gf5)"/>
+  <!-- viking/warrior helmet -->
+  <ellipse cx="80" cy="52" rx="25" ry="22" fill="#f59e0b" opacity="0.1" stroke="#f59e0b" stroke-width="1.5" filter="url(#sharp5)"/>
+  <rect x="55" y="50" width="50" height="8" rx="2" fill="#f59e0b" opacity="0.35" stroke="#f59e0b" stroke-width="1"/>
+  <!-- horns -->
+  <path d="M58,46 Q45,30 48,18 Q55,30 62,44" fill="#f59e0b" opacity="0.5" stroke="#fbbf24" stroke-width="0.8"/>
+  <path d="M102,46 Q115,30 112,18 Q105,30 98,44" fill="#f59e0b" opacity="0.5" stroke="#fbbf24" stroke-width="0.8"/>
+  <!-- face -->
+  <ellipse cx="80" cy="68" rx="18" ry="16" fill="#f59e0b" opacity="0.08"/>
+  <!-- eyes - fierce -->
+  <path d="M68,64 L76,62 L68,60 Z" fill="#f59e0b" opacity="0.9"/>
+  <path d="M92,64 L84,62 L92,60 Z" fill="#f59e0b" opacity="0.9"/>
+  <circle cx="72" cy="63" r="3" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="88" cy="63" r="3" fill="#fbbf24" opacity="0.8"/>
+  <!-- beard -->
+  <path d="M65,75 Q70,72 80,71 Q90,72 95,75 L90,88 Q80,92 70,88 Z" fill="#f59e0b" opacity="0.2" stroke="#fbbf24" stroke-width="0.8"/>
+  <!-- body/armor -->
+  <path d="M50,120 L55,88 Q80,84 105,88 L110,120" fill="#f59e0b" opacity="0.1" stroke="#f59e0b" stroke-width="0.8"/>
+  <!-- chest runes -->
+  <text x="80" y="108" text-anchor="middle" fill="#fbbf24" font-size="10" font-family="serif" opacity="0.6">ᚱᚢᚾ</text>
+  <text x="80" y="138" text-anchor="middle" fill="#fbbf24" font-size="7" font-weight="700" font-family="monospace">WARRIOR-05</text>
+</svg>

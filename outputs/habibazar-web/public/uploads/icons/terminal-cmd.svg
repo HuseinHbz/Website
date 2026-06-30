@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <rect x="8" y="12" width="40" height="32" rx="4" fill="#0a1f0a" stroke="#4ade80" stroke-width="1" opacity="0.8"/>
+  <!-- traffic lights -->
+  <circle cx="14" cy="18" r="2" fill="#ff5f57"/>
+  <circle cx="21" cy="18" r="2" fill="#febc2e"/>
+  <circle cx="28" cy="18" r="2" fill="#28c840"/>
+  <line x1="8" y1="22" x2="48" y2="22" stroke="#4ade80" stroke-width="0.6" opacity="0.3"/>
+  <!-- code lines -->
+  <text x="12" y="31" fill="#4ade80" font-size="6" font-family="monospace" opacity="0.9">$ ping 10.0.0.1</text>
+  <text x="12" y="38" fill="#22c55e" font-size="5.5" font-family="monospace" opacity="0.7">64 bytes: seq=1</text>
+  <rect x="12" y="40" width="5" height="1" rx="0.5" fill="#4ade80" opacity="0.8"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs><linearGradient id="si" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#059669"/></linearGradient></defs>
+  <rect x="8" y="22" width="40" height="14" rx="4" fill="url(#si)" opacity="0.12" stroke="url(#si)" stroke-width="1.2"/>
+  <!-- ports row -->
+  <g fill="#10b981" opacity="0.6">
+    <rect x="11" y="25" width="4" height="8" rx="1"/><rect x="17" y="25" width="4" height="8" rx="1"/>
+    <rect x="23" y="25" width="4" height="8" rx="1"/><rect x="29" y="25" width="4" height="8" rx="1"/>
+    <rect x="35" y="25" width="4" height="8" rx="1"/><rect x="41" y="25" width="4" height="8" rx="1"/>
+  </g>
+  <!-- activity LEDs -->
+  <circle cx="13" cy="25" r="1" fill="#34d399" opacity="0.9"/>
+  <circle cx="19" cy="25" r="1" fill="#34d399" opacity="0.7"/>
+  <circle cx="25" cy="25" r="1" fill="#34d399" opacity="0.9"/>
+  <circle cx="31" cy="25" r="1" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="37" cy="25" r="1" fill="#34d399" opacity="0.6"/>
+  <circle cx="43" cy="25" r="1" fill="#34d399" opacity="0.9"/>
+  <!-- uplink ports -->
+  <rect x="11" y="37" width="34" height="2" rx="1" fill="#10b981" opacity="0.2"/>
+  <!-- stacking arrows -->
+  <path d="M22,17 L28,13 L34,17" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22,41 L28,45 L34,41" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

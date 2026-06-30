@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg7" cx="50%" cy="50%"><stop offset="0%" stop-color="#120822"/><stop offset="100%" stop-color="#050308"/></radialGradient>
+    <linearGradient id="lg7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+    <filter id="gf7"><feGaussianBlur stdDeviation="7"/></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg7)"/>
+  <!-- spiral galaxy -->
+  <circle cx="80" cy="80" r="60" fill="#8b5cf6" opacity="0.04" filter="url(#gf7)"/>
+  <!-- spiral arms -->
+  <path d="M80,80 Q100,60 115,50 Q120,45 118,42" fill="none" stroke="#ec4899" stroke-width="1.5" opacity="0.7"/>
+  <path d="M80,80 Q60,100 45,110 Q40,115 42,118" fill="none" stroke="#ec4899" stroke-width="1.5" opacity="0.7"/>
+  <path d="M80,80 Q100,100 115,112 Q118,118 115,120" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7"/>
+  <path d="M80,80 Q60,60 45,48 Q42,42 45,40" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7"/>
+  <!-- stars -->
+  <circle cx="115" cy="48" r="2" fill="#f0abfc"/>
+  <circle cx="45" cy="112" r="2" fill="#f0abfc"/>
+  <circle cx="45" cy="46" r="1.5" fill="#c084fc"/>
+  <circle cx="118" cy="115" r="1.5" fill="#c084fc"/>
+  <circle cx="95" cy="35" r="1" fill="#e879f9"/>
+  <circle cx="65" cy="125" r="1" fill="#e879f9"/>
+  <circle cx="125" cy="75" r="1.2" fill="#e879f9"/>
+  <circle cx="35" cy="85" r="1.2" fill="#e879f9"/>
+  <!-- core -->
+  <circle cx="80" cy="80" r="12" fill="#ec4899" opacity="0.2" filter="url(#gf7)"/>
+  <circle cx="80" cy="80" r="8" fill="url(#lg7)" opacity="0.9"/>
+  <circle cx="80" cy="80" r="4" fill="white" opacity="0.5"/>
+  <text x="80" y="148" text-anchor="middle" fill="#c084fc" font-size="7" font-weight="700" font-family="monospace">GALAXY-07</text>
+</svg>

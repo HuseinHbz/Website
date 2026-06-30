@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="bg10" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0a0a20"/><stop offset="100%" stop-color="#05050f"/></linearGradient>
+    <linearGradient id="lg10" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444"/><stop offset="50%" stop-color="#f97316"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient>
+    <filter id="gf10"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg10)"/>
+  <!-- DNA helix -->
+  <path d="M55,20 Q80,40 105,60 Q80,80 55,100 Q80,120 105,140" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.7"/>
+  <path d="M105,20 Q80,40 55,60 Q80,80 105,100 Q80,120 55,140" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0.7"/>
+  <!-- rungs -->
+  <g stroke="#f97316" stroke-width="1.5" opacity="0.6">
+    <line x1="62" y1="31" x2="98" y2="31"/>
+    <line x1="79" y1="47" x2="81" y2="47"/>
+    <line x1="62" y1="63" x2="98" y2="63"/>
+    <line x1="79" y1="79" x2="81" y2="79"/>
+    <line x1="62" y1="95" x2="98" y2="95"/>
+    <line x1="79" y1="111" x2="81" y2="111"/>
+    <line x1="62" y1="127" x2="98" y2="127"/>
+  </g>
+  <!-- node dots -->
+  <circle cx="55" cy="60" r="4" fill="#ef4444" filter="url(#gf10)"/>
+  <circle cx="105" cy="60" r="4" fill="#f59e0b" filter="url(#gf10)"/>
+  <circle cx="55" cy="100" r="4" fill="#ef4444" filter="url(#gf10)"/>
+  <circle cx="105" cy="100" r="4" fill="#f59e0b" filter="url(#gf10)"/>
+  <circle cx="80" cy="80" r="14" fill="url(#lg10)" opacity="0.25" stroke="url(#lg10)" stroke-width="1.5" filter="url(#gf10)"/>
+  <circle cx="80" cy="80" r="7" fill="url(#lg10)" opacity="0.9"/>
+  <text x="80" y="150" text-anchor="middle" fill="#f97316" font-size="7" font-weight="700" font-family="monospace">DNA-10</text>
+</svg>

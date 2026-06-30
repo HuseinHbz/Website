@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="bg8" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0a1a0a"/><stop offset="100%" stop-color="#050a05"/></linearGradient>
+    <linearGradient id="lg8" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+    <filter id="gf8"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg8)"/>
+  <!-- concentric hexagons -->
+  <polygon points="80,18 120,40 120,120 80,142 40,120 40,40" fill="none" stroke="#10b981" stroke-width="1.5" opacity="0.6"/>
+  <polygon points="80,30 110,47 110,113 80,130 50,113 50,47" fill="none" stroke="#10b981" stroke-width="1" opacity="0.4"/>
+  <polygon points="80,42 100,54 100,106 80,118 60,106 60,54" fill="none" stroke="#06b6d4" stroke-width="0.8" opacity="0.3"/>
+  <polygon points="80,54 90,61 90,99 80,106 70,99 70,61" fill="url(#lg8)" opacity="0.12" stroke="#06b6d4" stroke-width="1"/>
+  <!-- honeycomb cells -->
+  <polygon points="80,62 87,66 87,74 80,78 73,74 73,66" fill="#10b981" opacity="0.2"/>
+  <polygon points="80,62 87,66 87,74 80,78 73,74 73,66" fill="none" stroke="#10b981" stroke-width="0.8"/>
+  <!-- glow dot -->
+  <circle cx="80" cy="70" r="6" fill="url(#lg8)" opacity="0.9" filter="url(#gf8)"/>
+  <circle cx="80" cy="70" r="3" fill="white" opacity="0.5"/>
+  <!-- corner accent dots -->
+  <circle cx="80" cy="20" r="3" fill="#10b981" opacity="0.8"/>
+  <circle cx="118" cy="41" r="2" fill="#06b6d4" opacity="0.6"/>
+  <circle cx="118" cy="119" r="2" fill="#06b6d4" opacity="0.6"/>
+  <circle cx="80" cy="140" r="3" fill="#10b981" opacity="0.8"/>
+  <text x="80" y="153" text-anchor="middle" fill="#34d399" font-size="7" font-weight="700" font-family="monospace">HEX-08</text>
+</svg>

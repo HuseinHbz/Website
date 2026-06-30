@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0a0a20"/><stop offset="100%" stop-color="#050510"/></linearGradient>
+    <radialGradient id="aura2" cx="50%" cy="50%"><stop offset="0%" stop-color="#06b6d4" stop-opacity="0.35"/><stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/></radialGradient>
+    <filter id="gf2"><feGaussianBlur stdDeviation="10"/></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg2)"/>
+  <!-- hexagonal frame -->
+  <polygon points="80,8 142,44 142,116 80,152 18,116 18,44" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.6"/>
+  <polygon points="80,20 130,48 130,112 80,140 30,112 30,48" fill="none" stroke="#06b6d4" stroke-width="0.5" opacity="0.3"/>
+  <!-- aura -->
+  <circle cx="80" cy="70" r="50" fill="url(#aura2)" filter="url(#gf2)"/>
+  <!-- character - cyber ninja -->
+  <ellipse cx="80" cy="58" rx="20" ry="22" fill="#06b6d4" opacity="0.12" stroke="#06b6d4" stroke-width="1"/>
+  <!-- mask/visor -->
+  <path d="M62,52 Q80,44 98,52 L96,65 Q80,70 64,65 Z" fill="#06b6d4" opacity="0.25"/>
+  <path d="M64,56 L96,56" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <!-- glowing eye slit -->
+  <line x1="68" y1="56" x2="92" y2="56" stroke="#67e8f9" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="72" y1="56" x2="88" y2="56" stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  <!-- body armor -->
+  <path d="M55,115 L60,80 Q80,76 100,80 L105,115" fill="#06b6d4" opacity="0.1" stroke="#06b6d4" stroke-width="0.8"/>
+  <line x1="80" y1="78" x2="80" y2="115" stroke="#06b6d4" stroke-width="0.6" opacity="0.4"/>
+  <!-- label -->
+  <rect x="60" y="125" width="40" height="14" rx="3" fill="#06b6d4" opacity="0.15" stroke="#06b6d4" stroke-width="0.8"/>
+  <text x="80" y="135" text-anchor="middle" fill="#67e8f9" font-size="7" font-weight="700" font-family="monospace">NINJA-02</text>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg4" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a0a1a"/><stop offset="100%" stop-color="#080508"/></radialGradient>
+    <radialGradient id="magic4" cx="50%" cy="50%"><stop offset="0%" stop-color="#a855f7" stop-opacity="0.5"/><stop offset="100%" stop-color="#a855f7" stop-opacity="0"/></radialGradient>
+    <filter id="glow4"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="bg_glow"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg4)"/>
+  <!-- magic circle -->
+  <circle cx="80" cy="80" r="70" fill="url(#magic4)" filter="url(#bg_glow)"/>
+  <circle cx="80" cy="80" r="70" fill="none" stroke="#a855f7" stroke-width="1" opacity="0.5" stroke-dasharray="6 3"/>
+  <circle cx="80" cy="80" r="55" fill="none" stroke="#a855f7" stroke-width="0.5" opacity="0.3"/>
+  <!-- wizard hat -->
+  <polygon points="80,15 96,52 64,52" fill="#7c3aed" opacity="0.7"/>
+  <polygon points="80,18 93,50 67,50" fill="#a855f7" opacity="0.3"/>
+  <!-- stars on hat -->
+  <circle cx="78" cy="28" r="1.5" fill="#f0abfc"/>
+  <circle cx="85" cy="36" r="1" fill="#f0abfc"/>
+  <circle cx="74" cy="40" r="1.2" fill="#f0abfc"/>
+  <!-- brim -->
+  <ellipse cx="80" cy="53" rx="22" ry="5" fill="#7c3aed" opacity="0.7" stroke="#a855f7" stroke-width="0.8"/>
+  <!-- face -->
+  <ellipse cx="80" cy="75" rx="20" ry="22" fill="#a855f7" opacity="0.12" stroke="#c084fc" stroke-width="1"/>
+  <!-- eyes - glowing -->
+  <circle cx="72" cy="70" r="4.5" fill="#7c3aed" opacity="0.8" filter="url(#glow4)"/>
+  <circle cx="88" cy="70" r="4.5" fill="#7c3aed" opacity="0.8" filter="url(#glow4)"/>
+  <circle cx="72" cy="70" r="2.5" fill="#e879f9"/>
+  <circle cx="88" cy="70" r="2.5" fill="#e879f9"/>
+  <!-- beard/robe -->
+  <path d="M60,95 Q65,85 80,83 Q95,85 100,95 L108,130 Q80,140 52,130 Z" fill="#7c3aed" opacity="0.15" stroke="#a855f7" stroke-width="0.8"/>
+  <!-- magic orb -->
+  <circle cx="80" cy="108" r="8" fill="#a855f7" opacity="0.3" stroke="#c084fc" stroke-width="1" filter="url(#glow4)"/>
+  <circle cx="80" cy="108" r="4" fill="#e879f9" opacity="0.6"/>
+  <text x="80" y="148" text-anchor="middle" fill="#c084fc" font-size="7" font-weight="700" font-family="monospace">MAGE-04</text>
+</svg>

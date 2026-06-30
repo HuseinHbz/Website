@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs>
+    <linearGradient id="sci" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+    <filter id="scg"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+  <path d="M28,10 L42,16 L42,30 Q42,42 28,48 Q14,42 14,30 L14,16 Z" fill="url(#sci)" opacity="0.12" stroke="url(#sci)" stroke-width="1.5"/>
+  <!-- shield glow -->
+  <path d="M28,12 L40,17 L40,29 Q40,40 28,46 Q16,40 16,29 L16,17 Z" fill="#10b981" opacity="0.05" filter="url(#scg)"/>
+  <!-- big check mark -->
+  <path d="M20,28 L25,34 L36,22" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- shield segments -->
+  <line x1="28" y1="12" x2="28" y2="46" stroke="#10b981" stroke-width="0.6" opacity="0.2"/>
+  <line x1="16" y1="24" x2="40" y2="24" stroke="#10b981" stroke-width="0.6" opacity="0.2"/>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg17" cx="50%" cy="50%"><stop offset="0%" stop-color="#0f0a1f"/><stop offset="100%" stop-color="#050308"/></radialGradient>
+    <linearGradient id="holo17" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="25%" stop-color="#06b6d4"/><stop offset="50%" stop-color="#10b981"/><stop offset="75%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#ec4899"/></linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="80" fill="url(#bg17)"/>
+  <!-- holographic rings -->
+  <ellipse cx="80" cy="80" rx="70" ry="20" fill="none" stroke="url(#holo17)" stroke-width="1" opacity="0.4"/>
+  <ellipse cx="80" cy="80" rx="60" ry="40" fill="none" stroke="url(#holo17)" stroke-width="0.8" opacity="0.3"/>
+  <ellipse cx="80" cy="80" rx="45" ry="55" fill="none" stroke="url(#holo17)" stroke-width="0.6" opacity="0.25"/>
+  <circle cx="80" cy="80" r="35" fill="none" stroke="url(#holo17)" stroke-width="0.5" opacity="0.2"/>
+  <!-- center face holo projection -->
+  <path d="M68,55 Q68,48 80,47 Q92,48 92,55 L92,72 Q92,80 80,82 Q68,80 68,72 Z" fill="none" stroke="url(#holo17)" stroke-width="1.5" opacity="0.8"/>
+  <!-- scanlines on face -->
+  <g opacity="0.3" stroke="url(#holo17)" stroke-width="0.4">
+    <line x1="68" y1="58" x2="92" y2="58"/>
+    <line x1="68" y1="62" x2="92" y2="62"/>
+    <line x1="68" y1="66" x2="92" y2="66"/>
+    <line x1="68" y1="70" x2="92" y2="70"/>
+    <line x1="68" y1="74" x2="92" y2="74"/>
+  </g>
+  <!-- glitch dots -->
+  <rect x="72" y="60" width="6" height="3" fill="#06b6d4" opacity="0.8"/>
+  <rect x="82" y="60" width="6" height="3" fill="#06b6d4" opacity="0.8"/>
+  <!-- projection beam -->
+  <path d="M70,82 L55,115" stroke="url(#holo17)" stroke-width="0.6" opacity="0.3"/>
+  <path d="M90,82 L105,115" stroke="url(#holo17)" stroke-width="0.6" opacity="0.3"/>
+  <ellipse cx="80" cy="115" rx="25" ry="5" fill="url(#holo17)" opacity="0.1"/>
+  <text x="80" y="136" text-anchor="middle" fill="#818cf8" font-size="7" font-weight="700" font-family="monospace">HOLO-17</text>
+</svg>

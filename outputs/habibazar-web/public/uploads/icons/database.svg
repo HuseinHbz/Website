@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">
+  <rect width="56" height="56" rx="12" fill="#0d1117"/>
+  <defs><linearGradient id="di" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#b45309"/></linearGradient></defs>
+  <!-- cylinders -->
+  <ellipse cx="28" cy="16" rx="14" ry="5" fill="url(#di)" opacity="0.2" stroke="#f59e0b" stroke-width="1.2"/>
+  <rect x="14" y="16" width="28" height="8" fill="#f59e0b" opacity="0.06"/>
+  <ellipse cx="28" cy="24" rx="14" ry="5" fill="url(#di)" opacity="0.15" stroke="#f59e0b" stroke-width="1"/>
+  <rect x="14" y="24" width="28" height="8" fill="#f59e0b" opacity="0.05"/>
+  <ellipse cx="28" cy="32" rx="14" ry="5" fill="url(#di)" opacity="0.12" stroke="#f59e0b" stroke-width="1"/>
+  <rect x="14" y="32" width="28" height="8" fill="#f59e0b" opacity="0.04"/>
+  <ellipse cx="28" cy="40" rx="14" ry="5" fill="url(#di)" opacity="0.2" stroke="#f59e0b" stroke-width="1.2"/>
+  <!-- data glow -->
+  <ellipse cx="28" cy="16" rx="8" ry="2.5" fill="#f59e0b" opacity="0.4"/>
+  <!-- query symbol -->
+  <text x="28" y="34" text-anchor="middle" fill="#fbbf24" font-size="7" font-family="monospace" opacity="0.7">SQL</text>
+  <!-- side detail lines -->
+  <line x1="14" y1="20" x2="14" y2="40" stroke="#f59e0b" stroke-width="0.8" opacity="0.3"/>
+  <line x1="42" y1="20" x2="42" y2="40" stroke="#f59e0b" stroke-width="0.8" opacity="0.3"/>
+</svg>
