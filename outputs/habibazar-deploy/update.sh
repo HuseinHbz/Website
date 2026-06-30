@@ -2,6 +2,7 @@
 # ============================================================
 # Habibazar Platform — Update Script
 # Pulls latest code and rebuilds without touching config/DB
+# Seed scripts are NOT run here — only on first deploy.
 # ============================================================
 set -euo pipefail
 
@@ -28,25 +29,15 @@ hr
 info "Pulling latest code..."
 git -C "$REPO" fetch origin "$BRANCH"
 git -C "$REPO" reset --hard "origin/$BRANCH"
-ok "Code updated"
+ok "Code updated ($(git -C "$REPO" log -1 --format='%h %s'))"
 
 # ── Build ────────────────────────────────────────────────────
-hr; info "Building..."
+hr; info "Installing dependencies & building..."
 cd "$WEB"
 rm -rf .next
 npm ci --omit=dev
 npm run build
 ok "Build complete"
-
-# ── Seed DB ─────────────────────────────────────────────────
-hr; info "Seeding database content..."
-SEED_SCRIPT="$REPO/outputs/habibazar-deploy/seed-cisco-blog.js"
-DB_PATH="$WEB/data/habibazar.db"
-if [[ -f "$SEED_SCRIPT" && -f "$DB_PATH" ]]; then
-    node "$SEED_SCRIPT" "$DB_PATH" && ok "Database seeded" || warn "Seed script failed — check manually"
-else
-    warn "Seed script or DB not found — skipping"
-fi
 
 # ── Reload ──────────────────────────────────────────────────
 hr; info "Reloading PM2..."
@@ -55,11 +46,16 @@ pm2 save
 ok "Reloaded"
 
 # ── Health ──────────────────────────────────────────────────
-sleep 5
-code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://127.0.0.1:3000/" 2>/dev/null || echo "000")
+info "Waiting 6s for app to warm up..."
+sleep 6
+code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 "http://127.0.0.1:3000/" 2>/dev/null || echo "000")
 if [[ "$code" == "200" || "$code" == "307" || "$code" == "308" ]]; then
     ok "Web → HTTP $code ✓"
 else
     warn "Web → HTTP $code — check: pm2 logs habibazar-web"
 fi
+
+hr
+echo -e "${BOLD}${GREEN}  Update complete!${NC}"
+echo -e "  Tip: to run Cisco seed manually: ${YELLOW}node $REPO/outputs/habibazar-deploy/seed-cisco-blog.js${NC}"
 hr

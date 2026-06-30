@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
-# Habibazar Platform — Deploy Script
+# Habibazar Platform — First Deploy Script
 # Ubuntu 24.04 LTS | Node 22 | PM2 | Nginx
+#
+# For updates after first deploy use: update.sh
 #
 # Usage:
 #   chmod +x deploy.sh && ./deploy.sh
@@ -25,7 +27,7 @@ WEB="$BASE/web"
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 hr
-echo -e "${BOLD}  Habibazar Platform — Deployment${NC}"
+echo -e "${BOLD}  Habibazar Platform — First Deployment${NC}"
 echo -e "  Branch: ${YELLOW}$BRANCH${NC}"
 hr
 
@@ -38,7 +40,7 @@ command -v nginx >/dev/null || err "nginx not found. Install: sudo apt install -
 command -v git   >/dev/null || err "git not found. Install: sudo apt install -y git"
 
 node -e "process.exit(parseInt(process.version.slice(1)) < 18 ? 1 : 0)" || err "Node 18+ required. Current: $(node --version)"
-ok "Node $(node --version)"
+ok "Node $(node --version) / npm $(npm --version)"
 
 # ── Directories ──────────────────────────────────────────────
 hr; info "Creating directories..."
@@ -52,20 +54,22 @@ if [[ -d "$REPO/.git" ]]; then
     git -C "$REPO" fetch origin "$BRANCH"
     git -C "$REPO" checkout "$BRANCH"
     git -C "$REPO" reset --hard "origin/$BRANCH"
-    ok "Pulled latest"
+    ok "Pulled latest ($(git -C "$REPO" log -1 --format='%h %s'))"
 else
     git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$REPO"
     ok "Cloned repository"
 fi
 
 # Symlink web
-if [[ -L "$WEB" ]]; then
-    rm "$WEB"
-elif [[ -d "$WEB" ]]; then
-    rm -rf "$WEB"
-fi
+[[ -L "$WEB" ]] && rm "$WEB"
+[[ -d "$WEB" ]] && rm -rf "$WEB"
 ln -sf "$REPO/outputs/habibazar-web" "$WEB"
 ok "Linked: web → $REPO/outputs/habibazar-web"
+
+# Copy update.sh to base for easy access
+cp "$REPO/outputs/habibazar-deploy/update.sh" "$BASE/update.sh"
+chmod +x "$BASE/update.sh"
+ok "update.sh → $BASE/update.sh"
 
 # ── Copy .env if provided ────────────────────────────────────
 if [[ -f "$DEPLOY_DIR/web.env.local" && ! -f "$WEB/.env.local" ]]; then
@@ -76,8 +80,12 @@ fi
 
 [[ -f "$WEB/.env.local" ]] || warn ".env.local not found at $WEB/.env.local — create it with ADMIN_JWT_SECRET"
 
+# ── Data directory ───────────────────────────────────────────
+mkdir -p "$WEB/data"
+ok "Data directory ready"
+
 # ── Build Web ────────────────────────────────────────────────
-hr; info "Installing & building..."
+hr; info "Installing dependencies & building..."
 cd "$WEB"
 rm -rf .next
 npm ci --omit=dev
@@ -95,7 +103,7 @@ else
     warn "nginx.conf not found — skipping"
 fi
 
-# Self-signed placeholder certs
+# Self-signed placeholder certs (replaced by Certbot later)
 for domain in habibazar.ir www.habibazar.ir; do
     certdir="/etc/letsencrypt/live/$domain"
     if [[ ! -f "$certdir/fullchain.pem" ]]; then
@@ -114,7 +122,7 @@ ok "Nginx ready"
 # ── PM2 ──────────────────────────────────────────────────────
 hr; info "Starting PM2..."
 ECOSYSTEM="$REPO/outputs/habibazar-deploy/ecosystem.config.js"
-sudo cp "$ECOSYSTEM" "$BASE/ecosystem.config.js"
+cp "$ECOSYSTEM" "$BASE/ecosystem.config.js"
 
 cd "$BASE"
 pm2 delete habibazar-web 2>/dev/null || true
@@ -128,14 +136,27 @@ fi
 ok "PM2 started"
 
 # ── Health Check ─────────────────────────────────────────────
-hr; info "Waiting 8s for app to start..."
-sleep 8
+hr; info "Waiting 10s for app to start..."
+sleep 10
 
-code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://127.0.0.1:3000/" 2>/dev/null || echo "000")
+code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 "http://127.0.0.1:3000/" 2>/dev/null || echo "000")
 if [[ "$code" == "200" || "$code" == "307" || "$code" == "308" ]]; then
     ok "Web → HTTP $code"
 else
-    warn "Web → HTTP $code (may still be starting — check: pm2 logs)"
+    warn "Web → HTTP $code (may still be starting — check: pm2 logs habibazar-web)"
+fi
+
+# ── Seed Cisco Blog (first deploy only) ──────────────────────
+hr; info "Seeding Cisco blog content (first deploy)..."
+SEED_SCRIPT="$REPO/outputs/habibazar-deploy/seed-cisco-blog.js"
+DB_PATH="$WEB/data/habibazar.db"
+# Wait a bit more for the app to create the DB on first request
+sleep 5
+if [[ -f "$SEED_SCRIPT" && -f "$DB_PATH" ]]; then
+    node "$SEED_SCRIPT" "$DB_PATH" && ok "Cisco blog seeded" || warn "Seed failed — run manually after app starts: node $SEED_SCRIPT"
+else
+    warn "DB not ready yet — run manually once app is up: node $SEED_SCRIPT"
+    warn "  (App creates DB on first request — visit the site once, then run the seed)"
 fi
 
 # ── Done ─────────────────────────────────────────────────────
@@ -144,13 +165,18 @@ echo ""
 echo -e "${BOLD}${GREEN}  Deployment complete!${NC}"
 echo ""
 echo -e "  ${BOLD}Next steps:${NC}"
-echo -e "  1. Create .env.local if not done:"
-echo -e "     ${YELLOW}echo 'ADMIN_JWT_SECRET=$(openssl rand -hex 64)' > $WEB/.env.local${NC}"
+echo ""
+echo -e "  1. Set a strong JWT secret (if not done):"
+echo -e "     ${YELLOW}echo \"ADMIN_JWT_SECRET=\$(openssl rand -hex 64)\" >> $WEB/.env.local${NC}"
 echo -e "     ${YELLOW}echo 'NEXT_PUBLIC_SITE_URL=https://habibazar.ir' >> $WEB/.env.local${NC}"
+echo -e "     ${YELLOW}pm2 restart habibazar-web${NC}"
 echo ""
 echo -e "  2. Issue SSL certificate:"
 echo -e "     ${YELLOW}sudo certbot --nginx -d habibazar.ir -d www.habibazar.ir --email hosseinhabibazar@gmail.com${NC}"
 echo ""
-echo -e "  3. Check logs:"
+echo -e "  3. For future updates use:"
+echo -e "     ${YELLOW}$BASE/update.sh${NC}"
+echo ""
+echo -e "  4. Check logs:"
 echo -e "     ${YELLOW}pm2 logs habibazar-web --lines 50${NC}"
 hr
