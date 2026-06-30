@@ -21,6 +21,19 @@ export async function GET() {
     return NextResponse.json({ ok: false, config, error: 'No API key configured' })
   }
 
+  // First, fetch available models
+  const modelsUrl = `${apiUrl || 'https://conduit.ozdoev.net/api/v1'}/models`
+  let models: string[] = []
+  try {
+    const mRes = await fetch(modelsUrl, {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    })
+    if (mRes.ok) {
+      const mData = await mRes.json() as { data: { id: string }[] }
+      models = mData.data?.map((m) => m.id) ?? []
+    }
+  } catch { /* ignore */ }
+
   const url = `${apiUrl || 'https://conduit.ozdoev.net/api/v1'}/chat/completions`
   try {
     const res = await fetch(url, {
@@ -37,11 +50,11 @@ export async function GET() {
     })
     const body = await res.text()
     if (!res.ok) {
-      return NextResponse.json({ ok: false, config, status: res.status, error: body })
+      return NextResponse.json({ ok: false, config, models, status: res.status, error: body })
     }
     const data = JSON.parse(body)
-    return NextResponse.json({ ok: true, config, reply: data.choices?.[0]?.message?.content })
+    return NextResponse.json({ ok: true, config, models, reply: data.choices?.[0]?.message?.content })
   } catch (e) {
-    return NextResponse.json({ ok: false, config, error: String(e) })
+    return NextResponse.json({ ok: false, config, models, error: String(e) })
   }
 }
