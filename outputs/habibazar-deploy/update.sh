@@ -38,6 +38,16 @@ npm ci --omit=dev
 npm run build
 ok "Build complete"
 
+# ── Seed DB ─────────────────────────────────────────────────
+hr; info "Seeding database content..."
+SEED_SCRIPT="$REPO/outputs/habibazar-deploy/seed-cisco-blog.js"
+DB_PATH="$WEB/data/habibazar.db"
+if [[ -f "$SEED_SCRIPT" && -f "$DB_PATH" ]]; then
+    node "$SEED_SCRIPT" "$DB_PATH" && ok "Database seeded" || warn "Seed script failed — check manually"
+else
+    warn "Seed script or DB not found — skipping"
+fi
+
 # ── Reload ──────────────────────────────────────────────────
 hr; info "Reloading PM2..."
 pm2 reload habibazar-web --update-env
