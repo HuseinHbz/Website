@@ -3754,3 +3754,1706 @@ console.log('✅ Section 6 done — 3 config posts inserted')
 console.log('')
 console.log('🎉 All blog posts inserted successfully!')
 console.log('Total posts: 20 + 10 + 3 + 3 + 3 + 3 = 42 posts')
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SECTION 7 — اتوماسیون، بکاپ خودکار و ترفندها
+// ══════════════════════════════════════════════════════════════════════════════
+
+// اضافه کردن دسته‌بندی جدید
+const autoCats = db.prepare(`INSERT OR IGNORE INTO blog_categories (slug, name_en, name_fa, color, sort_order) VALUES (?,?,?,?,?)`)
+autoCats.run('cisco-automation', 'Cisco Automation', 'اتوماسیون سیسکو', '#7c3aed', 7)
+autoCats.run('cisco-tricks',     'Tips & Tricks',    'ترفندها و نکات',  '#0f766e', 8)
+
+post('auto-backup-cisco-complete',
+  'Automatic Cisco Backup — 5 Methods from Basic to Pro',
+  'بکاپ خودکار سیسکو — ۵ روش از ساده تا حرفه‌ای',
+  'Never lose your Cisco config again. Set up automatic backups with EEM, Python, and Git.',
+  'پیکربندی سیسکو را هرگز از دست ندهید. بکاپ خودکار با EEM، Python و Git راه‌اندازی کنید.',
+  `## Why Automate Backups?
+Manual backups get forgotten. Engineers change configs and forget to backup. Hardware dies. The only safe backup is one that runs automatically — every day, without human intervention.
+
+## Method 1 — EEM (Built into Cisco IOS)
+EEM (Embedded Event Manager) runs scripts directly on the router. No external server needed.
+
+### Backup on every config change
+\`\`\`
+event manager applet BACKUP-ON-CHANGE
+ event syslog pattern "SYS-5-CONFIG_I"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/$(hostname)-$(clock).cfg"
+ action 3.0 syslog msg "Config backed up after change"
+\`\`\`
+
+### Scheduled daily backup (2am every night)
+\`\`\`
+event manager applet DAILY-BACKUP
+ event timer cron cron-entry "0 2 * * *"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/backup/$(hostname)-daily.cfg"
+ action 3.0 syslog msg "Daily backup completed"
+\`\`\`
+
+### Backup before reload
+\`\`\`
+event manager applet PRE-RELOAD-BACKUP
+ event syslog pattern "SYS-5-RELOAD"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/pre-reload-$(hostname).cfg"
+\`\`\`
+
+## Method 2 — Python + Netmiko (from Linux server)
+\`\`\`python
+#!/usr/bin/env python3
+from netmiko import ConnectHandler
+from datetime import datetime
+import os
+
+devices = [
+    {'host': '192.168.1.1', 'name': 'R1-Core'},
+    {'host': '192.168.1.2', 'name': 'SW1-Dist'},
+    {'host': '192.168.1.3', 'name': 'FW1-Edge'},
+]
+
+date = datetime.now().strftime('%Y%m%d_%H%M')
+backup_dir = f'/backups/{date}'
+os.makedirs(backup_dir, exist_ok=True)
+
+for device in devices:
+    try:
+        conn = ConnectHandler(
+            device_type='cisco_ios',
+            host=device['host'],
+            username='backup-user',
+            password='BackupPass123',
+        )
+        config = conn.send_command('show running-config')
+        filename = f"{backup_dir}/{device['name']}.cfg"
+        with open(filename, 'w') as f:
+            f.write(config)
+        print(f"✅ {device['name']} backed up")
+        conn.disconnect()
+    except Exception as e:
+        print(f"❌ {device['name']} failed: {e}")
+\`\`\`
+
+Add to cron: \`0 2 * * * /usr/local/bin/cisco-backup.py >> /var/log/cisco-backup.log 2>&1\`
+
+## Method 3 — Git-based Config Version Control
+Store configs in Git — full history of every change, who changed what, when.
+
+\`\`\`bash
+#!/bin/bash
+# /usr/local/bin/cisco-git-backup.sh
+BACKUP_DIR="/opt/cisco-configs"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+cd $BACKUP_DIR
+
+# Pull configs with rancid or oxidized
+/usr/bin/rancid-run
+
+# Commit to git
+git add -A
+git commit -m "Auto backup $DATE"
+git push origin main
+\`\`\`
+
+**Tools for Git-based backup:**
+- **Oxidized**: Modern, supports 100+ device types, REST API
+- **RANCID**: Classic, battle-tested
+- **Netshot**: GUI + git backup
+
+## Method 4 — Oxidized (Recommended for teams)
+Oxidized is purpose-built for network config backup with Git.
+
+\`\`\`yaml
+# /etc/oxidized/config
+username: backup-user
+password: BackupPass123
+model: IOS
+interval: 3600        # Every hour
+use_syslog: true
+pid: /var/run/oxidized.pid
+rest: 0.0.0.0:8888    # REST API
+
+output:
+  default: git
+  git:
+    user: oxidized
+    email: oxidized@company.local
+    repo: /var/lib/oxidized/configs.git
+
+source:
+  default: csv
+  csv:
+    file: /etc/oxidized/router.db
+    delimiter: !ruby/regexp /:/
+    map:
+      name: 0
+      ip: 1
+      model: 2
+\`\`\`
+
+## Method 5 — Ansible Playbook
+\`\`\`yaml
+---
+- name: Backup Cisco Configs
+  hosts: cisco_devices
+  gather_facts: no
+  tasks:
+    - name: Get running config
+      cisco.ios.ios_command:
+        commands: show running-config
+      register: config_output
+
+    - name: Save config to file
+      copy:
+        content: "{{ config_output.stdout[0] }}"
+        dest: "./backups/{{ inventory_hostname }}_{{ ansible_date_time.date }}.cfg"
+      delegate_to: localhost
+\`\`\`
+
+## Golden Rules for Backup
+1. **3-2-1 Rule**: 3 copies, 2 different media, 1 offsite
+2. **Test restores**: A backup you've never tested is not a backup
+3. **Backup before changes**: Always, without exception
+4. **Alert on failure**: Know immediately if backup fails`,
+
+  `## چرا بکاپ خودکار؟
+بکاپ دستی فراموش می‌شود. مهندسان تنظیمات را تغییر می‌دهند و فراموش می‌کنند بکاپ بگیرند. سخت‌افزار خراب می‌شود. تنها بکاپ امن، بکاپی است که به صورت خودکار اجرا می‌شود — هر روز، بدون دخالت انسانی.
+
+## روش ۱ — EEM (داخل IOS سیسکو)
+EEM مستقیم روی روتر اجرا می‌شود. نیازی به سرور خارجی نیست.
+
+### بکاپ با هر تغییر پیکربندی
+\`\`\`
+event manager applet BACKUP-ON-CHANGE
+ event syslog pattern "SYS-5-CONFIG_I"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/$(hostname)-change.cfg"
+ action 3.0 syslog msg "Config backed up after change"
+\`\`\`
+
+### بکاپ روزانه (ساعت ۲ صبح)
+\`\`\`
+event manager applet DAILY-BACKUP
+ event timer cron cron-entry "0 2 * * *"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/backup/$(hostname)-daily.cfg"
+ action 3.0 syslog msg "Daily backup completed"
+\`\`\`
+
+### بکاپ قبل از Reload
+\`\`\`
+event manager applet PRE-RELOAD-BACKUP
+ event syslog pattern "SYS-5-RELOAD"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/pre-reload-$(hostname).cfg"
+\`\`\`
+
+## روش ۲ — Python + Netmiko (از سرور Linux)
+\`\`\`python
+#!/usr/bin/env python3
+from netmiko import ConnectHandler
+from datetime import datetime
+import os
+
+devices = [
+    {'host': '192.168.1.1', 'name': 'R1-Core'},
+    {'host': '192.168.1.2', 'name': 'SW1-Dist'},
+    {'host': '192.168.1.3', 'name': 'FW1-Edge'},
+]
+
+date = datetime.now().strftime('%Y%m%d_%H%M')
+backup_dir = f'/backups/{date}'
+os.makedirs(backup_dir, exist_ok=True)
+
+for device in devices:
+    try:
+        conn = ConnectHandler(
+            device_type='cisco_ios',
+            host=device['host'],
+            username='backup-user',
+            password='BackupPass123',
+        )
+        config = conn.send_command('show running-config')
+        with open(f"{backup_dir}/{device['name']}.cfg", 'w') as f:
+            f.write(config)
+        print(f"✅ {device['name']} بکاپ گرفته شد")
+        conn.disconnect()
+    except Exception as e:
+        print(f"❌ {device['name']} خطا: {e}")
+\`\`\`
+
+اضافه به Cron: \`0 2 * * * python3 /usr/local/bin/cisco-backup.py\`
+
+## روش ۳ — Oxidized (توصیه شده برای تیم‌ها)
+Oxidized ابزاری اختصاصی برای بکاپ پیکربندی شبکه با Git است. از بیش از ۱۰۰ نوع دستگاه پشتیبانی می‌کند.
+
+\`\`\`yaml
+# /etc/oxidized/config
+username: backup-user
+password: BackupPass123
+model: IOS
+interval: 3600        # هر ساعت
+output:
+  default: git
+  git:
+    repo: /var/lib/oxidized/configs.git
+\`\`\`
+
+## روش ۴ — Ansible Playbook
+\`\`\`yaml
+---
+- name: Backup Cisco Configs
+  hosts: cisco_devices
+  gather_facts: no
+  tasks:
+    - name: دریافت پیکربندی
+      cisco.ios.ios_command:
+        commands: show running-config
+      register: config_output
+
+    - name: ذخیره در فایل
+      copy:
+        content: "{{ config_output.stdout[0] }}"
+        dest: "./backups/{{ inventory_hostname }}_{{ ansible_date_time.date }}.cfg"
+      delegate_to: localhost
+\`\`\`
+
+## قوانین طلایی بکاپ
+1. **قانون ۳-۲-۱**: ۳ نسخه، ۲ رسانه مختلف، ۱ خارج از سایت
+2. **بازیابی را آزمایش کنید**: بکاپ آزمایش نشده بکاپ نیست
+3. **قبل از هر تغییر بکاپ بگیرید**: همیشه، بدون استثنا
+4. **هشدار در صورت خرابی**: فوری بدانید بکاپ شکست خورده`,
+  'cisco-automation', 18, 1)
+
+post('ansible-cisco-automation',
+  'Ansible for Cisco — Automate Network Configuration at Scale',
+  'Ansible برای سیسکو — اتوماسیون پیکربندی شبکه در مقیاس بزرگ',
+  'Use Ansible to configure hundreds of Cisco devices in minutes instead of hours.',
+  'از Ansible برای پیکربندی صدها دستگاه سیسکو در دقایق به جای ساعت‌ها استفاده کنید.',
+  `## Why Ansible for Network?
+Imagine changing a password on 200 routers. Manually: 200 SSH sessions × 5 minutes = 16 hours. With Ansible: 5 minutes to write, 3 minutes to run.
+
+Ansible is:
+- **Agentless**: No software needed on Cisco devices
+- **YAML-based**: Human-readable playbooks
+- **Idempotent**: Running twice gives same result
+- **Free**: Open source
+
+## Installation
+\`\`\`bash
+pip install ansible
+pip install paramiko
+ansible-galaxy collection install cisco.ios
+\`\`\`
+
+## Inventory File (hosts.yml)
+\`\`\`yaml
+all:
+  children:
+    routers:
+      hosts:
+        R1:
+          ansible_host: 192.168.1.1
+        R2:
+          ansible_host: 192.168.1.2
+    switches:
+      hosts:
+        SW1:
+          ansible_host: 192.168.1.10
+        SW2:
+          ansible_host: 192.168.1.11
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: admin
+    ansible_password: "{{ vault_password }}"
+    ansible_connection: network_cli
+    ansible_become: yes
+    ansible_become_method: enable
+\`\`\`
+
+## Playbook Examples
+
+### 1. Configure NTP on all devices
+\`\`\`yaml
+---
+- name: Configure NTP
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Set NTP servers
+      cisco.ios.ios_ntp_global:
+        config:
+          servers:
+            - server: 0.pool.ntp.org
+            - server: 1.pool.ntp.org
+        state: merged
+\`\`\`
+
+### 2. Create VLANs on all switches
+\`\`\`yaml
+---
+- name: Configure VLANs
+  hosts: switches
+  gather_facts: no
+  tasks:
+    - name: Create VLANs
+      cisco.ios.ios_vlans:
+        config:
+          - vlan_id: 10
+            name: Sales
+          - vlan_id: 20
+            name: Engineering
+          - vlan_id: 30
+            name: Management
+        state: merged
+
+    - name: Save config
+      cisco.ios.ios_command:
+        commands: write memory
+\`\`\`
+
+### 3. Push security hardening to all devices
+\`\`\`yaml
+---
+- name: Security Hardening
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Apply security config
+      cisco.ios.ios_config:
+        lines:
+          - service password-encryption
+          - no ip http server
+          - no service tcp-small-servers
+          - login block-for 300 attempts 5 within 60
+          - ip ssh version 2
+        save_when: modified
+\`\`\`
+
+### 4. Collect show commands from all devices
+\`\`\`yaml
+---
+- name: Collect Device Info
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Get interface status
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show version
+          - show processes cpu
+      register: output
+
+    - name: Save output
+      copy:
+        content: "{{ output.stdout | join('\\n') }}"
+        dest: "./reports/{{ inventory_hostname }}_report.txt"
+      delegate_to: localhost
+\`\`\`
+
+## Run Playbooks
+\`\`\`bash
+# Dry run (check mode)
+ansible-playbook -i hosts.yml ntp.yml --check
+
+# Run for real
+ansible-playbook -i hosts.yml ntp.yml
+
+# Only on specific group
+ansible-playbook -i hosts.yml backup.yml --limit routers
+
+# With vault for passwords
+ansible-playbook -i hosts.yml hardening.yml --ask-vault-pass
+\`\`\`
+
+## Ansible Vault (Secure Passwords)
+\`\`\`bash
+# Encrypt password
+ansible-vault encrypt_string 'MyPassword123' --name 'vault_password'
+
+# Or encrypt whole file
+ansible-vault encrypt group_vars/all/secrets.yml
+\`\`\``,
+
+  `## چرا Ansible برای شبکه؟
+تصور کنید باید رمز عبور را روی ۲۰۰ روتر تغییر دهید. دستی: ۲۰۰ SSH × ۵ دقیقه = ۱۶ ساعت. با Ansible: ۵ دقیقه نوشتن، ۳ دقیقه اجرا.
+
+Ansible:
+- **بدون Agent**: نیازی به نرم‌افزار روی دستگاه‌های سیسکو ندارد
+- **مبتنی بر YAML**: Playbook‌های قابل خواندن توسط انسان
+- **Idempotent**: دو بار اجرا = یک نتیجه
+- **رایگان**: متن‌باز
+
+## نصب
+\`\`\`bash
+pip install ansible
+pip install paramiko
+ansible-galaxy collection install cisco.ios
+\`\`\`
+
+## فایل Inventory
+\`\`\`yaml
+all:
+  children:
+    routers:
+      hosts:
+        R1:
+          ansible_host: 192.168.1.1
+        R2:
+          ansible_host: 192.168.1.2
+    switches:
+      hosts:
+        SW1:
+          ansible_host: 192.168.1.10
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: admin
+    ansible_password: "{{ vault_password }}"
+    ansible_connection: network_cli
+    ansible_become: yes
+    ansible_become_method: enable
+\`\`\`
+
+## مثال‌های Playbook
+
+### ۱. پیکربندی NTP روی همه دستگاه‌ها
+\`\`\`yaml
+---
+- name: Configure NTP
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: تنظیم NTP
+      cisco.ios.ios_ntp_global:
+        config:
+          servers:
+            - server: 0.pool.ntp.org
+        state: merged
+\`\`\`
+
+### ۲. ایجاد VLAN روی همه سوئیچ‌ها
+\`\`\`yaml
+---
+- name: Configure VLANs
+  hosts: switches
+  gather_facts: no
+  tasks:
+    - name: ایجاد VLANها
+      cisco.ios.ios_vlans:
+        config:
+          - vlan_id: 10
+            name: Sales
+          - vlan_id: 20
+            name: Engineering
+        state: merged
+    - name: ذخیره پیکربندی
+      cisco.ios.ios_command:
+        commands: write memory
+\`\`\`
+
+### ۳. سخت‌سازی امنیتی همه دستگاه‌ها
+\`\`\`yaml
+---
+- name: Security Hardening
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: اعمال تنظیمات امنیتی
+      cisco.ios.ios_config:
+        lines:
+          - service password-encryption
+          - no ip http server
+          - login block-for 300 attempts 5 within 60
+          - ip ssh version 2
+        save_when: modified
+\`\`\`
+
+## اجرای Playbook‌ها
+\`\`\`bash
+# آزمایشی (بدون تغییر)
+ansible-playbook -i hosts.yml ntp.yml --check
+
+# اجرای واقعی
+ansible-playbook -i hosts.yml ntp.yml
+
+# فقط روی گروه خاص
+ansible-playbook -i hosts.yml backup.yml --limit routers
+\`\`\``,
+  'cisco-automation', 20, 1)
+
+post('python-netmiko-cisco',
+  'Python + Netmiko — Script Your Cisco Network',
+  'Python + Netmiko — شبکه سیسکو را اسکریپت کنید',
+  'Learn to use Python and Netmiko to automate repetitive Cisco tasks.',
+  'یاد بگیرید از Python و Netmiko برای اتوماسیون کارهای تکراری سیسکو استفاده کنید.',
+  `## What is Netmiko?
+Netmiko is a Python library that simplifies SSH connections to network devices. It handles all the complexity of Cisco's interactive CLI.
+
+## Installation
+\`\`\`bash
+pip install netmiko
+\`\`\`
+
+## Basic Connection
+\`\`\`python
+from netmiko import ConnectHandler
+
+cisco_router = {
+    'device_type': 'cisco_ios',
+    'host': '192.168.1.1',
+    'username': 'admin',
+    'password': 'MyPassword',
+    'secret': 'EnablePass',   # Enable password
+}
+
+with ConnectHandler(**cisco_router) as conn:
+    conn.enable()
+    output = conn.send_command('show version')
+    print(output)
+\`\`\`
+
+## Send Configuration Commands
+\`\`\`python
+config_commands = [
+    'interface loopback 0',
+    'ip address 1.1.1.1 255.255.255.255',
+    'no shutdown',
+    'description Management Loopback',
+]
+
+with ConnectHandler(**cisco_router) as conn:
+    conn.enable()
+    output = conn.send_config_set(config_commands)
+    conn.save_config()   # write memory
+    print(output)
+\`\`\`
+
+## Real-World Scripts
+
+### Mass Password Change
+\`\`\`python
+from netmiko import ConnectHandler
+
+devices = ['192.168.1.1', '192.168.1.2', '192.168.1.3']
+new_password = 'NewStrongPass2025!'
+
+for ip in devices:
+    try:
+        conn = ConnectHandler(
+            device_type='cisco_ios',
+            host=ip,
+            username='admin',
+            password='OldPassword',
+            secret='OldEnable',
+        )
+        conn.enable()
+        conn.send_config_set([
+            f'username admin privilege 15 secret {new_password}',
+            f'enable secret {new_password}',
+        ])
+        conn.save_config()
+        print(f"✅ {ip} password changed")
+        conn.disconnect()
+    except Exception as e:
+        print(f"❌ {ip}: {e}")
+\`\`\`
+
+### Network Audit — Find All Open Telnet
+\`\`\`python
+from netmiko import ConnectHandler
+import re
+
+devices = ['192.168.1.1', '192.168.1.2']
+telnet_devices = []
+
+for ip in devices:
+    conn = ConnectHandler(device_type='cisco_ios', host=ip,
+                          username='admin', password='pass')
+    output = conn.send_command('show running-config | include transport input')
+    if 'telnet' in output.lower() or 'all' in output.lower():
+        telnet_devices.append(ip)
+    conn.disconnect()
+
+print(f"Devices with Telnet enabled: {telnet_devices}")
+\`\`\`
+
+### Auto-Fix: Disable Telnet, Enable SSH Only
+\`\`\`python
+fix_commands = [
+    'line vty 0 15',
+    'transport input ssh',
+    'login local',
+]
+
+for ip in telnet_devices:
+    with ConnectHandler(device_type='cisco_ios', host=ip,
+                        username='admin', password='pass') as conn:
+        conn.enable()
+        conn.send_config_set(fix_commands)
+        conn.save_config()
+        print(f"✅ Fixed {ip}")
+\`\`\`
+
+## TextFSM — Parse CLI Output into Data
+\`\`\`python
+# Get structured data from show commands
+from netmiko import ConnectHandler
+
+with ConnectHandler(**cisco_router) as conn:
+    # use_textfsm=True parses output into list of dicts
+    interfaces = conn.send_command(
+        'show ip interface brief',
+        use_textfsm=True
+    )
+    
+    for intf in interfaces:
+        if intf['status'] == 'down':
+            print(f"DOWN interface: {intf['intf']} on {cisco_router['host']}")
+\`\`\``,
+
+  `## Netmiko چیست؟
+Netmiko یک کتابخانه Python است که اتصالات SSH به دستگاه‌های شبکه را ساده می‌کند. تمام پیچیدگی‌های CLI تعاملی سیسکو را مدیریت می‌کند.
+
+## نصب
+\`\`\`bash
+pip install netmiko
+\`\`\`
+
+## اتصال پایه
+\`\`\`python
+from netmiko import ConnectHandler
+
+cisco_router = {
+    'device_type': 'cisco_ios',
+    'host': '192.168.1.1',
+    'username': 'admin',
+    'password': 'MyPassword',
+    'secret': 'EnablePass',
+}
+
+with ConnectHandler(**cisco_router) as conn:
+    conn.enable()
+    output = conn.send_command('show version')
+    print(output)
+\`\`\`
+
+## ارسال دستورات پیکربندی
+\`\`\`python
+config_commands = [
+    'interface loopback 0',
+    'ip address 1.1.1.1 255.255.255.255',
+    'no shutdown',
+    'description Management Loopback',
+]
+
+with ConnectHandler(**cisco_router) as conn:
+    conn.enable()
+    output = conn.send_config_set(config_commands)
+    conn.save_config()   # write memory خودکار
+    print(output)
+\`\`\`
+
+## اسکریپت‌های واقعی
+
+### تغییر رمز عبور انبوه
+\`\`\`python
+devices = ['192.168.1.1', '192.168.1.2', '192.168.1.3']
+new_password = 'NewStrongPass2025!'
+
+for ip in devices:
+    try:
+        conn = ConnectHandler(device_type='cisco_ios', host=ip,
+                              username='admin', password='OldPass', secret='OldEnable')
+        conn.enable()
+        conn.send_config_set([
+            f'username admin privilege 15 secret {new_password}',
+            f'enable secret {new_password}',
+        ])
+        conn.save_config()
+        print(f"✅ {ip} رمز عبور تغییر یافت")
+        conn.disconnect()
+    except Exception as e:
+        print(f"❌ {ip}: {e}")
+\`\`\`
+
+### حسابرسی شبکه — یافتن Telnet باز
+\`\`\`python
+for ip in devices:
+    conn = ConnectHandler(device_type='cisco_ios', host=ip,
+                          username='admin', password='pass')
+    output = conn.send_command('show run | include transport input')
+    if 'telnet' in output.lower():
+        print(f"⚠️  {ip} Telnet فعال دارد!")
+    conn.disconnect()
+\`\`\`
+
+### خروجی ساختاریافته با TextFSM
+\`\`\`python
+# use_textfsm=True خروجی را به لیست دیکشنری تبدیل می‌کند
+interfaces = conn.send_command('show ip interface brief', use_textfsm=True)
+
+for intf in interfaces:
+    if intf['status'] == 'down':
+        print(f"اینترفیس Down: {intf['intf']}")
+\`\`\``,
+  'cisco-automation', 18, 0)
+
+post('napalm-nornir-cisco',
+  'NAPALM and Nornir — Professional Network Automation',
+  'NAPALM و Nornir — اتوماسیون شبکه حرفه‌ای',
+  'Take your network automation to the next level with NAPALM and Nornir.',
+  'اتوماسیون شبکه را با NAPALM و Nornir به سطح بعدی ببرید.',
+  `## NAPALM — Network Automation and Programmability
+NAPALM provides a unified API for multiple network vendors. The same code works for Cisco IOS, NX-OS, Juniper, Arista, and more.
+
+### Installation
+\`\`\`bash
+pip install napalm
+\`\`\`
+
+### Get Facts from Any Device
+\`\`\`python
+import napalm
+
+driver = napalm.get_network_driver('ios')
+device = driver(
+    hostname='192.168.1.1',
+    username='admin',
+    password='password',
+    optional_args={'secret': 'enable_pass'},
+)
+
+device.open()
+
+# Get device facts
+facts = device.get_facts()
+print(f"Hostname: {facts['hostname']}")
+print(f"OS Version: {facts['os_version']}")
+print(f"Uptime: {facts['uptime']} seconds")
+
+# Get interfaces
+interfaces = device.get_interfaces()
+for name, data in interfaces.items():
+    status = "UP" if data['is_up'] else "DOWN"
+    print(f"{name}: {status} | {data['speed']} Mbps")
+
+# Get BGP neighbors
+bgp = device.get_bgp_neighbors()
+print(f"BGP Neighbors: {bgp}")
+
+device.close()
+\`\`\`
+
+### Compare and Deploy Config (Config Diff)
+\`\`\`python
+device.open()
+
+# Load desired config
+device.load_merge_candidate(filename='new_config.txt')
+
+# See what will change
+diff = device.compare_config()
+print("Changes to be applied:")
+print(diff)
+
+# Apply if OK
+if diff:
+    confirm = input("Apply? (yes/no): ")
+    if confirm == 'yes':
+        device.commit_config()
+        print("✅ Config applied")
+    else:
+        device.discard_config()
+        print("❌ Cancelled")
+
+device.close()
+\`\`\`
+
+## Nornir — Fast Parallel Automation Framework
+Nornir runs tasks on hundreds of devices in parallel — 100x faster than sequential scripts.
+
+### Installation
+\`\`\`bash
+pip install nornir nornir-netmiko nornir-utils
+\`\`\`
+
+### Nornir Inventory (hosts.yaml)
+\`\`\`yaml
+R1:
+  hostname: 192.168.1.1
+  groups:
+    - routers
+
+SW1:
+  hostname: 192.168.1.10
+  groups:
+    - switches
+\`\`\`
+
+### groups.yaml
+\`\`\`yaml
+routers:
+  platform: ios
+  username: admin
+  password: password
+
+switches:
+  platform: ios
+  username: admin
+  password: password
+\`\`\`
+
+### Run Tasks on All Devices in Parallel
+\`\`\`python
+from nornir import InitNornir
+from nornir_netmiko.tasks import netmiko_send_command
+from nornir_utils.plugins.functions import print_result
+
+nr = InitNornir(config_file='config.yaml')
+
+# Run 'show version' on ALL devices simultaneously
+result = nr.run(
+    task=netmiko_send_command,
+    command_string='show version'
+)
+
+print_result(result)
+
+# Filter to specific group
+routers_only = nr.filter(groups=['routers'])
+result = routers_only.run(
+    task=netmiko_send_command,
+    command_string='show ip route'
+)
+\`\`\`
+
+### Custom Task — Health Check on All Devices
+\`\`\`python
+from nornir import InitNornir
+from nornir.core.task import Task, Result
+from nornir_netmiko.tasks import netmiko_send_command
+
+def health_check(task: Task) -> Result:
+    """Check CPU, memory, and interface status"""
+    cpu = task.run(netmiko_send_command, command_string='show processes cpu | include CPU')
+    mem = task.run(netmiko_send_command, command_string='show memory statistics | include Processor')
+    
+    return Result(
+        host=task.host,
+        result=f"CPU: {cpu.result[:50]}\\nMemory: {mem.result[:50]}"
+    )
+
+nr = InitNornir(config_file='config.yaml')
+result = nr.run(task=health_check)
+print_result(result)
+\`\`\`
+
+## Comparison: When to Use What?
+| Tool | Best For |
+|------|----------|
+| Netmiko | Simple scripts, learning |
+| NAPALM | Multi-vendor, config diff |
+| Nornir | Large scale, parallel, complex |
+| Ansible | Team collaboration, existing infrastructure |`,
+
+  `## NAPALM — اتوماسیون و برنامه‌پذیری شبکه
+NAPALM یک API یکپارچه برای چندین فروشنده شبکه فراهم می‌کند. همان کد برای Cisco IOS، NX-OS، Juniper، Arista و موارد دیگر کار می‌کند.
+
+### دریافت اطلاعات از هر دستگاه
+\`\`\`python
+import napalm
+
+driver = napalm.get_network_driver('ios')
+device = driver(hostname='192.168.1.1', username='admin', password='pass')
+
+device.open()
+
+facts = device.get_facts()
+print(f"نام میزبان: {facts['hostname']}")
+print(f"نسخه IOS: {facts['os_version']}")
+
+interfaces = device.get_interfaces()
+for name, data in interfaces.items():
+    status = "فعال" if data['is_up'] else "غیرفعال"
+    print(f"{name}: {status} | {data['speed']} مگابیت")
+
+device.close()
+\`\`\`
+
+### مقایسه و استقرار پیکربندی
+\`\`\`python
+device.open()
+device.load_merge_candidate(filename='new_config.txt')
+
+diff = device.compare_config()
+print("تغییراتی که اعمال می‌شود:")
+print(diff)
+
+if diff:
+    if input("اعمال کنم؟ (yes/no): ") == 'yes':
+        device.commit_config()
+        print("✅ پیکربندی اعمال شد")
+    else:
+        device.discard_config()
+
+device.close()
+\`\`\`
+
+## Nornir — اجرای موازی روی صدها دستگاه
+Nornir وظایف را به صورت موازی روی صدها دستگاه اجرا می‌کند — ۱۰۰ برابر سریع‌تر از اسکریپت‌های متوالی.
+
+\`\`\`python
+from nornir import InitNornir
+from nornir_netmiko.tasks import netmiko_send_command
+from nornir_utils.plugins.functions import print_result
+
+nr = InitNornir(config_file='config.yaml')
+
+# اجرای show version روی همه دستگاه‌ها همزمان
+result = nr.run(
+    task=netmiko_send_command,
+    command_string='show version'
+)
+print_result(result)
+\`\`\`
+
+## مقایسه ابزارها
+| ابزار | بهترین کاربرد |
+|-------|--------------|
+| Netmiko | اسکریپت‌های ساده، یادگیری |
+| NAPALM | چند فروشنده، مقایسه پیکربندی |
+| Nornir | مقیاس بزرگ، موازی، پیچیده |
+| Ansible | همکاری تیمی، زیرساخت موجود |`,
+  'cisco-automation', 17, 0)
+
+post('terraform-cisco-netdevops',
+  'Terraform and NetDevOps — Infrastructure as Code for Networks',
+  'Terraform و NetDevOps — زیرساخت به عنوان کد برای شبکه‌ها',
+  'Apply DevOps principles to network management with Terraform and CI/CD pipelines.',
+  'اصول DevOps را با Terraform و CI/CD Pipeline به مدیریت شبکه اعمال کنید.',
+  `## What is NetDevOps?
+NetDevOps applies software development practices (version control, CI/CD, testing, automation) to network operations. Your network config becomes code — reviewed, tested, and deployed automatically.
+
+## Core Principles
+1. **Everything as Code**: Network configs in Git
+2. **Peer Review**: Every change reviewed before applied
+3. **Automated Testing**: Test config changes before deployment
+4. **Rollback**: Revert to previous version instantly
+5. **Audit Trail**: Full history of who changed what and why
+
+## Terraform for Cisco
+Terraform is an Infrastructure-as-Code tool. Define desired state in .tf files; Terraform makes it happen.
+
+### Install Terraform
+\`\`\`bash
+# Ubuntu/Debian
+curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com focal main"
+apt-get install terraform
+\`\`\`
+
+### Terraform with Cisco IOS XE
+\`\`\`hcl
+terraform {
+  required_providers {
+    iosxe = {
+      source = "CiscoDevNet/iosxe"
+    }
+  }
+}
+
+provider "iosxe" {
+  host     = "192.168.1.1"
+  username = "admin"
+  password = var.password
+}
+
+# Create VLAN
+resource "iosxe_vlan" "vlan10" {
+  vlan_id = 10
+  name    = "Sales"
+}
+
+# Configure interface
+resource "iosxe_interface_vlan" "mgmt" {
+  name        = "1"
+  ip_address  = "192.168.1.1"
+  ip_mask     = "255.255.255.0"
+  shutdown    = false
+}
+
+# Static route
+resource "iosxe_static_route_vrf" "default_route" {
+  prefix    = "0.0.0.0"
+  mask      = "0.0.0.0"
+  next_hop  = "203.0.113.1"
+}
+\`\`\`
+
+\`\`\`bash
+terraform init
+terraform plan    # See what will change
+terraform apply   # Apply changes
+terraform destroy # Remove everything
+\`\`\`
+
+## CI/CD Pipeline for Network Changes
+\`\`\`yaml
+# .gitlab-ci.yml or GitHub Actions
+stages:
+  - validate
+  - test
+  - deploy
+
+validate:
+  stage: validate
+  script:
+    - ansible-playbook --syntax-check site.yml
+    - yamllint hosts.yml
+
+test:
+  stage: test
+  script:
+    - ansible-playbook -i staging/hosts.yml site.yml
+    - python3 tests/verify_config.py
+
+deploy:
+  stage: deploy
+  when: manual          # Requires human approval
+  script:
+    - ansible-playbook -i production/hosts.yml site.yml
+  only:
+    - main
+\`\`\`
+
+## Git Workflow for Network Changes
+\`\`\`bash
+# 1. Create feature branch
+git checkout -b feature/add-vlan-50
+
+# 2. Make config changes
+vim group_vars/switches/vlans.yml
+
+# 3. Test in lab
+ansible-playbook -i lab/hosts.yml vlans.yml
+
+# 4. Create pull request for review
+git push origin feature/add-vlan-50
+
+# 5. After approval, merge and CI/CD deploys automatically
+\`\`\``,
+
+  `## NetDevOps چیست؟
+NetDevOps اصول توسعه نرم‌افزار (کنترل نسخه، CI/CD، آزمایش، اتوماسیون) را به عملیات شبکه اعمال می‌کند. پیکربندی شبکه شما به کد تبدیل می‌شود — بررسی شده، آزمایش شده و به طور خودکار مستقر می‌شود.
+
+## اصول اساسی
+1. **همه چیز به عنوان کد**: پیکربندی‌های شبکه در Git
+2. **بررسی همتا**: هر تغییر قبل از اعمال بررسی می‌شود
+3. **آزمایش خودکار**: تغییرات پیکربندی قبل از استقرار آزمایش می‌شوند
+4. **بازگشت**: فوری به نسخه قبلی برگردید
+5. **مسیر حسابرسی**: تاریخچه کامل اینکه چه کسی چه چیزی را چه زمانی تغییر داد
+
+## Terraform برای سیسکو
+
+### تعریف VLAN با Terraform
+\`\`\`hcl
+terraform {
+  required_providers {
+    iosxe = {
+      source = "CiscoDevNet/iosxe"
+    }
+  }
+}
+
+provider "iosxe" {
+  host     = "192.168.1.1"
+  username = "admin"
+  password = var.password
+}
+
+resource "iosxe_vlan" "vlan10" {
+  vlan_id = 10
+  name    = "Sales"
+}
+\`\`\`
+
+\`\`\`bash
+terraform init
+terraform plan    # ببینید چه تغییری ایجاد می‌شود
+terraform apply   # اعمال تغییرات
+\`\`\`
+
+## Pipeline CI/CD برای تغییرات شبکه
+\`\`\`yaml
+stages:
+  - validate
+  - test
+  - deploy
+
+validate:
+  script:
+    - ansible-playbook --syntax-check site.yml
+
+test:
+  script:
+    - ansible-playbook -i staging/hosts.yml site.yml
+
+deploy:
+  when: manual          # نیاز به تأیید انسانی دارد
+  script:
+    - ansible-playbook -i production/hosts.yml site.yml
+  only:
+    - main
+\`\`\`
+
+## جریان کار Git برای تغییرات شبکه
+\`\`\`bash
+# ۱. ایجاد شاخه ویژگی
+git checkout -b feature/add-vlan-50
+
+# ۲. تغییر پیکربندی
+vim group_vars/switches/vlans.yml
+
+# ۳. آزمایش در محیط آزمایشگاهی
+ansible-playbook -i lab/hosts.yml vlans.yml
+
+# ۴. ایجاد Pull Request برای بررسی
+git push origin feature/add-vlan-50
+
+# ۵. بعد از تأیید، merge و CI/CD به صورت خودکار مستقر می‌کند
+\`\`\``,
+  'cisco-automation', 17, 0)
+
+post('cisco-eem-advanced',
+  'Cisco EEM Advanced — Automate Everything Inside IOS',
+  'EEM پیشرفته سیسکو — همه چیز را داخل IOS اتوماسیون کنید',
+  'EEM is Cisco\'s built-in automation engine. No external tools needed — automate directly on the device.',
+  'EEM موتور اتوماسیون داخلی سیسکو است. بدون ابزار خارجی — مستقیم روی دستگاه اتوماسیون کنید.',
+  `## EEM — Embedded Event Manager
+EEM is built into Cisco IOS. It watches for events (Syslog messages, CPU/memory thresholds, timers, CLI commands) and automatically runs actions.
+
+## EEM Event Types
+| Event | Trigger |
+|-------|---------|
+| syslog | Log message pattern |
+| timer cron | Scheduled time (like Linux cron) |
+| timer watchdog | Periodic interval |
+| interface | Link up/down |
+| snmp | SNMP threshold |
+| cli | CLI command entered |
+| threshold cpu | CPU usage |
+
+## Practical EEM Examples
+
+### Auto-Shutdown Interface on Error Threshold
+\`\`\`
+event manager applet SHUTDOWN-BAD-INTERFACE
+ event syslog pattern ".*%LINEPROTO-5-UPDOWN.*GigabitEthernet0/1.*down"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "configure terminal"
+ action 3.0 cli command "interface gi0/1"
+ action 4.0 cli command "shutdown"
+ action 5.0 syslog msg "Interface GI0/1 auto-shutdown due to flapping"
+ action 6.0 mail server "192.168.1.100" to "admin@company.com"
+              from "router@company.com"
+              subject "ALERT: Interface shutdown on $(hostname)"
+              body "GigabitEthernet0/1 was auto-shutdown due to repeated flapping"
+\`\`\`
+
+### CPU High Alert + Auto Action
+\`\`\`
+event manager applet CPU-HIGH-ALERT
+ event snmp oid 1.3.6.1.4.1.9.9.109.1.1.1.1.6.1 get-type next
+              entry-op gt entry-val 80 poll-interval 30
+ action 1.0 syslog priority critical msg "CPU above 80%!"
+ action 2.0 cli command "show processes cpu sorted | head 20"
+ action 3.0 mail server "192.168.1.100" to "noc@company.com"
+              subject "HIGH CPU on $(hostname)"
+              body "CPU threshold exceeded. Please investigate."
+\`\`\`
+
+### Auto-Reload on Memory Leak
+\`\`\`
+event manager applet MEMORY-WATCHDOG
+ event snmp oid 1.3.6.1.4.1.9.9.48.1.1.1.6.1 get-type next
+              entry-op lt entry-val 5000000 poll-interval 300
+ action 1.0 syslog priority critical msg "Free memory below 5MB - scheduling reload"
+ action 2.0 cli command "reload in 5"
+\`\`\`
+
+### Track Config Changes with User Attribution
+\`\`\`
+event manager applet LOG-CONFIG-CHANGE
+ event syslog pattern "SYS-5-CONFIG_I"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "show users"
+ action 3.0 set _whoami "$_cli_result"
+ action 4.0 syslog msg "CONFIG CHANGED by: $_whoami"
+ action 5.0 cli command "copy running-config tftp://192.168.1.200/changes/$(hostname)-$(date).cfg"
+\`\`\`
+
+### Daily Health Report Email
+\`\`\`
+event manager applet DAILY-HEALTH-REPORT
+ event timer cron cron-entry "0 8 * * *"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "show version | include uptime"
+ action 3.0 set _uptime "$_cli_result"
+ action 4.0 cli command "show processes cpu | include CPU"
+ action 5.0 set _cpu "$_cli_result"
+ action 6.0 mail server "192.168.1.100" to "noc@company.com"
+              subject "Daily Health: $(hostname)"
+              body "Uptime: $_uptime\\nCPU: $_cpu"
+\`\`\`
+
+## EEM Variables
+\`\`\`
+$(hostname)     - Device hostname
+$(router_name)  - Router name
+$_event_type    - Type of event that triggered
+$_cli_result    - Result of last CLI command
+\`\`\``,
+
+  `## EEM — مدیر رویداد داخلی
+EEM داخل Cisco IOS تعبیه شده است. رویدادها را (پیام‌های Syslog، آستانه CPU/حافظه، تایمرها، دستورات CLI) زیر نظر می‌گیرد و به صورت خودکار اقدامات را اجرا می‌کند.
+
+## انواع رویداد EEM
+| رویداد | محرک |
+|--------|------|
+| syslog | الگوی پیام لاگ |
+| timer cron | زمان برنامه‌ریزی شده |
+| timer watchdog | بازه دوره‌ای |
+| interface | لینک بالا/پایین |
+| threshold cpu | مصرف CPU |
+
+## مثال‌های عملی EEM
+
+### بکاپ خودکار با هر تغییر
+\`\`\`
+event manager applet BACKUP-ON-CHANGE
+ event syslog pattern "SYS-5-CONFIG_I"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "copy running-config tftp://192.168.1.200/$(hostname)-change.cfg"
+ action 3.0 syslog msg "Auto backup completed"
+\`\`\`
+
+### هشدار CPU بالا + اقدام خودکار
+\`\`\`
+event manager applet CPU-HIGH-ALERT
+ event snmp oid 1.3.6.1.4.1.9.9.109.1.1.1.1.6.1 get-type next
+              entry-op gt entry-val 80 poll-interval 30
+ action 1.0 syslog priority critical msg "CPU بالای ۸۰ درصد!"
+ action 2.0 cli command "show processes cpu sorted | head 20"
+ action 3.0 mail server "192.168.1.100" to "noc@company.com"
+              subject "CPU بالا در $(hostname)"
+              body "آستانه CPU رد شده. لطفاً بررسی کنید."
+\`\`\`
+
+### گزارش روزانه سلامت
+\`\`\`
+event manager applet DAILY-HEALTH-REPORT
+ event timer cron cron-entry "0 8 * * *"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "show version | include uptime"
+ action 3.0 set _uptime "$_cli_result"
+ action 4.0 cli command "show processes cpu | include CPU"
+ action 5.0 set _cpu "$_cli_result"
+ action 6.0 mail server "192.168.1.100" to "noc@company.com"
+              subject "گزارش روزانه: $(hostname)"
+              body "Uptime: $_uptime\\nCPU: $_cpu"
+\`\`\`
+
+### ردیابی تغییرات پیکربندی با کاربر
+\`\`\`
+event manager applet LOG-CONFIG-CHANGE
+ event syslog pattern "SYS-5-CONFIG_I"
+ action 1.0 cli command "enable"
+ action 2.0 cli command "show users"
+ action 3.0 set _whoami "$_cli_result"
+ action 4.0 syslog msg "پیکربندی توسط: $_whoami تغییر یافت"
+\`\`\``,
+  'cisco-automation', 16, 0)
+
+post('cisco-speed-tricks',
+  'Cisco Pro Tips — Speed Up Your Daily Network Work',
+  'ترفندهای حرفه‌ای سیسکو — کار روزانه شبکه را سریع‌تر کنید',
+  'Shortcuts, aliases, and techniques that experienced Cisco engineers use every day.',
+  'میانبرها، Alias‌ها و تکنیک‌هایی که مهندسان باتجربه سیسکو هر روز استفاده می‌کنند.',
+  `## CLI Shortcuts That Save Hours
+
+### Tab Completion & Abbreviation
+\`\`\`
+! Full command:
+show running-configuration
+! Abbreviated (Cisco accepts shortest unique abbreviation):
+sh run
+sho run
+show run
+\`\`\`
+
+### History and Recall
+\`\`\`
+! Show command history
+show history
+! Increase history size
+terminal history size 50
+! Navigate history: Ctrl+P (previous), Ctrl+N (next)
+\`\`\`
+
+### Powerful Pipe Filters
+\`\`\`
+show running-config | include interface
+show running-config | section ospf
+show running-config | begin router
+show running-config | exclude !
+show interfaces | include line|errors|rate
+show ip bgp | include 192.168
+\`\`\`
+
+### Aliases — Create Your Own Commands
+\`\`\`
+alias exec sri show running-config interface
+alias exec sib show ip interface brief
+alias exec sir show ip route
+alias exec soo show ip ospf neighbor
+alias exec shbgp show ip bgp summary
+alias exec sav copy run start
+\`\`\`
+Now type \`sib\` instead of \`show ip interface brief\`!
+
+### Helpful Exec Commands
+\`\`\`
+! See config with line numbers
+show running-config linenum
+
+! Compare running vs startup
+show archive config differences
+
+! Monitor interface counters live
+watch 5 show interfaces gi0/0 | include errors
+\`\`\`
+
+## Troubleshooting Speed Techniques
+
+### IP SLA — Monitor Connectivity Automatically
+\`\`\`
+ip sla 1
+ icmp-echo 8.8.8.8 source-interface gi0/0
+ frequency 30
+ip sla schedule 1 life forever start-time now
+
+! Check results
+show ip sla statistics 1
+\`\`\`
+
+### Track SLA — Adjust Routes Automatically
+\`\`\`
+track 1 ip sla 1 reachability
+ip route 0.0.0.0 0.0.0.0 203.0.113.1 track 1  ! Primary
+ip route 0.0.0.0 0.0.0.0 203.0.114.1 5        ! Backup
+\`\`\`
+Primary route used when 8.8.8.8 is reachable; backup kicks in automatically.
+
+### Config Archive — Never Lose a Change
+\`\`\`
+archive
+ log config
+  logging enable
+  logging size 200
+  notify syslog contenttype plaintext
+  hidekeys
+ path tftp://192.168.1.200/$h-
+ maximum 14
+ write-memory
+\`\`\`
+
+### Useful Debug Tricks
+\`\`\`
+! Debug with ACL filter (reduce noise)
+debug ip packet detail 100
+! where ACL 100 permits only what you want to see
+access-list 100 permit ip host 192.168.1.100 any
+
+! Always turn off debug when done!
+undebug all
+no debug all
+terminal no monitor
+\`\`\`
+
+## Interface Tricks
+
+### Shutdown/No-Shutdown Range
+\`\`\`
+interface range fa0/1-24
+ shutdown
+interface range gi0/1-2, gi0/5-8
+ description SERVERS
+ spanning-tree portfast
+\`\`\`
+
+### Default Interface (Reset to defaults)
+\`\`\`
+default interface gi0/1
+\`\`\`
+
+### Interface Description Best Practice
+\`\`\`
+interface gi0/0
+ description WAN|203.0.113.2|ISP-Name|Circuit-ID-12345
+interface gi0/1
+ description LAN|192.168.1.0/24|Office-Floor1|VLAN10-20-30
+interface gi0/2
+ description TO-SW1-GI0/24|Trunk|LACP-PO1
+\`\`\``,
+
+  `## میانبرهای CLI که ساعت‌ها صرفه‌جویی می‌کنند
+
+### تکمیل Tab و مخفف‌سازی
+\`\`\`
+! دستور کامل:
+show running-configuration
+! مخفف (سیسکو کوتاه‌ترین نسخه منحصر به فرد را می‌پذیرد):
+sh run
+\`\`\`
+
+### فیلترهای قدرتمند Pipe
+\`\`\`
+show running-config | include interface    ! فقط خطوط حاوی "interface"
+show running-config | section ospf        ! فقط بخش OSPF
+show running-config | begin router        ! از "router" تا آخر
+show running-config | exclude !           ! حذف توضیحات
+show interfaces | include line|errors     ! فقط وضعیت و خطاها
+\`\`\`
+
+### Alias — دستورات سفارشی بسازید
+\`\`\`
+alias exec sib show ip interface brief
+alias exec sir show ip route
+alias exec soo show ip ospf neighbor
+alias exec sav copy run start
+\`\`\`
+حالا به جای \`show ip interface brief\` فقط \`sib\` بنویسید!
+
+### IP SLA — مانیتورینگ خودکار اتصال
+\`\`\`
+ip sla 1
+ icmp-echo 8.8.8.8 source-interface gi0/0
+ frequency 30
+ip sla schedule 1 life forever start-time now
+
+show ip sla statistics 1
+\`\`\`
+
+### مسیریابی خودکار با Track
+\`\`\`
+track 1 ip sla 1 reachability
+ip route 0.0.0.0 0.0.0.0 203.0.113.1 track 1  ! مسیر اصلی
+ip route 0.0.0.0 0.0.0.0 203.0.114.1 5        ! مسیر پشتیبان
+\`\`\`
+اگر اتصال اصلی قطع شود، مسیر پشتیبان به صورت خودکار فعال می‌شود.
+
+### Config Archive — هیچ تغییری را از دست ندهید
+\`\`\`
+archive
+ log config
+  logging enable
+  logging size 200
+ path tftp://192.168.1.200/$h-
+ maximum 14
+ write-memory
+\`\`\`
+
+### توصیف اینترفیس به روش حرفه‌ای
+\`\`\`
+interface gi0/0
+ description WAN|203.0.113.2|ISP-Name|شماره مدار
+interface gi0/1
+ description LAN|192.168.1.0/24|طبقه اول|VLAN10-20-30
+\`\`\``,
+  'cisco-tricks', 14, 0)
+
+post('cisco-automation-tools-overview',
+  'Top 10 Cisco Automation Tools in 2025',
+  '۱۰ ابزار برتر اتوماسیون سیسکو در ۲۰۲۵',
+  'A complete overview of the best tools for automating Cisco network management.',
+  'مروری کامل بر بهترین ابزارها برای اتوماسیون مدیریت شبکه سیسکو.',
+  `## The Network Automation Landscape
+
+If you're still configuring devices manually one by one, you're living in 2005. Modern network engineers automate everything. Here's the complete toolkit.
+
+## 1. Ansible (Most Popular)
+- **What**: Agentless automation using YAML
+- **Best for**: Multi-device config deployment
+- **Learning curve**: Low
+- **Cost**: Free (Ansible AWX/Tower for enterprise)
+\`\`\`bash
+pip install ansible
+ansible-galaxy collection install cisco.ios
+\`\`\`
+
+## 2. Python + Netmiko
+- **What**: SSH library for network devices
+- **Best for**: Custom scripts, one-off tasks
+- **Learning curve**: Medium (need Python basics)
+- **Cost**: Free
+\`\`\`bash
+pip install netmiko
+\`\`\`
+
+## 3. NAPALM
+- **What**: Unified API for multiple vendors
+- **Best for**: Multi-vendor environments
+- **Learning curve**: Medium
+- **Cost**: Free
+
+## 4. Nornir
+- **What**: Fast parallel automation framework
+- **Best for**: Large-scale operations (100+ devices)
+- **Learning curve**: High
+- **Cost**: Free
+
+## 5. Terraform + Cisco Provider
+- **What**: Infrastructure-as-Code
+- **Best for**: Provisioning, day-0/day-1 config
+- **Learning curve**: Medium
+- **Cost**: Free (Terraform Cloud for teams)
+
+## 6. Oxidized
+- **What**: Config backup with Git versioning
+- **Best for**: Automated backup, change tracking
+- **Learning curve**: Low
+- **Cost**: Free
+
+## 7. NetBox (Source of Truth)
+- **What**: Network documentation and IPAM
+- **Best for**: IP management, device inventory
+- **Learning curve**: Low
+- **Cost**: Free
+\`\`\`bash
+# NetBox becomes your single source of truth
+# Ansible reads inventory FROM NetBox
+\`\`\`
+
+## 8. Cisco DNA Center / Catalyst Center
+- **What**: Cisco's own automation platform
+- **Best for**: Pure Cisco environments
+- **Learning curve**: Medium
+- **Cost**: Requires Cisco subscription
+
+## 9. Batfish
+- **What**: Network config analysis and testing
+- **Best for**: Pre-deployment validation, "what-if" analysis
+- **Learning curve**: High
+- **Cost**: Free
+
+## 10. Cisco NSO (Network Services Orchestrator)
+- **What**: Enterprise-grade network orchestration
+- **Best for**: Service provider, large enterprise
+- **Learning curve**: Very high
+- **Cost**: Commercial (expensive)
+
+## Recommended Stack for Different Scales
+
+### Small Team (1-5 engineers, <50 devices)
+- Oxidized (backup)
+- Netmiko scripts
+- Ansible for bulk changes
+
+### Medium Team (5-20 engineers, 50-500 devices)
+- NetBox (source of truth)
+- Ansible + AWX (GUI)
+- Oxidized (backup)
+- Python scripts for complex tasks
+
+### Large Enterprise (20+ engineers, 500+ devices)
+- NetBox or Cisco DNA Center
+- Nornir for automation
+- Terraform for provisioning
+- Full CI/CD pipeline
+- Cisco NSO for service orchestration
+
+## Learning Path for Network Automation
+1. **Linux basics** (must know)
+2. **Python basics** (3 months)
+3. **Netmiko** (1 month)
+4. **Git & version control** (2 weeks)
+5. **Ansible** (1 month)
+6. **CI/CD concepts** (2 weeks)
+7. **NAPALM / Nornir** (1 month)
+8. **Terraform** (1 month)`,
+
+  `## چشم‌انداز اتوماسیون شبکه
+
+اگر هنوز دستگاه‌ها را یک به یک به صورت دستی پیکربندی می‌کنید، در سال ۱۳۸۴ زندگی می‌کنید! مهندسان شبکه مدرن همه چیز را اتوماسیون می‌کنند.
+
+## ۱. Ansible (محبوب‌ترین)
+- **چیست**: اتوماسیون بدون Agent با YAML
+- **بهترین برای**: استقرار پیکربندی چند دستگاه
+- **منحنی یادگیری**: پایین
+- **هزینه**: رایگان
+
+## ۲. Python + Netmiko
+- **چیست**: کتابخانه SSH برای دستگاه‌های شبکه
+- **بهترین برای**: اسکریپت‌های سفارشی
+- **منحنی یادگیری**: متوسط
+- **هزینه**: رایگان
+
+## ۳. NAPALM
+- **چیست**: API یکپارچه برای چند فروشنده
+- **بهترین برای**: محیط‌های چند فروشنده
+- **هزینه**: رایگان
+
+## ۴. Nornir
+- **چیست**: چارچوب اتوماسیون موازی سریع
+- **بهترین برای**: عملیات در مقیاس بزرگ (100+ دستگاه)
+- **هزینه**: رایگان
+
+## ۵. Oxidized
+- **چیست**: بکاپ پیکربندی با نسخه‌بندی Git
+- **بهترین برای**: بکاپ خودکار، ردیابی تغییرات
+- **هزینه**: رایگان
+
+## ۶. NetBox (منبع حقیقت)
+- **چیست**: مستندسازی شبکه و IPAM
+- **بهترین برای**: مدیریت IP، موجودی دستگاه
+- **هزینه**: رایگان
+
+## ۷. Cisco DNA Center / Catalyst Center
+- **چیست**: پلتفرم اتوماسیون خود سیسکو
+- **بهترین برای**: محیط‌های خالص سیسکو
+- **هزینه**: نیاز به اشتراک سیسکو
+
+## ۸. Batfish
+- **چیست**: تحلیل پیکربندی شبکه
+- **بهترین برای**: اعتبارسنجی قبل از استقرار، تحلیل "اگر-چه"
+- **هزینه**: رایگان
+
+## مسیر یادگیری برای اتوماسیون شبکه
+1. **مبانی Linux** (ضروری)
+2. **Python پایه** (۳ ماه)
+3. **Netmiko** (۱ ماه)
+4. **Git و کنترل نسخه** (۲ هفته)
+5. **Ansible** (۱ ماه)
+6. **مفاهیم CI/CD** (۲ هفته)
+7. **NAPALM / Nornir** (۱ ماه)
+8. **Terraform** (۱ ماه)
+
+## پشته توصیه شده
+
+### تیم کوچک (<50 دستگاه)
+Oxidized + Netmiko + Ansible
+
+### تیم متوسط (50-500 دستگاه)
+NetBox + Ansible AWX + Oxidized + Python
+
+### سازمان بزرگ (500+ دستگاه)
+NetBox + Nornir + Terraform + CI/CD + Cisco NSO`,
+  'cisco-tricks', 15, 1)
+
+console.log('✅ Section 7 done — 7 automation/tips posts inserted')
+console.log('')
+console.log('🎉 Grand total: 42 + 7 = 49 blog posts!')
