@@ -14,9 +14,21 @@ const db = new Database(dbPath)
 
 db.pragma('journal_mode = WAL')
 
-// ── Cleanup: remove stale sub-categories added by previous runs ───────────────
+// ── Cleanup: migrate posts from stale sub-categories to 'cisco', then delete ──
 const staleSlugs = ['cisco-basics','cisco-security','cisco-logging','cisco-models','cisco-firewall','cisco-config','cisco-automation','cisco-tricks']
-staleSlugs.forEach(s => db.prepare('DELETE FROM blog_categories WHERE slug=?').run(s))
+const ciscoCatId = db.prepare('SELECT id FROM blog_categories WHERE slug=?').get('cisco')?.id
+if (ciscoCatId) {
+  const staleIds = staleSlugs
+    .map(s => db.prepare('SELECT id FROM blog_categories WHERE slug=?').get(s)?.id)
+    .filter(Boolean)
+  if (staleIds.length) {
+    const placeholders = staleIds.map(() => '?').join(',')
+    // move any posts referencing stale categories to cisco
+    db.prepare(`UPDATE blog_posts SET category_id=? WHERE category_id IN (${placeholders})`).run(ciscoCatId, ...staleIds)
+    // now safe to delete
+    db.prepare(`DELETE FROM blog_categories WHERE id IN (${placeholders})`).run(...staleIds)
+  }
+}
 
 // ── Category ──────────────────────────────────────────────────────────────────
 // All Cisco posts go under the existing 'cisco' category (created by the main seed)
