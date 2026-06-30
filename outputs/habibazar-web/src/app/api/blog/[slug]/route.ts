@@ -14,6 +14,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
     if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    const navSelect = 'SELECT slug, title_en, title_fa FROM blog_posts WHERE status = ? AND id '
+    const prev = db.prepare(navSelect + '< ? ORDER BY id DESC LIMIT 1').get('published', row.id as number) as { slug: string; title_en: string; title_fa: string } | undefined
+    const next = db.prepare(navSelect + '> ? ORDER BY id ASC LIMIT 1').get('published', row.id as number) as { slug: string; title_en: string; title_fa: string } | undefined
+
     return NextResponse.json({
       id: row.id,
       slug: row.slug,
@@ -31,6 +35,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       categoryNameEn: row.category_name_en,
       categoryNameFa: row.category_name_fa,
       categoryColor: row.category_color,
+      prev: prev ? { slug: prev.slug, titleEn: prev.title_en, titleFa: prev.title_fa } : null,
+      next: next ? { slug: next.slug, titleEn: next.title_en, titleFa: next.title_fa } : null,
     })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

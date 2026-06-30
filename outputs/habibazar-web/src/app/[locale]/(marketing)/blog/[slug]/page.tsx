@@ -21,6 +21,8 @@ interface BlogPost {
   categoryNameEn?: string
   categoryNameFa?: string
   categoryColor?: string
+  prev?: { slug: string; titleEn: string; titleFa: string } | null
+  next?: { slug: string; titleEn: string; titleFa: string } | null
 }
 
 function renderMarkdown(text: string, isRTL: boolean): string {
@@ -428,8 +430,43 @@ export default function BlogPostPage() {
             </div>
           )}
 
+          {/* Prev / Next navigation */}
+          {(post.prev || post.next) && (
+            <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {post.prev ? (
+                <Link
+                  href={`/${locale}/blog/${post.prev.slug}`}
+                  className="group flex flex-col gap-1.5 p-4 rounded-xl border border-border/20 hover:border-accent/40 hover:bg-white/[0.03] transition-all"
+                >
+                  <span className="flex items-center gap-1.5 text-xs text-text-muted group-hover:text-accent transition-colors">
+                    <span className="group-hover:-translate-x-1 transition-transform inline-block">←</span>
+                    {isRTL ? 'مقاله قبلی' : 'Previous'}
+                  </span>
+                  <span className="text-sm font-medium text-text-primary line-clamp-2 leading-snug">
+                    {isRTL ? post.prev.titleFa : post.prev.titleEn}
+                  </span>
+                </Link>
+              ) : <div />}
+
+              {post.next ? (
+                <Link
+                  href={`/${locale}/blog/${post.next.slug}`}
+                  className="group flex flex-col gap-1.5 p-4 rounded-xl border border-border/20 hover:border-accent/40 hover:bg-white/[0.03] transition-all sm:text-right"
+                >
+                  <span className="flex items-center justify-end gap-1.5 text-xs text-text-muted group-hover:text-accent transition-colors">
+                    {isRTL ? 'مقاله بعدی' : 'Next'}
+                    <span className="group-hover:translate-x-1 transition-transform inline-block">→</span>
+                  </span>
+                  <span className="text-sm font-medium text-text-primary line-clamp-2 leading-snug">
+                    {isRTL ? post.next.titleFa : post.next.titleEn}
+                  </span>
+                </Link>
+              ) : <div />}
+            </div>
+          )}
+
           {/* Footer nav */}
-          <div className="mt-20 pt-8 border-t border-border/20 flex items-center justify-between gap-4 flex-wrap">
+          <div className="mt-8 pt-8 border-t border-border/20 flex items-center justify-between gap-4 flex-wrap">
             <Link
               href={`/${locale}/blog`}
               className="flex items-center gap-2 text-sm text-text-muted hover:text-accent transition-colors group"
