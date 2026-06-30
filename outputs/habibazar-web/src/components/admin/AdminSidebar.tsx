@@ -26,6 +26,16 @@ const NAV = [
     ],
   },
   {
+    group: { en: 'Solutions', fa: 'راهکارها' },
+    items: [
+      { labelEn: 'Technology Solutions', labelFa: 'راهکارهای فناوری', href: '/admin/solutions', icon: '💡' },
+      { labelEn: 'Industries', labelFa: 'صنایع', href: '/admin/industries', icon: '🏭' },
+      { labelEn: 'Technology Ecosystem', labelFa: 'اکوسیستم فناوری', href: '/admin/technologies', icon: '⚙️' },
+      { labelEn: 'Client Testimonials', labelFa: 'نظرات مشتریان', href: '/admin/testimonials', icon: '⭐' },
+      { labelEn: 'Page Templates', labelFa: 'قالب‌های صفحه', href: '/admin/templates', icon: '🗂️' },
+    ],
+  },
+  {
     group: { en: 'Builder', fa: 'سازنده' },
     items: [
       { labelEn: 'Section Builder', labelFa: 'سازنده بخش‌ها', href: '/admin/sections', icon: '🧩' },

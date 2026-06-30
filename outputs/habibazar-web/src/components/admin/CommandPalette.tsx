@@ -31,6 +31,12 @@ const COMMANDS: Command[] = [
   { id: 'projects', label: 'Enterprise Case Studies', labelFa: 'مطالعات موردی', icon: '◆', href: '/admin/projects', group: 'Content', groupFa: 'محتوا', keywords: 'projects case studies' },
   { id: 'clients', label: 'Enterprise Partners', labelFa: 'شرکای سازمانی', icon: '◇', href: '/admin/clients', group: 'Content', groupFa: 'محتوا', keywords: 'clients partners companies' },
   { id: 'blog', label: 'Knowledge Center', labelFa: 'مرکز دانش', icon: '▣', href: '/admin/blog', group: 'Content', groupFa: 'محتوا', keywords: 'blog posts articles knowledge' },
+  // Solutions
+  { id: 'solutions', label: 'Technology Solutions', labelFa: 'راهکارهای فناوری', icon: '💡', href: '/admin/solutions', group: 'Solutions', groupFa: 'راهکارها', keywords: 'solutions enterprise technology' },
+  { id: 'industries', label: 'Industries', labelFa: 'صنایع', icon: '🏭', href: '/admin/industries', group: 'Solutions', groupFa: 'راهکارها', keywords: 'industries verticals sectors' },
+  { id: 'technologies', label: 'Technology Ecosystem', labelFa: 'اکوسیستم فناوری', icon: '⚙️', href: '/admin/technologies', group: 'Solutions', groupFa: 'راهکارها', keywords: 'technologies ecosystem cisco vmware azure' },
+  { id: 'testimonials', label: 'Client Testimonials', labelFa: 'نظرات مشتریان', icon: '⭐', href: '/admin/testimonials', group: 'Solutions', groupFa: 'راهکارها', keywords: 'testimonials reviews clients success' },
+  { id: 'templates', label: 'Page Templates', labelFa: 'قالب‌های صفحه', icon: '🗂️', href: '/admin/templates', group: 'Solutions', groupFa: 'راهکارها', keywords: 'templates pages layouts builder' },
   // Builder
   { id: 'sections', label: 'Section Builder', labelFa: 'سازنده بخش‌ها', icon: '🧩', href: '/admin/sections', group: 'Builder', groupFa: 'سازنده', keywords: 'sections builder' },
   { id: 'pages', label: 'Page Builder', labelFa: 'سازنده صفحات', icon: '📄', href: '/admin/pages', group: 'Builder', groupFa: 'سازنده', keywords: 'pages builder' },

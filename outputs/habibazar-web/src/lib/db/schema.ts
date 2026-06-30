@@ -419,6 +419,122 @@ export const aiConversations = sqliteTable('ai_conversations', {
   updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
 })
 
+// ─── Solutions (Phase 6) ──────────────────────────────────────────────────────
+
+export const solutions = sqliteTable('solutions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa').notNull(),
+  taglineEn: text('tagline_en'),
+  taglineFa: text('tagline_fa'),
+  descriptionEn: text('description_en'),
+  descriptionFa: text('description_fa'),
+  icon: text('icon').notNull().default('🔧'),
+  color: text('color').notNull().default('#6366f1'),
+  challengesJson: text('challenges_json').notNull().default('[]'),
+  approachJson: text('approach_json').notNull().default('[]'),
+  benefitsJson: text('benefits_json').notNull().default('[]'),
+  techStackJson: text('tech_stack_json').notNull().default('[]'),
+  roadmapJson: text('roadmap_json').notNull().default('[]'),
+  faqJson: text('faq_json').notNull().default('[]'),
+  metricsJson: text('metrics_json').notNull().default('[]'),
+  relatedCaseStudySlugs: text('related_case_study_slugs'),
+  seoTitle: text('seo_title'),
+  seoDescription: text('seo_description'),
+  seoKeywords: text('seo_keywords'),
+  ogImage: text('og_image'),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedBy: text('updated_by').references(() => users.id),
+})
+
+export type Solution = typeof solutions.$inferSelect
+
+export const industries = sqliteTable('industries', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa').notNull(),
+  taglineEn: text('tagline_en'),
+  taglineFa: text('tagline_fa'),
+  descriptionEn: text('description_en'),
+  descriptionFa: text('description_fa'),
+  icon: text('icon').notNull().default('🏢'),
+  color: text('color').notNull().default('#6366f1'),
+  challengesJson: text('challenges_json').notNull().default('[]'),
+  solutionsJson: text('solutions_json').notNull().default('[]'),
+  benefitsJson: text('benefits_json').notNull().default('[]'),
+  relatedSolutionSlugs: text('related_solution_slugs'),
+  seoTitle: text('seo_title'),
+  seoDescription: text('seo_description'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export type Industry = typeof industries.$inferSelect
+
+export const technologies = sqliteTable('technologies', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa').notNull(),
+  category: text('category').notNull().default('general'),
+  icon: text('icon').notNull().default('⚙️'),
+  color: text('color').notNull().default('#6366f1'),
+  vendor: text('vendor'),
+  descriptionEn: text('description_en'),
+  descriptionFa: text('description_fa'),
+  logoUrl: text('logo_url'),
+  tier: text('tier', { enum: ['core', 'advanced', 'specialized'] }).notNull().default('core'),
+  certifications: text('certifications'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+})
+
+export type Technology = typeof technologies.$inferSelect
+
+export const testimonials = sqliteTable('testimonials', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  clientName: text('client_name').notNull(),
+  clientTitle: text('client_title'),
+  clientCompany: text('client_company'),
+  clientAvatar: text('client_avatar'),
+  quoteEn: text('quote_en').notNull(),
+  quoteFa: text('quote_fa'),
+  rating: integer('rating').notNull().default(5),
+  projectSlug: text('project_slug'),
+  solutionSlug: text('solution_slug'),
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export type Testimonial = typeof testimonials.$inferSelect
+
+export const pageTemplates = sqliteTable('page_templates', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameFa: text('name_fa').notNull(),
+  descriptionEn: text('description_en'),
+  category: text('category').notNull().default('general'),
+  sectionsJson: text('sections_json').notNull().default('[]'),
+  defaultPropsJson: text('default_props_json').notNull().default('{}'),
+  previewImage: text('preview_image'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export type PageTemplate = typeof pageTemplates.$inferSelect
+
 // ─── Redirects ────────────────────────────────────────────────────────────────
 
 export const redirects = sqliteTable('redirects', {

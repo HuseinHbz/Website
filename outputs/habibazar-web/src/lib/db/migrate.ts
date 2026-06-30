@@ -587,5 +587,188 @@ export function runMigrations() {
     }
   }
 
+  // Phase 6: Solutions Platform tables
+  const phase6Tables = [
+    `CREATE TABLE IF NOT EXISTS solutions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      tagline_en TEXT,
+      tagline_fa TEXT,
+      description_en TEXT,
+      description_fa TEXT,
+      icon TEXT NOT NULL DEFAULT '🔧',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      challenges_json TEXT NOT NULL DEFAULT '[]',
+      approach_json TEXT NOT NULL DEFAULT '[]',
+      benefits_json TEXT NOT NULL DEFAULT '[]',
+      tech_stack_json TEXT NOT NULL DEFAULT '[]',
+      roadmap_json TEXT NOT NULL DEFAULT '[]',
+      faq_json TEXT NOT NULL DEFAULT '[]',
+      metrics_json TEXT NOT NULL DEFAULT '[]',
+      related_case_study_slugs TEXT,
+      seo_title TEXT,
+      seo_description TEXT,
+      seo_keywords TEXT,
+      og_image TEXT,
+      featured INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS industries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      tagline_en TEXT,
+      tagline_fa TEXT,
+      description_en TEXT,
+      description_fa TEXT,
+      icon TEXT NOT NULL DEFAULT '🏢',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      challenges_json TEXT NOT NULL DEFAULT '[]',
+      solutions_json TEXT NOT NULL DEFAULT '[]',
+      benefits_json TEXT NOT NULL DEFAULT '[]',
+      related_solution_slugs TEXT,
+      seo_title TEXT,
+      seo_description TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS technologies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'general',
+      icon TEXT NOT NULL DEFAULT '⚙️',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      vendor TEXT,
+      description_en TEXT,
+      description_fa TEXT,
+      logo_url TEXT,
+      tier TEXT NOT NULL DEFAULT 'core' CHECK(tier IN ('core','advanced','specialized')),
+      certifications TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS testimonials (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_name TEXT NOT NULL,
+      client_title TEXT,
+      client_company TEXT,
+      client_avatar TEXT,
+      quote_en TEXT NOT NULL,
+      quote_fa TEXT,
+      rating INTEGER NOT NULL DEFAULT 5,
+      project_slug TEXT,
+      solution_slug TEXT,
+      featured INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS page_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      description_en TEXT,
+      category TEXT NOT NULL DEFAULT 'general',
+      sections_json TEXT NOT NULL DEFAULT '[]',
+      default_props_json TEXT NOT NULL DEFAULT '{}',
+      preview_image TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+  ]
+  for (const stmt of phase6Tables) {
+    try { sqlite.exec(stmt) } catch { /* table already exists */ }
+  }
+
+  // Seed solutions
+  const solutionCount = (sqlite.prepare('SELECT COUNT(*) as c FROM solutions').get() as { c: number }).c
+  if (solutionCount === 0) {
+    const DEFAULT_SOLUTIONS = [
+      { slug: 'enterprise-networking', nameEn: 'Enterprise Networking', nameFa: 'شبکه سازمانی', taglineEn: 'High-performance, resilient network infrastructure for your business', taglineFa: 'زیرساخت شبکه با کارایی بالا برای کسب‌وکار شما', icon: '🌐', color: '#3b82f6', sortOrder: 1 },
+      { slug: 'microsoft-infrastructure', nameEn: 'Microsoft Infrastructure', nameFa: 'زیرساخت مایکروسافت', taglineEn: 'Complete Microsoft ecosystem deployment and management', taglineFa: 'استقرار و مدیریت کامل اکوسیستم مایکروسافت', icon: '🪟', color: '#0ea5e9', sortOrder: 2 },
+      { slug: 'linux-infrastructure', nameEn: 'Linux Infrastructure', nameFa: 'زیرساخت لینوکس', taglineEn: 'Enterprise-grade open-source infrastructure solutions', taglineFa: 'راهکارهای زیرساخت متن‌باز در سطح سازمانی', icon: '🐧', color: '#f97316', sortOrder: 3 },
+      { slug: 'virtualization', nameEn: 'Virtualization Platform', nameFa: 'پلتفرم مجازی‌سازی', taglineEn: 'VMware, Hyper-V, Proxmox — optimize your compute resources', taglineFa: 'VMware، Hyper-V، Proxmox — بهینه‌سازی منابع محاسباتی', icon: '🖥️', color: '#8b5cf6', sortOrder: 4 },
+      { slug: 'cloud-solutions', nameEn: 'Cloud Solutions', nameFa: 'راهکارهای ابری', taglineEn: 'Azure, AWS, GCP — multi-cloud strategy and migration', taglineFa: 'Azure، AWS، GCP — استراتژی چند ابری و مهاجرت', icon: '☁️', color: '#06b6d4', sortOrder: 5 },
+      { slug: 'cybersecurity', nameEn: 'Cybersecurity', nameFa: 'امنیت سایبری', taglineEn: 'Zero trust architecture, threat detection and compliance', taglineFa: 'معماری zero trust، شناسایی تهدید و انطباق', icon: '🔒', color: '#ef4444', sortOrder: 6 },
+      { slug: 'infrastructure-monitoring', nameEn: 'Infrastructure Monitoring', nameFa: 'پایش زیرساخت', taglineEn: 'Full-stack observability with Zabbix, Prometheus & Grafana', taglineFa: 'مشاهده‌پذیری کامل با Zabbix، Prometheus و Grafana', icon: '📊', color: '#22c55e', sortOrder: 7 },
+      { slug: 'automation', nameEn: 'IT Automation', nameFa: 'اتوماسیون IT', taglineEn: 'Ansible, Terraform, CI/CD — eliminate manual operations', taglineFa: 'Ansible، Terraform، CI/CD — حذف عملیات دستی', icon: '⚙️', color: '#f59e0b', sortOrder: 8 },
+      { slug: 'backup-disaster-recovery', nameEn: 'Backup & Disaster Recovery', nameFa: 'پشتیبان‌گیری و بازیابی از فاجعه', taglineEn: 'Protect your data with enterprise-grade backup and DR', taglineFa: 'محافظت از داده‌ها با پشتیبان‌گیری و DR سازمانی', icon: '💾', color: '#ec4899', sortOrder: 9 },
+      { slug: 'business-continuity', nameEn: 'Business Continuity', nameFa: 'تداوم کسب‌وکار', taglineEn: 'Ensure 99.99% uptime with continuity planning', taglineFa: 'تضمین ۹۹.۹۹٪ آپتایم با برنامه‌ریزی تداوم', icon: '🔄', color: '#10b981', sortOrder: 10 },
+      { slug: 'high-availability', nameEn: 'High Availability', nameFa: 'دسترس‌پذیری بالا', taglineEn: 'Eliminate single points of failure, achieve 5-nines uptime', taglineFa: 'حذف نقاط شکست تک، دستیابی به ۵ نه آپتایم', icon: '⚡', color: '#eab308', sortOrder: 11 },
+      { slug: 'technical-consulting', nameEn: 'Technical Consulting', nameFa: 'مشاوره فنی', taglineEn: 'Expert architecture reviews, technology roadmaps, and advisory', taglineFa: 'بررسی معماری تخصصی، نقشه راه فناوری و مشاوره', icon: '🎯', color: '#6366f1', sortOrder: 12 },
+      { slug: 'professional-services', nameEn: 'Professional Services', nameFa: 'خدمات حرفه‌ای', taglineEn: 'Deployment, migration, training, and knowledge transfer', taglineFa: 'استقرار، مهاجرت، آموزش و انتقال دانش', icon: '🤝', color: '#64748b', sortOrder: 13 },
+      { slug: 'managed-services', nameEn: 'Managed Services', nameFa: 'خدمات مدیریت‌شده', taglineEn: '24/7 proactive monitoring, management and support', taglineFa: 'پایش فعال ۲۴/۷، مدیریت و پشتیبانی', icon: '🛡️', color: '#14b8a6', sortOrder: 14 },
+    ]
+    const insertSolution = sqlite.prepare(`INSERT OR IGNORE INTO solutions (slug, name_en, name_fa, tagline_en, tagline_fa, icon, color, sort_order) VALUES (?,?,?,?,?,?,?,?)`)
+    for (const s of DEFAULT_SOLUTIONS) {
+      insertSolution.run(s.slug, s.nameEn, s.nameFa, s.taglineEn, s.taglineFa, s.icon, s.color, s.sortOrder)
+    }
+  }
+
+  // Seed industries
+  const industryCount = (sqlite.prepare('SELECT COUNT(*) as c FROM industries').get() as { c: number }).c
+  if (industryCount === 0) {
+    const DEFAULT_INDUSTRIES = [
+      { slug: 'finance-banking', nameEn: 'Finance & Banking', nameFa: 'مالی و بانکداری', icon: '🏦', color: '#22c55e', sortOrder: 1 },
+      { slug: 'healthcare', nameEn: 'Healthcare', nameFa: 'بهداشت و درمان', icon: '🏥', color: '#ef4444', sortOrder: 2 },
+      { slug: 'government', nameEn: 'Government & Public Sector', nameFa: 'دولت و بخش عمومی', icon: '🏛️', color: '#3b82f6', sortOrder: 3 },
+      { slug: 'education', nameEn: 'Education', nameFa: 'آموزش', icon: '🎓', color: '#8b5cf6', sortOrder: 4 },
+      { slug: 'retail-ecommerce', nameEn: 'Retail & E-Commerce', nameFa: 'خرده‌فروشی و تجارت الکترونیک', icon: '🛒', color: '#f97316', sortOrder: 5 },
+      { slug: 'manufacturing', nameEn: 'Manufacturing', nameFa: 'تولید و صنعت', icon: '🏭', color: '#64748b', sortOrder: 6 },
+      { slug: 'oil-gas-energy', nameEn: 'Oil, Gas & Energy', nameFa: 'نفت، گاز و انرژی', icon: '⚡', color: '#eab308', sortOrder: 7 },
+      { slug: 'telecom', nameEn: 'Telecommunications', nameFa: 'مخابرات', icon: '📡', color: '#06b6d4', sortOrder: 8 },
+      { slug: 'logistics', nameEn: 'Logistics & Supply Chain', nameFa: 'لجستیک و زنجیره تامین', icon: '🚛', color: '#10b981', sortOrder: 9 },
+      { slug: 'real-estate', nameEn: 'Real Estate & Construction', nameFa: 'ساختمان و مستغلات', icon: '🏗️', color: '#ec4899', sortOrder: 10 },
+    ]
+    const insertIndustry = sqlite.prepare(`INSERT OR IGNORE INTO industries (slug, name_en, name_fa, icon, color, sort_order) VALUES (?,?,?,?,?,?)`)
+    for (const i of DEFAULT_INDUSTRIES) {
+      insertIndustry.run(i.slug, i.nameEn, i.nameFa, i.icon, i.color, i.sortOrder)
+    }
+  }
+
+  // Seed technologies
+  const techCount = (sqlite.prepare('SELECT COUNT(*) as c FROM technologies').get() as { c: number }).c
+  if (techCount === 0) {
+    const DEFAULT_TECHNOLOGIES = [
+      { slug: 'cisco', nameEn: 'Cisco', nameFa: 'سیسکو', category: 'networking', icon: '🔵', color: '#1ba0d7', vendor: 'Cisco Systems', tier: 'core', sortOrder: 1 },
+      { slug: 'mikrotik', nameEn: 'MikroTik', nameFa: 'میکروتیک', category: 'networking', icon: '🔴', color: '#d0002a', vendor: 'MikroTik', tier: 'core', sortOrder: 2 },
+      { slug: 'vmware', nameEn: 'VMware vSphere', nameFa: 'VMware vSphere', category: 'virtualization', icon: '🟢', color: '#607078', vendor: 'Broadcom', tier: 'core', sortOrder: 3 },
+      { slug: 'proxmox', nameEn: 'Proxmox VE', nameFa: 'Proxmox VE', category: 'virtualization', icon: '🟠', color: '#e57000', vendor: 'Proxmox', tier: 'core', sortOrder: 4 },
+      { slug: 'microsoft-azure', nameEn: 'Microsoft Azure', nameFa: 'Microsoft Azure', category: 'cloud', icon: '☁️', color: '#0078d4', vendor: 'Microsoft', tier: 'core', sortOrder: 5 },
+      { slug: 'aws', nameEn: 'Amazon AWS', nameFa: 'Amazon AWS', category: 'cloud', icon: '☁️', color: '#ff9900', vendor: 'Amazon', tier: 'core', sortOrder: 6 },
+      { slug: 'windows-server', nameEn: 'Windows Server', nameFa: 'Windows Server', category: 'os', icon: '🪟', color: '#0078d4', vendor: 'Microsoft', tier: 'core', sortOrder: 7 },
+      { slug: 'linux-rhel', nameEn: 'Red Hat / CentOS', nameFa: 'Red Hat / CentOS', category: 'os', icon: '🐧', color: '#ee0000', vendor: 'Red Hat', tier: 'core', sortOrder: 8 },
+      { slug: 'zabbix', nameEn: 'Zabbix', nameFa: 'Zabbix', category: 'monitoring', icon: '📊', color: '#d40000', vendor: 'Zabbix', tier: 'core', sortOrder: 9 },
+      { slug: 'prometheus', nameEn: 'Prometheus & Grafana', nameFa: 'Prometheus & Grafana', category: 'monitoring', icon: '📈', color: '#e6522c', vendor: 'CNCF', tier: 'advanced', sortOrder: 10 },
+      { slug: 'fortigate', nameEn: 'FortiGate', nameFa: 'FortiGate', category: 'security', icon: '🔒', color: '#ee3124', vendor: 'Fortinet', tier: 'core', sortOrder: 11 },
+      { slug: 'active-directory', nameEn: 'Active Directory', nameFa: 'Active Directory', category: 'identity', icon: '🏢', color: '#0078d4', vendor: 'Microsoft', tier: 'core', sortOrder: 12 },
+      { slug: 'ansible', nameEn: 'Ansible', nameFa: 'Ansible', category: 'automation', icon: '⚙️', color: '#ee0000', vendor: 'Red Hat', tier: 'advanced', sortOrder: 13 },
+      { slug: 'terraform', nameEn: 'Terraform', nameFa: 'Terraform', category: 'automation', icon: '🏗️', color: '#7b42bc', vendor: 'HashiCorp', tier: 'advanced', sortOrder: 14 },
+      { slug: 'kubernetes', nameEn: 'Kubernetes', nameFa: 'Kubernetes', category: 'containers', icon: '🐋', color: '#326ce5', vendor: 'CNCF', tier: 'advanced', sortOrder: 15 },
+      { slug: 'docker', nameEn: 'Docker', nameFa: 'Docker', category: 'containers', icon: '🐳', color: '#2496ed', vendor: 'Docker Inc', tier: 'core', sortOrder: 16 },
+      { slug: 'palo-alto', nameEn: 'Palo Alto Networks', nameFa: 'Palo Alto Networks', category: 'security', icon: '🔐', color: '#fa582d', vendor: 'Palo Alto', tier: 'specialized', sortOrder: 17 },
+      { slug: 'veeam', nameEn: 'Veeam Backup', nameFa: 'Veeam Backup', category: 'backup', icon: '💾', color: '#00b336', vendor: 'Veeam', tier: 'core', sortOrder: 18 },
+      { slug: 'hyper-v', nameEn: 'Hyper-V', nameFa: 'Hyper-V', category: 'virtualization', icon: '🖥️', color: '#0078d4', vendor: 'Microsoft', tier: 'core', sortOrder: 19 },
+      { slug: 'juniper', nameEn: 'Juniper Networks', nameFa: 'Juniper Networks', category: 'networking', icon: '🌿', color: '#84b135', vendor: 'Juniper', tier: 'advanced', sortOrder: 20 },
+    ]
+    const insertTech = sqlite.prepare(`INSERT OR IGNORE INTO technologies (slug, name_en, name_fa, category, icon, color, vendor, tier, sort_order) VALUES (?,?,?,?,?,?,?,?,?)`)
+    for (const t of DEFAULT_TECHNOLOGIES) {
+      insertTech.run(t.slug, t.nameEn, t.nameFa, t.category, t.icon, t.color, t.vendor, t.tier, t.sortOrder)
+    }
+  }
+
   sqlite.close()
 }
