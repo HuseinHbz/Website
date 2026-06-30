@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================
 # Habibazar Platform — Update Script
-# Pulls latest code and rebuilds without touching config/DB
+# Pulls latest code, rebuilds, reloads. DB migrations run
+# automatically on next app boot (idempotent).
 # Seed scripts are NOT run here — only on first deploy.
 # ============================================================
 set -euo pipefail
@@ -17,45 +18,91 @@ hr()   { echo -e "${BOLD}──────────────────�
 BRANCH="${DEPLOY_BRANCH:-hbz}"
 REPO="/var/www/habibazar/repo"
 WEB="/var/www/habibazar/web"
+BASE="/var/www/habibazar"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 hr
-echo -e "${BOLD}  Habibazar — Update${NC}"
+echo -e "${BOLD}  Habibazar — Update  [${TIMESTAMP}]${NC}"
 echo -e "  Branch: ${YELLOW}$BRANCH${NC}"
 hr
 
 [[ -d "$REPO/.git" ]] || err "Repo not found at $REPO — run deploy.sh first"
 
-# ── Pull ─────────────────────────────────────────────────────
-info "Pulling latest code..."
-git -C "$REPO" fetch origin "$BRANCH"
-git -C "$REPO" reset --hard "origin/$BRANCH"
-ok "Code updated ($(git -C "$REPO" log -1 --format='%h %s'))"
-
-# ── Build ────────────────────────────────────────────────────
-hr; info "Installing dependencies & building..."
-cd "$WEB"
-rm -rf .next
-npm ci --omit=dev
-npm run build
-ok "Build complete"
-
-# ── Reload ──────────────────────────────────────────────────
-hr; info "Reloading PM2..."
-pm2 reload habibazar-web --update-env
-pm2 save
-ok "Reloaded"
-
-# ── Health ──────────────────────────────────────────────────
-info "Waiting 6s for app to warm up..."
-sleep 6
-code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 "http://127.0.0.1:3000/" 2>/dev/null || echo "000")
-if [[ "$code" == "200" || "$code" == "307" || "$code" == "308" ]]; then
-    ok "Web → HTTP $code ✓"
-else
-    warn "Web → HTTP $code — check: pm2 logs habibazar-web"
+# ── Backup current .next (quick rollback) ────────────────────
+PREV_BUILD="$BASE/.next_prev"
+if [[ -d "$WEB/.next" ]]; then
+    info "Snapshotting current build for rollback..."
+    rm -rf "$PREV_BUILD"
+    cp -r "$WEB/.next" "$PREV_BUILD"
+    ok "Snapshot saved → $PREV_BUILD"
 fi
 
+# ── Pull ─────────────────────────────────────────────────────
+info "Pulling latest code from origin/$BRANCH..."
+git -C "$REPO" fetch origin "$BRANCH"
+PREV_COMMIT=$(git -C "$REPO" rev-parse HEAD)
+git -C "$REPO" reset --hard "origin/$BRANCH"
+NEW_COMMIT=$(git -C "$REPO" rev-parse HEAD)
+ok "Code updated: ${PREV_COMMIT:0:7} → ${NEW_COMMIT:0:7}"
+git -C "$REPO" log -1 --format="  %s" --color=always
+
+# ── Dependencies ─────────────────────────────────────────────
+hr; info "Syncing dependencies..."
+cd "$WEB"
+npm ci --omit=dev
+ok "Dependencies ready"
+
+# ── Build ────────────────────────────────────────────────────
+info "Building Next.js..."
+rm -rf .next
+if npm run build; then
+    ok "Build complete"
+else
+    err_msg="Build FAILED"
+    # Attempt rollback
+    if [[ -d "$PREV_BUILD" ]]; then
+        warn "$err_msg — rolling back to previous build..."
+        rm -rf .next
+        cp -r "$PREV_BUILD" .next
+        pm2 reload habibazar-web --update-env 2>/dev/null || true
+        warn "Rolled back. Fix the build error and try again."
+    else
+        warn "$err_msg — no previous build to roll back to."
+    fi
+    err "$err_msg"
+fi
+
+# ── Reload PM2 ──────────────────────────────────────────────
+hr; info "Reloading PM2 (zero-downtime)..."
+pm2 reload habibazar-web --update-env
+pm2 save
+ok "PM2 reloaded"
+
+# ── Health Check ─────────────────────────────────────────────
+info "Waiting 8s for app to warm up..."
+sleep 8
+for i in 1 2 3; do
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://127.0.0.1:3000/" 2>/dev/null || echo "000")
+    if [[ "$code" == "200" || "$code" == "307" || "$code" == "308" ]]; then
+        ok "Health check → HTTP $code ✓"
+        break
+    else
+        warn "Attempt $i/3 → HTTP $code"
+        [[ $i -lt 3 ]] && sleep 5
+    fi
+done
+if [[ "$code" != "200" && "$code" != "307" && "$code" != "308" ]]; then
+    warn "App may not be healthy — check: pm2 logs habibazar-web --lines 50"
+fi
+
+# ── Cleanup ──────────────────────────────────────────────────
+rm -rf "$PREV_BUILD"
+
+# ── Done ─────────────────────────────────────────────────────
 hr
 echo -e "${BOLD}${GREEN}  Update complete!${NC}"
-echo -e "  Tip: to run Cisco seed manually: ${YELLOW}node $REPO/outputs/habibazar-deploy/seed-cisco-blog.js${NC}"
+echo ""
+echo -e "  Commit: ${YELLOW}$(git -C "$REPO" log -1 --format='%h — %s')${NC}"
+echo -e "  Logs:   ${YELLOW}pm2 logs habibazar-web --lines 50${NC}"
+echo -e "  Status: ${YELLOW}pm2 status${NC}"
 hr

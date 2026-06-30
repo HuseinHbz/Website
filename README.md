@@ -1,7 +1,7 @@
 # Habibazar Platform
 
-پلتفرم شخصی حسین حبیب‌آذر — متخصص زیرساخت شبکه و امنیت.  
-سایت دوزبانه (FA/EN)، ادمین پنل کامل، دستیار هوش مصنوعی.
+پلتفرم سازمانی حسین حبیب‌آذر — متخصص زیرساخت شبکه، امنیت و راهکارهای Enterprise.  
+سایت دوزبانه (FA/EN)، ادمین پنل کامل، دستیار هوش مصنوعی، معماری Enterprise Domain Model.
 
 ---
 
@@ -9,7 +9,8 @@
 
 ```
 outputs/
-├── habibazar-web/     ← Next.js 15 (سایت عمومی + ادمین پنل)
+├── habibazar-web/     ← Next.js 15 App Router (سایت عمومی + ادمین پنل)
+├── habibazar-api/     ← API جداگانه (اختیاری)
 └── habibazar-deploy/  ← اسکریپت‌های deploy و nginx
 ```
 
@@ -18,37 +19,128 @@ outputs/
 
 ---
 
-## صفحات سایت
+## صفحات عمومی
 
 | مسیر | توضیح |
 |------|-------|
 | `/` | صفحه اصلی |
-| `/blog` | وبلاگ با فیلتر دسته‌بندی |
-| `/blog/[slug]` | مقاله با prev/next navigation |
+| `/about` | پروفایل اجرایی |
+| `/services` | خدمات و راهکارها |
+| `/projects` | مطالعات موردی |
+| `/case-studies` | Case Studies |
+| `/solutions` | راهکارهای سازمانی |
+| `/products` | محصولات و پلتفرم |
+| `/academy` | دوره‌ها و آموزش |
+| `/docs` | مستندات فنی |
+| `/blog` | وبلاگ دانش |
+| `/events` | رویدادها و وبینارها |
+| `/industries` | صنایع هدف |
+| `/technologies` | اکوسیستم فناوری |
 | `/consultation` | فرم درخواست مشاوره |
-| `/about` | درباره |
-| `/services` | خدمات |
-| `/projects` | پروژه‌ها |
+| `/search` | جستجو |
 
-### ادمین پنل `/admin`
+---
 
+## ادمین پنل `/admin`
+
+### Personal Brand
 | صفحه | کاربرد |
 |------|--------|
-| `/admin/dashboard` | داشبورد + resync |
-| `/admin/hero` | ویرایش Hero با ۲۰ variant |
-| `/admin/blog` | مدیریت مقالات |
+| `/admin/dashboard` | داشبورد اجرایی |
+| `/admin/hero` | Hero section با ۲۰ variant |
+| `/admin/about` | پروفایل اجرایی |
+| `/admin/timeline` | مسیر رهبری |
+| `/admin/skills` | تخصص‌های اصلی |
+| `/admin/credentials` | گواهینامه‌ها، جوایز، بدج‌ها |
+
+### Content Hub
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/content` | هاب محتوا (blog/docs/news/tutorials/guides/...) |
+| `/admin/sections` | سکشن‌های صفحه اصلی |
+| `/admin/pages` | مدیریت صفحات |
+| `/admin/menus` | منوها |
+| `/admin/media` | مدیریت رسانه |
+
+### Technology
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/technologies` | کاتالوگ فناوری |
 | `/admin/services` | خدمات |
-| `/admin/projects` | پروژه‌ها |
-| `/admin/consultations` | درخواست‌های مشاوره |
-| `/admin/contacts` | پیام‌های تماس |
-| `/admin/clients` | لوگو مشتریان |
-| `/admin/skills` | مهارت‌ها |
-| `/admin/timeline` | تایم‌لاین تجربه |
-| `/admin/media` | مدیریت تصاویر |
+| `/admin/solutions` | راهکارها |
+| `/admin/industries` | صنایع |
+
+### Portfolio
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/projects` | مطالعات موردی و پروژه‌ها |
+
+### Organizations
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/organizations` | هاب سازمان‌ها (clients/partners/employers/vendors/...) |
+
+### Products
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/products` | محصولات و پلتفرم |
+
+### Academy
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/academy` | دوره‌ها و مسیرهای یادگیری |
+
+### Community
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/events-mgr` | رویدادها و وبینارها |
+| `/admin/testimonials` | نظرات و توصیه‌نامه‌ها |
+
+### Enterprise
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/organization` | تنظیمات سازمان |
+| `/admin/sites` | مدیریت سایت‌ها |
+| `/admin/workspaces` | فضاهای کاری |
+| `/admin/integrations` | یکپارچه‌سازی‌ها |
+
+### Operations
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/operations` | مرکز عملیات |
+| `/admin/security` | امنیت |
+| `/admin/backup` | پشتیبان‌گیری |
+
+### AI Platform
+| صفحه | کاربرد |
+|------|--------|
+| `/admin/ai-control` | کنترل پنل هوش مصنوعی |
 | `/admin/ai-kb` | پایگاه دانش AI |
+
+### System
+| صفحه | کاربرد |
+|------|--------|
 | `/admin/settings` | تنظیمات (AI provider، SMTP، ...) |
-| `/admin/users` | مدیریت کاربران |
+| `/admin/users` | مدیریت کاربران ادمین |
 | `/admin/audit` | لاگ فعالیت‌ها |
+| `/admin/seo` | SEO |
+
+---
+
+## Domain Model (Enterprise)
+
+در Phase 7.5 مدل داده یکپارچه شد:
+
+```
+organizations     ← clients + partners + employers + vendors + resellers + ...
+content           ← blog + docs + news + tutorials + guides + api-docs + ...
+credentials       ← certifications + awards + badges + licenses + memberships
+success_stories   ← testimonials + recommendations + reviews + awards
+content_categories ← درخت دسته‌بندی یکپارچه
+```
+
+هر entity از طریق فیلد `type` نوع خود را مشخص می‌کند.  
+جداول قدیمی (`clients`, `blog`, `certifications`, `testimonials`) برای backward compatibility حفظ شده‌اند.
 
 ---
 
@@ -63,7 +155,7 @@ outputs/
 | Gemini | Google Gemini |
 | Grok | xAI Grok |
 | DeepSeek | DeepSeek Chat |
-| **Conduit** | Gateway چند-مدلی (anthropic/claude-sonnet-4-6، openai/gpt-5، ...) |
+| **Conduit** | Gateway چند-مدلی (پشتیبانی از همه providerها) |
 
 ---
 
@@ -89,17 +181,31 @@ node --version   # باید 18+ باشد
 
 ### متغیرهای محیطی
 
-فایل `.env.local` در کنار `deploy.sh` بسازید:
+فایل `.env.local` در پوشه `outputs/habibazar-web` بسازید:
 
 ```bash
+# Required
 ADMIN_JWT_SECRET=$(openssl rand -hex 64)
 NEXT_PUBLIC_SITE_URL=https://habibazar.ir
+
+# Optional — AI providers
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_AI_API_KEY=...
+CONDUIT_API_URL=https://conduit.your-domain.com
+CONDUIT_API_KEY=...
+
+# Optional — Email
+SMTP_HOST=mail.habibazar.ir
+SMTP_PORT=587
+SMTP_USER=no-reply@habibazar.ir
+SMTP_PASS=...
+CONTACT_EMAIL=hosseinhabibazar@gmail.com
 ```
 
 ### Deploy اول‌بار
 
 ```bash
-# دانلود اسکریپت
 wget -O deploy.sh \
   https://raw.githubusercontent.com/HuseinHbz/Website/hbz/outputs/habibazar-deploy/deploy.sh
 
@@ -153,22 +259,32 @@ npm run dev
 outputs/habibazar-web/
 ├── src/
 │   ├── app/
-│   │   ├── [locale]/          ← صفحات عمومی (FA/EN)
-│   │   ├── admin/             ← ادمین پنل
-│   │   └── api/               ← API routes
+│   │   ├── [locale]/               ← صفحات عمومی (FA/EN)
+│   │   │   └── (marketing)/        ← با Header + Footer + AI Assistant
+│   │   ├── admin/                  ← ادمین پنل
+│   │   └── api/
+│   │       ├── admin/              ← Admin CRUD APIs
+│   │       ├── ai/                 ← AI chat API
+│   │       └── search/             ← جستجو
 │   ├── components/
-│   │   ├── sections/          ← سکشن‌های صفحه اصلی
-│   │   ├── ai/                ← دستیار هوش مصنوعی
-│   │   ├── forms/             ← فرم‌ها
-│   │   └── ui/                ← کامپوننت‌های مشترک
+│   │   ├── admin/                  ← AdminShell، AdminSidebar، CommandPalette
+│   │   ├── sections/               ← سکشن‌های صفحه اصلی
+│   │   ├── ai/                     ← دستیار هوش مصنوعی
+│   │   ├── forms/                  ← فرم‌ها
+│   │   └── ui/                     ← کامپوننت‌های مشترک
 │   └── lib/
-│       ├── db/                ← SQLite (schema، seed، resync)
-│       └── publicData.ts      ← توابع خواندن داده عمومی
+│       ├── db/
+│       │   ├── schema.ts           ← تعریف جداول (drizzle-orm)
+│       │   └── migrate.ts          ← migrations ایمن (try/catch)
+│       ├── admin/
+│       │   ├── auth.ts             ← getAdminUser()
+│       │   └── audit.ts            ← logAction()
+│       └── publicData.ts           ← توابع خواندن داده عمومی
 outputs/habibazar-deploy/
-├── deploy.sh                  ← deploy اول‌بار
-├── update.sh                  ← آپدیت سریع
-├── ecosystem.config.js        ← PM2 config
-└── nginx.conf                 ← Nginx config
+├── deploy.sh                       ← deploy اول‌بار
+├── update.sh                       ← آپدیت سریع
+├── ecosystem.config.js             ← PM2 config
+└── nginx.conf                      ← Nginx config
 ```
 
 ---
@@ -177,8 +293,8 @@ outputs/habibazar-deploy/
 
 | Branch | توضیح |
 |--------|-------|
-| `hbz` | **production** — معماری monolith (Next.js + SQLite) |
-| `habibazar-web` | معماری سه‌اپ (web + admin + api جداگانه) |
+| `hbz` | **production** — monolith (Next.js + SQLite) |
+| `feature/v2-enterprise-upgrade` | توسعه — Enterprise Architecture |
 
 ---
 
