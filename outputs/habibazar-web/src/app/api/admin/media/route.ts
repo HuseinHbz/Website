@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   const url = `/uploads/${folder}/${filename}`
   const db = getDb()
-  const result = await db.insert(mediaFiles).values({
+  await db.insert(mediaFiles).values({
     filename,
     originalName: file.name,
     mimeType: file.type,
@@ -46,10 +46,11 @@ export async function POST(req: NextRequest) {
     folder,
     alt,
     uploadedBy: user?.id,
-  }).returning()
+  })
 
-  await logAction(user, 'UPLOAD', 'media_files', result[0]?.id, null, { filename, folder })
-  return NextResponse.json(result[0])
+  const inserted = await db.select().from(mediaFiles).where(eq(mediaFiles.filename, filename)).get()
+  await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder })
+  return NextResponse.json(inserted ?? { url, filename, originalName: file.name, mimeType: file.type, size: file.size, folder, alt })
 }
 
 export async function DELETE(req: NextRequest) {

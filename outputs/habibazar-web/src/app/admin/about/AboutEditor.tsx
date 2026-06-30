@@ -46,11 +46,12 @@ export function AboutEditor() {
     setUploading(false)
     if (res.ok) {
       const d = await res.json()
+      const photoUrl: string = d.url?.startsWith('/') ? d.url : `/${d.url}`
       // update photoUrl for both locales so the photo is shared
       setData((prev) => {
         const next = { ...prev }
         for (const loc of ['en', 'fa']) {
-          next[loc] = { ...(prev[loc] || { ...EMPTY, locale: loc }), photoUrl: d.url }
+          next[loc] = { ...(prev[loc] || { ...EMPTY, locale: loc }), photoUrl }
         }
         return next
       })
@@ -112,12 +113,17 @@ export function AboutEditor() {
             <div className="flex items-start gap-4">
               {/* Preview */}
               <div className="flex-shrink-0">
-                {current.photoUrl ? (
+                {uploading ? (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-indigo-500/40 bg-indigo-500/10 animate-pulse">
+                    <span className="text-indigo-400 text-xs">...</span>
+                  </div>
+                ) : current.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={current.photoUrl}
+                    src={current.photoUrl.startsWith('/') ? current.photoUrl : `/${current.photoUrl}`}
                     alt="Profile"
                     className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500/40 shadow-lg"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-full flex items-center justify-center font-black text-xl text-white border-2 border-slate-700"

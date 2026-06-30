@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getDb } from '@/lib/db'
 import { aboutContent } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -24,5 +25,8 @@ export async function PUT(req: NextRequest) {
     await db.insert(aboutContent).values({ locale, ...data, updatedBy: user?.id })
   }
   await logAction(user, 'UPDATE', 'about_content', locale, existing, data)
+  revalidatePath('/en/about')
+  revalidatePath('/fa/about')
+  revalidatePath('/', 'layout')
   return NextResponse.json({ ok: true })
 }

@@ -275,7 +275,7 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                 {dbAbout?.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={dbAbout.photoUrl}
+                    src={dbAbout.photoUrl.startsWith('/') ? dbAbout.photoUrl : `/${dbAbout.photoUrl}`}
                     alt="Husein Habibazar"
                     className="w-28 h-28 rounded-full object-cover border-2 border-accent/30 shadow-lg"
                   />
