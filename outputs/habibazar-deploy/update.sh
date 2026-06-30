@@ -20,7 +20,7 @@ hr()   { echo -e "${BOLD}──────────────────�
 
 BASE="/var/www/habibazar"
 REPO="$BASE/repo"
-BRANCH="${DEPLOY_BRANCH:-main}"
+BRANCH="${DEPLOY_BRANCH:-habibazar-web}"
 TARGET="${1:-all}"
 
 hr
