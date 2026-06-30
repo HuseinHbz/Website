@@ -8,8 +8,6 @@ node_modules/
 out/
 build/
 
-# Lock files (keep package.json, ignore lock)
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
