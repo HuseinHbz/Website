@@ -76,7 +76,15 @@ async function callGrok(apiKey: string, apiUrl: string, model: string, messages:
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, locale } = await req.json() as { messages: { role: string; content: string }[]; locale?: string }
+    const { messages: rawMessages, locale } = await req.json() as { messages: { role: string; content: string }[]; locale?: string }
+
+    // Fix consecutive user messages: merge leading user messages into system context
+    let userContext = ''
+    let messages = rawMessages
+    if (rawMessages.length >= 2 && rawMessages[0].role === 'user' && rawMessages[1].role === 'user') {
+      userContext = rawMessages[0].content
+      messages = rawMessages.slice(1)
+    }
 
     const db = getDb()
     const provider = getSetting(db, 'ai_provider') || 'chatgpt'
@@ -93,7 +101,8 @@ export async function POST(req: NextRequest) {
     const defaultSystemPrompt = isFA
       ? 'شما دستیار هوشمند HBZ هستید. به سوالات کاربران درباره خدمات زیرساخت شبکه، امنیت، و مشاوره حسین حبیب‌آذر پاسخ دهید. پاسخ‌ها را کوتاه و مفید نگه دارید.'
       : 'You are the HBZ AI assistant. Help users with questions about network infrastructure services, security, and consultations by Husein Habibazar. Keep responses concise and helpful.'
-    const systemPrompt = customSystemPrompt || defaultSystemPrompt
+    const basePrompt = customSystemPrompt || defaultSystemPrompt
+    const systemPrompt = userContext ? `${basePrompt}\n\nUser info: ${userContext}` : basePrompt
 
     let reply = ''
 
