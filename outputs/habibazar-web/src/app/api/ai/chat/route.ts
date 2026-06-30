@@ -30,7 +30,7 @@ async function callChatGPT(apiKey: string, apiUrl: string, model: string, messag
   return data.choices[0].message.content
 }
 
-async function callClaude(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
+async function callClaude(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string, useBearer = false) {
   const url = `${apiUrl}/messages`
   const body = {
     model: model || 'claude-sonnet-4-6',
@@ -38,16 +38,18 @@ async function callClaude(apiKey: string, apiUrl: string, model: string, message
     system: systemPrompt || undefined,
     messages,
   }
+  const authHeader = useBearer
+    ? { 'Authorization': `Bearer ${apiKey}` }
+    : { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'Content-Type': 'application/json',
-    },
+    headers: { ...authHeader, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Claude API error: ${res.status}`)
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`)
+  }
   const data = await res.json() as { content: { text: string }[] }
   return data.content[0].text
 }
@@ -120,7 +122,8 @@ export async function POST(req: NextRequest) {
         // Claude models: use Anthropic Messages endpoint (system field works correctly)
         // Other models: use OpenAI-compatible endpoint
         if (conduitModel.startsWith('claude')) {
-          reply = await callClaude(apiKey, 'https://conduit.ozdoev.net/v1', conduitModel, messages, systemPrompt)
+          // Conduit Anthropic endpoint uses Bearer auth (not x-api-key)
+          reply = await callClaude(apiKey, 'https://conduit.ozdoev.net/v1', conduitModel, messages, systemPrompt, true)
         } else {
           reply = await callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', conduitModel, messages, systemPrompt)
         }
