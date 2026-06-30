@@ -89,10 +89,10 @@ export function AboutEditor() {
             value={current.photoUrl || ''}
             onChange={setPhotoUrl}
             folder="profile"
-            aspect={1}
-            shape="circle"
-            label="Profile Photo"
-            previewClass="w-20 h-20 rounded-full"
+            aspect={16 / 9}
+            shape="rect"
+            label="Profile Photo (16:9)"
+            previewClass="w-48 aspect-video rounded-xl"
           />
           <Input label="Resume PDF URL" value={current.resumeUrl || ''} onChange={(v) => set('resumeUrl', v)} placeholder="/resume.pdf" />
         </Card>

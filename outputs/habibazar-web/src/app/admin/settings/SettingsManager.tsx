@@ -130,6 +130,7 @@ export function SettingsManager() {
               { key: 'social_github', label: 'GitHub URL' },
               { key: 'social_twitter', label: 'Twitter/X URL' },
               { key: 'social_instagram', label: 'Instagram URL' },
+              { key: 'social_telegram', label: 'Telegram URL' },
             ].map((k) => (
               <Input key={k.key} label={k.label} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}

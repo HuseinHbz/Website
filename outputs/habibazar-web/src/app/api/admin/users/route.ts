@@ -76,8 +76,14 @@ export async function DELETE(req: NextRequest) {
       const { id } = await req.json()
       if (id === me.id) return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
       const db = getDb()
-      try { await db.run(sql`UPDATE audit_logs SET user_id=NULL WHERE user_id=${id}`) } catch { /* ok */ }
-      try { await db.run(sql`UPDATE media_files SET uploaded_by=NULL WHERE uploaded_by=${id}`) } catch { /* ok */ }
+      // Nullify all FK references before delete
+      const tables = ['audit_logs', 'media_files', 'about_content', 'timeline_items', 'skills',
+        'certifications', 'services', 'projects', 'clients', 'blog_posts', 'site_settings', 'ai_knowledge_base']
+      const cols: Record<string, string> = { audit_logs: 'user_id', media_files: 'uploaded_by' }
+      for (const t of tables) {
+        const col = cols[t] ?? 'updated_by'
+        try { await db.run(sql`UPDATE ${sql.identifier(t)} SET ${sql.identifier(col)} = NULL WHERE ${sql.identifier(col)} = ${id}`) } catch { /* ok */ }
+      }
       await db.delete(users).where(eq(users.id, id))
       await logAction(me, 'DELETE', 'users', id)
       return NextResponse.json({ ok: true })

@@ -9,7 +9,7 @@ interface DbCert { nameEn: string; nameFa: string; issuer?: string | null; color
 interface DbAbout { bio: string | null; photoUrl: string | null; resumeUrl: string | null; headline: string | null; subheadline: string | null }
 
 interface ContactInfo { email?: string | null; phone?: string | null; locationEn?: string | null; locationFa?: string | null }
-interface SocialLinks { linkedin?: string | null; github?: string | null; twitter?: string | null; instagram?: string | null }
+interface SocialLinks { linkedin?: string | null; github?: string | null; twitter?: string | null; instagram?: string | null; telegram?: string | null; email?: string | null }
 
 interface AboutSectionProps {
   locale?: string
@@ -271,23 +271,19 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             transition={{ duration: 0.7 }}
           >
             <div className="glass-card p-8 h-full">
-              <div className="flex justify-center mb-6">
+              <div className="w-full mb-6">
                 {dbAbout?.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={dbAbout.photoUrl.startsWith('/') ? dbAbout.photoUrl : `/${dbAbout.photoUrl}`}
                     alt="Husein Habibazar"
-                    className="w-28 h-28 rounded-full object-cover border-2 border-accent/30 shadow-lg"
+                    className="w-full aspect-video rounded-xl object-cover border border-accent/20 shadow-lg"
                   />
                 ) : (
-                  <div className="relative">
-                    <div
-                      className="w-28 h-28 rounded-full flex items-center justify-center font-black text-3xl text-white tracking-tight shadow-lg border-2 border-accent/30"
-                      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', boxShadow: '0 0 32px rgba(99,102,241,0.4)' }}
-                    >
-                      HBZ
-                    </div>
-                    <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-success border-2 border-background" />
+                  <div className="relative w-full aspect-video rounded-xl flex items-center justify-center border border-accent/20 shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', boxShadow: '0 0 32px rgba(99,102,241,0.3)' }}>
+                    <span className="font-black text-4xl text-white tracking-tight">HBZ</span>
+                    <span className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-success border-2 border-background" />
                   </div>
                 )}
               </div>
@@ -327,31 +323,45 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                 </div>
               )}
               {/* Social Links */}
-              {(socialLinks?.linkedin || socialLinks?.github || socialLinks?.twitter || socialLinks?.instagram) && (
+              {(socialLinks?.linkedin || socialLinks?.github || socialLinks?.twitter || socialLinks?.instagram || socialLinks?.telegram || socialLinks?.email || contactInfo?.email) && (
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {socialLinks.linkedin && (
+                  {socialLinks?.linkedin && (
                     <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0077b5]/10 text-[#0077b5] hover:bg-[#0077b5]/20 transition-colors border border-[#0077b5]/20">
                       <span>in</span> LinkedIn
                     </a>
                   )}
-                  {socialLinks.github && (
+                  {socialLinks?.github && (
                     <a href={socialLinks.github} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-text-secondary hover:text-white hover:bg-white/10 transition-colors border border-border">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.4.6.11.82-.26.82-.58v-2c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013.01-.4c1.02 0 2.05.14 3.01.4 2.28-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.7.82.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
                       GitHub
                     </a>
                   )}
-                  {socialLinks.twitter && (
+                  {socialLinks?.twitter && (
                     <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1da1f2]/10 text-[#1da1f2] hover:bg-[#1da1f2]/20 transition-colors border border-[#1da1f2]/20">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-black/20 text-white hover:bg-black/40 transition-colors border border-white/10">
                       𝕏 Twitter
                     </a>
                   )}
-                  {socialLinks.instagram && (
+                  {socialLinks?.instagram && (
                     <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#e1306c]/10 text-[#e1306c] hover:bg-[#e1306c]/20 transition-colors border border-[#e1306c]/20">
-                      📷 Instagram
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                      Instagram
+                    </a>
+                  )}
+                  {socialLinks?.telegram && (
+                    <a href={socialLinks.telegram} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0088cc]/10 text-[#0088cc] hover:bg-[#0088cc]/20 transition-colors border border-[#0088cc]/20">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                      Telegram
+                    </a>
+                  )}
+                  {(socialLinks?.email || contactInfo?.email) && (
+                    <a href={`mailto:${socialLinks?.email || contactInfo?.email}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors border border-accent/20">
+                      ✉ Email
                     </a>
                   )}
                 </div>

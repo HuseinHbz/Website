@@ -30,7 +30,7 @@ export default async function AboutPage({ params }: Props) {
   const { locale } = await params
   const [dbAbout, dbTimeline, dbSkills, dbCerts,
     contactEmail, contactPhone, contactLocationEn, contactLocationFa,
-    socialLinkedin, socialGithub, socialTwitter, socialInstagram,
+    socialLinkedin, socialGithub, socialTwitter, socialInstagram, socialTelegram,
   ] = await Promise.all([
     getPublicAbout(locale),
     getPublicTimeline(),
@@ -44,6 +44,7 @@ export default async function AboutPage({ params }: Props) {
     getPublicSetting('social_github'),
     getPublicSetting('social_twitter'),
     getPublicSetting('social_instagram'),
+    getPublicSetting('social_telegram'),
   ])
 
   const contactInfo = {
@@ -58,6 +59,8 @@ export default async function AboutPage({ params }: Props) {
     github: socialGithub,
     twitter: socialTwitter,
     instagram: socialInstagram,
+    telegram: socialTelegram,
+    email: contactEmail,
   }
 
   return (
