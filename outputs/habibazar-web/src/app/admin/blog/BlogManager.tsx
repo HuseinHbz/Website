@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 
 type Category = { id: number; slug: string; nameEn: string; nameFa: string; color: string; icon: string; sortOrder: number; active: boolean }
 type Post = {
@@ -15,6 +15,8 @@ const EMPTY_POST: Post = { slug: '', titleEn: '', titleFa: '', excerptEn: '', ex
 
 export function BlogManager() {
   const t = useT()
+  const locale = useAdminLocale()
+  const isFA = locale === 'fa'
   const [posts, setPosts] = useState<Post[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [tab, setTab] = useState<'posts' | 'categories'>('posts')
@@ -167,60 +169,73 @@ export function BlogManager() {
       {tab === 'posts' ? (
         <>
           {/* ── Filter Bar ── */}
-          <Card className="mb-4">
+          <div className="mb-4 rounded-xl border border-[#2a2a3e] bg-[#0f0f1a] p-4">
             <div className="flex flex-wrap gap-3 items-end">
-              <div className="flex-1 min-w-40">
-                <Input
-                  label="جستجو / Search"
-                  value={search}
-                  onChange={setSearch}
-                  placeholder="عنوان، slug..."
-                />
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
+                <div className="relative">
+                  <span className={`absolute top-1/2 -translate-y-1/2 text-slate-500 text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={isFA ? 'عنوان یا slug...' : 'title or slug...'}
+                    className={`w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                  />
+                </div>
               </div>
               <div className="w-44">
-                <Select
-                  label="دسته‌بندی"
+                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'دسته‌بندی' : 'Category'}</label>
+                <select
                   value={filterCat}
-                  onChange={setFilterCat}
-                  options={[
-                    { value: '', label: 'همه دسته‌ها' },
-                    ...categories.map((c) => ({ value: String(c.id), label: `${c.icon || ''} ${c.nameEn}` })),
-                  ]}
-                />
+                  onChange={(e) => setFilterCat(e.target.value)}
+                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">{isFA ? 'همه دسته‌ها' : 'All categories'}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.icon || ''} {isFA ? c.nameFa : c.nameEn}</option>
+                  ))}
+                </select>
               </div>
               <div className="w-36">
-                <Select
-                  label="وضعیت"
+                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
+                <select
                   value={filterStatus}
-                  onChange={setFilterStatus}
-                  options={[
-                    { value: '', label: 'همه' },
-                    { value: 'published', label: t('published') },
-                    { value: 'draft', label: t('draft') },
-                    { value: 'archived', label: t('archived') },
-                  ]}
-                />
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">{isFA ? 'همه' : 'All'}</option>
+                  <option value="published">{t('published')}</option>
+                  <option value="draft">{t('draft')}</option>
+                  <option value="archived">{t('archived')}</option>
+                </select>
               </div>
               <div className="w-36">
-                <Select
-                  label="ویژه"
+                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'ویژه' : 'Featured'}</label>
+                <select
                   value={filterFeatured}
-                  onChange={setFilterFeatured}
-                  options={[
-                    { value: '', label: 'همه' },
-                    { value: 'yes', label: '★ ویژه' },
-                    { value: 'no', label: 'عادی' },
-                  ]}
-                />
+                  onChange={(e) => setFilterFeatured(e.target.value)}
+                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">{isFA ? 'همه' : 'All'}</option>
+                  <option value="yes">{isFA ? '★ ویژه' : '★ Featured'}</option>
+                  <option value="no">{isFA ? 'عادی' : 'Regular'}</option>
+                </select>
               </div>
-              {hasPostFilters && (
-                <Btn variant="secondary" size="sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterStatus(''); setFilterFeatured('') }}>
-                  ✕ پاک کردن
-                </Btn>
-              )}
-              <span className="text-xs text-slate-500 self-end pb-1">{filteredPosts.length} / {posts.length} پست</span>
+              <div className={`flex items-end gap-2 ${isFA ? 'mr-auto' : 'ml-auto'}`}>
+                {hasPostFilters && (
+                  <button
+                    onClick={() => { setSearch(''); setFilterCat(''); setFilterStatus(''); setFilterFeatured('') }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-slate-400 border border-[#2a2a3e] hover:border-red-500 hover:text-red-400 transition-colors"
+                  >
+                    ✕ {isFA ? 'پاک کردن' : 'Clear'}
+                  </button>
+                )}
+                <span className="text-xs text-slate-500 py-2 px-1 whitespace-nowrap">
+                  {filteredPosts.length} / {posts.length} {isFA ? 'پست' : 'posts'}
+                </span>
+              </div>
             </div>
-          </Card>
+          </div>
 
           <Card>
             <Table headers={[t('title'), t('category'), t('status'), t('views'), t('date'), t('actions')]}>
@@ -267,29 +282,47 @@ export function BlogManager() {
       ) : (
         <>
           {/* ── Category Filter Bar ── */}
-          <Card className="mb-4">
+          <div className="mb-4 rounded-xl border border-[#2a2a3e] bg-[#0f0f1a] p-4">
             <div className="flex flex-wrap gap-3 items-end">
-              <div className="flex-1 min-w-40">
-                <Input label="جستجو" value={catSearch} onChange={setCatSearch} placeholder="نام، slug..." />
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
+                <div className="relative">
+                  <span className={`absolute top-1/2 -translate-y-1/2 text-slate-500 text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
+                  <input
+                    value={catSearch}
+                    onChange={(e) => setCatSearch(e.target.value)}
+                    placeholder={isFA ? 'نام یا slug...' : 'name or slug...'}
+                    className={`w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                  />
+                </div>
               </div>
               <div className="w-36">
-                <Select
-                  label="وضعیت"
+                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
+                <select
                   value={filterCatActive}
-                  onChange={setFilterCatActive}
-                  options={[
-                    { value: '', label: 'همه' },
-                    { value: 'active', label: 'فعال' },
-                    { value: 'inactive', label: 'غیرفعال' },
-                  ]}
-                />
+                  onChange={(e) => setFilterCatActive(e.target.value)}
+                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">{isFA ? 'همه' : 'All'}</option>
+                  <option value="active">{isFA ? 'فعال' : 'Active'}</option>
+                  <option value="inactive">{isFA ? 'غیرفعال' : 'Inactive'}</option>
+                </select>
               </div>
-              {(catSearch || filterCatActive) && (
-                <Btn variant="secondary" size="sm" onClick={() => { setCatSearch(''); setFilterCatActive('') }}>✕ پاک کردن</Btn>
-              )}
-              <span className="text-xs text-slate-500 self-end pb-1">{filteredCats.length} / {categories.length} دسته</span>
+              <div className={`flex items-end gap-2 ${isFA ? 'mr-auto' : 'ml-auto'}`}>
+                {(catSearch || filterCatActive) && (
+                  <button
+                    onClick={() => { setCatSearch(''); setFilterCatActive('') }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-slate-400 border border-[#2a2a3e] hover:border-red-500 hover:text-red-400 transition-colors"
+                  >
+                    ✕ {isFA ? 'پاک کردن' : 'Clear'}
+                  </button>
+                )}
+                <span className="text-xs text-slate-500 py-2 px-1 whitespace-nowrap">
+                  {filteredCats.length} / {categories.length} {isFA ? 'دسته' : 'cats'}
+                </span>
+              </div>
             </div>
-          </Card>
+          </div>
 
           <Card>
             <Table headers={[t('category'), t('slug'), t('icon'), t('color'), t('sortOrder'), 'پست‌ها', 'وضعیت', t('actions')]}>
