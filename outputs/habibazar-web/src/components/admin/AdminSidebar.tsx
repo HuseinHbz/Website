@@ -18,6 +18,7 @@ const NAV = [
       { labelEn: 'About / Bio', labelFa: 'درباره / بیوگرافی', href: '/admin/about', icon: '◍' },
       { labelEn: 'Career Timeline', labelFa: 'تایم‌لاین شغلی', href: '/admin/timeline', icon: '◎' },
       { labelEn: 'Skills', labelFa: 'مهارت‌ها', href: '/admin/skills', icon: '◈' },
+      { labelEn: 'Certifications', labelFa: 'گواهینامه‌ها', href: '/admin/certifications', icon: '🏅' },
       { labelEn: 'Services', labelFa: 'خدمات', href: '/admin/services', icon: '◉' },
       { labelEn: 'Projects', labelFa: 'پروژه‌ها', href: '/admin/projects', icon: '◆' },
       { labelEn: 'Clients', labelFa: 'مشتریان', href: '/admin/clients', icon: '◇' },
