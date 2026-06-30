@@ -36,6 +36,46 @@ const NAV = [
     ],
   },
   {
+    group: { en: 'Enterprise', fa: 'سازمانی' },
+    items: [
+      { labelEn: 'Organization', labelFa: 'سازمان', href: '/admin/organization', icon: '🏢' },
+      { labelEn: 'Sites', labelFa: 'سایت‌ها', href: '/admin/sites', icon: '🌐' },
+      { labelEn: 'Workspaces', labelFa: 'فضاهای کاری', href: '/admin/workspaces', icon: '🗂️' },
+      { labelEn: 'Partners', labelFa: 'شرکا', href: '/admin/partners', icon: '🤝' },
+      { labelEn: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', href: '/admin/integrations', icon: '🔌' },
+    ],
+  },
+  {
+    group: { en: 'Products', fa: 'محصولات' },
+    items: [
+      { labelEn: 'Products & Platform', labelFa: 'محصولات و پلتفرم', href: '/admin/products', icon: '📦' },
+    ],
+  },
+  {
+    group: { en: 'Academy', fa: 'آکادمی' },
+    items: [
+      { labelEn: 'Courses & Learning', labelFa: 'دوره‌ها و یادگیری', href: '/admin/academy', icon: '🎓' },
+    ],
+  },
+  {
+    group: { en: 'Documentation', fa: 'مستندات' },
+    items: [
+      { labelEn: 'Documentation Center', labelFa: 'مرکز مستندات', href: '/admin/docs', icon: '📄' },
+    ],
+  },
+  {
+    group: { en: 'Community', fa: 'جامعه' },
+    items: [
+      { labelEn: 'Events & Webinars', labelFa: 'رویدادها و وبینارها', href: '/admin/events-mgr', icon: '🗓️' },
+    ],
+  },
+  {
+    group: { en: 'Operations', fa: 'عملیات' },
+    items: [
+      { labelEn: 'Operations Center', labelFa: 'مرکز عملیات', href: '/admin/operations', icon: '🖥️' },
+    ],
+  },
+  {
     group: { en: 'Builder', fa: 'سازنده' },
     items: [
       { labelEn: 'Section Builder', labelFa: 'سازنده بخش‌ها', href: '/admin/sections', icon: '🧩' },

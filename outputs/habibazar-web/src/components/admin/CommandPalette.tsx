@@ -37,6 +37,22 @@ const COMMANDS: Command[] = [
   { id: 'technologies', label: 'Technology Ecosystem', labelFa: 'اکوسیستم فناوری', icon: '⚙️', href: '/admin/technologies', group: 'Solutions', groupFa: 'راهکارها', keywords: 'technologies ecosystem cisco vmware azure' },
   { id: 'testimonials', label: 'Client Testimonials', labelFa: 'نظرات مشتریان', icon: '⭐', href: '/admin/testimonials', group: 'Solutions', groupFa: 'راهکارها', keywords: 'testimonials reviews clients success' },
   { id: 'templates', label: 'Page Templates', labelFa: 'قالب‌های صفحه', icon: '🗂️', href: '/admin/templates', group: 'Solutions', groupFa: 'راهکارها', keywords: 'templates pages layouts builder' },
+  // Enterprise
+  { id: 'organization', label: 'Organization', labelFa: 'سازمان', icon: '🏢', href: '/admin/organization', group: 'Enterprise', groupFa: 'سازمانی', keywords: 'organization company brand legal' },
+  { id: 'sites', label: 'Sites', labelFa: 'سایت‌ها', icon: '🌐', href: '/admin/sites', group: 'Enterprise', groupFa: 'سازمانی', keywords: 'sites domains workspaces multi-site' },
+  { id: 'workspaces', label: 'Workspaces', labelFa: 'فضاهای کاری', icon: '🗂️', href: '/admin/workspaces', group: 'Enterprise', groupFa: 'سازمانی', keywords: 'workspaces teams departments' },
+  { id: 'partners', label: 'Partners', labelFa: 'شرکا', icon: '🤝', href: '/admin/partners', group: 'Enterprise', groupFa: 'سازمانی', keywords: 'partners reseller distributor tier gold silver' },
+  { id: 'integrations', label: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', icon: '🔌', href: '/admin/integrations', group: 'Enterprise', groupFa: 'سازمانی', keywords: 'integrations microsoft azure slack github jira' },
+  // Products
+  { id: 'products', label: 'Products & Platform', labelFa: 'محصولات و پلتفرم', icon: '📦', href: '/admin/products', group: 'Products', groupFa: 'محصولات', keywords: 'products software hardware saas subscriptions' },
+  // Academy
+  { id: 'academy', label: 'Courses & Learning', labelFa: 'دوره‌ها و یادگیری', icon: '🎓', href: '/admin/academy', group: 'Academy', groupFa: 'آکادمی', keywords: 'courses academy learning paths certifications bootcamp' },
+  // Documentation
+  { id: 'docs', label: 'Documentation Center', labelFa: 'مرکز مستندات', icon: '📄', href: '/admin/docs', group: 'Documentation', groupFa: 'مستندات', keywords: 'docs documentation api runbook tutorial guide' },
+  // Community
+  { id: 'events-mgr', label: 'Events & Webinars', labelFa: 'رویدادها و وبینارها', icon: '🗓️', href: '/admin/events-mgr', group: 'Community', groupFa: 'جامعه', keywords: 'events webinars conferences meetups community' },
+  // Operations
+  { id: 'operations', label: 'Operations Center', labelFa: 'مرکز عملیات', icon: '🖥️', href: '/admin/operations', group: 'Operations', groupFa: 'عملیات', keywords: 'operations monitoring performance errors security uptime' },
   // Builder
   { id: 'sections', label: 'Section Builder', labelFa: 'سازنده بخش‌ها', icon: '🧩', href: '/admin/sections', group: 'Builder', groupFa: 'سازنده', keywords: 'sections builder' },
   { id: 'pages', label: 'Page Builder', labelFa: 'سازنده صفحات', icon: '📄', href: '/admin/pages', group: 'Builder', groupFa: 'سازنده', keywords: 'pages builder' },

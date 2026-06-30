@@ -770,5 +770,448 @@ export function runMigrations() {
     }
   }
 
+  // Phase 7: Enterprise Digital Ecosystem tables
+  const phase7Tables = [
+    `CREATE TABLE IF NOT EXISTS sites (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      domain TEXT,
+      alt_domains TEXT,
+      status TEXT NOT NULL DEFAULT 'staging' CHECK(status IN ('active','staging','archived','maintenance')),
+      type TEXT NOT NULL DEFAULT 'corporate',
+      theme_id TEXT,
+      default_locale TEXT NOT NULL DEFAULT 'en',
+      supported_locales TEXT NOT NULL DEFAULT 'en,fa',
+      logo_url TEXT,
+      favicon_url TEXT,
+      home_page_slug TEXT,
+      config_json TEXT NOT NULL DEFAULT '{}',
+      seo_json TEXT NOT NULL DEFAULT '{}',
+      share_media INTEGER NOT NULL DEFAULT 1,
+      share_templates INTEGER NOT NULL DEFAULT 1,
+      share_kb INTEGER NOT NULL DEFAULT 0,
+      share_users INTEGER NOT NULL DEFAULT 0,
+      workspace_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS workspaces (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL DEFAULT 'corporate',
+      icon TEXT NOT NULL DEFAULT '🏢',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      description_en TEXT,
+      config_json TEXT NOT NULL DEFAULT '{}',
+      isolation_level TEXT NOT NULL DEFAULT 'partial',
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS organization (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      legal_name_en TEXT NOT NULL DEFAULT 'HBZ Technology',
+      legal_name_fa TEXT NOT NULL DEFAULT 'فناوری HBZ',
+      brand_name_en TEXT NOT NULL DEFAULT 'HBZ Technology',
+      brand_name_fa TEXT NOT NULL DEFAULT 'فناوری HBZ',
+      tagline_en TEXT,
+      tagline_fa TEXT,
+      mission_en TEXT,
+      mission_fa TEXT,
+      logo_url TEXT,
+      logo_mark_url TEXT,
+      primary_color TEXT DEFAULT '#6366f1',
+      secondary_color TEXT DEFAULT '#06b6d4',
+      website TEXT,
+      email TEXT,
+      phone TEXT,
+      address_json TEXT DEFAULT '{}',
+      social_json TEXT DEFAULT '{}',
+      legal_json TEXT DEFAULT '{}',
+      business_units_json TEXT DEFAULT '[]',
+      certifications_json TEXT DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS departments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '🏢',
+      head_user_id TEXT REFERENCES users(id),
+      parent_id INTEGER,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS office_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'branch',
+      city TEXT,
+      country TEXT,
+      address_en TEXT,
+      phone TEXT,
+      email TEXT,
+      lat REAL,
+      lng REAL,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS product_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '📦',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
+    )`,
+    `CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      tagline_en TEXT,
+      tagline_fa TEXT,
+      description_en TEXT,
+      description_fa TEXT,
+      type TEXT NOT NULL DEFAULT 'service',
+      category_id INTEGER REFERENCES product_categories(id),
+      icon TEXT NOT NULL DEFAULT '📦',
+      logo_url TEXT,
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      current_version TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      pricing_json TEXT NOT NULL DEFAULT '[]',
+      features_json TEXT NOT NULL DEFAULT '[]',
+      roadmap_json TEXT NOT NULL DEFAULT '[]',
+      download_url TEXT,
+      docs_url TEXT,
+      changelog_url TEXT,
+      repo_url TEXT,
+      seo_title TEXT,
+      seo_description TEXT,
+      featured INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS product_releases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      version TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'minor',
+      title_en TEXT,
+      changelog_en TEXT,
+      changelog_fa TEXT,
+      download_url TEXT,
+      breaking_changes INTEGER NOT NULL DEFAULT 0,
+      published_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS doc_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '📄',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      parent_id INTEGER,
+      type TEXT NOT NULL DEFAULT 'docs',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
+    )`,
+    `CREATE TABLE IF NOT EXISTS docs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      content_en TEXT,
+      content_fa TEXT,
+      excerpt_en TEXT,
+      category_id INTEGER REFERENCES doc_categories(id),
+      type TEXT NOT NULL DEFAULT 'docs',
+      version TEXT DEFAULT 'latest',
+      product_id INTEGER REFERENCES products(id),
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      code_examples_json TEXT NOT NULL DEFAULT '[]',
+      related_docs_json TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'draft',
+      read_time_minutes INTEGER DEFAULT 5,
+      views INTEGER NOT NULL DEFAULT 0,
+      helpful INTEGER NOT NULL DEFAULT 0,
+      not_helpful INTEGER NOT NULL DEFAULT 0,
+      seo_title TEXT,
+      seo_description TEXT,
+      featured INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS course_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '🎓',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
+    )`,
+    `CREATE TABLE IF NOT EXISTS courses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      description_en TEXT,
+      description_fa TEXT,
+      category_id INTEGER REFERENCES course_categories(id),
+      level TEXT NOT NULL DEFAULT 'intermediate',
+      type TEXT NOT NULL DEFAULT 'course',
+      cover_image TEXT,
+      duration_hours INTEGER DEFAULT 0,
+      lessons_count INTEGER NOT NULL DEFAULT 0,
+      labs_count INTEGER NOT NULL DEFAULT 0,
+      prerequisites_json TEXT NOT NULL DEFAULT '[]',
+      outcomes_json TEXT NOT NULL DEFAULT '[]',
+      instructor_id TEXT REFERENCES users(id),
+      price REAL NOT NULL DEFAULT 0,
+      is_free INTEGER NOT NULL DEFAULT 1,
+      certificate_enabled INTEGER NOT NULL DEFAULT 0,
+      enrollments_count INTEGER NOT NULL DEFAULT 0,
+      rating REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft',
+      featured INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS course_lessons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      content_en TEXT,
+      type TEXT NOT NULL DEFAULT 'text',
+      video_url TEXT,
+      duration_minutes INTEGER DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_free INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
+    )`,
+    `CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      description_en TEXT,
+      description_fa TEXT,
+      type TEXT NOT NULL DEFAULT 'webinar',
+      status TEXT NOT NULL DEFAULT 'upcoming',
+      start_date TEXT NOT NULL,
+      end_date TEXT,
+      timezone TEXT NOT NULL DEFAULT 'Asia/Tehran',
+      format TEXT NOT NULL DEFAULT 'online',
+      location_en TEXT,
+      meeting_url TEXT,
+      cover_image TEXT,
+      speakers_json TEXT NOT NULL DEFAULT '[]',
+      agenda_json TEXT NOT NULL DEFAULT '[]',
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      max_attendees INTEGER,
+      registrations_count INTEGER NOT NULL DEFAULT 0,
+      registration_open INTEGER NOT NULL DEFAULT 1,
+      is_free INTEGER NOT NULL DEFAULT 1,
+      featured INTEGER NOT NULL DEFAULT 0,
+      seo_title TEXT,
+      seo_description TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS event_registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      company TEXT,
+      phone TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS integrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'productivity',
+      icon TEXT NOT NULL DEFAULT '🔌',
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      enabled INTEGER NOT NULL DEFAULT 0,
+      config_json TEXT NOT NULL DEFAULT '{}',
+      secrets_json TEXT NOT NULL DEFAULT '{}',
+      webhook_url TEXT,
+      status TEXT NOT NULL DEFAULT 'disabled',
+      last_sync_at TEXT,
+      error_message TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS partners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      type TEXT NOT NULL DEFAULT 'technology',
+      tier TEXT NOT NULL DEFAULT 'silver',
+      logo_url TEXT,
+      website TEXT,
+      contact_email TEXT,
+      description_en TEXT,
+      certifications_json TEXT NOT NULL DEFAULT '[]',
+      regions_json TEXT NOT NULL DEFAULT '[]',
+      active INTEGER NOT NULL DEFAULT 1,
+      featured INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS role_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      scope TEXT NOT NULL DEFAULT 'global',
+      scope_id TEXT,
+      granted_by TEXT REFERENCES users(id),
+      expires_at TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS search_index (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      excerpt_en TEXT,
+      url TEXT NOT NULL,
+      icon TEXT,
+      tags TEXT,
+      workspace_id TEXT,
+      site_id TEXT,
+      locale TEXT DEFAULT 'both',
+      active INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+  ]
+  for (const stmt of phase7Tables) {
+    try { sqlite.exec(stmt) } catch { /* table already exists */ }
+  }
+
+  // Seed Phase 7 defaults
+  const orgCount = (sqlite.prepare('SELECT COUNT(*) as c FROM organization').get() as { c: number }).c
+  if (orgCount === 0) {
+    sqlite.exec(`INSERT INTO organization (legal_name_en, legal_name_fa, brand_name_en, brand_name_fa, tagline_en, tagline_fa, website, email, primary_color, secondary_color) VALUES ('HBZ Technology','فناوری HBZ','HBZ Technology','فناوری HBZ','Enterprise Technology Solutions','راهکارهای فناوری سازمانی','https://hbztechnology.com','info@hbztechnology.com','#6366f1','#06b6d4')`)
+  }
+
+  const workspaceCount = (sqlite.prepare('SELECT COUNT(*) as c FROM workspaces').get() as { c: number }).c
+  if (workspaceCount === 0) {
+    const DEFAULT_WORKSPACES = [
+      { id: 'ws-personal', name: 'Personal Brand', slug: 'personal', type: 'personal', icon: '👤', color: '#6366f1', sortOrder: 1 },
+      { id: 'ws-corporate', name: 'HBZ Technology', slug: 'corporate', type: 'corporate', icon: '🏢', color: '#3b82f6', sortOrder: 2 },
+      { id: 'ws-academy', name: 'HBZ Academy', slug: 'academy', type: 'academy', icon: '🎓', color: '#8b5cf6', sortOrder: 3 },
+      { id: 'ws-docs', name: 'Documentation', slug: 'docs', type: 'docs', icon: '📚', color: '#06b6d4', sortOrder: 4 },
+      { id: 'ws-support', name: 'Support', slug: 'support', type: 'support', icon: '🛟', color: '#22c55e', sortOrder: 5 },
+      { id: 'ws-partner', name: 'Partner Portal', slug: 'partner', type: 'partner', icon: '🤝', color: '#f59e0b', sortOrder: 6 },
+      { id: 'ws-developer', name: 'Developer Portal', slug: 'developer', type: 'developer', icon: '⚡', color: '#ec4899', sortOrder: 7 },
+    ]
+    const insertWs = sqlite.prepare(`INSERT OR IGNORE INTO workspaces (id, name, slug, type, icon, color, sort_order) VALUES (?,?,?,?,?,?,?)`)
+    for (const w of DEFAULT_WORKSPACES) { insertWs.run(w.id, w.name, w.slug, w.type, w.icon, w.color, w.sortOrder) }
+  }
+
+  const siteCount = (sqlite.prepare('SELECT COUNT(*) as c FROM sites').get() as { c: number }).c
+  if (siteCount === 0) {
+    const DEFAULT_SITES = [
+      { id: 'site-main', name: 'HabiBazar.ir', slug: 'main', domain: 'habibazar.ir', type: 'personal', status: 'active', workspaceId: 'ws-personal', sortOrder: 1 },
+      { id: 'site-corporate', name: 'HBZ Technology', slug: 'corporate', domain: 'hbztechnology.com', type: 'corporate', status: 'staging', workspaceId: 'ws-corporate', sortOrder: 2 },
+      { id: 'site-academy', name: 'HBZ Academy', slug: 'academy', domain: 'academy.hbztechnology.com', type: 'academy', status: 'staging', workspaceId: 'ws-academy', sortOrder: 3 },
+      { id: 'site-docs', name: 'HBZ Docs', slug: 'docs', domain: 'docs.hbztechnology.com', type: 'docs', status: 'staging', workspaceId: 'ws-docs', sortOrder: 4 },
+      { id: 'site-support', name: 'HBZ Support', slug: 'support', domain: 'support.hbztechnology.com', type: 'support', status: 'staging', workspaceId: 'ws-support', sortOrder: 5 },
+    ]
+    const insertSite = sqlite.prepare(`INSERT OR IGNORE INTO sites (id, name, slug, domain, type, status, workspace_id) VALUES (?,?,?,?,?,?,?)`)
+    for (const s of DEFAULT_SITES) { insertSite.run(s.id, s.name, s.slug, s.domain, s.type, s.status, s.workspaceId) }
+  }
+
+  const integrationCount = (sqlite.prepare('SELECT COUNT(*) as c FROM integrations').get() as { c: number }).c
+  if (integrationCount === 0) {
+    const DEFAULT_INTEGRATIONS = [
+      { slug: 'microsoft-365', nameEn: 'Microsoft 365', category: 'productivity', icon: '🪟', color: '#0078d4', sortOrder: 1 },
+      { slug: 'azure', nameEn: 'Microsoft Azure', category: 'cloud', icon: '☁️', color: '#0078d4', sortOrder: 2 },
+      { slug: 'google-workspace', nameEn: 'Google Workspace', category: 'productivity', icon: '🔵', color: '#4285f4', sortOrder: 3 },
+      { slug: 'slack', nameEn: 'Slack', category: 'communication', icon: '💬', color: '#4a154b', sortOrder: 4 },
+      { slug: 'discord', nameEn: 'Discord', category: 'communication', icon: '🎮', color: '#5865f2', sortOrder: 5 },
+      { slug: 'github', nameEn: 'GitHub', category: 'devops', icon: '🐙', color: '#333', sortOrder: 6 },
+      { slug: 'gitlab', nameEn: 'GitLab', category: 'devops', icon: '🦊', color: '#fc6d26', sortOrder: 7 },
+      { slug: 'jira', nameEn: 'Jira', category: 'project', icon: '📋', color: '#0052cc', sortOrder: 8 },
+      { slug: 'cloudflare', nameEn: 'Cloudflare', category: 'infrastructure', icon: '🌐', color: '#f48120', sortOrder: 9 },
+      { slug: 'vercel', nameEn: 'Vercel', category: 'infrastructure', icon: '▲', color: '#000', sortOrder: 10 },
+      { slug: 'stripe', nameEn: 'Stripe', category: 'payments', icon: '💳', color: '#635bff', sortOrder: 11 },
+      { slug: 'trello', nameEn: 'Trello', category: 'project', icon: '📌', color: '#0052cc', sortOrder: 12 },
+    ]
+    const insertInt = sqlite.prepare(`INSERT OR IGNORE INTO integrations (slug, name_en, category, icon, color, sort_order) VALUES (?,?,?,?,?,?)`)
+    for (const i of DEFAULT_INTEGRATIONS) { insertInt.run(i.slug, i.nameEn, i.category, i.icon, i.color, i.sortOrder) }
+  }
+
+  const docCatCount = (sqlite.prepare('SELECT COUNT(*) as c FROM doc_categories').get() as { c: number }).c
+  if (docCatCount === 0) {
+    const DEFAULT_DOC_CATS = [
+      { slug: 'getting-started', nameEn: 'Getting Started', nameFa: 'شروع سریع', icon: '🚀', color: '#22c55e', type: 'docs', sortOrder: 1 },
+      { slug: 'api-reference', nameEn: 'API Reference', nameFa: 'مرجع API', icon: '⚡', color: '#3b82f6', type: 'api', sortOrder: 2 },
+      { slug: 'architecture', nameEn: 'Architecture Guides', nameFa: 'راهنمای معماری', icon: '🏛️', color: '#8b5cf6', type: 'guide', sortOrder: 3 },
+      { slug: 'runbooks', nameEn: 'Runbooks', nameFa: 'Runbook‌ها', icon: '📋', color: '#f59e0b', type: 'runbook', sortOrder: 4 },
+      { slug: 'tutorials', nameEn: 'Tutorials', nameFa: 'آموزش‌ها', icon: '📖', color: '#ec4899', type: 'tutorial', sortOrder: 5 },
+      { slug: 'release-notes', nameEn: 'Release Notes', nameFa: 'یادداشت‌های نسخه', icon: '📦', color: '#06b6d4', type: 'release', sortOrder: 6 },
+    ]
+    const insertDocCat = sqlite.prepare(`INSERT OR IGNORE INTO doc_categories (slug, name_en, name_fa, icon, color, type, sort_order) VALUES (?,?,?,?,?,?,?)`)
+    for (const d of DEFAULT_DOC_CATS) { insertDocCat.run(d.slug, d.nameEn, d.nameFa, d.icon, d.color, d.type, d.sortOrder) }
+  }
+
+  const courseCatCount = (sqlite.prepare('SELECT COUNT(*) as c FROM course_categories').get() as { c: number }).c
+  if (courseCatCount === 0) {
+    const DEFAULT_COURSE_CATS = [
+      { slug: 'networking', nameEn: 'Networking', nameFa: 'شبکه', icon: '🌐', color: '#3b82f6', sortOrder: 1 },
+      { slug: 'security', nameEn: 'Cybersecurity', nameFa: 'امنیت سایبری', icon: '🔒', color: '#ef4444', sortOrder: 2 },
+      { slug: 'cloud', nameEn: 'Cloud Computing', nameFa: 'رایانش ابری', icon: '☁️', color: '#06b6d4', sortOrder: 3 },
+      { slug: 'linux', nameEn: 'Linux Administration', nameFa: 'مدیریت لینوکس', icon: '🐧', color: '#f97316', sortOrder: 4 },
+      { slug: 'virtualization', nameEn: 'Virtualization', nameFa: 'مجازی‌سازی', icon: '🖥️', color: '#8b5cf6', sortOrder: 5 },
+      { slug: 'devops', nameEn: 'DevOps & Automation', nameFa: 'DevOps و اتوماسیون', icon: '⚙️', color: '#22c55e', sortOrder: 6 },
+    ]
+    const insertCourseCat = sqlite.prepare(`INSERT OR IGNORE INTO course_categories (slug, name_en, name_fa, icon, color, sort_order) VALUES (?,?,?,?,?,?)`)
+    for (const c of DEFAULT_COURSE_CATS) { insertCourseCat.run(c.slug, c.nameEn, c.nameFa, c.icon, c.color, c.sortOrder) }
+  }
+
+  const productCatCount = (sqlite.prepare('SELECT COUNT(*) as c FROM product_categories').get() as { c: number }).c
+  if (productCatCount === 0) {
+    const DEFAULT_PRODUCT_CATS = [
+      { slug: 'infrastructure', nameEn: 'Infrastructure', nameFa: 'زیرساخت', icon: '🏗️', color: '#3b82f6', sortOrder: 1 },
+      { slug: 'security', nameEn: 'Security', nameFa: 'امنیت', icon: '🔒', color: '#ef4444', sortOrder: 2 },
+      { slug: 'monitoring', nameEn: 'Monitoring', nameFa: 'پایش', icon: '📊', color: '#22c55e', sortOrder: 3 },
+      { slug: 'ai-tools', nameEn: 'AI Tools', nameFa: 'ابزارهای هوش مصنوعی', icon: '🤖', color: '#8b5cf6', sortOrder: 4 },
+      { slug: 'services', nameEn: 'Professional Services', nameFa: 'خدمات حرفه‌ای', icon: '🤝', color: '#6366f1', sortOrder: 5 },
+    ]
+    const insertProdCat = sqlite.prepare(`INSERT OR IGNORE INTO product_categories (slug, name_en, name_fa, icon, color, sort_order) VALUES (?,?,?,?,?,?)`)
+    for (const p of DEFAULT_PRODUCT_CATS) { insertProdCat.run(p.slug, p.nameEn, p.nameFa, p.icon, p.color, p.sortOrder) }
+  }
+
   sqlite.close()
 }
