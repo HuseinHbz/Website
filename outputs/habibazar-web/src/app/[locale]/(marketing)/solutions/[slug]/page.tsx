@@ -9,10 +9,14 @@ import type { Metadata } from 'next'
 interface Props { params: Promise<{ locale: string; slug: string }> }
 
 export async function generateStaticParams() {
-  const db = getDb()
-  const rows = db.select({ slug: solutions.slug }).from(solutions).all()
-  const locales = ['en', 'fa']
-  return locales.flatMap(locale => rows.map(r => ({ locale, slug: r.slug })))
+  try {
+    const db = getDb()
+    const rows = db.select({ slug: solutions.slug }).from(solutions).all()
+    const locales = ['en', 'fa']
+    return locales.flatMap(locale => rows.map(r => ({ locale, slug: r.slug })))
+  } catch {
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
