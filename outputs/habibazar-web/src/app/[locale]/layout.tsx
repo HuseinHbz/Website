@@ -6,17 +6,19 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import { cn } from '@/lib/utils'
 import { SITE } from '@/lib/site'
 import { AnalyticsTracker } from '@/components/AnalyticsTracker'
+import { ThemeProvider } from '@/components/ds/ThemeProvider'
+import { ToastProvider } from '@/components/ds/Toast'
 import '../globals.css'
 
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-sans',
   display: 'swap',
 })
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
+  variable: '--font-mono',
   display: 'swap',
 })
 
@@ -122,23 +124,32 @@ export default async function RootLayout({ children, params }: Props) {
             rel="stylesheet"
           />
         )}
+        <style>{`
+          :root {
+            --font-persian: ${isRTL ? "'Vazirmatn', Tahoma, Arial, sans-serif" : 'inherit'};
+          }
+        `}</style>
       </head>
       <body
         className={cn(
-          'bg-background text-text-primary antialiased min-h-screen',
+          'bg-background text-text-primary antialiased min-h-dvh',
           isRTL ? 'font-persian' : 'font-sans'
         )}
       >
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:start-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-accent focus:text-white focus:rounded-md focus:text-sm focus:font-medium"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:start-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-brand focus:text-white focus:rounded-lg focus:text-sm focus:font-semibold focus:shadow-brand"
         >
           {isRTL ? 'رفتن به محتوا' : 'Skip to content'}
         </a>
-        <NextIntlClientProvider messages={messages}>
-          <AnalyticsTracker locale={locale} />
-          {children}
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <NextIntlClientProvider messages={messages}>
+              <AnalyticsTracker locale={locale} />
+              {children}
+            </NextIntlClientProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
