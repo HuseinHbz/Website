@@ -69,11 +69,16 @@ if [[ "$SKIP_BUILD" == "false" ]]; then
 
   # ─── npm ci (فقط اگر package.json تغییر کرده) ────────────────────────────────
   if git -C "$APP_DIR" diff "$PREV_COMMIT" HEAD -- outputs/habibazar-web/package.json outputs/habibazar-web/package-lock.json 2>/dev/null | grep -q .; then
-    step "package.json تغییر کرده — نصب پکیج‌ها..."
-    sudo -u "$APP_USER" npm ci --omit=dev
+    step "package.json تغییر کرده — نصب پکیج‌ها (همه + devDeps برای build)..."
+    sudo -u "$APP_USER" npm ci
     info "پکیج‌ها آپدیت شدند"
   else
-    info "package.json تغییر نکرده — نیازی به نصب نیست"
+    # اگر node_modules موجود است ولی devDeps حذف شده، آن‌ها را برای build برگردان
+    if [[ ! -d "node_modules/eslint" ]]; then
+      step "نصب devDependencies برای build..."
+      sudo -u "$APP_USER" npm ci
+    fi
+    info "package.json تغییر نکرده"
   fi
 
   # ─── build ───────────────────────────────────────────────────────────────────
@@ -89,6 +94,9 @@ if [[ "$SKIP_BUILD" == "false" ]]; then
   fi
   info "build کامل شد"
   rm -rf "$WEB_DIR/.next.bak"
+
+  step "حذف devDependencies بعد از build..."
+  sudo -u "$APP_USER" npm prune --omit=dev 2>/dev/null || true
 fi
 
 # ─── reload zero-downtime ────────────────────────────────────────────────────

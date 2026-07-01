@@ -89,14 +89,18 @@ else
 fi
 
 # ─── ۷. npm install + build ──────────────────────────────────────────────────
-step "نصب پکیج‌ها..."
+step "نصب پکیج‌ها (همه — شامل devDependencies برای build)..."
 cd "$APP_DIR/outputs/habibazar-web"
-sudo -u "$APP_USER" npm ci --omit=dev 2>/dev/null
+sudo -u "$APP_USER" npm ci 2>/dev/null
 info "پکیج‌ها نصب شدند"
 
 step "build پروژه (ممکن است چند دقیقه طول بکشد)..."
 sudo -u "$APP_USER" bash -c "source $ENV_FILE 2>/dev/null; npm run build"
 info "build کامل شد"
+
+step "حذف devDependencies بعد از build..."
+sudo -u "$APP_USER" npm prune --omit=dev 2>/dev/null
+info "devDependencies حذف شد"
 
 # ─── ۸. پوشه داده ────────────────────────────────────────────────────────────
 mkdir -p "$APP_DIR/outputs/habibazar-web/data"
