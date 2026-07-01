@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, SectionDivider, PageHeader, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 import { ImageUploadCrop } from '@/components/admin/ImageUploadCrop'
 
 type AboutData = {
@@ -17,6 +18,7 @@ const EMPTY: AboutData = {
 }
 
 export function AboutEditor() {
+  const t = useT()
   const [locale, setLocale] = useState<'en' | 'fa'>('en')
   const [data, setData] = useState<Record<string, AboutData>>({})
   const [saving, setSaving] = useState(false)
@@ -51,7 +53,7 @@ export function AboutEditor() {
         body: JSON.stringify({ locale: loc, photoUrl: url }),
       })
     ))
-    toast(url ? 'Photo saved' : 'Photo removed', 'success')
+    toast(url ? t('saved') : t('deleted'), 'success')
   }
 
   async function save() {
@@ -72,37 +74,37 @@ export function AboutEditor() {
       }),
     ])
     setSaving(false)
-    toast(res.ok ? 'Saved successfully' : 'Save failed', res.ok ? 'success' : 'error')
+    toast(res.ok ? t('savedSuccessfully') : t('saveFailed'), res.ok ? 'success' : 'error')
   }
 
   return (
     <>
       <ToastContainer />
       <PageHeader
-        title="About / Bio"
-        subtitle="Edit your professional biography and key metrics"
+        title={t('aboutTitle')}
+        subtitle={t('aboutSub')}
         action={
           <div className="flex items-center gap-3">
-            <div className="flex rounded-lg bg-[#0c0c14] border border-[#2a2a3e] overflow-hidden">
+            <div className="flex rounded-lg bg-background border border-border overflow-hidden">
               {(['en', 'fa'] as const).map((l) => (
-                <button key={l} onClick={() => setLocale(l)} className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                <button key={l} onClick={() => setLocale(l)} className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>
                   {l.toUpperCase()}
                 </button>
               ))}
             </div>
-            <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? t('saving') : t('saveChanges')}</Btn>
           </div>
         }
       />
 
       <div className="space-y-6">
         <Card className="p-6 space-y-4">
-          <SectionDivider label="Profile" />
+          <SectionDivider label={t('profileSection')} />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Headline" value={current.headline || ''} onChange={(v) => set('headline', v)} placeholder="Infrastructure Architect" />
-            <Input label="Subheadline" value={current.subheadline || ''} onChange={(v) => set('subheadline', v)} placeholder="& Network Security Consultant" />
+            <Input label={t('headlineLabel')} value={current.headline || ''} onChange={(v) => set('headline', v)} placeholder="Infrastructure Architect" />
+            <Input label={t('subheadlineLabel')} value={current.subheadline || ''} onChange={(v) => set('subheadline', v)} placeholder="& Network Security Consultant" />
           </div>
-          <Input label="داستان حرفه‌ای / Professional Story (bio)" value={current.bio || ''} onChange={(v) => set('bio', v)} multiline rows={6} placeholder="Professional biography shown in the About page under 'داستان حرفه‌ای' section..." />
+          <Input label={t('bioLabel')} value={current.bio || ''} onChange={(v) => set('bio', v)} multiline rows={6} placeholder="Professional biography shown in the About page under 'داستان حرفه‌ای' section..." />
           {/* Profile photo */}
           <ImageUploadCrop
             value={current.photoUrl || ''}
@@ -117,12 +119,12 @@ export function AboutEditor() {
         </Card>
 
         <Card className="p-6 space-y-4">
-          <SectionDivider label="Key Statistics" />
+          <SectionDivider label={t('keyStatsSection')} />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Years Experience" value={current.yearsExp || ''} onChange={(v) => set('yearsExp', v)} placeholder="10+" />
-            <Input label="Projects Count" value={current.projectsCount || ''} onChange={(v) => set('projectsCount', v)} placeholder="50+" />
-            <Input label="Managed Endpoints" value={current.endpointsCount || ''} onChange={(v) => set('endpointsCount', v)} placeholder="1000+" />
-            <Input label="Production Deployments" value={current.deploymentsCount || ''} onChange={(v) => set('deploymentsCount', v)} placeholder="20+" />
+            <Input label={t('yearsExp')} value={current.yearsExp || ''} onChange={(v) => set('yearsExp', v)} placeholder="10+" />
+            <Input label={t('projectsCount')} value={current.projectsCount || ''} onChange={(v) => set('projectsCount', v)} placeholder="50+" />
+            <Input label={t('endpointsCount')} value={current.endpointsCount || ''} onChange={(v) => set('endpointsCount', v)} placeholder="1000+" />
+            <Input label={t('deploymentsCount')} value={current.deploymentsCount || ''} onChange={(v) => set('deploymentsCount', v)} placeholder="20+" />
           </div>
         </Card>
       </div>

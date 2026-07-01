@@ -98,7 +98,12 @@
     "title": "Ready to Transform Your Enterprise Infrastructure?",
     "subtitle": "Start with a free consultation. No commitment — just an honest conversation about your infrastructure challenges.",
     "ctaPrimary": "Book Free Consultation",
-    "ctaSecondary": "30-Min Intro Call"
+    "ctaSecondary": "30-Min Intro Call",
+    "available": "Available for Enterprise Projects",
+    "trust1": "Free Initial Assessment",
+    "trust2": "No Commitment",
+    "trust3": "Response Within 24h",
+    "trust4": "10+ Years Enterprise Experience"
   },
   "consultation": {
     "title": "Free Consultation",

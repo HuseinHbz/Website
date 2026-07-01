@@ -316,7 +316,7 @@ export default async function SolutionPage({ params }: Props) {
                       <span key={i} className="text-yellow-400">★</span>
                     ))}
                   </div>
-                  <p className="text-slate-300 italic mb-4">"{fa ? (t.quoteFa || t.quoteEn) : t.quoteEn}"</p>
+                  <p className="text-slate-300 italic mb-4">&quot;{fa ? (t.quoteFa || t.quoteEn) : t.quoteEn}&quot;</p>
                   <div>
                     <div className="font-semibold text-white text-sm">{t.clientName}</div>
                     <div className="text-xs text-slate-500">{t.clientTitle} · {t.clientCompany}</div>

@@ -271,21 +271,48 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             transition={{ duration: 0.7 }}
           >
             <div className="glass-card p-8 h-full">
-              <div className="flex justify-center mb-6">
-                {dbAbout?.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={dbAbout.photoUrl.startsWith('/') ? dbAbout.photoUrl : `/${dbAbout.photoUrl}`}
-                    alt="Husein Habibazar"
-                    className="w-44 aspect-[9/16] rounded-2xl object-cover border border-accent/20 shadow-lg"
+              {/* Profile image — focal point */}
+              <div className="flex justify-center mb-8">
+                <div className="relative">
+                  {dbAbout?.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={dbAbout.photoUrl.startsWith('/') ? dbAbout.photoUrl : `/${dbAbout.photoUrl}`}
+                      alt="Husein Habibazar"
+                      className="w-48 sm:w-56 aspect-[3/4] rounded-2xl object-cover border border-accent/30 shadow-2xl"
+                      style={{ boxShadow: '0 0 48px rgba(99,102,241,0.2), 0 24px 48px rgba(0,0,0,0.4)' }}
+                    />
+                  ) : (
+                    <div
+                      className="relative w-48 sm:w-56 aspect-[3/4] rounded-2xl flex flex-col items-center justify-center border border-accent/30"
+                      style={{
+                        background: 'linear-gradient(135deg, #1a1a3e 0%, #0d0d1a 50%, #1e1e3f 100%)',
+                        boxShadow: '0 0 48px rgba(99,102,241,0.2), 0 24px 48px rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 rounded-2xl pointer-events-none"
+                        style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(99,102,241,0.15) 0%, transparent 70%)' }}
+                      />
+                      <span className="font-black text-5xl text-white tracking-tight relative z-10" style={{ background: 'linear-gradient(135deg, #f1f5f9, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>HBZ</span>
+                      <span className="text-xs text-text-muted mt-2 relative z-10 tracking-wider uppercase">Infrastructure</span>
+                      <span className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-emerald-500 border-2 border-background z-10" />
+                    </div>
+                  )}
+                  {/* Decorative ring */}
+                  <div
+                    className="absolute -inset-3 rounded-2xl pointer-events-none"
+                    style={{ border: '1px solid rgba(99,102,241,0.12)', background: 'transparent' }}
                   />
-                ) : (
-                  <div className="relative w-44 aspect-[9/16] rounded-2xl flex items-center justify-center border border-accent/20 shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', boxShadow: '0 0 32px rgba(99,102,241,0.3)' }}>
-                    <span className="font-black text-4xl text-white tracking-tight">HBZ</span>
-                    <span className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-success border-2 border-background" />
+                  {/* Status badge */}
+                  <div
+                    className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border"
+                    style={{ background: 'rgba(16,185,129,0.1)', borderColor: 'rgba(16,185,129,0.3)', color: '#10b981' }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1.5 animate-pulse" />
+                    {isRTL ? 'آماده همکاری' : 'Available'}
                   </div>
-                )}
+                </div>
               </div>
               <h3 className="text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">◈</span>

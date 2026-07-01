@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import type { Metadata } from 'next'
 import '../globals.css'
 import { runMigrations } from '@/lib/db/migrate'
@@ -20,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await ensureInit()
   return (
     <html lang="en">
-      <body className="bg-[#080810] text-white antialiased font-sans">
+      <body className="bg-background text-white antialiased font-sans">
         {children}
       </body>
     </html>

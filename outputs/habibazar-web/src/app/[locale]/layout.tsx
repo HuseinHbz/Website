@@ -40,6 +40,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     metadataBase: new URL(SITE.url),
+    icons: {
+      icon: [
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+      ],
+      apple: '/favicon.svg',
+    },
     title: {
       default: t('homeTitle'),
       template: `%s | ${SITE.name}`,

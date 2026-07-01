@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db'
 import { siteSettings } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { breakers } from '@/lib/circuitBreaker'
 
 function getSetting(key: string): string {
   try {
@@ -28,10 +29,7 @@ export async function sendEmailNotification(data: NotificationData) {
   if (!smtpHost || !notifyTo || notifyEnabled !== '1') return
 
   try {
-    // Send email via SMTP using a simple raw TCP approach via fetch to a local relay,
-    // or via the SMTP protocol directly. We use dynamic require to avoid TS issues.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const nm = require('nodemailer') as { createTransport: (cfg: unknown) => { sendMail: (opts: unknown) => Promise<void> } }
+    const nm = (await import('nodemailer')) as unknown as { createTransport: (cfg: unknown) => { sendMail: (opts: unknown) => Promise<void> } }
     const transporter = nm.createTransport({
       host: smtpHost,
       port: parseInt(smtpPort || '587'),
@@ -39,12 +37,12 @@ export async function sendEmailNotification(data: NotificationData) {
       auth: smtpUser ? { user: smtpUser, pass: smtpPass } : undefined,
     })
 
-    await transporter.sendMail({
+    await breakers.smtp.execute(() => transporter.sendMail({
       from: smtpFrom || smtpUser,
       to: notifyTo,
       subject: data.subject,
       text: data.body,
-    })
+    }))
   } catch (err) {
     console.error('Email notification failed:', err)
   }

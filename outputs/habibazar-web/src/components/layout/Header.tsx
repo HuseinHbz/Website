@@ -130,7 +130,7 @@ export function Header({ locale }: HeaderProps) {
               )}
               style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
             >
-              Book Consultation
+              {isRTL ? 'رزرو مشاوره' : 'Book Consultation'}
             </Link>
           </div>
 
@@ -205,7 +205,7 @@ export function Header({ locale }: HeaderProps) {
                   className="flex items-center justify-center w-full px-5 py-3 rounded-xl text-sm font-semibold text-white"
                   style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
                 >
-                  Book Free Consultation
+                  {isRTL ? 'رزرو مشاوره رایگان' : 'Book Free Consultation'}
                 </Link>
               </div>
             </nav>

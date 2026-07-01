@@ -61,24 +61,24 @@ export function ServicesManager() {
       <PageHeader title={t('servicesTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('addNew')} {t('servicesTitle')}</Btn>} />
 
       <div className="flex flex-wrap gap-3 mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." className="flex-1 min-w-[200px] bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500" />
-        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-text-disabled focus:outline-none focus:border-brand" />
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="hidden">Hidden</option>
         </select>
-        {(search || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterActive('all') }} className="px-3 py-2 text-xs text-slate-400 hover:text-white border border-[#2a2a3e] rounded-lg">✕ Clear</button>}
-        <span className="px-3 py-2 text-xs text-slate-500">{filtered.length} / {services.length}</span>
+        {(search || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterActive('all') }} className="px-3 py-2 text-xs text-text-secondary hover:text-white border border-border rounded-lg">✕ Clear</button>}
+        <span className="px-3 py-2 text-xs text-text-tertiary">{filtered.length} / {services.length}</span>
       </div>
 
       <Card>
         <Table headers={[t('title'), t('category'), t('color'), t('sortOrder'), t('status'), t('actions')]}>
           {filtered.map((s) => (
             <TR key={s.id}>
-              <TD><div className="font-medium text-white">{s.titleEn}</div><div className="text-xs text-slate-500">{s.titleFa}</div></TD>
-              <TD className="text-slate-400">{s.categoryEn}</TD>
+              <TD><div className="font-medium text-white">{s.titleEn}</div><div className="text-xs text-text-tertiary">{s.titleFa}</div></TD>
+              <TD className="text-text-secondary">{s.categoryEn}</TD>
               <TD><ColorDot color={s.color} /></TD>
-              <TD className="text-slate-500">{s.sortOrder}</TD>
+              <TD className="text-text-tertiary">{s.sortOrder}</TD>
               <TD><Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('hidden')}</Badge></TD>
               <TD>
                 <div className="flex gap-2">

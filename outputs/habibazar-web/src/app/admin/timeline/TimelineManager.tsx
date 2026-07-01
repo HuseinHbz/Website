@@ -61,11 +61,11 @@ export function TimelineManager() {
           <Table headers={[t('year'), t('titleEn'), t('companyEn'), t('color'), t('sortOrder'), t('status'), t('actions')]}>
             {items.map((item) => (
               <TR key={item.id}>
-                <TD><span className="font-mono text-indigo-400">{item.year}</span></TD>
+                <TD><span className="font-mono text-brand">{item.year}</span></TD>
                 <TD>{item.titleEn}</TD>
-                <TD className="text-slate-500">{item.companyEn}</TD>
+                <TD className="text-text-tertiary">{item.companyEn}</TD>
                 <TD><ColorDot color={item.color} /></TD>
-                <TD className="text-slate-500">{item.sortOrder}</TD>
+                <TD className="text-text-tertiary">{item.sortOrder}</TD>
                 <TD><Badge color={item.active ? 'green' : 'slate'}>{item.active ? t('active') : t('hidden')}</Badge></TD>
                 <TD>
                   <div className="flex gap-2">

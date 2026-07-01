@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, SectionDivider, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Tab = 'modules' | 'knowledge' | 'analytics' | 'settings'
 
@@ -59,6 +60,7 @@ const COLOR_DOT: Record<string, string> = {
 }
 
 export function AiControlCenter() {
+  const t = useT()
   const [tab, setTab] = useState<Tab>('modules')
   const [modules, setModules] = useState<AiModule[]>([])
   const [editingModule, setEditingModule] = useState<AiModule | null>(null)
@@ -88,7 +90,7 @@ export function AiControlCenter() {
     })
     if (res.ok) {
       setModules(prev => prev.map(m => m.id === mod.id ? { ...m, enabled: !m.enabled } : m))
-      toast(mod.enabled ? 'Module disabled' : 'Module enabled')
+      toast(mod.enabled ? t('disabled') : t('enabled'))
     }
   }
 
@@ -103,9 +105,9 @@ export function AiControlCenter() {
     setSaving(false)
     if (res.ok) {
       setModules(prev => prev.map(m => m.id === editingModule.id ? editingModule : m))
-      toast('Module saved')
+      toast(t('saved'))
       setModuleModal(false)
-    } else toast('Failed', 'error')
+    } else toast(t('failed'), 'error')
   }
 
   async function saveKb() {
@@ -117,17 +119,17 @@ export function AiControlCenter() {
     })
     setSaving(false)
     if (res.ok) {
-      toast('Saved')
+      toast(t('saved'))
       setKbModal(false)
       fetch('/api/admin/ai-kb').then(r => r.json()).then(d => setKbItems(Array.isArray(d) ? d : []))
-    } else toast('Failed', 'error')
+    } else toast(t('failed'), 'error')
   }
 
   async function deleteKb(id: number) {
-    if (!confirm('Delete this knowledge item?')) return
+    if (!confirm(t('confirmDel'))) return
     await fetch('/api/admin/ai-kb', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setKbItems(prev => prev.filter(k => (k as { id?: number }).id !== id))
-    toast('Deleted')
+    toast(t('deleted'))
   }
 
   async function saveSettings() {
@@ -139,7 +141,7 @@ export function AiControlCenter() {
       body: JSON.stringify({ ...(all as Record<string, string>), ...settings }),
     })
     setSaving(false)
-    toast(res.ok ? 'Settings saved' : 'Failed', res.ok ? 'success' : 'error')
+    toast(res.ok ? t('saved') : t('failed'), res.ok ? 'success' : 'error')
   }
 
   const TABS: { id: Tab; label: string }[] = [
@@ -156,12 +158,12 @@ export function AiControlCenter() {
     <>
       <ToastContainer />
       <PageHeader
-        title="AI Control Center"
+        title={t('aiControlTitle')}
         subtitle="Manage HBZ AI Platform — modules, knowledge base, analytics, and provider settings"
         action={
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500">{enabledCount}/{modules.length} modules active · {kbActiveCount} KB items</span>
-            <a href="/en/ai" target="_blank" className="px-3 py-1.5 text-xs font-medium text-indigo-400 border border-indigo-500/30 rounded-lg hover:bg-indigo-500/10 transition-all">
+            <span className="text-xs text-text-tertiary">{enabledCount}/{modules.length} modules active · {kbActiveCount} KB items</span>
+            <a href="/en/ai" target="_blank" className="px-3 py-1.5 text-xs font-medium text-brand border border-brand/30 rounded-lg hover:bg-brand/10 transition-all">
               ↗ Open AI Platform
             </a>
           </div>
@@ -170,10 +172,10 @@ export function AiControlCenter() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.id ? 'bg-indigo-600 text-white' : 'bg-[#111122] text-slate-400 border border-[#2a2a3e] hover:text-white'}`}>
-            {t.label}
+        {TABS.map(tabItem => (
+          <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === tabItem.id ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-white'}`}>
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -194,17 +196,17 @@ export function AiControlCenter() {
                       <p className="text-sm font-semibold text-white truncate">{mod.nameEn.replace('HBZ ', '')}</p>
                       <div className="flex items-center gap-1">
                         <button onClick={() => toggleModule(mod)}
-                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${mod.enabled ? 'bg-indigo-600' : 'bg-slate-700'}`}>
+                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${mod.enabled ? 'bg-brand' : 'bg-surface-2'}`}>
                           <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${mod.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">{mod.descriptionEn}</p>
+                    <p className="text-xs text-text-tertiary mt-0.5 truncate">{mod.descriptionEn}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full text-slate-400" style={{ background: 'rgba(255,255,255,0.05)' }}>{mod.category}</span>
-                      <span className="text-xs text-slate-600">{mod.usageCount} uses</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full text-text-secondary" style={{ background: 'rgba(255,255,255,0.05)' }}>{mod.category}</span>
+                      <span className="text-xs text-text-disabled">{mod.usageCount} uses</span>
                       <button onClick={() => { setEditingModule(mod); setModuleModal(true) }}
-                        className="ml-auto text-xs text-slate-500 hover:text-indigo-400 transition-colors">✏ Edit</button>
+                        className="ml-auto text-xs text-text-tertiary hover:text-brand transition-colors">✏ Edit</button>
                     </div>
                   </div>
                 </div>
@@ -218,8 +220,8 @@ export function AiControlCenter() {
       {tab === 'knowledge' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-slate-500">{kbItems.length} items · {kbActiveCount} active · Used for RAG context injection</p>
-            <Btn onClick={() => { setEditingKb(EMPTY_KB); setKbModal(true) }}>+ Add Knowledge Item</Btn>
+            <p className="text-sm text-text-tertiary">{kbItems.length} items · {kbActiveCount} active · Used for RAG context injection</p>
+            <Btn onClick={() => { setEditingKb(EMPTY_KB); setKbModal(true) }}>{t('addKbItem')}</Btn>
           </div>
           <div className="grid gap-3">
             {kbItems.map((item: KbItem) => (
@@ -227,20 +229,20 @@ export function AiControlCenter() {
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-indigo-400">[{(item as { id?: number }).id}]</span>
+                      <span className="text-xs font-bold text-brand">[{(item as { id?: number }).id}]</span>
                       <p className="text-sm font-medium text-white">{item.title}</p>
                       <Badge color={item.type === 'document' ? 'blue' : item.type === 'faq' ? 'green' : item.type === 'snippet' ? 'yellow' : 'indigo'}>{item.type}</Badge>
                       {!item.active && <Badge color="slate">Disabled</Badge>}
                     </div>
-                    {item.content && <p className="text-xs text-slate-500 line-clamp-2">{item.content}</p>}
+                    {item.content && <p className="text-xs text-text-tertiary line-clamp-2">{item.content}</p>}
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-slate-600">{item.tags}</span>
-                      <span className="text-[10px] text-slate-700">priority: {item.priority}</span>
+                      <span className="text-[10px] text-text-disabled">{item.tags}</span>
+                      <span className="text-[10px] text-text-disabled">priority: {item.priority}</span>
                     </div>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <Btn size="sm" variant="secondary" onClick={() => { setEditingKb(item); setKbModal(true) }}>Edit</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => deleteKb((item as { id: number }).id)}>Del</Btn>
+                    <Btn size="sm" variant="secondary" onClick={() => { setEditingKb(item); setKbModal(true) }}>{t('edit')}</Btn>
+                    <Btn size="sm" variant="danger" onClick={() => deleteKb((item as { id: number }).id)}>{t('del')}</Btn>
                   </div>
                 </div>
               </Card>
@@ -248,8 +250,8 @@ export function AiControlCenter() {
           </div>
           {kbItems.length === 0 && (
             <Card className="p-12 text-center">
-              <p className="text-slate-600 text-sm mb-4">No knowledge items yet. Add content to power RAG-based AI responses.</p>
-              <Btn onClick={() => { setEditingKb(EMPTY_KB); setKbModal(true) }}>+ Add First Knowledge Item</Btn>
+              <p className="text-text-disabled text-sm mb-4">No knowledge items yet. Add content to power RAG-based AI responses.</p>
+              <Btn onClick={() => { setEditingKb(EMPTY_KB); setKbModal(true) }}>{t('addKbItem')}</Btn>
             </Card>
           )}
         </div>
@@ -271,7 +273,7 @@ export function AiControlCenter() {
                   <span className="text-2xl">{stat.icon}</span>
                   <div>
                     <p className="text-2xl font-bold text-white">{stat.value}</p>
-                    <p className="text-xs text-slate-500">{stat.label}</p>
+                    <p className="text-xs text-text-tertiary">{stat.label}</p>
                   </div>
                 </div>
               </Card>
@@ -289,11 +291,11 @@ export function AiControlCenter() {
                     <span className="text-base w-6 text-center">{mod.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs text-slate-300">{mod.nameEn.replace('HBZ ', '')}</p>
-                        <span className="text-xs text-slate-500">{mod.usageCount} sessions</span>
+                        <p className="text-xs text-text-primary">{mod.nameEn.replace('HBZ ', '')}</p>
+                        <span className="text-xs text-text-tertiary">{mod.usageCount} sessions</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-[#1e1e2e]">
-                        <div className="h-full rounded-full bg-indigo-500/60" style={{ width: `${(mod.usageCount / maxUsage) * 100}%` }} />
+                      <div className="h-1.5 rounded-full bg-surface-2">
+                        <div className="h-full rounded-full bg-brand/60" style={{ width: `${(mod.usageCount / maxUsage) * 100}%` }} />
                       </div>
                     </div>
                     <Badge color={mod.enabled ? 'green' : 'slate'}>{mod.enabled ? 'On' : 'Off'}</Badge>
@@ -301,7 +303,7 @@ export function AiControlCenter() {
                 )
               })}
               {analytics.topModules.every(m => m.usageCount === 0) && (
-                <p className="text-center text-slate-600 text-sm py-4">No usage data yet. Start conversations from the AI Platform.</p>
+                <p className="text-center text-text-disabled text-sm py-4">No usage data yet. Start conversations from the AI Platform.</p>
               )}
             </div>
           </Card>
@@ -316,7 +318,7 @@ export function AiControlCenter() {
                   return (
                     <div key={day.date} className="flex-1 flex flex-col items-center gap-1" title={`${day.date}: ${day.count}`}>
                       <div className="w-full rounded-t" style={{ height: `${(day.count / max) * 80}px`, minHeight: 2, background: 'rgba(99,102,241,0.5)' }} />
-                      <span className="text-[8px] text-slate-700 truncate w-full text-center">{day.date.slice(5)}</span>
+                      <span className="text-[8px] text-text-disabled truncate w-full text-center">{day.date.slice(5)}</span>
                     </div>
                   )
                 })}
@@ -326,15 +328,15 @@ export function AiControlCenter() {
         </div>
       )}
       {tab === 'analytics' && !analytics && (
-        <div className="text-center py-16 text-slate-600">Loading analytics...</div>
+        <div className="text-center py-16 text-text-disabled">Loading analytics...</div>
       )}
 
       {/* ── Settings Tab ───────────────────────────────────────── */}
       {tab === 'settings' && (
         <div className="space-y-6">
           <Card className="p-6 space-y-4">
-            <SectionDivider label="AI Provider" />
-            <Select label="AI Provider" value={settings.ai_provider || 'chatgpt'}
+            <SectionDivider label={t('aiProviderLabel')} />
+            <Select label={t('aiProviderLabel')} value={settings.ai_provider || 'chatgpt'}
               onChange={v => setSettings(s => ({ ...s, ai_provider: v }))}
               options={[
                 { value: 'chatgpt', label: 'OpenAI (ChatGPT)' },
@@ -351,7 +353,7 @@ export function AiControlCenter() {
 
           <Card className="p-6 space-y-4">
             <SectionDivider label="Default System Prompt" />
-            <p className="text-xs text-slate-500">This prompt is used when no module-specific prompt is set. Module prompts override this.</p>
+            <p className="text-xs text-text-tertiary">This prompt is used when no module-specific prompt is set. Module prompts override this.</p>
             <Input label="Global System Prompt" value={settings.ai_system_prompt || ''} onChange={v => setSettings(s => ({ ...s, ai_system_prompt: v }))} multiline rows={6}
               placeholder="You are HBZ AI Platform, an enterprise technology advisor..." />
           </Card>
@@ -361,54 +363,54 @@ export function AiControlCenter() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-lg" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
                 <p className="text-xs font-semibold text-emerald-400 mb-1">✓ RAG Enabled</p>
-                <p className="text-xs text-slate-500">Knowledge base is automatically searched for each user message. Top 4 relevant items injected as context.</p>
+                <p className="text-xs text-text-tertiary">Knowledge base is automatically searched for each user message. Top 4 relevant items injected as context.</p>
               </div>
               <div className="p-3 rounded-lg" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-                <p className="text-xs font-semibold text-indigo-400 mb-1">📐 Architecture Ready</p>
-                <p className="text-xs text-slate-500">System designed for future vector DB (pgvector, Chroma, Pinecone) integration with minimal code changes.</p>
+                <p className="text-xs font-semibold text-brand mb-1">📐 Architecture Ready</p>
+                <p className="text-xs text-text-tertiary">System designed for future vector DB (pgvector, Chroma, Pinecone) integration with minimal code changes.</p>
               </div>
             </div>
             <div className="p-3 rounded-lg" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
               <p className="text-xs font-semibold text-amber-400 mb-2">🎙 Voice Architecture</p>
-              <p className="text-xs text-slate-500">Speech-to-text (Whisper API) and text-to-speech (ElevenLabs/OpenAI TTS) interfaces are defined. Add <code className="text-amber-300">ai_tts_enabled</code> and <code className="text-amber-300">ai_stt_enabled</code> settings to activate.</p>
+              <p className="text-xs text-text-tertiary">Speech-to-text (Whisper API) and text-to-speech (ElevenLabs/OpenAI TTS) interfaces are defined. Add <code className="text-amber-300">ai_tts_enabled</code> and <code className="text-amber-300">ai_stt_enabled</code> settings to activate.</p>
             </div>
           </Card>
 
           <div className="flex gap-3">
-            <Btn onClick={saveSettings} disabled={saving}>{saving ? 'Saving...' : 'Save Settings'}</Btn>
+            <Btn onClick={saveSettings} disabled={saving}>{saving ? t('saving') : t('saveSettings')}</Btn>
           </div>
         </div>
       )}
 
       {/* Module edit modal */}
-      <Modal open={moduleModal} onClose={() => setModuleModal(false)} title="Edit AI Module" size="lg">
+      <Modal open={moduleModal} onClose={() => setModuleModal(false)} title={t('editAiModule')} size="lg">
         {editingModule && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Name (EN)" value={editingModule.nameEn} onChange={v => setEditingModule(e => e ? { ...e, nameEn: v } : e)} />
-              <Input label="Name (FA)" value={editingModule.nameFa} onChange={v => setEditingModule(e => e ? { ...e, nameFa: v } : e)} />
+              <Input label={t('nameEn')} value={editingModule.nameEn} onChange={v => setEditingModule(e => e ? { ...e, nameEn: v } : e)} />
+              <Input label={t('nameFa')} value={editingModule.nameFa} onChange={v => setEditingModule(e => e ? { ...e, nameFa: v } : e)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Description (EN)" value={editingModule.descriptionEn || ''} onChange={v => setEditingModule(e => e ? { ...e, descriptionEn: v } : e)} />
-              <Input label="Description (FA)" value={editingModule.descriptionFa || ''} onChange={v => setEditingModule(e => e ? { ...e, descriptionFa: v } : e)} />
+              <Input label={t('descriptionEn')} value={editingModule.descriptionEn || ''} onChange={v => setEditingModule(e => e ? { ...e, descriptionEn: v } : e)} />
+              <Input label={t('descriptionFa')} value={editingModule.descriptionFa || ''} onChange={v => setEditingModule(e => e ? { ...e, descriptionFa: v } : e)} />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <Input label="Icon (emoji)" value={editingModule.icon} onChange={v => setEditingModule(e => e ? { ...e, icon: v } : e)} />
               <Select label="Color" value={editingModule.color} onChange={v => setEditingModule(e => e ? { ...e, color: v } : e)}
                 options={COLOR_PRESETS} />
-              <Input label="Sort Order" type="number" value={String(editingModule.sortOrder)} onChange={v => setEditingModule(e => e ? { ...e, sortOrder: Number(v) } : e)} />
+              <Input label={t('sortOrder')} type="number" value={String(editingModule.sortOrder)} onChange={v => setEditingModule(e => e ? { ...e, sortOrder: Number(v) } : e)} />
             </div>
             <Input label="System Prompt (overrides global prompt for this module)" value={editingModule.systemPrompt || ''} onChange={v => setEditingModule(e => e ? { ...e, systemPrompt: v } : e)} multiline rows={8} placeholder="You are HBZ [Module Name], an expert in..." />
             <div className="flex gap-3">
-              <Btn onClick={saveModule} disabled={saving}>{saving ? 'Saving...' : 'Save Module'}</Btn>
-              <Btn variant="secondary" onClick={() => setModuleModal(false)}>Cancel</Btn>
+              <Btn onClick={saveModule} disabled={saving}>{saving ? t('saving') : t('saveModule')}</Btn>
+              <Btn variant="secondary" onClick={() => setModuleModal(false)}>{t('cancel')}</Btn>
             </div>
           </div>
         )}
       </Modal>
 
       {/* KB edit modal */}
-      <Modal open={kbModal} onClose={() => setKbModal(false)} title={(editingKb as { id?: number }).id ? 'Edit Knowledge Item' : 'New Knowledge Item'} size="lg">
+      <Modal open={kbModal} onClose={() => setKbModal(false)} title={(editingKb as { id?: number }).id ? t('editKbItem') : t('newKbItem')} size="lg">
         <div className="space-y-4">
           <Input label="Title *" value={editingKb.title} onChange={v => setEditingKb(e => ({ ...e, title: v }))} placeholder="HBZ Professional Profile" />
           <div className="grid grid-cols-3 gap-4">
@@ -432,8 +434,8 @@ export function AiControlCenter() {
           <Select label="Status" value={editingKb.active ? 'true' : 'false'} onChange={v => setEditingKb(e => ({ ...e, active: v === 'true' }))}
             options={[{ value: 'true', label: 'Active — included in RAG' }, { value: 'false', label: 'Disabled' }]} />
           <div className="flex gap-3">
-            <Btn onClick={saveKb} disabled={saving}>{saving ? 'Saving...' : 'Save Item'}</Btn>
-            <Btn variant="secondary" onClick={() => setKbModal(false)}>Cancel</Btn>
+            <Btn onClick={saveKb} disabled={saving}>{saving ? t('saving') : t('saveItem')}</Btn>
+            <Btn variant="secondary" onClick={() => setKbModal(false)}>{t('cancel')}</Btn>
           </div>
         </div>
       </Modal>

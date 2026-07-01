@@ -165,19 +165,19 @@ export function SettingsManager() {
               <Input key={k.key} label={k.label} type={k.type || 'text'} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}
           </div>
-          <div className="border-t border-[#2a2a3e] pt-4">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-3">Email Notifications</p>
+          <div className="border-t border-border pt-4">
+            <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold mb-3">Email Notifications</p>
             <div className="space-y-3">
               {NOTIFICATION_KEYS.filter(k => k.key.startsWith('notify_email')).map((item) => (
                 <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
                   <button
                     type="button"
                     onClick={() => toggle(item.key)}
-                    className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings[item.key] === '1' ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                    className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings[item.key] === '1' ? 'bg-brand' : 'bg-surface-2'}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{item.label}</span>
+                  <span className="text-sm text-text-primary group-hover:text-white transition-colors">{item.label}</span>
                 </label>
               ))}
             </div>
@@ -197,19 +197,19 @@ export function SettingsManager() {
               <Input key={k.key} label={k.label} type={k.type || 'text'} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}
           </div>
-          <div className="border-t border-[#2a2a3e] pt-4">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-3">SMS Notifications</p>
+          <div className="border-t border-border pt-4">
+            <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold mb-3">SMS Notifications</p>
             <div className="space-y-3">
               {NOTIFICATION_KEYS.filter(k => k.key.startsWith('notify_sms')).map((item) => (
                 <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
                   <button
                     type="button"
                     onClick={() => toggle(item.key)}
-                    className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings[item.key] === '1' ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                    className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings[item.key] === '1' ? 'bg-brand' : 'bg-surface-2'}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{item.label}</span>
+                  <span className="text-sm text-text-primary group-hover:text-white transition-colors">{item.label}</span>
                 </label>
               ))}
             </div>
@@ -220,7 +220,7 @@ export function SettingsManager() {
         <Card className="p-6">
           <SectionDivider label="AI Chatbot / Assistant" />
           <div className="mb-4">
-            <p className="text-xs text-slate-500 font-medium mb-2">AI Provider</p>
+            <p className="text-xs text-text-tertiary font-medium mb-2">AI Provider</p>
             <div className="flex flex-wrap gap-2">
               {AI_PROVIDERS.map((p) => (
                 <button
@@ -229,8 +229,8 @@ export function SettingsManager() {
                   onClick={() => setAiProvider(p.value)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     currentProvider === p.value
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-[#1e1e2e] text-slate-400 hover:text-white hover:bg-[#2a2a3e]'
+                      ? 'bg-brand text-white'
+                      : 'bg-surface-2 text-text-secondary hover:text-white hover:bg-surface-2'
                   }`}
                 >
                   {p.label}

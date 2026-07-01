@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Testimonial = {
   id: number
@@ -18,6 +19,7 @@ type Testimonial = {
 }
 
 export function TestimonialsManager() {
+  const t = useT()
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Testimonial> | null>(null)
@@ -39,11 +41,11 @@ export function TestimonialsManager() {
     const method = editing.id ? 'PUT' : 'POST'
     const res = await fetch('/api/admin/testimonials', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
     if (res.ok) {
-      toast(editing.id ? 'Testimonial updated' : 'Testimonial created', 'success')
+      toast(editing.id ? t('updated') : t('created'), 'success')
       setEditing(null)
       load()
     } else {
-      toast('Save failed', 'error')
+      toast(t('saveFailed'), 'error')
     }
     setSaving(false)
   }
@@ -57,45 +59,45 @@ export function TestimonialsManager() {
     <div>
       <ToastContainer />
       <PageHeader
-        title="Client Testimonials"
+        title={t('testimonialsTitle')}
         subtitle={`${testimonials.length} testimonials`}
-        action={<Btn onClick={() => setEditing({ rating: 5, active: true, featured: false, sortOrder: testimonials.length + 1 })}>+ Add Testimonial</Btn>}
+        action={<Btn onClick={() => setEditing({ rating: 5, active: true, featured: false, sortOrder: testimonials.length + 1 })}>{t('addTestimonial')}</Btn>}
       />
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#0e0e1a] border border-slate-800 rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? 'Edit Testimonial' : 'New Testimonial'}</h3>
+          <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editTestimonial') : t('newTestimonial')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Client Name" value={editing.clientName || ''} onChange={v => setEditing(e => ({ ...e, clientName: v }))} />
-              <Input label="Client Title" value={editing.clientTitle || ''} onChange={v => setEditing(e => ({ ...e, clientTitle: v }))} />
-              <div className="col-span-2"><Input label="Company" value={editing.clientCompany || ''} onChange={v => setEditing(e => ({ ...e, clientCompany: v }))} /></div>
+              <Input label={t('clientName')} value={editing.clientName || ''} onChange={v => setEditing(e => ({ ...e, clientName: v }))} />
+              <Input label={t('clientTitle')} value={editing.clientTitle || ''} onChange={v => setEditing(e => ({ ...e, clientTitle: v }))} />
+              <div className="col-span-2"><Input label={t('company')} value={editing.clientCompany || ''} onChange={v => setEditing(e => ({ ...e, clientCompany: v }))} /></div>
               <div className="col-span-2">
-                <label className="text-xs text-slate-400 mb-1 block">Quote (EN)</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('quoteEn')}</label>
                 <textarea value={editing.quoteEn || ''} onChange={e2 => setEditing(e => ({ ...e, quoteEn: e2.target.value }))} rows={3}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white outline-none" />
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" />
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-slate-400 mb-1 block">Quote (FA)</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('quoteFa')}</label>
                 <textarea value={editing.quoteFa || ''} onChange={e2 => setEditing(e => ({ ...e, quoteFa: e2.target.value }))} rows={3}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white outline-none" dir="rtl" />
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" dir="rtl" />
               </div>
-              <Input label="Rating (1-5)" type="number" value={String(editing.rating || 5)} onChange={v => setEditing(e => ({ ...e, rating: Math.min(5, Math.max(1, parseInt(v) || 5)) }))} />
-              <Input label="Solution Slug" value={editing.solutionSlug || ''} onChange={v => setEditing(e => ({ ...e, solutionSlug: v }))} />
+              <Input label={t('rating')} type="number" value={String(editing.rating || 5)} onChange={v => setEditing(e => ({ ...e, rating: Math.min(5, Math.max(1, parseInt(v) || 5)) }))} />
+              <Input label={t('solutionSlug')} value={editing.solutionSlug || ''} onChange={v => setEditing(e => ({ ...e, solutionSlug: v }))} />
               <div className="flex items-center gap-4 col-span-2 pt-2">
-                <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
                   <input type="checkbox" checked={!!editing.active} onChange={e2 => setEditing(e => ({ ...e, active: e2.target.checked }))} />
-                  Active
+                  {t('activeLabel')}
                 </label>
-                <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
                   <input type="checkbox" checked={!!editing.featured} onChange={e2 => setEditing(e => ({ ...e, featured: e2.target.checked }))} />
                   Featured
                 </label>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Btn>
-              <Btn variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
+              <Btn onClick={save} disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
+              <Btn variant="ghost" onClick={() => setEditing(null)}>{t('cancel')}</Btn>
             </div>
           </div>
         </div>
@@ -103,35 +105,35 @@ export function TestimonialsManager() {
 
       <Card>
         {loading ? (
-          <div className="text-slate-500 text-sm text-center py-8">Loading…</div>
+          <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 text-left">
-                <th className="px-4 py-3 text-slate-500 font-medium">Client</th>
-                <th className="px-4 py-3 text-slate-500 font-medium">Quote</th>
-                <th className="px-4 py-3 text-slate-500 font-medium">Rating</th>
-                <th className="px-4 py-3 text-slate-500 font-medium">Status</th>
-                <th className="px-4 py-3 text-slate-500 font-medium">Actions</th>
+              <tr className="border-b border-border text-left">
+                <th className="px-4 py-3 text-text-tertiary font-medium">{t('client')}</th>
+                <th className="px-4 py-3 text-text-tertiary font-medium">{t('quote')}</th>
+                <th className="px-4 py-3 text-text-tertiary font-medium">{t('rating')}</th>
+                <th className="px-4 py-3 text-text-tertiary font-medium">{t('status')}</th>
+                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {testimonials.map(t => (
-                <tr key={t.id} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
+              {testimonials.map(t2 => (
+                <tr key={t2.id} className="border-b border-border/50 hover:bg-white/[0.02]">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-white">{t.clientName}</div>
-                    <div className="text-xs text-slate-500">{t.clientTitle} · {t.clientCompany}</div>
+                    <div className="font-medium text-white">{t2.clientName}</div>
+                    <div className="text-xs text-text-tertiary">{t2.clientTitle} · {t2.clientCompany}</div>
                   </td>
-                  <td className="px-4 py-3 text-slate-400 max-w-xs truncate">{t.quoteEn}</td>
-                  <td className="px-4 py-3 text-yellow-400">{'★'.repeat(t.rating)}</td>
+                  <td className="px-4 py-3 text-text-secondary max-w-xs truncate">{t2.quoteEn}</td>
+                  <td className="px-4 py-3 text-yellow-400">{'★'.repeat(t2.rating)}</td>
                   <td className="px-4 py-3">
-                    <Badge color={t.active ? 'green' : 'slate'}>{t.active ? 'Active' : 'Inactive'}</Badge>
-                    {t.featured && <> <Badge color="yellow">Featured</Badge></>}
+                    <Badge color={t2.active ? 'green' : 'slate'}>{t2.active ? t('active') : t('inactive')}</Badge>
+                    {t2.featured && <> <Badge color="yellow">{t('featuredLabel')}</Badge></>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      <Btn size="sm" variant="ghost" onClick={() => setEditing(t)}>Edit</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => toggle(t)}>{t.active ? 'Disable' : 'Enable'}</Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => setEditing(t2)}>{t('edit')}</Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => toggle(t2)}>{t2.active ? t('disable') : t('enable')}</Btn>
                     </div>
                   </td>
                 </tr>

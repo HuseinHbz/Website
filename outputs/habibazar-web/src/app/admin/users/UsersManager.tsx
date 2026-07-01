@@ -108,23 +108,23 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
             <TR key={u.id}>
               <TD>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold">
+                  <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold">
                     {u.name.charAt(0)}
                   </div>
                   <div>
-                    <div className="font-medium text-white">{u.name}{u.id === currentUserId && <span className="text-xs text-slate-500 ml-2">(you)</span>}</div>
-                    <div className="text-xs text-slate-500">{u.email}</div>
+                    <div className="font-medium text-white">{u.name}{u.id === currentUserId && <span className="text-xs text-text-tertiary ml-2">(you)</span>}</div>
+                    <div className="text-xs text-text-tertiary">{u.email}</div>
                   </div>
                 </div>
               </TD>
               <TD><Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge></TD>
               <TD>
-                <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-slate-700/50 text-slate-500 hover:bg-slate-700'}`}>
+                <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-surface-2/50 text-text-tertiary hover:bg-surface-2'}`}>
                   {u.totpEnabled ? '🔐 On' : '○ Off'}
                 </button>
               </TD>
               <TD><Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Active' : 'Inactive'}</Badge></TD>
-              <TD className="text-xs text-slate-500">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</TD>
+              <TD className="text-xs text-text-tertiary">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</TD>
               <TD>
                 <div className="flex gap-2">
                   <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...u, password: '' }); setModal(true) }}>Edit</Btn>
@@ -148,9 +148,9 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
           { role: 'administrator', label: 'Administrator', desc: 'All content + settings, no user deletion', color: 'blue' },
           { role: 'editor', label: 'Editor', desc: 'Create and publish content only', color: 'green' },
         ].map((r) => (
-          <div key={r.role} className="bg-[#111122] border border-[#1e1e2e] rounded-xl p-4">
+          <div key={r.role} className="bg-surface border border-border rounded-xl p-4">
             <Badge color={r.color}>{r.label}</Badge>
-            <p className="text-xs text-slate-500 mt-2">{r.desc}</p>
+            <p className="text-xs text-text-tertiary mt-2">{r.desc}</p>
           </div>
         ))}
       </div>
@@ -180,12 +180,12 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
           <div className="space-y-4">
             {twoFA.phase === 'view' && (
               <>
-                <div className="flex items-center justify-between p-3 bg-[#0c0c14] rounded-xl border border-[#2a2a3e]">
+                <div className="flex items-center justify-between p-3 bg-background rounded-xl border border-border">
                   <div>
                     <p className="text-sm font-medium text-white">Two-Factor Authentication</p>
-                    <p className="text-xs text-slate-500 mt-0.5">TOTP via Google Authenticator or Authy</p>
+                    <p className="text-xs text-text-tertiary mt-0.5">TOTP via Google Authenticator or Authy</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${twoFA.enabled ? 'bg-green-500/15 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${twoFA.enabled ? 'bg-green-500/15 text-green-400' : 'bg-surface-2 text-text-secondary'}`}>
                     {twoFA.enabled ? '● Enabled' : '○ Disabled'}
                   </span>
                 </div>
@@ -201,17 +201,17 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
 
             {twoFA.phase === 'setup' && (
               <>
-                <p className="text-xs text-slate-400">Step 1 — Have the user scan this QR code in Google Authenticator:</p>
+                <p className="text-xs text-text-secondary">Step 1 — Have the user scan this QR code in Google Authenticator:</p>
                 <div className="flex justify-center p-4 bg-white rounded-xl w-fit mx-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={twoFA.qrCode} alt="2FA QR Code" className="w-44 h-44" />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Or enter this secret manually:</p>
-                  <code className="block bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-xs text-indigo-300 tracking-widest break-all select-all">{twoFA.secret}</code>
+                  <p className="text-xs text-text-secondary mb-1">Or enter this secret manually:</p>
+                  <code className="block bg-background border border-border rounded-lg px-3 py-2 text-xs text-brand tracking-widest break-all select-all">{twoFA.secret}</code>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 mb-2">Step 2 — Enter the 6-digit code from the app to confirm:</p>
+                  <p className="text-xs text-text-secondary mb-2">Step 2 — Enter the 6-digit code from the app to confirm:</p>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -220,7 +220,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                     onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="000000"
                     autoFocus
-                    className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.4em] font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
                   />
                 </div>
                 <div className="flex gap-3">
