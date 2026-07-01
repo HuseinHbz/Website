@@ -20,7 +20,7 @@ hr()   { echo -e "${BOLD}──────────────────�
 
 # ── Config ───────────────────────────────────────────────────
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-BRANCH="${DEPLOY_BRANCH:-hbz}"
+BRANCH="${1:-${DEPLOY_BRANCH:-feature/v2-enterprise-upgrade}}"
 BASE="/var/www/habibazar"
 REPO="$BASE/repo"
 WEB="$BASE/web"

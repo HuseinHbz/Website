@@ -15,7 +15,7 @@ info() { echo -e "${BLUE}▸${NC}  $*"; }
 err()  { echo -e "${RED}✗${NC}  $*" >&2; exit 1; }
 hr()   { echo -e "${BOLD}────────────────────────────────────────${NC}"; }
 
-BRANCH="${1:-${DEPLOY_BRANCH:-hbz}}"
+BRANCH="${1:-${DEPLOY_BRANCH:-feature/v2-enterprise-upgrade}}"
 REPO="/var/www/habibazar/repo"
 WEB="/var/www/habibazar/web"
 BASE="/var/www/habibazar"
