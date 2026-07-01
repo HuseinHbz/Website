@@ -62,7 +62,10 @@ EOF
 chown "$APP_USER":"$APP_USER" "$PM2_CONF"
 info "pm2.config.js ساخته شد"
 
-step "توقف و restart PM2..."
+step "پاکسازی و restart PM2..."
+# پروسه قدیمی root را هم پاک کن
+pm2 delete habibazar-web 2>/dev/null || true
+pm2 delete habibazar     2>/dev/null || true
 sudo -u "$APP_USER" pm2 delete habibazar 2>/dev/null || true
 sudo -u "$APP_USER" pm2 start "$PM2_CONF"
 sudo -u "$APP_USER" pm2 save

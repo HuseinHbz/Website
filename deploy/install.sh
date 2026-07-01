@@ -3,9 +3,8 @@
 # HBZ Website — نصب اولیه روی سرور تازه (Ubuntu 22.04)
 # =============================================================================
 # استفاده:
-#   chmod +x deploy/install.sh
-#   sudo bash deploy/install.sh                          # branch پیش‌فرض
-#   sudo bash deploy/install.sh hbz                     # branch خاص
+#   sudo bash deploy/install.sh                  # branch پیش‌فرض
+#   sudo bash deploy/install.sh main             # branch خاص
 # =============================================================================
 set -euo pipefail
 
@@ -13,7 +12,7 @@ set -euo pipefail
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-BRANCH="${1:-feature/v2-enterprise-upgrade}"   # مثال: sudo bash install.sh hbz
+BRANCH="${1:-feature/v2-enterprise-upgrade}"
 APP_PORT="3000"
 NODE_VERSION="20"
 
@@ -27,7 +26,7 @@ error() { echo -e "${RED}[✘]${NC} $*"; exit 1; }
 
 echo ""
 echo "═══════════════════════════════════════════════════"
-echo "  HBZ Website — نصب اولیه"
+echo "  HBZ Website — نصب اولیه  (branch: $BRANCH)"
 echo "═══════════════════════════════════════════════════"
 echo ""
 
@@ -66,6 +65,7 @@ else
   step "clone مخزن از branch $BRANCH..."
   git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$APP_DIR"
   chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+  git config --global --add safe.directory "$APP_DIR"
   info "مخزن clone شد"
 fi
 
@@ -82,47 +82,46 @@ LOG_LEVEL=info
 NODE_ENV=production
 EOF
   chown "$APP_USER":"$APP_USER" "$ENV_FILE"
-  warn "فایل .env.local ساخته شد — آدرس سایت را بررسی کنید:"
-  warn "  $ENV_FILE"
+  warn "فایل .env.local ساخته شد — آدرس سایت را بررسی کنید: $ENV_FILE"
 else
   info ".env.local از قبل وجود دارد"
 fi
 
 # ─── ۷. npm install + build ──────────────────────────────────────────────────
+WEB_DIR="$APP_DIR/outputs/habibazar-web"
+cd "$WEB_DIR"
+
 step "نصب پکیج‌ها (همه — شامل devDependencies برای build)..."
-cd "$APP_DIR/outputs/habibazar-web"
-sudo -u "$APP_USER" npm ci 2>/dev/null
+sudo -u "$APP_USER" npm ci
 info "پکیج‌ها نصب شدند"
 
 step "build پروژه (ممکن است چند دقیقه طول بکشد)..."
-sudo -u "$APP_USER" bash -c "source $ENV_FILE 2>/dev/null; npm run build"
+sudo -u "$APP_USER" bash -c "set -a; source $ENV_FILE; set +a; npm run build"
 info "build کامل شد"
 
 step "حذف devDependencies بعد از build..."
-sudo -u "$APP_USER" npm prune --omit=dev 2>/dev/null
+sudo -u "$APP_USER" npm prune --omit=dev 2>/dev/null || true
 info "devDependencies حذف شد"
 
 # ─── ۸. پوشه داده ────────────────────────────────────────────────────────────
-mkdir -p "$APP_DIR/outputs/habibazar-web/data"
+mkdir -p "$WEB_DIR/data"
 mkdir -p "/var/backups/habibazar"
-chown -R "$APP_USER":"$APP_USER" "$APP_DIR/outputs/habibazar-web/data"
+chown -R "$APP_USER":"$APP_USER" "$WEB_DIR/data"
 chown -R "$APP_USER":"$APP_USER" "/var/backups/habibazar"
 
 # ─── ۹. PM2 راه‌اندازی ───────────────────────────────────────────────────────
 step "راه‌اندازی PM2..."
 NODE_PATH=$(dirname "$(which node)")
-WEB_DIR="$APP_DIR/outputs/habibazar-web"
 
 # wrapper script — source کردن .env.local و راه‌اندازی next
 START_SCRIPT="$APP_DIR/deploy/start.sh"
-cat > "$START_SCRIPT" <<SCRIPT
+cat > "$START_SCRIPT" <<STARTSCRIPT
 #!/usr/bin/env bash
 set -a
-source "$ENV_FILE"
+source "${ENV_FILE}"
 set +a
-cd "$WEB_DIR"
-exec node_modules/.bin/next start -p "$APP_PORT"
-SCRIPT
+exec "${NODE_PATH}/node" "${WEB_DIR}/node_modules/.bin/next" start -p ${APP_PORT}
+STARTSCRIPT
 chmod +x "$START_SCRIPT"
 chown "$APP_USER":"$APP_USER" "$START_SCRIPT"
 
@@ -138,7 +137,7 @@ module.exports = {
     watch: false,
     max_memory_restart: '512M',
     error_file: '/var/log/habibazar-error.log',
-    out_file: '/var/log/habibazar-out.log',
+    out_file:   '/var/log/habibazar-out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     env: {
       PATH: '${NODE_PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
@@ -146,14 +145,20 @@ module.exports = {
   }]
 }
 EOF
+chown "$APP_USER":"$APP_USER" "$PM2_CONF"
 
+sudo -u "$APP_USER" pm2 delete habibazar 2>/dev/null || true
 sudo -u "$APP_USER" pm2 start "$PM2_CONF"
 sudo -u "$APP_USER" pm2 save
 
-# pm2 startup — فقط خط حاوی sudo را استخراج و اجرا کن
-STARTUP_CMD=$(pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1 | grep -oP '(?<=command:\n?)sudo .*' || \
-              pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1 | grep "^sudo ")
-[[ -n "$STARTUP_CMD" ]] && bash -c "$STARTUP_CMD" || systemctl enable "pm2-$APP_USER" 2>/dev/null || true
+# pm2 startup — استخراج دقیق دستور sudo و اجرا
+STARTUP_OUT=$(pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1)
+STARTUP_CMD=$(echo "$STARTUP_OUT" | grep "^sudo " | head -1)
+if [[ -n "$STARTUP_CMD" ]]; then
+  bash -c "$STARTUP_CMD"
+else
+  systemctl enable "pm2-$APP_USER" 2>/dev/null || true
+fi
 info "PM2 راه‌اندازی شد"
 
 # ─── ۱۰. Nginx ───────────────────────────────────────────────────────────────
@@ -168,13 +173,13 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
 
     location /_next/static/ {
-        alias ${APP_DIR}/outputs/habibazar-web/.next/static/;
+        alias ${WEB_DIR}/.next/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
     location /uploads/ {
-        alias ${APP_DIR}/outputs/habibazar-web/public/uploads/;
+        alias ${WEB_DIR}/public/uploads/;
         expires 7d;
         add_header Cache-Control "public";
     }
@@ -200,19 +205,19 @@ nginx -t && systemctl reload nginx
 info "Nginx پیکربندی شد"
 
 # ─── ۱۱. Firewall ────────────────────────────────────────────────────────────
-ufw allow OpenSSH   2>/dev/null || true
+ufw allow OpenSSH    2>/dev/null || true
 ufw allow 'Nginx Full' 2>/dev/null || true
-ufw --force enable  2>/dev/null || true
+ufw --force enable   2>/dev/null || true
 
 # ─── ۱۲. health check ────────────────────────────────────────────────────────
 step "بررسی سلامت سرویس..."
-sleep 5
+sleep 6
 for i in 1 2 3; do
   if curl -sf "http://localhost:${APP_PORT}/api/health" &>/dev/null; then
     info "سرویس پاسخ می‌دهد ✓"; break
   fi
-  [[ $i -eq 3 ]] && warn "health check پاسخ نداد — لاگ: pm2 logs habibazar"
-  sleep 3
+  [[ $i -eq 3 ]] && warn "health check پاسخ نداد — لاگ: sudo -u $APP_USER pm2 logs habibazar"
+  sleep 4
 done
 
 # ─── پایان ───────────────────────────────────────────────────────────────────
@@ -221,10 +226,10 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  نصب با موفقیت انجام شد!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo ""
-echo "  سایت:     http://habibazar.ir"
+echo "  سایت:      http://habibazar.ir"
 echo "  پنل ادمین: http://habibazar.ir/admin"
-echo "  لاگ زنده: pm2 logs habibazar"
-echo "  وضعیت:    pm2 status"
+echo "  لاگ زنده:  sudo -u $APP_USER pm2 logs habibazar"
+echo "  وضعیت:     sudo -u $APP_USER pm2 status"
 echo ""
 echo -e "${YELLOW}  مرحله بعد — فعال‌سازی HTTPS:${NC}"
 echo "  apt install certbot python3-certbot-nginx"
