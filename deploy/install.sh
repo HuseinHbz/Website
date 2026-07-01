@@ -4,7 +4,8 @@
 # =============================================================================
 # استفاده:
 #   chmod +x deploy/install.sh
-#   sudo bash deploy/install.sh
+#   sudo bash deploy/install.sh                          # branch پیش‌فرض
+#   sudo bash deploy/install.sh hbz                     # branch خاص
 # =============================================================================
 set -euo pipefail
 
@@ -12,7 +13,7 @@ set -euo pipefail
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-BRANCH="hbz"
+BRANCH="${1:-feature/v2-enterprise-upgrade}"   # مثال: sudo bash install.sh hbz
 APP_PORT="3000"
 NODE_VERSION="20"
 

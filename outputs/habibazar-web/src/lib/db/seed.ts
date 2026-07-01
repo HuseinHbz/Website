@@ -8,11 +8,11 @@ const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibaz
 export async function seedDatabase() {
   const sqlite = new Database(DB_PATH)
 
-  // Super admin user
+  // Super admin user — INSERT OR IGNORE is safe across parallel build workers
   const existingUser = sqlite.prepare('SELECT id FROM users WHERE email = ?').get('admin@habibazar.com')
   if (!existingUser) {
     const hash = await bcrypt.hash('HBZ@Admin2025!', 12)
-    sqlite.prepare(`INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`)
+    sqlite.prepare(`INSERT OR IGNORE INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`)
       .run(nanoid(), 'Husein Habibazar', 'admin@habibazar.com', hash, 'super_admin')
   }
 
