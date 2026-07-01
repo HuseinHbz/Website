@@ -14,11 +14,11 @@
 pm2 status
 
 # Restart
-pm2 start ecosystem.config.js --only habibazar
+pm2 restart habibazar
 
 # Verify
 curl http://localhost:3000/api/health
-./health-check.sh
+bash /var/www/habibazar/deploy/health-check.sh
 ```
 
 **Expected recovery:** < 2 minutes
@@ -30,19 +30,20 @@ curl http://localhost:3000/api/health
 **Symptoms:** Deployment succeeded but app crashes on start.
 
 ```bash
-# Option A: Restore from .next.bak snapshot (if update.sh created one)
-cd /var/www/habibazar-repo/outputs/habibazar-web
-ls -la .next.bak    # confirm it exists
-mv .next .next.broken
-mv .next.bak .next
+WEB_DIR=/var/www/habibazar/outputs/habibazar-web
+
+# Option A: Restore from .next.bak snapshot (created by update.sh before each build)
+ls -la "$WEB_DIR/.next.bak"   # confirm it exists
+mv "$WEB_DIR/.next" "$WEB_DIR/.next.broken"
+mv "$WEB_DIR/.next.bak" "$WEB_DIR/.next"
 pm2 reload habibazar
 
 # Option B: Roll back to previous Git commit
-cd /var/www/habibazar-repo
-git log --oneline -5     # find the last good commit
-git checkout <COMMIT_SHA> -- outputs/habibazar-web/
-cd outputs/habibazar-web
-npm ci && npm run build
+APP_DIR=/var/www/habibazar
+git -C "$APP_DIR" log --oneline -5       # find the last good commit
+git -C "$APP_DIR" reset --hard <COMMIT>  # roll back
+cd "$WEB_DIR"
+npm ci --omit=dev && npm run build
 pm2 reload habibazar
 ```
 
@@ -55,8 +56,10 @@ pm2 reload habibazar
 **Symptoms:** App returns errors, health check shows DB `down`.
 
 ```bash
+DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+
 # Step 1: Check integrity
-sqlite3 /var/data/habibazar/habibazar.db "PRAGMA integrity_check;"
+sqlite3 "$DB" "PRAGMA integrity_check;"
 
 # Step 2: Find latest backup
 ls -lt /var/backups/habibazar/ | head -5
@@ -66,10 +69,10 @@ pm2 stop habibazar
 
 # Step 4: Restore DB
 BACKUP_DIR=/var/backups/habibazar/YYYYMMDD_HHMMSS
-gunzip -c $BACKUP_DIR/habibazar_*.db.gz > /var/data/habibazar/habibazar.db
+cp "$BACKUP_DIR/habibazar.db" "$DB"
 
 # Step 5: Verify
-sqlite3 /var/data/habibazar/habibazar.db "PRAGMA integrity_check;"
+sqlite3 "$DB" "PRAGMA integrity_check;"
 
 # Step 6: Restart
 pm2 start habibazar
@@ -86,33 +89,28 @@ curl http://localhost:3000/api/health
 **Symptoms:** Server completely lost.
 
 ```bash
-# On new server:
+# On new server (Ubuntu 22.04):
 
-# 1. Install prerequisites
-apt update && apt install -y nodejs npm nginx sqlite3
-npm install -g pm2
+# 1. Clone repository and run install script
+git clone https://github.com/HuseinHbz/Website.git /var/www/habibazar
+sudo bash /var/www/habibazar/deploy/install.sh
 
-# 2. Clone repository
-git clone https://github.com/HuseinHbz/Website.git /var/www/habibazar-repo
-cd /var/www/habibazar-repo && git checkout hbz
+# 2. Restore .env.local from secure storage
+cp /path/to/secure/.env.local /var/www/habibazar/outputs/habibazar-web/.env.local
 
-# 3. Restore .env.local from secure storage
-# (store backups of .env.local in a password manager or secret vault)
-cp /path/to/secure/.env.local outputs/habibazar-web/.env.local
+# 3. Restore database from backup
+DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+BACKUP=/path/to/backup/habibazar.db
+pm2 stop habibazar
+cp "$BACKUP" "$DB"
+chown hbz:hbz "$DB"
 
-# 4. Restore database from backup
-mkdir -p /var/data/habibazar
-scp old-server:/var/backups/habibazar/LATEST/habibazar_*.db.gz .
-gunzip habibazar_*.db.gz -c > /var/data/habibazar/habibazar.db
+# 4. Rebuild and start
+cd /var/www/habibazar/outputs/habibazar-web
+sudo -u hbz npm run build
+pm2 start habibazar
 
-# 5. Deploy
-cd outputs/habibazar-deploy
-chmod +x deploy.sh update.sh backup.sh health-check.sh
-./deploy.sh
-
-# 6. Configure Nginx (see DEPLOYMENT_GUIDE.md)
-# 7. Point DNS to new server IP
-
+# 5. Point DNS to new server IP
 ```
 
 **Expected recovery:** < 45 minutes  
@@ -123,19 +121,20 @@ chmod +x deploy.sh update.sh backup.sh health-check.sh
 ## Scenario 5: Compromised Admin Credentials
 
 ```bash
+ENV_FILE=/var/www/habibazar/outputs/habibazar-web/.env.local
+DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+
 # Step 1: Immediately rotate JWT secret (invalidates ALL sessions)
-NEW_SECRET=$(openssl rand -base64 48)
-sed -i "s/^ADMIN_JWT_SECRET=.*/ADMIN_JWT_SECRET=$NEW_SECRET/" \
-  /var/www/habibazar-repo/outputs/habibazar-web/.env.local
+NEW_SECRET=$(openssl rand -hex 32)
+sed -i "s/^ADMIN_JWT_SECRET=.*/ADMIN_JWT_SECRET=$NEW_SECRET/" "$ENV_FILE"
 pm2 reload habibazar
 
 # Step 2: Review audit logs for unauthorized actions
 pm2 logs habibazar --lines 500 | grep AUDIT
 
-# Step 3: Reset admin password via DB
-sqlite3 /var/data/habibazar/habibazar.db \
-  "UPDATE users SET password_hash = 'TEMPORARY_LOCKED' WHERE role = 'admin';"
-# Then use the admin panel to set a new password after rotating the secret
+# Step 3: Lock all admin accounts temporarily
+sqlite3 "$DB" "UPDATE users SET password_hash = 'LOCKED' WHERE role != 'super_admin';"
+# Then reset passwords via admin panel after rotating the secret
 ```
 
 ---
@@ -144,12 +143,10 @@ sqlite3 /var/data/habibazar/habibazar.db \
 
 ```bash
 # Pick a recent backup
-BACKUP=/var/backups/habibazar/YYYYMMDD_HHMMSS/habibazar_*.db.gz
+BACKUP=/var/backups/habibazar/YYYYMMDD_HHMMSS/habibazar.db
 
-# Restore to temp location
-gunzip -c $BACKUP > /tmp/hbz_test.db
-
-# Verify integrity
+# Restore to temp location and verify
+cp "$BACKUP" /tmp/hbz_test.db
 sqlite3 /tmp/hbz_test.db "PRAGMA integrity_check; SELECT COUNT(*) FROM users;"
 
 # Clean up
