@@ -113,7 +113,7 @@ export function AboutEditor() {
             aspect={9 / 16}
             shape="rect"
             label="Profile Photo (9:16 portrait)"
-            previewClass="w-32 aspect-[9/16] rounded-xl"
+            previewClass="w-32 h-[142px] rounded-xl"
           />
           <Input label="Resume PDF URL" value={current.resumeUrl || ''} onChange={(v) => set('resumeUrl', v)} placeholder="/resume.pdf" />
         </Card>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
 import { MediaPicker, GalleryPicker } from '@/components/admin/MediaPicker'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 
 type Project = {
   id?: number; slug: string; nameEn: string; nameFa: string; industryEn: string; industryFa: string
@@ -89,6 +89,8 @@ type TabId = typeof TABS[number]['id']
 
 export function ProjectsManager() {
   const t = useT()
+  const locale = useAdminLocale()
+  const isFa = locale === 'fa'
   const [projects, setProjects] = useState<Project[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Project>(EMPTY)
@@ -131,28 +133,28 @@ export function ProjectsManager() {
     <>
       <ToastContainer />
       <PageHeader
-        title="Case Studies Management"
-        action={<Btn onClick={openNew}>+ New Case Study</Btn>}
+        title={t('caseStudiesTitle')}
+        action={<Btn onClick={openNew}>{t('newCaseStudy')}</Btn>}
       />
 
       <Card>
-        <Table headers={[t('name'), 'Industry', 'Status', 'Featured', 'Cover', t('actions')]}>
+        <Table headers={[t('name'), t('industry'), t('status'), t('featured'), t('cover'), t('actions')]}>
           {projects.map((p) => (
             <TR key={p.id}>
               <TD>
                 <div className="flex items-center gap-2">
                   <ColorDot color={p.color} />
                   <div>
-                    <div className="font-medium text-white">{p.nameEn}</div>
-                    <div className="text-xs text-text-tertiary">{p.nameFa} · {p.year}</div>
+                    <div className="font-medium text-white">{isFa ? p.nameFa : p.nameEn}</div>
+                    <div className="text-xs text-text-tertiary">{isFa ? p.nameEn : p.nameFa} · {p.year}</div>
                     <div className="text-[10px] text-text-disabled">{p.slug}</div>
                   </div>
                 </div>
               </TD>
-              <TD className="text-text-secondary text-xs">{p.industryEn}</TD>
+              <TD className="text-text-secondary text-xs">{isFa ? p.industryFa : p.industryEn}</TD>
               <TD>
                 <Badge color={p.projectStatus === 'completed' ? 'green' : p.projectStatus === 'ongoing' ? 'indigo' : 'slate'}>
-                  {p.projectStatus || 'completed'}
+                  {t(p.projectStatus || 'completed')}
                 </Badge>
               </TD>
               <TD><Badge color={p.featured ? 'indigo' : 'slate'}>{p.featured ? `★ ${t('featured')}` : t('regular')}</Badge></TD>
@@ -173,7 +175,7 @@ export function ProjectsManager() {
         </Table>
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Case Study' : 'New Case Study'} size="xl">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('editCaseStudy') : t('newCaseStudyModal')} size="xl">
         {/* Tab nav */}
         <div className="flex gap-1 mb-5 border-b border-border pb-3 flex-wrap">
           {TABS.map(tab => (
