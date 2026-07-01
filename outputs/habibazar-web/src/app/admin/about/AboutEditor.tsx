@@ -42,23 +42,31 @@ export function AboutEditor() {
   const { toast, ToastContainer } = useToast()
 
   useEffect(() => {
-    fetch('/api/admin/about').then((r) => r.json()).then((rows: AboutData[]) => {
-      const map: Record<string, AboutData> = {}
-      for (const r of rows) map[r.locale] = r
-      setData(map)
-    })
-    fetch('/api/admin/settings').then((r) => r.json()).then((s: Record<string, string>) => {
-      setSocial({
-        contact_email:    s.contact_email    || '',
-        contact_phone:    s.contact_phone    || '',
-        social_linkedin:  s.social_linkedin  || '',
-        social_instagram: s.social_instagram || '',
-        social_whatsapp:  s.social_whatsapp  || '',
-        social_telegram:  s.social_telegram  || '',
-        social_twitter:   s.social_twitter   || '',
+    fetch('/api/admin/about')
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+      .then((rows: AboutData[]) => {
+        const map: Record<string, AboutData> = {}
+        for (const r of rows) map[r.locale] = r
+        setData(map)
       })
-    })
-  }, [])
+      .catch(() => toast('Failed to load about data', 'error'))
+
+    fetch('/api/admin/settings')
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+      .then((s: Record<string, string>) => {
+        if (!s || typeof s !== 'object' || Array.isArray(s)) return
+        setSocial({
+          contact_email:    s.contact_email    || '',
+          contact_phone:    s.contact_phone    || '',
+          social_linkedin:  s.social_linkedin  || '',
+          social_instagram: s.social_instagram || '',
+          social_whatsapp:  s.social_whatsapp  || '',
+          social_telegram:  s.social_telegram  || '',
+          social_twitter:   s.social_twitter   || '',
+        })
+      })
+      .catch(() => {})
+  }, [toast])
 
   const current = data[locale] || { ...EMPTY, locale }
   function set(k: keyof AboutData, v: string) {
@@ -74,14 +82,15 @@ export function AboutEditor() {
       return next
     })
     // Auto-save photo to both locales immediately
-    await Promise.all(['en', 'fa'].map((loc) =>
+    const results = await Promise.all(['en', 'fa'].map((loc) =>
       fetch('/api/admin/about', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale: loc, photoUrl: url }),
       })
     ))
-    toast(url ? t('saved') : t('deleted'), 'success')
+    const allOk = results.every((r) => r.ok)
+    toast(allOk ? (url ? t('saved') : t('deleted')) : t('saveFailed'), allOk ? 'success' : 'error')
   }
 
   async function saveSocial() {

@@ -99,8 +99,12 @@ export function ProjectsManager() {
   const { toast, ToastContainer } = useToast()
 
   async function load() {
-    const r = await fetch('/api/admin/projects')
-    const d = await r.json(); setProjects(Array.isArray(d) ? d : [])
+    try {
+      const r = await fetch('/api/admin/projects')
+      if (!r.ok) return
+      const d = await r.json()
+      setProjects(Array.isArray(d) ? d : [])
+    } catch { /* network error — leave existing list */ }
   }
   useEffect(() => { load() }, [])
 
@@ -113,13 +117,13 @@ export function ProjectsManager() {
 
   async function del(id: number) {
     if (!confirm(t('confirmDel'))) return
-    await fetch('/api/admin/projects', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    toast(t('deleted')); load()
+    const res = await fetch('/api/admin/projects', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (res.ok) { toast(t('deleted')); load() } else toast(t('failed'), 'error')
   }
 
   async function toggle(p: Project) {
-    await fetch('/api/admin/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, active: !p.active }) })
-    toast(t('saved')); load()
+    const res = await fetch('/api/admin/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, active: !p.active }) })
+    if (res.ok) { toast(t('saved')); load() } else toast(t('failed'), 'error')
   }
 
   function set<K extends keyof Project>(k: K, v: Project[K]) { setEditing((e) => ({ ...e, [k]: v })) }

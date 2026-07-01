@@ -418,7 +418,7 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             <div className="space-y-8">
               {TIMELINE_DATA.map((item, i) => (
                 <motion.div
-                  key={item.year}
+                  key={`${item.year}-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
