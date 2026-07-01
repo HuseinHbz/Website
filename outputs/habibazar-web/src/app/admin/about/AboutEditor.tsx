@@ -17,11 +17,28 @@ const EMPTY: AboutData = {
   yearsExp: '', projectsCount: '', endpointsCount: '', deploymentsCount: '',
 }
 
+const SOCIAL_FIELDS = [
+  { key: 'contact_email',    label: 'ایمیل',      placeholder: 'husein@habibazar.com' },
+  { key: 'contact_phone',    label: 'تلفن',       placeholder: '+98...' },
+  { key: 'social_linkedin',  label: 'LinkedIn',   placeholder: 'https://linkedin.com/in/...' },
+  { key: 'social_instagram', label: 'Instagram',  placeholder: 'https://instagram.com/...' },
+  { key: 'social_whatsapp',  label: 'WhatsApp',   placeholder: '+989...' },
+  { key: 'social_telegram',  label: 'Telegram',   placeholder: 'https://t.me/...' },
+  { key: 'social_twitter',   label: 'Twitter/X',  placeholder: 'https://x.com/...' },
+] as const
+
+type SocialKey = typeof SOCIAL_FIELDS[number]['key']
+type SocialState = Record<SocialKey, string>
+
+const SOCIAL_EMPTY: SocialState = { contact_email: '', contact_phone: '', social_linkedin: '', social_instagram: '', social_whatsapp: '', social_telegram: '', social_twitter: '' }
+
 export function AboutEditor() {
   const t = useT()
   const [locale, setLocale] = useState<'en' | 'fa'>('en')
   const [data, setData] = useState<Record<string, AboutData>>({})
+  const [social, setSocial] = useState<SocialState>(SOCIAL_EMPTY)
   const [saving, setSaving] = useState(false)
+  const [savingSocial, setSavingSocial] = useState(false)
   const { toast, ToastContainer } = useToast()
 
   useEffect(() => {
@@ -29,6 +46,17 @@ export function AboutEditor() {
       const map: Record<string, AboutData> = {}
       for (const r of rows) map[r.locale] = r
       setData(map)
+    })
+    fetch('/api/admin/settings').then((r) => r.json()).then((s: Record<string, string>) => {
+      setSocial({
+        contact_email:    s.contact_email    || '',
+        contact_phone:    s.contact_phone    || '',
+        social_linkedin:  s.social_linkedin  || '',
+        social_instagram: s.social_instagram || '',
+        social_whatsapp:  s.social_whatsapp  || '',
+        social_telegram:  s.social_telegram  || '',
+        social_twitter:   s.social_twitter   || '',
+      })
     })
   }, [])
 
@@ -54,6 +82,13 @@ export function AboutEditor() {
       })
     ))
     toast(url ? t('saved') : t('deleted'), 'success')
+  }
+
+  async function saveSocial() {
+    setSavingSocial(true)
+    const res = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(social) })
+    setSavingSocial(false)
+    toast(res.ok ? t('savedSuccessfully') : t('saveFailed'), res.ok ? 'success' : 'error')
   }
 
   async function save() {
@@ -125,6 +160,24 @@ export function AboutEditor() {
             <Input label={t('projectsCount')} value={current.projectsCount || ''} onChange={(v) => set('projectsCount', v)} placeholder="50+" />
             <Input label={t('endpointsCount')} value={current.endpointsCount || ''} onChange={(v) => set('endpointsCount', v)} placeholder="1000+" />
             <Input label={t('deploymentsCount')} value={current.deploymentsCount || ''} onChange={(v) => set('deploymentsCount', v)} placeholder="20+" />
+          </div>
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <SectionDivider label={t('contactSection')} />
+          <div className="grid grid-cols-2 gap-4">
+            {SOCIAL_FIELDS.map((f) => (
+              <Input
+                key={f.key}
+                label={f.label}
+                value={social[f.key]}
+                onChange={(v) => setSocial((s) => ({ ...s, [f.key]: v }))}
+                placeholder={f.placeholder}
+              />
+            ))}
+          </div>
+          <div className="pt-1">
+            <Btn onClick={saveSocial} disabled={savingSocial}>{savingSocial ? t('saving') : t('save')}</Btn>
           </div>
         </Card>
       </div>

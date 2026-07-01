@@ -33,6 +33,7 @@ export async function seedDatabase() {
     ['social_github', '', 'social'],
     ['social_twitter', '', 'social'],
     ['social_instagram', '', 'social'],
+    ['social_whatsapp', '', 'social'],
     ['smtp_host', '', 'email'],
     ['smtp_port', '587', 'email'],
     ['smtp_user', '', 'email'],
