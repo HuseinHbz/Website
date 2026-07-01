@@ -110,15 +110,29 @@ chown -R "$APP_USER":"$APP_USER" "/var/backups/habibazar"
 
 # ─── ۹. PM2 راه‌اندازی ───────────────────────────────────────────────────────
 step "راه‌اندازی PM2..."
+NODE_PATH=$(dirname "$(which node)")
+WEB_DIR="$APP_DIR/outputs/habibazar-web"
+
+# wrapper script — source کردن .env.local و راه‌اندازی next
+START_SCRIPT="$APP_DIR/deploy/start.sh"
+cat > "$START_SCRIPT" <<SCRIPT
+#!/usr/bin/env bash
+set -a
+source "$ENV_FILE"
+set +a
+cd "$WEB_DIR"
+exec node_modules/.bin/next start -p "$APP_PORT"
+SCRIPT
+chmod +x "$START_SCRIPT"
+chown "$APP_USER":"$APP_USER" "$START_SCRIPT"
+
 PM2_CONF="$APP_DIR/deploy/pm2.config.js"
 cat > "$PM2_CONF" <<EOF
 module.exports = {
   apps: [{
     name: 'habibazar',
-    cwd: '${APP_DIR}/outputs/habibazar-web',
-    script: 'npm',
-    args: 'run start',
-    env_file: '${ENV_FILE}',
+    cwd: '${WEB_DIR}',
+    script: '${START_SCRIPT}',
     instances: 1,
     autorestart: true,
     watch: false,
@@ -126,13 +140,20 @@ module.exports = {
     error_file: '/var/log/habibazar-error.log',
     out_file: '/var/log/habibazar-out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    env: {
+      PATH: '${NODE_PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+    },
   }]
 }
 EOF
 
 sudo -u "$APP_USER" pm2 start "$PM2_CONF"
 sudo -u "$APP_USER" pm2 save
-pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" | tail -1 | bash
+
+# pm2 startup — فقط خط حاوی sudo را استخراج و اجرا کن
+STARTUP_CMD=$(pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1 | grep -oP '(?<=command:\n?)sudo .*' || \
+              pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1 | grep "^sudo ")
+[[ -n "$STARTUP_CMD" ]] && bash -c "$STARTUP_CMD" || systemctl enable "pm2-$APP_USER" 2>/dev/null || true
 info "PM2 راه‌اندازی شد"
 
 # ─── ۱۰. Nginx ───────────────────────────────────────────────────────────────
