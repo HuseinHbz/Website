@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# =============================================================================
+# HBZ Website — نصب اولیه روی سرور تازه (Ubuntu 22.04)
+# =============================================================================
+# استفاده:
+#   chmod +x deploy/install.sh
+#   sudo bash deploy/install.sh
+# =============================================================================
+set -euo pipefail
+
+# ─── تنظیمات ─────────────────────────────────────────────────────────────────
+APP_USER="hbz"
+APP_DIR="/var/www/habibazar"
+REPO_URL="https://github.com/HuseinHbz/Website.git"
+BRANCH="hbz"
+APP_PORT="3000"
+NODE_VERSION="20"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+info()  { echo -e "${GREEN}[✔]${NC} $*"; }
+step()  { echo -e "${CYAN}[→]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
+error() { echo -e "${RED}[✘]${NC} $*"; exit 1; }
+
+[[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/install.sh"
+
+echo ""
+echo "═══════════════════════════════════════════════════"
+echo "  HBZ Website — نصب اولیه"
+echo "═══════════════════════════════════════════════════"
+echo ""
+
+# ─── ۱. وابستگی‌های سیستم ────────────────────────────────────────────────────
+step "نصب وابستگی‌های سیستم..."
+apt-get update -qq
+apt-get install -y -qq curl git nginx ufw sqlite3
+info "وابستگی‌های سیستم نصب شد"
+
+# ─── ۲. Node.js ──────────────────────────────────────────────────────────────
+if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt "$NODE_VERSION" ]]; then
+  step "نصب Node.js $NODE_VERSION..."
+  curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - 2>/dev/null
+  apt-get install -y nodejs 2>/dev/null
+fi
+info "Node.js $(node -v) | npm $(npm -v)"
+
+# ─── ۳. PM2 ──────────────────────────────────────────────────────────────────
+if ! command -v pm2 &>/dev/null; then
+  step "نصب PM2..."
+  npm install -g pm2 --silent
+fi
+info "PM2 $(pm2 -v)"
+
+# ─── ۴. کاربر سیستم ─────────────────────────────────────────────────────────
+if ! id "$APP_USER" &>/dev/null; then
+  step "ایجاد کاربر $APP_USER..."
+  useradd -r -m -s /bin/bash "$APP_USER"
+fi
+info "کاربر $APP_USER آماده است"
+
+# ─── ۵. clone مخزن ──────────────────────────────────────────────────────────
+if [[ -d "$APP_DIR/.git" ]]; then
+  warn "مخزن از قبل وجود دارد — برای آپدیت از update.sh استفاده کنید"
+else
+  step "clone مخزن از branch $BRANCH..."
+  git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$APP_DIR"
+  chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+  info "مخزن clone شد"
+fi
+
+# ─── ۶. فایل .env.local ──────────────────────────────────────────────────────
+ENV_FILE="$APP_DIR/outputs/habibazar-web/.env.local"
+if [[ ! -f "$ENV_FILE" ]]; then
+  step "ساخت .env.local..."
+  JWT_SECRET=$(openssl rand -hex 32)
+  cat > "$ENV_FILE" <<EOF
+ADMIN_JWT_SECRET=${JWT_SECRET}
+NEXT_PUBLIC_SITE_URL=https://habibazar.ir
+NEXT_PUBLIC_API_URL=https://habibazar.ir
+LOG_LEVEL=info
+NODE_ENV=production
+EOF
+  chown "$APP_USER":"$APP_USER" "$ENV_FILE"
+  warn "فایل .env.local ساخته شد — آدرس سایت را بررسی کنید:"
+  warn "  $ENV_FILE"
+else
+  info ".env.local از قبل وجود دارد"
+fi
+
+# ─── ۷. npm install + build ──────────────────────────────────────────────────
+step "نصب پکیج‌ها..."
+cd "$APP_DIR/outputs/habibazar-web"
+sudo -u "$APP_USER" npm ci --omit=dev 2>/dev/null
+info "پکیج‌ها نصب شدند"
+
+step "build پروژه (ممکن است چند دقیقه طول بکشد)..."
+sudo -u "$APP_USER" bash -c "source $ENV_FILE 2>/dev/null; npm run build"
+info "build کامل شد"
+
+# ─── ۸. پوشه داده ────────────────────────────────────────────────────────────
+mkdir -p "$APP_DIR/outputs/habibazar-web/data"
+mkdir -p "/var/backups/habibazar"
+chown -R "$APP_USER":"$APP_USER" "$APP_DIR/outputs/habibazar-web/data"
+chown -R "$APP_USER":"$APP_USER" "/var/backups/habibazar"
+
+# ─── ۹. PM2 راه‌اندازی ───────────────────────────────────────────────────────
+step "راه‌اندازی PM2..."
+PM2_CONF="$APP_DIR/deploy/pm2.config.js"
+cat > "$PM2_CONF" <<EOF
+module.exports = {
+  apps: [{
+    name: 'habibazar',
+    cwd: '${APP_DIR}/outputs/habibazar-web',
+    script: 'npm',
+    args: 'run start',
+    env_file: '${ENV_FILE}',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '512M',
+    error_file: '/var/log/habibazar-error.log',
+    out_file: '/var/log/habibazar-out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+  }]
+}
+EOF
+
+sudo -u "$APP_USER" pm2 start "$PM2_CONF"
+sudo -u "$APP_USER" pm2 save
+pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" | tail -1 | bash
+info "PM2 راه‌اندازی شد"
+
+# ─── ۱۰. Nginx ───────────────────────────────────────────────────────────────
+step "پیکربندی Nginx..."
+cat > /etc/nginx/sites-available/habibazar <<EOF
+server {
+    listen 80;
+    server_name habibazar.ir www.habibazar.ir;
+
+    client_max_body_size 50M;
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+
+    location /_next/static/ {
+        alias ${APP_DIR}/outputs/habibazar-web/.next/static/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /uploads/ {
+        alias ${APP_DIR}/outputs/habibazar-web/public/uploads/;
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
+
+ln -sf /etc/nginx/sites-available/habibazar /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+info "Nginx پیکربندی شد"
+
+# ─── ۱۱. Firewall ────────────────────────────────────────────────────────────
+ufw allow OpenSSH   2>/dev/null || true
+ufw allow 'Nginx Full' 2>/dev/null || true
+ufw --force enable  2>/dev/null || true
+
+# ─── ۱۲. health check ────────────────────────────────────────────────────────
+step "بررسی سلامت سرویس..."
+sleep 5
+for i in 1 2 3; do
+  if curl -sf "http://localhost:${APP_PORT}/api/health" &>/dev/null; then
+    info "سرویس پاسخ می‌دهد ✓"; break
+  fi
+  [[ $i -eq 3 ]] && warn "health check پاسخ نداد — لاگ: pm2 logs habibazar"
+  sleep 3
+done
+
+# ─── پایان ───────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  نصب با موفقیت انجام شد!${NC}"
+echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
+echo ""
+echo "  سایت:     http://habibazar.ir"
+echo "  پنل ادمین: http://habibazar.ir/admin"
+echo "  لاگ زنده: pm2 logs habibazar"
+echo "  وضعیت:    pm2 status"
+echo ""
+echo -e "${YELLOW}  مرحله بعد — فعال‌سازی HTTPS:${NC}"
+echo "  apt install certbot python3-certbot-nginx"
+echo "  certbot --nginx -d habibazar.ir -d www.habibazar.ir"
+echo ""
