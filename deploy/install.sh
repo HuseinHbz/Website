@@ -113,6 +113,10 @@ chown -R "$APP_USER":"$APP_USER" "/var/backups/habibazar"
 step "راه‌اندازی PM2..."
 NODE_PATH=$(dirname "$(which node)")
 
+# ساخت فایل‌های لاگ با permission درست
+touch /var/log/habibazar-error.log /var/log/habibazar-out.log
+chown "$APP_USER":"$APP_USER" /var/log/habibazar-error.log /var/log/habibazar-out.log
+
 # wrapper script — source کردن .env.local و راه‌اندازی next
 START_SCRIPT="$APP_DIR/deploy/start.sh"
 cat > "$START_SCRIPT" <<STARTSCRIPT

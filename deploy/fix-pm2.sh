@@ -26,6 +26,11 @@ NODE_PATH=$(dirname "$(which node)")
 START_SCRIPT="$APP_DIR/deploy/start.sh"
 PM2_CONF="$APP_DIR/deploy/pm2.config.js"
 
+step "ساخت فایل‌های لاگ..."
+touch /var/log/habibazar-error.log /var/log/habibazar-out.log
+chown "$APP_USER":"$APP_USER" /var/log/habibazar-error.log /var/log/habibazar-out.log
+info "فایل‌های لاگ آماده شد"
+
 step "ساخت start.sh..."
 cat > "$START_SCRIPT" <<SCRIPT
 #!/usr/bin/env bash
