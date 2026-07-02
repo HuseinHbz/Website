@@ -1,9 +1,16 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { StatCard, Card } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+
+// Lazy-load the recharts-backed chart so its ~130 kB chunk stays out of the
+// admin shell's initial bundle and only loads when the dashboard renders.
+const ViewsChart = dynamic(() => import('./ViewsChart'), {
+  ssr: false,
+  loading: () => <div className="h-[200px] animate-pulse rounded-lg bg-surface-2" />,
+})
 
 interface DashData {
   stats: {
@@ -265,24 +272,7 @@ export function AdminDashboard() {
             <Card className="p-5">
               <h3 className="text-sm font-semibold text-white mb-4">{t('viewsChart')}</h3>
               {data?.dailyViews && data.dailyViews.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={data.dailyViews}>
-                    <defs>
-                      <linearGradient id="vGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-                    <XAxis dataKey="date" tick={{ fill: '#4a4a6a', fontSize: 11 }} tickLine={false} />
-                    <YAxis tick={{ fill: '#4a4a6a', fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{ background: '#111122', border: '1px solid #1e1e2e', borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: '#9090b0' }}
-                    />
-                    <Area type="monotone" dataKey="count" stroke="#6366f1" fill="url(#vGrad)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ViewsChart data={data.dailyViews} />
               ) : (
                 <div className="h-48 flex items-center justify-center text-text-disabled text-sm">
                   {t('noAnalytics')}

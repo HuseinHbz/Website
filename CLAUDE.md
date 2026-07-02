@@ -111,6 +111,19 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
 - E2E seeds/logs in via the seeded admin above (see `e2e/helpers.ts`).
 - Target: zero TS errors, zero lint warnings, 0 vulnerabilities, all tests green.
 
+## Governance audits (`npm run audit` runs all four; docs in `docs/governance/`)
+- `audit:tokens` — design tokens: fails on arbitrary Tailwind color classes
+  (drift). Source of truth: `tailwind.config.ts` + `src/lib/design/tokens.ts`
+  (`BRAND`, `CHART_PALETTE`, `SOCIAL_BRAND`) for values that can't be a class.
+- `audit:content` — CMS content: fails on Lorem/placeholder filler; reports
+  `/uploads/` media coverage.
+- `audit:reuse` — component reusability (informational): tracks raw admin-fetch
+  duplication. Shared primitive: `src/lib/admin/crud.ts` (`crud.*` + `useResource`).
+- `audit:deps` — dependency/bundle: fails on unused runtime deps, build tools in
+  `dependencies`, or `@types/*` in runtime. Heavy recharts is code-split via
+  `next/dynamic` (`src/app/admin/ViewsChart.tsx`) — `/admin` First Load 136 kB.
+- `tokens`, `content` and `deps` audits gate CI (in the ESLint job).
+
 ## CI (`.github/workflows/ci.yml`)
 Jobs: TypeScript, ESLint, Unit Tests, Build, Security Audit
 (`npm audit --audit-level=critical --omit=dev` + secret grep), E2E, Lighthouse
