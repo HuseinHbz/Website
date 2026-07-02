@@ -44,6 +44,8 @@ jobs:
       - run: npx next lint
       - name: Design token governance
         run: npm run audit:tokens
+      - name: CMS content governance
+        run: npm run audit:content
 
   # ── Unit tests ─────────────────────────────────────────────────────────────
   test:
