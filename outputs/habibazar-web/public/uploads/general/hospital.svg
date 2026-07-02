@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Hospital">
+  <rect width="120" height="120" rx="20" fill="#0b0b16"/>
+  <rect x="0.5" y="0.5" width="119" height="119" rx="19.5" fill="none" stroke="#1c1c2e"/>
+  <circle cx="60" cy="46" r="20" fill="#06b6d4" opacity="0.16"/>
+  <text x="60" y="53" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="700" fill="#06b6d4" text-anchor="middle">Ho</text>
+  <text x="60" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="600" fill="#94a3b8" text-anchor="middle">Hospital</text>
+</svg>

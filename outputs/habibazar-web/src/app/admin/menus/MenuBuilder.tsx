@@ -23,7 +23,7 @@ const EMPTY: Omit<MenuItem, 'id'> = {
 const COMMON_LINKS = [
   { label: 'Home', href: '/' }, { label: 'Case Studies', href: '/case-studies' },
   { label: 'Knowledge Center', href: '/blog' }, { label: 'Consultation', href: '/consultation' },
-  { label: 'Contact', href: '/contact' }, { label: 'About', href: '/about' },
+  { label: 'About', href: '/about' },
 ]
 
 export function MenuBuilder() {
@@ -162,8 +162,8 @@ export function MenuBuilder() {
             {location === 'header' ? `☰ ${t('headerPreview')}` : `— ${t('footerPreview')}`}
           </h3>
           {location === 'header' ? (
-            <div className="rounded-xl overflow-hidden" style={{ background: '#0c0c14', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-4 px-6 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div className="rounded-xl overflow-hidden bg-surface-2 border border-subtle">
+              <div className="flex items-center gap-4 px-6 py-3 border-b border-subtle">
                 <span className="text-white font-bold text-sm">HBZ</span>
                 <div className="flex gap-4 ml-auto">
                   {topLevel.filter(i => i.active).map(i => (
@@ -173,7 +173,7 @@ export function MenuBuilder() {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl overflow-hidden p-6" style={{ background: '#0c0c14', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="rounded-xl overflow-hidden p-6 bg-surface-2 border border-subtle">
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-xs font-bold text-white mb-2">Navigation</p>

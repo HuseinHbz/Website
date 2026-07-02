@@ -85,8 +85,7 @@ export function AuditView() {
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
         {Object.entries(ACTION_COLOR).map(([action]) => (
           <button key={action} onClick={() => { setFilterAction(filterAction === action ? '' : action); setPage(1) }}
-            className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all ${filterAction === action ? 'border-brand/40' : 'border-border hover:border-border'}`}
-            style={{ background: filterAction === action ? 'rgba(99,102,241,0.1)' : '#0e0e1a' }}>
+            className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all ${filterAction === action ? 'border-brand/40 bg-brand/10' : 'border-border hover:border-border bg-surface-2'}`}>
             <span className="text-base">{ACTION_ICON[action] || '•'}</span>
             <span className="text-[10px] text-text-tertiary uppercase font-bold">{action}</span>
             <span className="text-sm font-bold text-white">{stats[action] || 0}</span>

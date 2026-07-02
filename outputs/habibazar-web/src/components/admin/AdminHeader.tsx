@@ -118,10 +118,10 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
             <>
               <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
               <div
-                className="absolute top-10 z-50 w-80 rounded-xl overflow-hidden shadow-2xl"
-                style={{ [isRTL ? 'left' : 'right']: 0, background: '#0e0e1a', border: '1px solid rgba(99,102,241,0.2)' }}
+                className="absolute top-10 z-50 w-80 rounded-xl overflow-hidden shadow-2xl bg-surface-2 border border-brand/20"
+                style={{ [isRTL ? 'left' : 'right']: 0 }}
               >
-                <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-subtle">
                   <p className="text-sm font-semibold text-white">{isRTL ? 'اعلان‌ها' : 'Notifications'}</p>
                   {unread > 0 && (
                     <button

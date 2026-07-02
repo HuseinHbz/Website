@@ -156,8 +156,7 @@ export function CommandPalette({ open, onClose, locale }: Props) {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Palette */}
-      <div className="relative w-full max-w-2xl mx-4 rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: '#0e0e1a', border: '1px solid rgba(99,102,241,0.3)' }}>
+      <div className="relative w-full max-w-2xl mx-4 rounded-2xl overflow-hidden shadow-2xl bg-surface-2 border border-brand/30">
 
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: 'rgba(99,102,241,0.15)' }}>
@@ -197,7 +196,7 @@ export function CommandPalette({ open, onClose, locale }: Props) {
                       color: isSelected ? '#c7d2fe' : '#94a3b8',
                     }}
                   >
-                    <span className="text-base w-5 text-center shrink-0" style={{ color: isSelected ? '#6366f1' : '#4b5563' }}>
+                    <span className={`text-base w-5 text-center shrink-0 ${isSelected ? 'text-brand' : 'text-text-tertiary'}`}>
                       {cmd.icon}
                     </span>
                     <span className="flex-1 text-start">{isRTL ? cmd.labelFa : cmd.label}</span>
