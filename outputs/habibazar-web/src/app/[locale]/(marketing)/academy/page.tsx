@@ -27,7 +27,7 @@ export default async function AcademyPage() {
   const stats = { total: courseList.length, free: courseList.filter(c => c.isFree).length, enrolled: courseList.reduce((s, c) => s + c.enrollmentsCount, 0) }
 
   return (
-    <main className="min-h-screen bg-[#07070f] text-white">
+    <main className="min-h-screen bg-background text-white">
       <section className="pt-32 pb-16 px-6 text-center">
         <div className="inline-block px-4 py-1.5 rounded-full text-xs font-bold border border-indigo-500/30 text-indigo-400 mb-6 uppercase tracking-widest">HBZ Academy</div>
         <h1 className="text-5xl md:text-6xl font-black mb-4">Learn Enterprise Technology</h1>

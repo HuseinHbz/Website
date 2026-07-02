@@ -47,7 +47,7 @@ function SearchContent() {
   const types = Object.keys(TYPE_ICONS)
 
   return (
-    <main className="min-h-screen bg-[#07070f] text-white">
+    <main className="min-h-screen bg-background text-white">
       <section className="pt-32 pb-12 px-6">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-4xl font-black mb-6 text-center">Search Everything</h1>
@@ -120,7 +120,7 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#07070f] flex items-center justify-center text-slate-500">Loading…</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-slate-500">Loading…</div>}>
       <SearchContent />
     </Suspense>
   )

@@ -30,7 +30,7 @@ export default async function DocsPage() {
   const typeOrder = ['docs', 'api', 'guide', 'tutorial', 'runbook', 'release']
 
   return (
-    <main className="min-h-screen bg-[#07070f] text-white">
+    <main className="min-h-screen bg-background text-white">
       <section className="pt-32 pb-16 px-6 text-center">
         <h1 className="text-5xl md:text-6xl font-black mb-4">Documentation</h1>
         <p className="text-xl text-slate-400 max-w-2xl mx-auto">Everything you need to build, integrate, and operate with HBZ Technology platform.</p>

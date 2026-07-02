@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { slideUp, staggerContainer, fadeIn } from '@/lib/motion'
+import { BRAND } from '@/lib/design/tokens'
 
 interface DbTimeline { year: string; titleEn: string; titleFa: string; descEn: string | null; descFa: string | null; color: string | null }
 interface DbSkill { nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number; color?: string | null; icon?: string | null }
@@ -48,26 +49,26 @@ interface CertItem {
 }
 
 const TIMELINE: TimelineItem[] = [
-  { year: '2013', titleEn: 'Technical Technician', titleFa: 'تکنسین فنی', descEn: 'Started career in IT support, hardware maintenance and basic network administration.', descFa: 'آغاز فعالیت در پشتیبانی IT، تعمیر سخت‌افزار و مدیریت پایه شبکه.', color: '#6366f1' },
-  { year: '2017', titleEn: 'IT Specialist', titleFa: 'متخصص IT', descEn: 'Expanded into system administration, server management, and enterprise networking.', descFa: 'توسعه تخصص به مدیریت سیستم، سرور و شبکه‌های سازمانی.', color: '#818cf8' },
-  { year: '2021', titleEn: 'Network Operations Engineer', titleFa: 'مهندس عملیات شبکه', descEn: 'Designed and implemented complex LAN/WAN infrastructures, VPN solutions and security systems.', descFa: 'طراحی و پیاده‌سازی زیرساخت‌های پیچیده LAN/WAN، راه‌حل‌های VPN و سیستم‌های امنیتی.', color: '#06b6d4' },
-  { year: '2024', titleEn: 'Senior Infrastructure Engineer', titleFa: 'مهندس ارشد زیرساخت', descEn: 'Led enterprise-scale virtualization, cloud integration, and infrastructure automation projects.', descFa: 'رهبری پروژه‌های مجازی‌سازی سازمانی، یکپارچه‌سازی ابر و خودکارسازی زیرساخت.', color: '#10b981' },
-  { year: '2025', titleEn: 'Network Operations Supervisor', titleFa: 'سرپرست عملیات شبکه', descEn: 'Overseeing multi-site infrastructure operations, mentoring teams and driving digital transformation.', descFa: 'نظارت بر عملیات زیرساخت چند سایته، راهنمایی تیم‌ها و هدایت تحول دیجیتال.', color: '#f59e0b' },
+  { year: '2013', titleEn: 'Technical Technician', titleFa: 'تکنسین فنی', descEn: 'Started career in IT support, hardware maintenance and basic network administration.', descFa: 'آغاز فعالیت در پشتیبانی IT، تعمیر سخت‌افزار و مدیریت پایه شبکه.', color: BRAND.indigo },
+  { year: '2017', titleEn: 'IT Specialist', titleFa: 'متخصص IT', descEn: 'Expanded into system administration, server management, and enterprise networking.', descFa: 'توسعه تخصص به مدیریت سیستم، سرور و شبکه‌های سازمانی.', color: BRAND.indigoLight },
+  { year: '2021', titleEn: 'Network Operations Engineer', titleFa: 'مهندس عملیات شبکه', descEn: 'Designed and implemented complex LAN/WAN infrastructures, VPN solutions and security systems.', descFa: 'طراحی و پیاده‌سازی زیرساخت‌های پیچیده LAN/WAN، راه‌حل‌های VPN و سیستم‌های امنیتی.', color: BRAND.cyan },
+  { year: '2024', titleEn: 'Senior Infrastructure Engineer', titleFa: 'مهندس ارشد زیرساخت', descEn: 'Led enterprise-scale virtualization, cloud integration, and infrastructure automation projects.', descFa: 'رهبری پروژه‌های مجازی‌سازی سازمانی، یکپارچه‌سازی ابر و خودکارسازی زیرساخت.', color: BRAND.green },
+  { year: '2025', titleEn: 'Network Operations Supervisor', titleFa: 'سرپرست عملیات شبکه', descEn: 'Overseeing multi-site infrastructure operations, mentoring teams and driving digital transformation.', descFa: 'نظارت بر عملیات زیرساخت چند سایته، راهنمایی تیم‌ها و هدایت تحول دیجیتال.', color: BRAND.amber },
 ]
 
 const SKILLS: SkillItem[] = [
-  { nameEn: 'Network Architecture', nameFa: 'معماری شبکه', categoryEn: 'Networking', categoryFa: 'شبکه', level: 95, color: '#6366f1', icon: '/uploads/logos/mikrotik.svg' },
+  { nameEn: 'Network Architecture', nameFa: 'معماری شبکه', categoryEn: 'Networking', categoryFa: 'شبکه', level: 95, color: BRAND.indigo, icon: '/uploads/logos/mikrotik.svg' },
   { nameEn: 'MikroTik RouterOS', nameFa: 'میکروتیک RouterOS', categoryEn: 'Networking', categoryFa: 'شبکه', level: 92, color: '#c03030', icon: '/uploads/logos/mikrotik.svg' },
   { nameEn: 'Cisco IOS/IOS-XE', nameFa: 'سیسکو IOS', categoryEn: 'Networking', categoryFa: 'شبکه', level: 88, color: '#1ba0d7', icon: '/uploads/logos/cisco.svg' },
   { nameEn: 'Fortigate / Sophos', nameFa: 'فورتیگیت / سوفوس', categoryEn: 'Security', categoryFa: 'امنیت', level: 90, color: '#ee3124', icon: '/uploads/logos/fortinet.svg' },
   { nameEn: 'Network Security', nameFa: 'امنیت شبکه', categoryEn: 'Security', categoryFa: 'امنیت', level: 88, color: '#ef4444', icon: '/uploads/logos/fortinet.svg' },
   { nameEn: 'VMware vSphere', nameFa: 'VMware vSphere', categoryEn: 'Virtualization', categoryFa: 'مجازی‌سازی', level: 85, color: '#60b6e0', icon: '/uploads/logos/vmware.svg' },
   { nameEn: 'Proxmox VE', nameFa: 'Proxmox VE', categoryEn: 'Virtualization', categoryFa: 'مجازی‌سازی', level: 82, color: '#e57000', icon: '/uploads/logos/proxmox.svg' },
-  { nameEn: 'Linux Server Admin', nameFa: 'مدیریت سرور لینوکس', categoryEn: 'Systems', categoryFa: 'سیستم', level: 90, color: '#f59e0b', icon: '/uploads/logos/linux.svg' },
-  { nameEn: 'Zabbix / Grafana', nameFa: 'زابیکس / گرافانا', categoryEn: 'Monitoring', categoryFa: 'پایش', level: 85, color: '#f59e0b', icon: '/uploads/logos/zabbix.svg' },
-  { nameEn: 'Infrastructure Automation', nameFa: 'خودکارسازی زیرساخت', categoryEn: 'Automation', categoryFa: 'خودکارسازی', level: 78, color: '#06b6d4', icon: '/uploads/logos/ansible.svg' },
+  { nameEn: 'Linux Server Admin', nameFa: 'مدیریت سرور لینوکس', categoryEn: 'Systems', categoryFa: 'سیستم', level: 90, color: BRAND.amber, icon: '/uploads/logos/linux.svg' },
+  { nameEn: 'Zabbix / Grafana', nameFa: 'زابیکس / گرافانا', categoryEn: 'Monitoring', categoryFa: 'پایش', level: 85, color: BRAND.amber, icon: '/uploads/logos/zabbix.svg' },
+  { nameEn: 'Infrastructure Automation', nameFa: 'خودکارسازی زیرساخت', categoryEn: 'Automation', categoryFa: 'خودکارسازی', level: 78, color: BRAND.cyan, icon: '/uploads/logos/ansible.svg' },
   { nameEn: 'Veeam Backup & DR', nameFa: 'Veeam پشتیبان‌گیری', categoryEn: 'Operations', categoryFa: 'عملیات', level: 85, color: '#00b336', icon: '/uploads/logos/windows-server.svg' },
-  { nameEn: 'VoIP Solutions', nameFa: 'راه‌حل‌های VoIP', categoryEn: 'Communications', categoryFa: 'ارتباطات', level: 80, color: '#818cf8', icon: '/uploads/logos/linux.svg' },
+  { nameEn: 'VoIP Solutions', nameFa: 'راه‌حل‌های VoIP', categoryEn: 'Communications', categoryFa: 'ارتباطات', level: 80, color: BRAND.indigoLight, icon: '/uploads/logos/linux.svg' },
 ]
 
 const CERTS: CertItem[] = [
@@ -75,7 +76,7 @@ const CERTS: CertItem[] = [
   { nameEn: 'MikroTik MTCRE', nameFa: 'میکروتیک MTCRE', issuer: 'MikroTik', color: '#c03030' },
   { nameEn: 'Fortinet NSE', nameFa: 'فورتینت NSE', issuer: 'Fortinet', color: '#ee3124' },
   { nameEn: 'VMware VCP', nameFa: 'VMware VCP', issuer: 'VMware', color: '#60b6e0' },
-  { nameEn: 'Linux LPIC', nameFa: 'لینوکس LPIC', issuer: 'Linux Professional Institute', color: '#f59e0b' },
+  { nameEn: 'Linux LPIC', nameFa: 'لینوکس LPIC', issuer: 'Linux Professional Institute', color: BRAND.amber },
   { nameEn: 'Cisco CCNA', nameFa: 'سیسکو CCNA', issuer: 'Cisco', color: '#1ba0d7' },
 ]
 

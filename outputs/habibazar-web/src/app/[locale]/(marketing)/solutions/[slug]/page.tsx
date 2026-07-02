@@ -85,7 +85,7 @@ export default async function SolutionPage({ params }: Props) {
   const color = solution.color || '#6366f1'
 
   return (
-    <div className="min-h-screen bg-[#050510]" dir={fa ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-background" dir={fa ? 'rtl' : 'ltr'}>
       {/* Hero */}
       <section className="relative pt-32 pb-24 overflow-hidden">
         <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${color}15 0%, transparent 60%)` }} />

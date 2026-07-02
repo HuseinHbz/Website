@@ -62,13 +62,13 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
       {label && <p className="text-xs font-medium text-slate-400 mb-1">{label}</p>}
       <div className="flex gap-2 items-center">
         {value ? (
-          <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-[#0c0c14] border border-[#2a2a3e] rounded-lg">
+          <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-background border border-strong rounded-lg">
             <img src={value} alt="" className="w-8 h-8 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
             <span className="text-xs text-indigo-400 flex-1 truncate">{value}</span>
             <button onClick={clear} className="text-slate-600 hover:text-red-400 text-xs ml-1">✕</button>
           </div>
         ) : (
-          <div className="flex-1 px-3 py-2 bg-[#0c0c14] border border-[#2a2a3e] rounded-lg text-xs text-slate-600">
+          <div className="flex-1 px-3 py-2 bg-background border border-strong rounded-lg text-xs text-slate-600">
             {placeholder || 'No image selected'}
           </div>
         )}
@@ -97,7 +97,7 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
               onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
-              className={`border-2 border-dashed rounded-xl p-4 text-center mb-4 transition-colors ${dragging ? 'border-indigo-500 bg-indigo-500/10' : 'border-[#2a2a3e] hover:border-indigo-500/30'}`}
+              className={`border-2 border-dashed rounded-xl p-4 text-center mb-4 transition-colors ${dragging ? 'border-indigo-500 bg-indigo-500/10' : 'border-strong hover:border-indigo-500/30'}`}
             >
               <p className="text-xs text-slate-500 mb-2">Drag images here or</p>
               <label className="cursor-pointer">
@@ -118,12 +118,12 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
                   <button
                     key={f.id}
                     onClick={() => pick(f.url)}
-                    className="group rounded-lg overflow-hidden border border-[#1e1e2e] hover:border-indigo-500 transition-all text-left"
+                    className="group rounded-lg overflow-hidden border border-border hover:border-indigo-500 transition-all text-left"
                   >
                     {isImage(f.mimeType) ? (
                       <img src={f.url} alt={f.alt || f.originalName} className="w-full h-20 object-cover group-hover:opacity-90" />
                     ) : (
-                      <div className="w-full h-20 bg-[#111122] flex items-center justify-center text-2xl">
+                      <div className="w-full h-20 bg-surface-2 flex items-center justify-center text-2xl">
                         {f.mimeType.includes('pdf') ? '📄' : '📎'}
                       </div>
                     )}
@@ -199,7 +199,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
       <div className="flex flex-wrap gap-2 mb-2">
         {value.map((url) => (
           <div key={url} className="relative group">
-            <img src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#2a2a3e]" />
+            <img src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-strong" />
             <button
               onClick={() => remove(url)}
               className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] hidden group-hover:flex items-center justify-center"
@@ -208,7 +208,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
         ))}
         <button
           onClick={() => setOpen(true)}
-          className="w-16 h-16 rounded-lg border-2 border-dashed border-[#2a2a3e] hover:border-indigo-500 text-slate-600 hover:text-indigo-400 flex items-center justify-center text-xl transition-colors"
+          className="w-16 h-16 rounded-lg border-2 border-dashed border-strong hover:border-indigo-500 text-slate-600 hover:text-indigo-400 flex items-center justify-center text-xl transition-colors"
         >+</button>
       </div>
       {value.length === 0 && (
@@ -231,7 +231,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
               onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
-              className={`border-2 border-dashed rounded-xl p-3 text-center mb-3 transition-colors ${dragging ? 'border-indigo-500 bg-indigo-500/10' : 'border-[#2a2a3e]'}`}
+              className={`border-2 border-dashed rounded-xl p-3 text-center mb-3 transition-colors ${dragging ? 'border-indigo-500 bg-indigo-500/10' : 'border-strong'}`}
             >
               <label className="cursor-pointer text-xs text-slate-500">
                 {uploading ? 'Uploading...' : <><span className="text-indigo-400 underline">Upload images</span> or drag here</>}
@@ -242,7 +242,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
             <div className="grid grid-cols-4 gap-2 max-h-72 overflow-y-auto">
               {files.filter(f => isImage(f.mimeType)).map((f) => (
                 <button key={f.id} onClick={() => toggle(f.url)}
-                  className={`group rounded-lg overflow-hidden border transition-all ${value.includes(f.url) ? 'border-indigo-500 ring-2 ring-indigo-500/30' : 'border-[#1e1e2e] hover:border-indigo-500/50'}`}
+                  className={`group rounded-lg overflow-hidden border transition-all ${value.includes(f.url) ? 'border-indigo-500 ring-2 ring-indigo-500/30' : 'border-border hover:border-indigo-500/50'}`}
                 >
                   <div className="relative">
                     <img src={f.url} alt={f.originalName} className="w-full h-20 object-cover" />

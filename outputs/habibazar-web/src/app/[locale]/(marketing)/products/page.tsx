@@ -33,7 +33,7 @@ export default async function ProductsPage() {
   const rest = productList.filter(p => !p.featured)
 
   return (
-    <main className="min-h-screen bg-[#07070f] text-white">
+    <main className="min-h-screen bg-background text-white">
       <section className="pt-32 pb-16 px-6 text-center">
         <h1 className="text-5xl md:text-6xl font-black mb-4">Enterprise Platform</h1>
         <p className="text-xl text-slate-400 max-w-2xl mx-auto">Infrastructure, security, monitoring, and AI tools engineered for enterprise scale.</p>

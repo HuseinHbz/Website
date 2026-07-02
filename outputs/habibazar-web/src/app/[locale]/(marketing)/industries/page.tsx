@@ -26,7 +26,7 @@ export default async function IndustriesPage({ params }: Props) {
   const allIndustries = db.select().from(industries).where(eq(industries.active, true)).orderBy(industries.sortOrder).all()
 
   return (
-    <div className="min-h-screen bg-[#050510]" dir={fa ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-background" dir={fa ? 'rtl' : 'ltr'}>
       {/* Hero */}
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/15 via-transparent to-indigo-900/15" />

@@ -42,6 +42,8 @@ jobs:
           cache-dependency-path: outputs/habibazar-web/package-lock.json
       - run: npm ci
       - run: npx next lint
+      - name: Design token governance
+        run: npm run audit:tokens
 
   # ── Unit tests ─────────────────────────────────────────────────────────────
   test:

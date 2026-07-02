@@ -320,9 +320,9 @@ export function AiPlatform({ locale }: Props) {
   }, { today: [], week: [], older: [] })
 
   return (
-    <div className="flex flex-col h-screen bg-[#08080f]" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="flex flex-col h-screen bg-background" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ── Top Bar ─────────────────────────────────────────────────── */}
-      <header className="h-14 flex items-center gap-3 px-4 border-b border-[#1e1e2e] flex-shrink-0" style={{ background: 'rgba(8,8,15,0.95)', backdropFilter: 'blur(12px)' }}>
+      <header className="h-14 flex items-center gap-3 px-4 border-b border-border flex-shrink-0" style={{ background: 'rgba(8,8,15,0.95)', backdropFilter: 'blur(12px)' }}>
         <Link href={`/${locale}`} className="flex items-center gap-2 mr-2 rtl:mr-0 rtl:ml-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white text-[10px] font-black">HBZ</div>
           {!isRTL
@@ -330,7 +330,7 @@ export function AiPlatform({ locale }: Props) {
             : <span className="text-sm font-bold text-white hidden sm:block">پلتفرم هوش مصنوعی</span>
           }
         </Link>
-        <div className="h-4 w-px bg-[#2a2a3e] hidden sm:block" />
+        <div className="h-4 w-px bg-border-strong hidden sm:block" />
         {activeModule && (
           <div className="flex items-center gap-2">
             <span className="text-base">{activeModule.icon}</span>
@@ -368,7 +368,7 @@ export function AiPlatform({ locale }: Props) {
             <span className="text-base">◧</span>
           </button>
           <Link href={`/${locale}`}
-            className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white border border-[#2a2a3e] hover:border-indigo-500/40 transition-all hidden sm:flex items-center gap-1">
+            className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white border border-strong hover:border-indigo-500/40 transition-all hidden sm:flex items-center gap-1">
             <span>↗</span> {t('Back to site', 'بازگشت به سایت')}
           </Link>
         </div>
@@ -379,7 +379,7 @@ export function AiPlatform({ locale }: Props) {
 
         {/* ── Left Sidebar ─────────────────────────────────────────── */}
         {sidebarOpen && (
-          <aside className="w-64 flex-shrink-0 flex flex-col border-r border-[#1e1e2e] overflow-hidden" style={{ background: 'rgba(10,10,20,0.8)' }}>
+          <aside className="w-64 flex-shrink-0 flex flex-col border-r border-border overflow-hidden" style={{ background: 'rgba(10,10,20,0.8)' }}>
             {/* Modules */}
             <div className="flex-shrink-0 px-3 pt-3 pb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 px-1 mb-2">{t('AI Advisors', 'مشاوران هوش مصنوعی')}</p>
@@ -405,7 +405,7 @@ export function AiPlatform({ locale }: Props) {
             </div>
 
             {/* Divider */}
-            <div className="border-t border-[#1e1e2e] mx-3 my-1" />
+            <div className="border-t border-border mx-3 my-1" />
 
             {/* History */}
             <div className="flex-1 overflow-y-auto px-3 pb-3">
@@ -436,7 +436,7 @@ export function AiPlatform({ locale }: Props) {
             </div>
 
             {/* Bottom: new chat */}
-            <div className="p-3 border-t border-[#1e1e2e]">
+            <div className="p-3 border-t border-border">
               <button onClick={clearChat}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium text-indigo-400 hover:text-white hover:bg-indigo-500/10 transition-all border border-indigo-500/20 hover:border-indigo-500/40">
                 ✦ {t('New Conversation', 'گفتگوی جدید')}
@@ -449,7 +449,7 @@ export function AiPlatform({ locale }: Props) {
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Module header */}
           {activeModule && (
-            <div className="flex-shrink-0 px-6 py-3 border-b border-[#1e1e2e] flex items-center gap-3"
+            <div className="flex-shrink-0 px-6 py-3 border-b border-border flex items-center gap-3"
               style={{ background: 'rgba(10,10,20,0.6)' }}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
                 style={{ background: getColor(activeModule.color).bg, border: `1px solid ${getColor(activeModule.color).border}` }}>
@@ -553,7 +553,7 @@ export function AiPlatform({ locale }: Props) {
           </div>
 
           {/* Input area */}
-          <div className="flex-shrink-0 px-4 md:px-8 py-4 border-t border-[#1e1e2e]" style={{ background: 'rgba(10,10,20,0.8)' }}>
+          <div className="flex-shrink-0 px-4 md:px-8 py-4 border-t border-border" style={{ background: 'rgba(10,10,20,0.8)' }}>
             <div className="max-w-4xl mx-auto">
               <div className="relative rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <textarea
@@ -585,7 +585,7 @@ export function AiPlatform({ locale }: Props) {
 
         {/* ── Right: Context Panel ──────────────────────────────────── */}
         {contextOpen && (
-          <aside className="w-72 flex-shrink-0 hidden xl:flex flex-col border-l border-[#1e1e2e] overflow-hidden" style={{ background: 'rgba(10,10,20,0.8)' }}>
+          <aside className="w-72 flex-shrink-0 hidden xl:flex flex-col border-l border-border overflow-hidden" style={{ background: 'rgba(10,10,20,0.8)' }}>
             <div className="flex-1 overflow-y-auto p-4 space-y-5">
               {/* Knowledge Sources */}
               <div>

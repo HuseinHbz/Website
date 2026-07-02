@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
+import { CHART_PALETTE } from '@/lib/design/tokens'
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface DbHero {
@@ -52,10 +53,10 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
     ctaSecondary: 'رزرو مشاوره', ctaSecondaryHref: `/${locale}/consultation`,
     ctaTertiary: 'دانلود رزومه', ctaTertiaryHref: '/resume.pdf',
     stats: [
-      { value: '+۱۰', label: 'سال تجربه', color: '#6366f1' },
-      { value: '+۵۰', label: 'پروژه زیرساختی', color: '#06b6d4' },
-      { value: '+۱۰۰۰', label: 'تجهیزات مدیریتی', color: '#10b981' },
-      { value: '+۲۰', label: 'استقرار سازمانی', color: '#f59e0b' },
+      { value: '+۱۰', label: 'سال تجربه', color: CHART_PALETTE[0] },
+      { value: '+۵۰', label: 'پروژه زیرساختی', color: CHART_PALETTE[1] },
+      { value: '+۱۰۰۰', label: 'تجهیزات مدیریتی', color: CHART_PALETTE[2] },
+      { value: '+۲۰', label: 'استقرار سازمانی', color: CHART_PALETTE[3] },
     ],
   } : {
     badge: 'Available for enterprise projects',
@@ -66,10 +67,10 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
     ctaSecondary: 'Book Consultation', ctaSecondaryHref: `/${locale}/consultation`,
     ctaTertiary: 'Download Resume', ctaTertiaryHref: '/resume.pdf',
     stats: [
-      { value: '10+', label: 'Years Experience', color: '#6366f1' },
-      { value: '50+', label: 'Infrastructure Projects', color: '#06b6d4' },
-      { value: '1000+', label: 'Managed Endpoints', color: '#10b981' },
-      { value: '20+', label: 'Enterprise Deployments', color: '#f59e0b' },
+      { value: '10+', label: 'Years Experience', color: CHART_PALETTE[0] },
+      { value: '50+', label: 'Infrastructure Projects', color: CHART_PALETTE[1] },
+      { value: '1000+', label: 'Managed Endpoints', color: CHART_PALETTE[2] },
+      { value: '20+', label: 'Enterprise Deployments', color: CHART_PALETTE[3] },
     ],
   }
   const h = dbHero
@@ -86,10 +87,10 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
     ctaTertiary:      h?.ctaTertiary      || D.ctaTertiary,
     ctaTertiaryHref:  resolveHref(locale, h?.ctaTertiaryHref,  D.ctaTertiaryHref),
     stats: h?.stat1Value ? [
-      { value: h.stat1Value, label: h.stat1Label || '', color: '#6366f1' },
-      { value: h.stat2Value || '', label: h.stat2Label || '', color: '#06b6d4' },
-      { value: h.stat3Value || '', label: h.stat3Label || '', color: '#10b981' },
-      { value: h.stat4Value || '', label: h.stat4Label || '', color: '#f59e0b' },
+      { value: h.stat1Value, label: h.stat1Label || '', color: CHART_PALETTE[0] },
+      { value: h.stat2Value || '', label: h.stat2Label || '', color: CHART_PALETTE[1] },
+      { value: h.stat3Value || '', label: h.stat3Label || '', color: CHART_PALETTE[2] },
+      { value: h.stat4Value || '', label: h.stat4Label || '', color: CHART_PALETTE[3] },
     ] : D.stats,
   }
 }
@@ -98,7 +99,7 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
 function Badge({ label }: { label: string }) {
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border w-fit"
-      style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.3)', color: '#10b981' }}>
+      style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.3)', color: CHART_PALETTE[2] }}>
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
       {label}
     </div>
@@ -833,8 +834,8 @@ function VariantCode({ c }: { c: HeroContent }) {
     <div className="container-site py-20 max-w-5xl mx-auto">
       <div className={`flex flex-col lg:flex-row items-start gap-12 ${c.isRTL?'lg:flex-row-reverse':''}`}>
         <motion.div initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }} className="flex-1">
-          <div className="rounded-xl overflow-hidden border border-[#2a2a3e]" style={{ background:'#0a0a12' }}>
-            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#1e1e2e]">
+          <div className="rounded-xl overflow-hidden border border-strong" style={{ background:'#0a0a12' }}>
+            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border">
               <div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
               <span className="text-[10px] text-slate-500 ml-2 font-mono">profile.ts</span>
             </div>
@@ -842,7 +843,7 @@ function VariantCode({ c }: { c: HeroContent }) {
               {lines.map((line,i) => (
                 <motion.div key={i} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3+i*0.1 }}
                   className="flex gap-3 leading-relaxed">
-                  <span className="text-[#3a3a5e] select-none w-4 shrink-0 text-right">{i+1}</span>
+                  <span className="text-text-tertiary select-none w-4 shrink-0 text-right">{i+1}</span>
                   <span style={{ color:colors[i] }}>{line}</span>
                 </motion.div>
               ))}
@@ -985,7 +986,7 @@ function VariantSidebar({ c }: { c: HeroContent }) {
   return (
     <div className="min-h-screen flex" dir={c.isRTL?'rtl':'ltr'}>
       {/* Sidebar accent */}
-      <div className="hidden lg:flex w-14 flex-col items-center py-24 gap-6 shrink-0 border-r border-[#1e1e2e]">
+      <div className="hidden lg:flex w-14 flex-col items-center py-24 gap-6 shrink-0 border-r border-border">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black" style={{ background:'linear-gradient(135deg,#6366f1,#818cf8)', color:'white' }}>HBZ</div>
         <div className="flex-1 w-px" style={{ background:'linear-gradient(to bottom,#6366f1,#06b6d4,transparent)' }}/>
         {['⬡','⬢','◈','◉'].map((icon,i) => <span key={i} className="text-text-muted text-sm">{icon}</span>)}
