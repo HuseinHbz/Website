@@ -116,8 +116,10 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   level/source/service/date, search, pause/resume, error grouping,
   JSON/CSV export (`/api/admin/logs/export`), history query
   (`/api/admin/logs/query`), backup-engine status strip + alert badge.
-- Admin **System Logs** (`/admin/logs`) still reads raw PM2 stdout/stderr files
-  via `GET /api/admin/logs` from `PM2_LOG_DIR` (default `/home/hbz/logs`).
+- Admin **Database Center** (`/admin/database`, `DatabaseHealth`) — read-only
+  diagnostics via `GET /api/admin/database/health`: integrity_check + quick_check,
+  foreign_key_check, WAL/journal + page/free stats, table+index census, per-table
+  row counts, critical-schema validation, and a 0–100 health score. Never mutates.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
