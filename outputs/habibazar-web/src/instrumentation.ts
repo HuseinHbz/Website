@@ -22,6 +22,21 @@ export async function register() {
       logger.error('Database initialization failed', { error: String(err) })
     }
 
+    // Start the internal (cron-free) backup scheduler now the DB is ready.
+    try {
+      const { scheduler } = await import('@/lib/backup/scheduler')
+      scheduler.start()
+    } catch (err) {
+      logger.error('Backup scheduler failed to start', { error: String(err) })
+    }
+
+    // Capture uncaught runtime failures into the real-time log stream.
+    try {
+      const { logBus } = await import('@/lib/logs/bus')
+      process.on('uncaughtException', (e) => logBus.publish({ level: 'error', source: 'system', service: 'runtime', message: `uncaughtException: ${e.message}`, stacktrace: e.stack }))
+      process.on('unhandledRejection', (r) => logBus.publish({ level: 'error', source: 'system', service: 'runtime', message: `unhandledRejection: ${String(r)}` }))
+    } catch { /* non-fatal */ }
+
     logger.info('HBZ Platform starting', {
       version: process.env.APP_VERSION ?? '2.0.0',
       env: process.env.NODE_ENV,

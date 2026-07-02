@@ -1,7 +1,9 @@
 /**
  * Structured logger — outputs JSON in production, pretty-prints in development.
  * Every log entry carries a correlation ID, timestamp, level, and context.
+ * Also fans out into the real-time log bus (Logs & Monitoring module).
  */
+import { logBus } from '@/lib/logs/bus'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -51,6 +53,28 @@ function write(level: LogLevel, msg: string, ctx: Record<string, unknown> = {}) 
   } else {
     process.stdout.write(JSON.stringify(entry) + '\n')
   }
+
+  // Fan out to the real-time log bus (Logs & Monitoring). Never let this throw.
+  try {
+    logBus.publish({
+      ts: entry.ts,
+      level,
+      source: typeof ctx.source === 'string' ? ctx.source : deriveSource(msg),
+      service: typeof ctx.service === 'string' ? ctx.service : 'app',
+      message: msg,
+      stacktrace: typeof entry.stack === 'string' ? entry.stack : null,
+      requestId: typeof ctx.correlationId === 'string' ? ctx.correlationId : null,
+      userId: typeof ctx.userId === 'string' ? ctx.userId : null,
+      meta: ctx,
+    })
+  } catch { /* logging must never break the request */ }
+}
+
+function deriveSource(msg: string): string {
+  if (msg.startsWith('[SECURITY]')) return 'security'
+  if (msg.startsWith('[AUDIT]')) return 'audit'
+  if (/^[A-Z]+ \/\S/.test(msg)) return 'http'
+  return 'app'
 }
 
 export const logger = {

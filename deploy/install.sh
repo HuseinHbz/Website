@@ -109,9 +109,17 @@ mkdir -p "/var/backups/habibazar"
 chown -R "$APP_USER":"$APP_USER" "$WEB_DIR/data"
 chown -R "$APP_USER":"$APP_USER" "/var/backups/habibazar"
 
-# ─── ۸.۵ بکاپ خودکار (کلید رمزنگاری + زمان‌بندی cron) ─────────────────────────
-step "راه‌اندازی بکاپ خودکار سازمانی..."
-bash "$APP_DIR/deploy/backup-cron.sh" || warn "نصب بکاپ خودکار ناموفق بود — بعداً: sudo bash deploy/backup-cron.sh"
+# ─── ۸.۵ بکاپ خودکار (بدون cron — موتور داخلی برنامه) ────────────────────────
+# Backups are now driven by the in-app, event-driven BackupEngine (starts with
+# the Node process via instrumentation.ts) — NO OS cron. Here we only (a) drop
+# any legacy cron job from a previous install and (b) ensure an encryption key
+# exists in .env.local for the engine.
+step "پیکربندی بکاپ داخلی (بدون cron)..."
+rm -f /etc/cron.d/habibazar-backup 2>/dev/null || true
+if ! grep -q '^BACKUP_ENCRYPTION_KEY=' "$ENV_FILE" 2>/dev/null; then
+  echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$ENV_FILE"
+  chown "$APP_USER":"$APP_USER" "$ENV_FILE" 2>/dev/null || true
+fi
 
 # ─── ۹. PM2 راه‌اندازی ───────────────────────────────────────────────────────
 step "راه‌اندازی PM2..."

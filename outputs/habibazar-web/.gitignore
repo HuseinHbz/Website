@@ -36,3 +36,4 @@ public/uploads/
 test-results/
 playwright-report/
 .lighthouseci/
+data/backups-engine/

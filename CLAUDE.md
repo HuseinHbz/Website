@@ -92,11 +92,32 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
 - Uploads are saved under `public/uploads/` (via `POST /api/admin/media`) and
   served at `/uploads/` by `src/app/uploads/[...path]/route.ts` — a Next route,
   **not** an nginx alias, so freshly uploaded files always work under `next start`.
-- Admin **Backup** (`/admin/backup`) is a real feature: `POST /api/admin/backup`
-  makes a WAL-safe SQLite `.backup()` into `data/backups/`; GET lists / downloads.
-- Admin **System Logs** (`/admin/logs`) reads the app's PM2 stdout/stderr logs
-  via `GET /api/admin/logs` from `PM2_LOG_DIR` (default `/home/hbz/logs`) —
-  parses the logger's JSON lines and plain lines, filter by level / search.
+- **Internal BackupEngine** (`src/lib/backup/`, cron-free) — the primary backup
+  system. Runs in-process; started by `instrumentation.ts` via
+  `scheduler.start()`. Triggers: app-level scheduler (`scheduler.ts`,
+  hourly→yearly by cadence, no OS cron), event-driven data-change (debounced from
+  `logAction`), uploads `fs.watch`, and manual (`POST /api/admin/backup/run`).
+  Each backup = WAL-safe SQLite `.backup()` + config + media + manifest.json →
+  tar.gz → AES-256 (`crypto.ts`) → SHA-256 → distributed to 3-2-1 storage
+  adapters (`storage.ts`: local + `BACKUP_MIRROR_DIR` + `BACKUP_REMOTE`
+  rclone/rsync) → **verified by an isolated dry restore** (decrypt + untar +
+  integrity_check + schema compare) before status=success; retries ≤3. Catalog in
+  the `backups` table; status/alerts/3-2-1 via `GET /api/admin/backup/engine`.
+  Env: `BACKUP_ENCRYPTION_KEY` (else falls back to `ADMIN_JWT_SECRET`),
+  `BACKUP_ROOT`, `BACKUP_MIRROR_DIR`, `BACKUP_REMOTE`, `BACKUP_KEEP`,
+  `BACKUP_SCHEDULER_DISABLED=1`.
+- Legacy `POST /api/admin/backup` (manual WAL-safe `.backup()` into
+  `data/backups/`) + `/admin/backup` UI remain for on-demand DB snapshots.
+- **Log bus** (`src/lib/logs/bus.ts`) — every `logger.*` call, audit event and
+  backup event fans out to (1) live SSE subscribers, (2) a ring buffer, (3) the
+  `system_logs` table (deferred, non-blocking). `fingerprint` groups duplicates.
+- Admin **Logs & Monitoring** (`/admin/logs-monitoring`, `LogsMonitoring`) — the
+  real-time module: SSE live console (`GET /api/admin/logs/stream`), filter by
+  level/source/service/date, search, pause/resume, error grouping,
+  JSON/CSV export (`/api/admin/logs/export`), history query
+  (`/api/admin/logs/query`), backup-engine status strip + alert badge.
+- Admin **System Logs** (`/admin/logs`) still reads raw PM2 stdout/stderr files
+  via `GET /api/admin/logs` from `PM2_LOG_DIR` (default `/home/hbz/logs`).
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
@@ -153,9 +174,12 @@ start the app, `wait-on /api/health`, then run.
   - `restore.sh <file.enc> [--test|--db-only|--with-config|--yes]` — verify sha256
     → decrypt → `integrity_check` → restore (snapshots current DB first). `--test`
     is an isolated recovery test that never touches the live system.
-  - `backup-cron.sh` — generates the encryption key + installs `/etc/cron.d/
-    habibazar-backup` (the schedule above + a weekly auto recovery-test). Run by
-    `install.sh`. Admin monitors it at `/admin/backup` via `/api/admin/backup/system`.
+  - **No cron.** Automated backups are now driven by the in-app, event-driven
+    `BackupEngine` (see above), started with the Node process — there is no
+    `backup-cron.sh` and no `/etc/cron.d/habibazar-backup`. `install.sh`/`update.sh`
+    remove any legacy cron file and ensure `BACKUP_ENCRYPTION_KEY` in `.env.local`.
+    The `backup.sh`/`restore.sh` shell scripts remain as optional manual CLI DR
+    tools; monitor the engine at `/admin/logs-monitoring` + `/api/admin/backup/engine`.
 - First-time/after-config-change: `git pull && sudo bash deploy/update.sh &&
   sudo bash deploy/fix-pm2.sh`. Routine updates: `git pull && sudo bash deploy/update.sh`.
 

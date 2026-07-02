@@ -102,9 +102,13 @@ fi
 mkdir -p "/home/$APP_USER/logs"
 chown -R "$APP_USER":"$APP_USER" "/home/$APP_USER/logs" 2>/dev/null || true
 
+# ─── حذف cron قدیمی بکاپ (اکنون موتور داخلی برنامه است) ──────────────────────
+# Backups are now handled by the in-app BackupEngine — remove any legacy OS cron.
+rm -f /etc/cron.d/habibazar-backup 2>/dev/null || true
+
 # ─── reload zero-downtime ────────────────────────────────────────────────────
 # reload پروسه را restart می‌کند → instrumentation.register() اجرا و DB
-# به‌صورت خودکار مقداردهی می‌شود.
+# به‌صورت خودکار مقداردهی می‌شود. موتور بکاپ داخلی هم با همین پروسه استارت می‌خورد.
 step "reload سرویس (zero-downtime)..."
 sudo -u "$APP_USER" pm2 reload habibazar
 info "سرویس reload شد"

@@ -1,5 +1,7 @@
 import { getDb } from '@/lib/db'
 import { auditLogs } from '@/lib/db/schema'
+import { logBus } from '@/lib/logs/bus'
+import { scheduler } from '@/lib/backup/scheduler'
 import type { AdminUser } from './auth'
 
 export async function logAction(
@@ -23,6 +25,14 @@ export async function logAction(
       newValue: newValue ? JSON.stringify(newValue) : null,
       ipAddress,
     })
+    // Surface the audit event on the real-time log stream.
+    logBus.publish({
+      level: 'info', source: 'audit', service: 'admin',
+      message: `[AUDIT] ${action} ${resource}${resourceId != null ? `:${resourceId}` : ''}`,
+      userId: user?.id ?? null, meta: { action, resource, resourceId, ip: ipAddress },
+    })
+    // Event-driven backup: any admin data mutation debounces a backup.
+    if (action !== 'LOGIN' && action !== 'LOGOUT') scheduler.notifyDataChange('data-change')
   } catch {
     // Non-fatal
   }

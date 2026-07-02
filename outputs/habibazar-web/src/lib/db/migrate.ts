@@ -356,6 +356,41 @@ export function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Real-time system log stream (application/API/db/backup/security events).
+    CREATE TABLE IF NOT EXISTS system_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL,
+      level TEXT NOT NULL DEFAULT 'info',
+      source TEXT,
+      service TEXT,
+      message TEXT NOT NULL,
+      stacktrace TEXT,
+      request_id TEXT,
+      user_id TEXT,
+      fingerprint TEXT,
+      meta TEXT
+    );
+
+    -- Backup catalog written by the internal (cron-free) BackupEngine.
+    CREATE TABLE IF NOT EXISTS backups (
+      id TEXT PRIMARY KEY,
+      version TEXT NOT NULL,
+      env TEXT NOT NULL DEFAULT 'production',
+      trigger TEXT NOT NULL,
+      bucket TEXT,
+      status TEXT NOT NULL DEFAULT 'started',
+      size INTEGER NOT NULL DEFAULT 0,
+      checksum TEXT,
+      manifest TEXT,
+      copies TEXT,
+      verified INTEGER NOT NULL DEFAULT 0,
+      verify_detail TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      error TEXT,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS sections (
       id TEXT PRIMARY KEY,
       section_type TEXT NOT NULL,
@@ -1377,6 +1412,12 @@ export function runMigrations() {
     `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_logs(resource)`,
     `CREATE INDEX IF NOT EXISTS idx_analytics_type_created ON analytics_events(type, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_syslogs_ts ON system_logs(ts)`,
+    `CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts)`,
+    `CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source)`,
+    `CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint)`,
+    `CREATE INDEX IF NOT EXISTS idx_backups_started ON backups(started_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_backups_status ON backups(status)`,
     `CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_requests(status)`,
     `CREATE INDEX IF NOT EXISTS idx_consultation_status ON consultation_requests(status)`,
     `CREATE INDEX IF NOT EXISTS idx_media_folder ON media_files(folder)`,
