@@ -13,6 +13,10 @@
 2. **Read before you act.** Always read the relevant files and current state
    before editing or running a build/deploy flow — never act on assumptions.
    (همیشه قبل از هر flow، اول فایل‌ها/وضعیت فعلی رو بخون.)
+3. **Never stop mid-task on a limit.** If a context/usage limit is hit, resume
+   automatically after it resets and keep going until the requested work is
+   fully finished and pushed — don't leave the project half-done.
+   (هر وقت به لیمیت خوردی، بعد از اتمامش پروژه رو ادامه بده و تمومش کن.)
 
 ---
 

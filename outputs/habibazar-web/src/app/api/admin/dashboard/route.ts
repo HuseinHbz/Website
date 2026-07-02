@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { analyticsEvents, contactRequests, consultationRequests, blogPosts, projects, services, auditLogs } from '@/lib/db/schema'
 import { sql, eq, gte, desc } from 'drizzle-orm'
@@ -64,6 +65,6 @@ export async function GET() {
     recentActivity: recentLogs,
   })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

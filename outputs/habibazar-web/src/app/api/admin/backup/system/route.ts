@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { readdir, stat, readFile } from 'fs/promises'
 import path from 'path'
 
@@ -42,6 +43,6 @@ export async function GET() {
     const latest = all.sort((a, c) => c.createdAt.localeCompare(a.createdAt))[0] ?? null
     return NextResponse.json({ root: ROOT, status, buckets, count: all.length, totalSize, latest })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

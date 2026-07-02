@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { blogPosts, blogCategories } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -35,8 +36,7 @@ export async function POST(req: NextRequest) {
     await logAction(user, 'CREATE', 'blog_posts', result[0]?.id, null, data)
     return NextResponse.json(result[0])
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return apiError(e)
   }
 }
 

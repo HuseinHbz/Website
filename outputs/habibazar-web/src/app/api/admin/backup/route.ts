@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { readdir, stat, mkdir, unlink, readFile } from 'fs/promises'
 import path from 'path'
 import type Database from 'better-sqlite3'
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(await listBackups())
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -66,7 +67,7 @@ export async function POST() {
     await logAction(user, 'BACKUP', 'database', name, null, { size: s.size })
     return NextResponse.json({ name, size: s.size, createdAt: s.mtime.toISOString() })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -82,6 +83,6 @@ export async function DELETE(req: NextRequest) {
     await logAction(user, 'DELETE', 'backup', name)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

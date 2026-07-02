@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { contactRequests } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -9,7 +10,7 @@ export async function GET() {
   try {      const db = getDb()
       return NextResponse.json(await db.select().from(contactRequests).orderBy(desc(contactRequests.createdAt)).all())
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -22,7 +23,7 @@ export async function PUT(req: NextRequest) {
       await logAction(user, 'UPDATE', 'contact_requests', id, null, { status, notes })
       return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -34,6 +35,6 @@ export async function DELETE(req: NextRequest) {
       await logAction(user, 'DELETE', 'contact_requests', id)
       return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

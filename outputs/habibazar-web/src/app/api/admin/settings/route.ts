@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { siteSettings } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getAdminUser } from '@/lib/admin/auth'
+import { requireAdmin } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
@@ -12,12 +13,14 @@ export async function GET() {
       for (const r of rows) obj[r.key] = r.value ?? ''
       return NextResponse.json(obj)
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
 export async function PUT(req: NextRequest) {
-  try {      const user = await getAdminUser()
+  try {      const auth = await requireAdmin('manage_settings')
+      if ('error' in auth) return auth.error
+      const user = auth.user
       const body = await req.json() as Record<string, string>
       const db = getDb()
       for (const [key, value] of Object.entries(body)) {
@@ -31,6 +34,6 @@ export async function PUT(req: NextRequest) {
       await logAction(user, 'UPDATE', 'site_settings', undefined, undefined, body)
       return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

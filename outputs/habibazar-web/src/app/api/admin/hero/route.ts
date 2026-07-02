@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { heroContent } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -10,7 +11,7 @@ export async function GET() {
     const db = getDb()
     return NextResponse.json(await db.select().from(heroContent).all())
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -30,6 +31,6 @@ export async function PUT(req: NextRequest) {
     await logAction(user, 'UPDATE', 'hero_content', locale, existing, data)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { navigationItems } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
@@ -9,7 +10,7 @@ export async function GET() {
   try {      const db = getDb()
       return NextResponse.json(await db.select().from(navigationItems).orderBy(asc(navigationItems.sortOrder)).all())
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       await logAction(user, 'CREATE', 'navigation_items', result[0]?.id, null, body)
       return NextResponse.json(result[0])
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -34,7 +35,7 @@ export async function PUT(req: NextRequest) {
       await logAction(user, 'UPDATE', 'navigation_items', id, null, data)
       return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -46,6 +47,6 @@ export async function DELETE(req: NextRequest) {
       await logAction(user, 'DELETE', 'navigation_items', id)
       return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { getAdminUser } from '@/lib/admin/auth'
 import { resyncPublicContent } from '@/lib/db/resync'
 
@@ -11,6 +12,6 @@ export async function POST() {
     const result = resyncPublicContent()
     return NextResponse.json(result)
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

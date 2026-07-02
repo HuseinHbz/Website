@@ -1,44 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { getDb } from '@/lib/db'
 import { consultationRequests } from '@/lib/db/schema'
 import { notify } from '@/lib/notifications'
+import { logger } from '@/lib/logger'
+import { apiError, readJson } from '@/lib/api/respond'
 
-export async function POST(req: NextRequest) {
+const schema = z.object({
+  name: z.string().trim().min(1, 'required').max(200),
+  email: z.string().trim().email('invalid email').max(200),
+  phone: z.string().trim().max(50).optional().nullable(),
+  company: z.string().trim().max(200).optional().nullable(),
+  message: z.string().trim().min(1, 'required').max(5000),
+  preferredDate: z.string().trim().max(100).optional().nullable(),
+  marketingConsent: z.boolean().optional(),
+  locale: z.enum(['en', 'fa']).optional(),
+  kind: z.string().trim().max(50).optional(),
+})
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { name, email, phone, company, message, preferredDate, marketingConsent, locale, kind } = body
-
-    if (!name || !email || !message) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(String(email))) {
-      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
-    }
+    const parsed = await readJson(req, schema)
+    if ('error' in parsed) return parsed.error
+    const { name, email, phone, company, message, preferredDate, locale, kind } = parsed.data
 
     const db = getDb()
     await db.insert(consultationRequests).values({
-      name: String(name).trim(),
-      email: String(email).trim(),
-      phone: phone ? String(phone).trim() : null,
-      company: company ? String(company).trim() : null,
-      projectDescription: message ? String(message).trim() : null,
-      preferredDate: preferredDate ? String(preferredDate).trim() : null,
+      name,
+      email,
+      phone: phone || null,
+      company: company || null,
+      projectDescription: message,
+      preferredDate: preferredDate || null,
       type: kind === 'INTRO_CALL' ? 'intro' : 'full',
       locale: locale || 'en',
       status: 'new',
     })
 
-    // Send notifications asynchronously (don't block response)
+    // Fire-and-forget notification — never block or fail the request on it.
     notify({
       type: 'consultation',
       subject: `New consultation request from ${name}`,
       body: `Name: ${name}\nEmail: ${email}\nPhone: ${phone || '-'}\nCompany: ${company || '-'}\nMessage: ${message}${preferredDate ? `\nPreferred Date: ${preferredDate}` : ''}`,
-    }).catch(console.error)
+    }).catch((err) => logger.error('consultation notify failed', { error: String(err) }))
 
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }

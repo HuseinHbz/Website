@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/respond'
 import { readFile } from 'fs/promises'
 import path from 'path'
 
@@ -67,6 +68,6 @@ export async function GET(req: NextRequest) {
     const available = out.length > 0 || err.length > 0
     return NextResponse.json({ dir: LOG_DIR, available, entries: entries.slice(-lines) })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
+    return apiError(e)
   }
 }
