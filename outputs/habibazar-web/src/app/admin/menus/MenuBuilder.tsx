@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 interface MenuItem {
   id: number
@@ -26,6 +27,7 @@ const COMMON_LINKS = [
 ]
 
 export function MenuBuilder() {
+  const t = useT()
   const [items, setItems] = useState<MenuItem[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Omit<MenuItem, 'id'> & { id?: number }>(EMPTY)
@@ -48,18 +50,18 @@ export function MenuBuilder() {
       body: JSON.stringify(editing),
     })
     setSaving(false)
-    if (res.ok) { toast('Saved'); setModal(false); load() } else toast('Failed', 'error')
+    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(t('failed'), 'error')
   }
 
   async function del(id: number) {
-    if (!confirm('Delete this menu item?')) return
+    if (!confirm(t('confirmDel'))) return
     await fetch('/api/admin/navigation', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    toast('Deleted'); load()
+    toast(t('deleted')); load()
   }
 
   async function toggle(item: MenuItem) {
     await fetch('/api/admin/navigation', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, active: !item.active }) })
-    toast('Updated'); load()
+    toast(t('updated')); load()
   }
 
   async function reorder(id: number, dir: -1 | 1) {
@@ -89,14 +91,14 @@ export function MenuBuilder() {
   return (
     <>
       <ToastContainer />
-      <PageHeader title="Menu Builder" action={<Btn onClick={() => openNew()}>+ Add Menu Item</Btn>} />
+      <PageHeader title={t('menuTitle')} action={<Btn onClick={() => openNew()}>{t('addMenuItem')}</Btn>} />
 
       {/* Location tabs */}
       <div className="flex gap-2 mb-6">
         {(['header', 'footer'] as const).map(loc => (
           <button key={loc} onClick={() => setLocation(loc)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${location === loc ? 'bg-indigo-600 text-white' : 'bg-[#111122] text-slate-400 border border-[#2a2a3e] hover:text-white'}`}>
-            {loc === 'header' ? '☰ Header Navigation' : '— Footer Navigation'}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${location === loc ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-white'}`}>
+            {loc === 'header' ? `☰ ${t('headerNav')}` : `— ${t('footerNav')}`}
           </button>
         ))}
       </div>
@@ -110,7 +112,7 @@ export function MenuBuilder() {
             <Btn size="sm" onClick={() => openNew(location)}>+ Add Item</Btn>
           </div>
           {filteredItems.length === 0 && (
-            <div className="text-center py-8 text-slate-600 text-sm">No items in {location} menu yet</div>
+            <div className="text-center py-8 text-text-disabled text-sm">No items in {location} menu yet</div>
           )}
           <div className="space-y-1">
             {topLevel.map((item, idx) => (
@@ -118,13 +120,13 @@ export function MenuBuilder() {
                 <div className={`flex items-center gap-3 p-2.5 rounded-lg ${item.active ? '' : 'opacity-50'}`}
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <div className="flex flex-col gap-0.5">
-                    <button onClick={() => reorder(item.id, -1)} className="text-slate-600 hover:text-white text-[10px]">▲</button>
-                    <button onClick={() => reorder(item.id, 1)} className="text-slate-600 hover:text-white text-[10px]">▼</button>
+                    <button onClick={() => reorder(item.id, -1)} className="text-text-disabled hover:text-white text-[10px]">▲</button>
+                    <button onClick={() => reorder(item.id, 1)} className="text-text-disabled hover:text-white text-[10px]">▼</button>
                   </div>
                   <span className="text-base">{item.icon || '◦'}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white font-medium">{item.labelEn}</p>
-                    <p className="text-xs text-slate-500">{item.labelFa} · <span className="font-mono">{item.href}</span></p>
+                    <p className="text-xs text-text-tertiary">{item.labelFa} · <span className="font-mono">{item.href}</span></p>
                   </div>
                   <Badge color={item.active ? 'green' : 'slate'}>{item.active ? 'On' : 'Off'}</Badge>
                   <div className="flex gap-1">
@@ -138,10 +140,10 @@ export function MenuBuilder() {
                 {childOf(item.id).map(child => (
                   <div key={child.id} className="flex items-center gap-3 p-2 rounded-lg ml-6 mt-1"
                     style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.1)' }}>
-                    <span className="text-slate-600 text-xs">↳</span>
+                    <span className="text-text-disabled text-xs">↳</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-white">{child.labelEn}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">{child.href}</p>
+                      <p className="text-[10px] text-text-tertiary font-mono">{child.href}</p>
                     </div>
                     <div className="flex gap-1">
                       <Btn size="sm" variant="ghost" onClick={() => { setEditing({ ...child }); setModal(true) }}>✏</Btn>
@@ -157,7 +159,7 @@ export function MenuBuilder() {
         {/* Preview */}
         <Card className="p-4">
           <h3 className="text-sm font-semibold text-white mb-4">
-            {location === 'header' ? '☰ Header Preview' : '— Footer Preview'}
+            {location === 'header' ? `☰ ${t('headerPreview')}` : `— ${t('footerPreview')}`}
           </h3>
           {location === 'header' ? (
             <div className="rounded-xl overflow-hidden" style={{ background: '#0c0c14', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -165,7 +167,7 @@ export function MenuBuilder() {
                 <span className="text-white font-bold text-sm">HBZ</span>
                 <div className="flex gap-4 ml-auto">
                   {topLevel.filter(i => i.active).map(i => (
-                    <span key={i.id} className="text-xs text-slate-400 hover:text-white cursor-pointer">{i.labelEn}</span>
+                    <span key={i.id} className="text-xs text-text-secondary hover:text-white cursor-pointer">{i.labelEn}</span>
                   ))}
                 </div>
               </div>
@@ -176,7 +178,7 @@ export function MenuBuilder() {
                 <div>
                   <p className="text-xs font-bold text-white mb-2">Navigation</p>
                   {filteredItems.filter(i => i.active && !i.parentId).map(i => (
-                    <p key={i.id} className="text-xs text-slate-500 mb-1 hover:text-white cursor-pointer">{i.labelEn}</p>
+                    <p key={i.id} className="text-xs text-text-tertiary mb-1 hover:text-white cursor-pointer">{i.labelEn}</p>
                   ))}
                 </div>
               </div>
@@ -185,14 +187,14 @@ export function MenuBuilder() {
 
           {/* Quick add common links */}
           <div className="mt-4">
-            <p className="text-xs text-slate-500 font-medium mb-2">Quick add common links</p>
+            <p className="text-xs text-text-tertiary font-medium mb-2">Quick add common links</p>
             <div className="flex flex-wrap gap-2">
               {COMMON_LINKS.map(link => (
                 <button key={link.href} onClick={() => {
                   setEditing({ ...EMPTY, labelEn: link.label, labelFa: link.label, href: link.href, location, sortOrder: filteredItems.length })
                   setModal(true)
                 }}
-                  className="text-xs px-2 py-1 rounded text-slate-400 hover:text-white transition-colors"
+                  className="text-xs px-2 py-1 rounded text-text-secondary hover:text-white transition-colors"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   + {link.label}
                 </button>
@@ -202,32 +204,32 @@ export function MenuBuilder() {
         </Card>
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Menu Item' : 'Add Menu Item'} size="md">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('editMenuItem') : t('addMenuItem')} size="md">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Label (EN) *" value={editing.labelEn} onChange={v => set('labelEn', v)} placeholder="Case Studies" />
-            <Input label="Label (FA)" value={editing.labelFa} onChange={v => set('labelFa', v)} placeholder="مطالعات موردی" />
+            <Input label={t('labelEnStar')} value={editing.labelEn} onChange={v => set('labelEn', v)} placeholder="Case Studies" />
+            <Input label={t('labelFaLabel')} value={editing.labelFa} onChange={v => set('labelFa', v)} placeholder="مطالعات موردی" />
           </div>
-          <Input label="URL / Path *" value={editing.href} onChange={v => set('href', v)} placeholder="/case-studies" />
+          <Input label={t('urlPath')} value={editing.href} onChange={v => set('href', v)} placeholder="/case-studies" />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Icon (emoji)" value={editing.icon} onChange={v => set('icon', v)} placeholder="◆" />
-            <Select label="Location" value={editing.location} onChange={v => set('location', v as 'header' | 'footer')} options={[
-              { value: 'header', label: 'Header' }, { value: 'footer', label: 'Footer' },
+            <Input label={t('iconEmoji')} value={editing.icon} onChange={v => set('icon', v)} placeholder="◆" />
+            <Select label={t('location')} value={editing.location} onChange={v => set('location', v as 'header' | 'footer')} options={[
+              { value: 'header', label: t('headerNav') }, { value: 'footer', label: t('footerNav') },
             ]} />
           </div>
           {editing.location === 'header' && (
-            <Select label="Parent Item (for sub-menu)" value={String(editing.parentId ?? '')} onChange={v => set('parentId', v ? Number(v) : null)}
-              options={[{ value: '', label: '— Top level (no parent)' }, ...headerItems.map(i => ({ value: String(i.id), label: i.labelEn }))]} />
+            <Select label={t('parentItem')} value={String(editing.parentId ?? '')} onChange={v => set('parentId', v ? Number(v) : null)}
+              options={[{ value: '', label: t('topLevel') }, ...headerItems.map(i => ({ value: String(i.id), label: i.labelEn }))]} />
           )}
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Sort Order" type="number" value={String(editing.sortOrder)} onChange={v => set('sortOrder', Number(v))} />
-            <Select label="Status" value={editing.active ? 'true' : 'false'} onChange={v => set('active', v === 'true')} options={[
-              { value: 'true', label: 'Active' }, { value: 'false', label: 'Hidden' },
+            <Input label={t('sortOrder')} type="number" value={String(editing.sortOrder)} onChange={v => set('sortOrder', Number(v))} />
+            <Select label={t('status')} value={editing.active ? 'true' : 'false'} onChange={v => set('active', v === 'true')} options={[
+              { value: 'true', label: t('active') }, { value: 'false', label: t('hidden') },
             ]} />
           </div>
           <div className="flex gap-3">
-            <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('cancel')}</Btn>
           </div>
         </div>
       </Modal>

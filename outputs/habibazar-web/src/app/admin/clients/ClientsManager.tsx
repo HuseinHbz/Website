@@ -60,27 +60,27 @@ export function ClientsManager() {
       <PageHeader title={t('clientsTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('clientNew')}</Btn>} />
 
       <div className="flex flex-wrap gap-3 mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search clients..." className="flex-1 min-w-[200px] bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500" />
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search clients..." className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-text-disabled focus:outline-none focus:border-brand" />
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
           <option value="all">All Types</option>
           <option value="partner">Tech Partners</option>
           <option value="client">Clients</option>
         </select>
-        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="hidden">Hidden</option>
         </select>
-        {(search || filterType !== 'all' || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterType('all'); setFilterActive('all') }} className="px-3 py-2 text-xs text-slate-400 hover:text-white border border-[#2a2a3e] rounded-lg">✕ Clear</button>}
-        <span className="px-3 py-2 text-xs text-slate-500">{filtered.length} / {clients.length}</span>
+        {(search || filterType !== 'all' || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterType('all'); setFilterActive('all') }} className="px-3 py-2 text-xs text-text-secondary hover:text-white border border-border rounded-lg">✕ Clear</button>}
+        <span className="px-3 py-2 text-xs text-text-tertiary">{filtered.length} / {clients.length}</span>
       </div>
 
       <Card>
         <Table headers={[t('name'), t('type'), t('isTechPartner'), t('status'), t('actions')]}>
           {filtered.map((c) => (
             <TR key={c.id}>
-              <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-slate-500">{c.nameFa}</div></TD>
-              <TD className="text-slate-400">{c.typeEn}</TD>
+              <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></TD>
+              <TD className="text-text-secondary">{c.typeEn}</TD>
               <TD><Badge color={c.isTechPartner ? 'blue' : 'slate'}>{c.isTechPartner ? t('isTechPartner') : t('isClient')}</Badge></TD>
               <TD><Badge color={c.active ? 'green' : 'slate'}>{c.active ? t('active') : t('hidden')}</Badge></TD>
               <TD>

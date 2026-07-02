@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, Vazirmatn } from 'next/font/google'
 import { cn } from '@/lib/utils'
 import { SITE } from '@/lib/site'
 import { AnalyticsTracker } from '@/components/AnalyticsTracker'
@@ -19,6 +19,12 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
+  display: 'swap',
+})
+
+const vazirmatn = Vazirmatn({
+  subsets: ['arabic', 'latin'],
+  variable: '--font-persian',
   display: 'swap',
 })
 
@@ -40,6 +46,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     metadataBase: new URL(SITE.url),
+    icons: {
+      icon: [
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+      ],
+      apple: '/favicon.svg',
+    },
     title: {
       default: t('homeTitle'),
       template: `%s | ${SITE.name}`,
@@ -113,23 +125,11 @@ export default async function RootLayout({ children, params }: Props) {
       className={cn(
         inter.variable,
         jetbrainsMono.variable,
+        vazirmatn.variable,
         isRTL ? 'font-persian' : 'font-sans',
         'scroll-smooth'
       )}
     >
-      <head>
-        {isRTL && (
-          <link
-            href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap"
-            rel="stylesheet"
-          />
-        )}
-        <style>{`
-          :root {
-            --font-persian: ${isRTL ? "'Vazirmatn', Tahoma, Arial, sans-serif" : 'inherit'};
-          }
-        `}</style>
-      </head>
       <body
         className={cn(
           'bg-background text-text-primary antialiased min-h-dvh',

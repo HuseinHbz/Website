@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
 import { MediaPicker, GalleryPicker } from '@/components/admin/MediaPicker'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 
 type Project = {
   id?: number; slug: string; nameEn: string; nameFa: string; industryEn: string; industryFa: string
@@ -89,6 +89,8 @@ type TabId = typeof TABS[number]['id']
 
 export function ProjectsManager() {
   const t = useT()
+  const locale = useAdminLocale()
+  const isFa = locale === 'fa'
   const [projects, setProjects] = useState<Project[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Project>(EMPTY)
@@ -97,8 +99,12 @@ export function ProjectsManager() {
   const { toast, ToastContainer } = useToast()
 
   async function load() {
-    const r = await fetch('/api/admin/projects')
-    const d = await r.json(); setProjects(Array.isArray(d) ? d : [])
+    try {
+      const r = await fetch('/api/admin/projects')
+      if (!r.ok) return
+      const d = await r.json()
+      setProjects(Array.isArray(d) ? d : [])
+    } catch { /* network error — leave existing list */ }
   }
   useEffect(() => { load() }, [])
 
@@ -111,13 +117,13 @@ export function ProjectsManager() {
 
   async function del(id: number) {
     if (!confirm(t('confirmDel'))) return
-    await fetch('/api/admin/projects', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    toast(t('deleted')); load()
+    const res = await fetch('/api/admin/projects', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (res.ok) { toast(t('deleted')); load() } else toast(t('failed'), 'error')
   }
 
   async function toggle(p: Project) {
-    await fetch('/api/admin/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, active: !p.active }) })
-    toast(t('saved')); load()
+    const res = await fetch('/api/admin/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, active: !p.active }) })
+    if (res.ok) { toast(t('saved')); load() } else toast(t('failed'), 'error')
   }
 
   function set<K extends keyof Project>(k: K, v: Project[K]) { setEditing((e) => ({ ...e, [k]: v })) }
@@ -131,35 +137,35 @@ export function ProjectsManager() {
     <>
       <ToastContainer />
       <PageHeader
-        title="Case Studies Management"
-        action={<Btn onClick={openNew}>+ New Case Study</Btn>}
+        title={t('caseStudiesTitle')}
+        action={<Btn onClick={openNew}>{t('newCaseStudy')}</Btn>}
       />
 
       <Card>
-        <Table headers={[t('name'), 'Industry', 'Status', 'Featured', 'Cover', t('actions')]}>
+        <Table headers={[t('name'), t('industry'), t('status'), t('featured'), t('cover'), t('actions')]}>
           {projects.map((p) => (
             <TR key={p.id}>
               <TD>
                 <div className="flex items-center gap-2">
                   <ColorDot color={p.color} />
                   <div>
-                    <div className="font-medium text-white">{p.nameEn}</div>
-                    <div className="text-xs text-slate-500">{p.nameFa} · {p.year}</div>
-                    <div className="text-[10px] text-slate-600">{p.slug}</div>
+                    <div className="font-medium text-white">{isFa ? p.nameFa : p.nameEn}</div>
+                    <div className="text-xs text-text-tertiary">{isFa ? p.nameEn : p.nameFa} · {p.year}</div>
+                    <div className="text-[10px] text-text-disabled">{p.slug}</div>
                   </div>
                 </div>
               </TD>
-              <TD className="text-slate-400 text-xs">{p.industryEn}</TD>
+              <TD className="text-text-secondary text-xs">{isFa ? p.industryFa : p.industryEn}</TD>
               <TD>
                 <Badge color={p.projectStatus === 'completed' ? 'green' : p.projectStatus === 'ongoing' ? 'indigo' : 'slate'}>
-                  {p.projectStatus || 'completed'}
+                  {t(p.projectStatus || 'completed')}
                 </Badge>
               </TD>
               <TD><Badge color={p.featured ? 'indigo' : 'slate'}>{p.featured ? `★ ${t('featured')}` : t('regular')}</Badge></TD>
               <TD>
                 {p.coverImage
-                  ? <img src={p.coverImage} alt="" className="w-10 h-10 object-cover rounded-lg border border-[#2a2a3e]" />
-                  : <span className="text-slate-600 text-xs">—</span>}
+                  ? <img src={p.coverImage} alt="" className="w-10 h-10 object-cover rounded-lg border border-border" />
+                  : <span className="text-text-disabled text-xs">—</span>}
               </TD>
               <TD>
                 <div className="flex gap-2">
@@ -173,14 +179,14 @@ export function ProjectsManager() {
         </Table>
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Case Study' : 'New Case Study'} size="xl">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('editCaseStudy') : t('newCaseStudyModal')} size="xl">
         {/* Tab nav */}
-        <div className="flex gap-1 mb-5 border-b border-[#1e1e2e] pb-3 flex-wrap">
+        <div className="flex gap-1 mb-5 border-b border-border pb-3 flex-wrap">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeTab === tab.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeTab === tab.id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white hover:bg-white/5'}`}
             >
               {tab.label}
             </button>
@@ -259,15 +265,15 @@ export function ProjectsManager() {
           {activeTab === 'technical' && (
             <>
               <div>
-                <p className="text-xs text-slate-400 mb-1">Tech Stack (JSON array of objects with name, category, icon?, url?)</p>
+                <p className="text-xs text-text-secondary mb-1">Tech Stack (JSON array of objects with name, category, icon?, url?)</p>
                 <Input label="" value={editing.techStackJson} onChange={(v) => set('techStackJson', v)} multiline rows={6} placeholder='[{"name":"Cisco","category":"Networking"},{"name":"VMware","category":"Virtualization"}]' />
               </div>
               <div>
-                <p className="text-xs text-slate-400 mb-1">Implementation Timeline (JSON array of phases)</p>
+                <p className="text-xs text-text-secondary mb-1">Implementation Timeline (JSON array of phases)</p>
                 <Input label="" value={editing.implementationTimelineJson} onChange={(v) => set('implementationTimelineJson', v)} multiline rows={6} placeholder='[{"phase":"Phase 1","titleEn":"Assessment","titleFa":"ارزیابی","durationEn":"2 weeks","durationFa":"۲ هفته","descriptionEn":"...","descriptionFa":"...","icon":"🔍"}]' />
               </div>
               <div>
-                <p className="text-xs text-slate-400 mb-1">Before/After Comparison (JSON array of comparison rows)</p>
+                <p className="text-xs text-text-secondary mb-1">Before/After Comparison (JSON array of comparison rows)</p>
                 <Input label="" value={editing.beforeAfterJson} onChange={(v) => set('beforeAfterJson', v)} multiline rows={5} placeholder='[{"aspectEn":"Network Speed","aspectFa":"سرعت شبکه","beforeEn":"100Mbps","beforeFa":"۱۰۰ مگابیت","afterEn":"10Gbps","afterFa":"۱۰ گیگابیت"}]' />
               </div>
             </>
@@ -297,7 +303,7 @@ export function ProjectsManager() {
           {activeTab === 'results' && (
             <>
               <div>
-                <p className="text-xs text-slate-400 mb-1">Business Impact (JSON array of metrics with before/after)</p>
+                <p className="text-xs text-text-secondary mb-1">Business Impact (JSON array of metrics with before/after)</p>
                 <Input label="" value={editing.businessImpactJson} onChange={(v) => set('businessImpactJson', v)} multiline rows={6} placeholder='[{"metricEn":"Network Uptime","metricFa":"آپ‌تایم شبکه","before":"85%","after":"99.9%","unit":"","improvement":"+14.9%","icon":"📈"}]' />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -337,7 +343,7 @@ export function ProjectsManager() {
             </>
           )}
 
-          <div className="flex gap-3 pt-2 border-t border-[#1e1e2e]">
+          <div className="flex gap-3 pt-2 border-t border-border">
             <Btn onClick={save} disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
             <Btn variant="secondary" onClick={() => setModal(false)}>{t('cancel')}</Btn>
           </div>

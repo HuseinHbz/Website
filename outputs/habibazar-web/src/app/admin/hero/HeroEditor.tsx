@@ -306,12 +306,12 @@ export function HeroEditor() {
         subtitle="Hero Section"
         action={
           <div className="flex items-center gap-3">
-            <div className="flex rounded-lg bg-[#0c0c14] border border-[#2a2a3e] overflow-hidden">
+            <div className="flex rounded-lg bg-background border border-border overflow-hidden">
               {(['en', 'fa'] as const).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLocale(l)}
-                  className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}
                 >
                   {l.toUpperCase()}
                 </button>
@@ -328,7 +328,7 @@ export function HeroEditor() {
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <SectionDivider label="انتخاب طرح هیرو / Hero Layout" />
-            {variantSaving && <span className="text-xs text-slate-400">در حال ذخیره...</span>}
+            {variantSaving && <span className="text-xs text-text-secondary">در حال ذخیره...</span>}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {VARIANTS.map((v) => (
@@ -337,20 +337,20 @@ export function HeroEditor() {
                 onClick={() => saveVariant(v.id)}
                 className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 text-left group ${
                   variant === v.id
-                    ? 'border-indigo-500 ring-2 ring-indigo-500/30 scale-[1.02]'
-                    : 'border-[#2a2a3e] hover:border-slate-500'
+                    ? 'border-brand ring-2 ring-brand/30 scale-[1.02]'
+                    : 'border-border hover:border-border-strong'
                 }`}
               >
-                <div className="h-[70px] w-full overflow-hidden bg-[#0a0a12]">
+                <div className="h-[70px] w-full overflow-hidden bg-background">
                   {v.thumb}
                 </div>
-                <div className="bg-[#0c0c14] px-2 py-1.5 flex items-center justify-between">
+                <div className="bg-background px-2 py-1.5 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-medium text-slate-300 truncate">{v.fa}</p>
-                    <p className="text-[9px] text-slate-500 truncate">{v.en}</p>
+                    <p className="text-[10px] font-medium text-text-primary truncate">{v.fa}</p>
+                    <p className="text-[9px] text-text-tertiary truncate">{v.en}</p>
                   </div>
                   {variant === v.id && (
-                    <div className="w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center shrink-0">
+                    <div className="w-4 h-4 bg-brand rounded-full flex items-center justify-center shrink-0">
                       <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>

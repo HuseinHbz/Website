@@ -153,9 +153,9 @@ export function BlogManager() {
         title={t('blogTitle')}
         action={
           <div className="flex gap-2">
-            <div className="flex rounded-lg bg-[#0c0c14] border border-[#2a2a3e] overflow-hidden">
-              <button onClick={() => setTab('posts')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'posts' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>{t('blogPosts')}</button>
-              <button onClick={() => setTab('categories')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'categories' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>{t('blogCats')}</button>
+            <div className="flex rounded-lg bg-background border border-border overflow-hidden">
+              <button onClick={() => setTab('posts')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'posts' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{t('blogPosts')}</button>
+              <button onClick={() => setTab('categories')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'categories' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{t('blogCats')}</button>
             </div>
             {tab === 'posts' ? (
               <Btn onClick={() => { setEditing(EMPTY_POST); setModal(true) }}>{t('postNew')}</Btn>
@@ -169,26 +169,26 @@ export function BlogManager() {
       {tab === 'posts' ? (
         <>
           {/* ── Filter Bar ── */}
-          <div className="mb-4 rounded-xl border border-[#2a2a3e] bg-[#0f0f1a] p-4">
+          <div className="mb-4 rounded-xl border border-border bg-background p-4">
             <div className="flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[180px]">
-                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
+                <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
                 <div className="relative">
-                  <span className={`absolute top-1/2 -translate-y-1/2 text-slate-500 text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
+                  <span className={`absolute top-1/2 -translate-y-1/2 text-text-tertiary text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={isFA ? 'عنوان یا slug...' : 'title or slug...'}
-                    className={`w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                    className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-white placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
                   />
                 </div>
               </div>
               <div className="w-44">
-                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'دسته‌بندی' : 'Category'}</label>
+                <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'دسته‌بندی' : 'Category'}</label>
                 <select
                   value={filterCat}
                   onChange={(e) => setFilterCat(e.target.value)}
-                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه دسته‌ها' : 'All categories'}</option>
                   {categories.map((c) => (
@@ -197,11 +197,11 @@ export function BlogManager() {
                 </select>
               </div>
               <div className="w-36">
-                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
+                <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه' : 'All'}</option>
                   <option value="published">{t('published')}</option>
@@ -210,11 +210,11 @@ export function BlogManager() {
                 </select>
               </div>
               <div className="w-36">
-                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'ویژه' : 'Featured'}</label>
+                <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'ویژه' : 'Featured'}</label>
                 <select
                   value={filterFeatured}
                   onChange={(e) => setFilterFeatured(e.target.value)}
-                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه' : 'All'}</option>
                   <option value="yes">{isFA ? '★ ویژه' : '★ Featured'}</option>
@@ -225,12 +225,12 @@ export function BlogManager() {
                 {hasPostFilters && (
                   <button
                     onClick={() => { setSearch(''); setFilterCat(''); setFilterStatus(''); setFilterFeatured('') }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-slate-400 border border-[#2a2a3e] hover:border-red-500 hover:text-red-400 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-text-secondary border border-border hover:border-red-500 hover:text-red-400 transition-colors"
                   >
                     ✕ {isFA ? 'پاک کردن' : 'Clear'}
                   </button>
                 )}
-                <span className="text-xs text-slate-500 py-2 px-1 whitespace-nowrap">
+                <span className="text-xs text-text-tertiary py-2 px-1 whitespace-nowrap">
                   {filteredPosts.length} / {posts.length} {isFA ? 'پست' : 'posts'}
                 </span>
               </div>
@@ -246,7 +246,7 @@ export function BlogManager() {
                       {p.featured && <span className="text-yellow-400 text-xs">★</span>}
                       {p.titleEn}
                     </div>
-                    <div className="text-xs text-slate-500 truncate max-w-48">{p.titleFa}</div>
+                    <div className="text-xs text-text-tertiary truncate max-w-48">{p.titleFa}</div>
                   </TD>
                   <TD>
                     {(() => {
@@ -254,14 +254,14 @@ export function BlogManager() {
                       return cat ? (
                         <span className="flex items-center gap-1 text-sm">
                           <span className="w-2 h-2 rounded-full inline-block" style={{ background: cat.color }} />
-                          <span className="text-slate-300">{cat.nameEn}</span>
+                          <span className="text-text-primary">{cat.nameEn}</span>
                         </span>
-                      ) : <span className="text-slate-600">—</span>
+                      ) : <span className="text-text-disabled">—</span>
                     })()}
                   </TD>
                   <TD><Badge color={statusColor[p.status]}>{statusLabel[p.status] || p.status}</Badge></TD>
-                  <TD className="text-slate-500">{p.views}</TD>
-                  <TD className="text-xs text-slate-500">{p.publishedAtEn}</TD>
+                  <TD className="text-text-tertiary">{p.views}</TD>
+                  <TD className="text-xs text-text-tertiary">{p.publishedAtEn}</TD>
                   <TD>
                     <div className="flex gap-2">
                       <Btn size="sm" variant="secondary" onClick={() => openEditPost(p)}>{t('edit')}</Btn>
@@ -274,7 +274,7 @@ export function BlogManager() {
                 </TR>
               ))}
               {filteredPosts.length === 0 && (
-                <TR><TD colSpan={6} className="text-center text-slate-500 py-8">نتیجه‌ای یافت نشد</TD></TR>
+                <TR><TD colSpan={6} className="text-center text-text-tertiary py-8">نتیجه‌ای یافت نشد</TD></TR>
               )}
             </Table>
           </Card>
@@ -282,26 +282,26 @@ export function BlogManager() {
       ) : (
         <>
           {/* ── Category Filter Bar ── */}
-          <div className="mb-4 rounded-xl border border-[#2a2a3e] bg-[#0f0f1a] p-4">
+          <div className="mb-4 rounded-xl border border-border bg-background p-4">
             <div className="flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[180px]">
-                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
+                <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
                 <div className="relative">
-                  <span className={`absolute top-1/2 -translate-y-1/2 text-slate-500 text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
+                  <span className={`absolute top-1/2 -translate-y-1/2 text-text-tertiary text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
                   <input
                     value={catSearch}
                     onChange={(e) => setCatSearch(e.target.value)}
                     placeholder={isFA ? 'نام یا slug...' : 'name or slug...'}
-                    className={`w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                    className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-white placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
                   />
                 </div>
               </div>
               <div className="w-36">
-                <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
+                <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
                 <select
                   value={filterCatActive}
                   onChange={(e) => setFilterCatActive(e.target.value)}
-                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه' : 'All'}</option>
                   <option value="active">{isFA ? 'فعال' : 'Active'}</option>
@@ -312,12 +312,12 @@ export function BlogManager() {
                 {(catSearch || filterCatActive) && (
                   <button
                     onClick={() => { setCatSearch(''); setFilterCatActive('') }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-slate-400 border border-[#2a2a3e] hover:border-red-500 hover:text-red-400 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-text-secondary border border-border hover:border-red-500 hover:text-red-400 transition-colors"
                   >
                     ✕ {isFA ? 'پاک کردن' : 'Clear'}
                   </button>
                 )}
-                <span className="text-xs text-slate-500 py-2 px-1 whitespace-nowrap">
+                <span className="text-xs text-text-tertiary py-2 px-1 whitespace-nowrap">
                   {filteredCats.length} / {categories.length} {isFA ? 'دسته' : 'cats'}
                 </span>
               </div>
@@ -330,18 +330,18 @@ export function BlogManager() {
                 <TR key={c.id}>
                   <TD>
                     <div className="font-medium text-white">{c.nameEn}</div>
-                    <div className="text-xs text-slate-500">{c.nameFa}</div>
+                    <div className="text-xs text-text-tertiary">{c.nameFa}</div>
                   </TD>
-                  <TD className="text-slate-500 font-mono text-xs">{c.slug}</TD>
+                  <TD className="text-text-tertiary font-mono text-xs">{c.slug}</TD>
                   <TD>{c.icon}</TD>
                   <TD>
                     <span className="inline-flex items-center gap-1.5">
                       <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
-                      <span className="text-xs text-slate-500 font-mono">{c.color}</span>
+                      <span className="text-xs text-text-tertiary font-mono">{c.color}</span>
                     </span>
                   </TD>
-                  <TD className="text-slate-500">{c.sortOrder}</TD>
-                  <TD className="text-slate-400 text-sm">{posts.filter((p) => p.categoryId === c.id).length}</TD>
+                  <TD className="text-text-tertiary">{c.sortOrder}</TD>
+                  <TD className="text-text-secondary text-sm">{posts.filter((p) => p.categoryId === c.id).length}</TD>
                   <TD>
                     <Badge color={c.active ? 'green' : 'slate'}>{c.active ? 'فعال' : 'غیرفعال'}</Badge>
                   </TD>
@@ -359,7 +359,7 @@ export function BlogManager() {
                 </TR>
               ))}
               {filteredCats.length === 0 && (
-                <TR><TD colSpan={8} className="text-center text-slate-500 py-8">نتیجه‌ای یافت نشد</TD></TR>
+                <TR><TD colSpan={8} className="text-center text-text-tertiary py-8">نتیجه‌ای یافت نشد</TD></TR>
               )}
             </Table>
           </Card>
@@ -395,7 +395,7 @@ export function BlogManager() {
               </Btn>
             </div>
             {editing.coverImage && (
-              <img src={editing.coverImage} alt="cover" className="h-24 rounded-lg object-cover border border-[#2a2a3e]" />
+              <img src={editing.coverImage} alt="cover" className="h-24 rounded-lg object-cover border border-border" />
             )}
           </div>
           <div className="grid grid-cols-3 gap-4">

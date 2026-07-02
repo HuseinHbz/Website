@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 
 interface DashData {
@@ -74,6 +75,7 @@ const RESOURCE_FA: Record<string, string> = {
 const PIE_COLORS = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#818cf8', '#c03030', '#e57000']
 
 export function AnalyticsPanel() {
+  const t = useT()
   const [data, setData] = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState<'7' | '14' | '30'>('7')
@@ -89,7 +91,7 @@ export function AnalyticsPanel() {
     return (
       <div className="animate-pulse space-y-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-48 bg-[#111122] rounded-xl" />
+          <div key={i} className="h-48 bg-surface rounded-xl" />
         ))}
       </div>
     )
@@ -119,13 +121,13 @@ export function AnalyticsPanel() {
           { label: 'تماس‌های جدید', value: s?.newContacts ?? 0, icon: '✉', color: '#f59e0b', sub: 'دریافت نشده' },
           { label: 'مشاوره‌ها', value: s?.newConsultations ?? 0, icon: '◎', color: '#10b981', sub: 'در انتظار' },
         ].map((kpi, i) => (
-          <div key={i} className="bg-[#111122] border border-[#1e1e2e] rounded-xl p-4">
+          <div key={i} className="bg-surface border border-border rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500">{kpi.label}</span>
+              <span className="text-xs text-text-tertiary">{kpi.label}</span>
               <span style={{ color: kpi.color }} className="text-lg">{kpi.icon}</span>
             </div>
             <p className="text-2xl font-bold text-white">{kpi.value.toLocaleString()}</p>
-            <p className="text-xs text-slate-600 mt-1">{kpi.sub}</p>
+            <p className="text-xs text-text-disabled mt-1">{kpi.sub}</p>
           </div>
         ))}
       </div>
@@ -137,7 +139,7 @@ export function AnalyticsPanel() {
           <div className="flex gap-1">
             {(['7', '14', '30'] as const).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${range === r ? 'bg-indigo-600 text-white' : 'bg-[#1a1a2e] text-slate-400 hover:text-white'}`}>
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${range === r ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary hover:text-white'}`}>
                 {r} روز
               </button>
             ))}
@@ -163,7 +165,7 @@ export function AnalyticsPanel() {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-48 flex items-center justify-center text-slate-600 text-sm">هنوز داده‌ای ثبت نشده</div>
+          <div className="h-48 flex items-center justify-center text-text-disabled text-sm">هنوز داده‌ای ثبت نشده</div>
         )}
       </Card>
 
@@ -176,13 +178,13 @@ export function AnalyticsPanel() {
             <div className="space-y-2.5">
               {topPagesData.map((p, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-500 w-5 text-right">{i + 1}</span>
+                  <span className="text-xs font-bold text-text-tertiary w-5 text-right">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-slate-300 truncate">{p.page}</span>
-                      <span className="text-xs font-mono text-indigo-400 flex-shrink-0 ml-2">{p.count}</span>
+                      <span className="text-xs text-text-primary truncate">{p.page}</span>
+                      <span className="text-xs font-mono text-brand flex-shrink-0 ml-2">{p.count}</span>
                     </div>
-                    <div className="h-1.5 bg-[#1e1e2e] rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -196,7 +198,7 @@ export function AnalyticsPanel() {
               ))}
             </div>
           ) : (
-            <div className="h-40 flex items-center justify-center text-slate-600 text-sm">هنوز داده‌ای ثبت نشده</div>
+            <div className="h-40 flex items-center justify-center text-text-disabled text-sm">هنوز داده‌ای ثبت نشده</div>
           )}
         </Card>
 
@@ -217,14 +219,14 @@ export function AnalyticsPanel() {
                 {actionPieData.map((entry, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="text-xs text-slate-400">{entry.name}</span>
-                    <span className="text-xs font-mono text-slate-500 mr-auto">{entry.value}</span>
+                    <span className="text-xs text-text-secondary">{entry.name}</span>
+                    <span className="text-xs font-mono text-text-tertiary mr-auto">{entry.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-40 flex items-center justify-center text-slate-600 text-sm">هنوز فعالیتی ثبت نشده</div>
+            <div className="h-40 flex items-center justify-center text-text-disabled text-sm">هنوز فعالیتی ثبت نشده</div>
           )}
         </Card>
       </div>
@@ -236,17 +238,17 @@ export function AnalyticsPanel() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-[#1e1e2e]">
-                  <th className="text-right pb-2 font-medium text-slate-500">عملیات</th>
-                  <th className="text-right pb-2 font-medium text-slate-500">منبع</th>
-                  <th className="text-right pb-2 font-medium text-slate-500">شناسه</th>
-                  <th className="text-right pb-2 font-medium text-slate-500">کاربر</th>
-                  <th className="text-right pb-2 font-medium text-slate-500">زمان</th>
+                <tr className="border-b border-border">
+                  <th className="text-right pb-2 font-medium text-text-tertiary">عملیات</th>
+                  <th className="text-right pb-2 font-medium text-text-tertiary">منبع</th>
+                  <th className="text-right pb-2 font-medium text-text-tertiary">شناسه</th>
+                  <th className="text-right pb-2 font-medium text-text-tertiary">کاربر</th>
+                  <th className="text-right pb-2 font-medium text-text-tertiary">زمان</th>
                 </tr>
               </thead>
               <tbody>
                 {data.recentActivity.map(log => (
-                  <tr key={log.id} className="border-b border-[#1a1a2a] hover:bg-[#111122] transition-colors">
+                  <tr key={log.id} className="border-b border-border hover:bg-surface transition-colors">
                     <td className="py-2 pr-0">
                       <span
                         className="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
@@ -255,10 +257,10 @@ export function AnalyticsPanel() {
                         {ACTION_FA[log.action] || log.action}
                       </span>
                     </td>
-                    <td className="py-2 text-slate-400">{RESOURCE_FA[log.resource] || log.resource}</td>
-                    <td className="py-2 font-mono text-slate-600">{log.resourceId || '—'}</td>
-                    <td className="py-2 text-slate-500 max-w-[120px] truncate">{log.userEmail}</td>
-                    <td className="py-2 text-slate-600 whitespace-nowrap">
+                    <td className="py-2 text-text-secondary">{RESOURCE_FA[log.resource] || log.resource}</td>
+                    <td className="py-2 font-mono text-text-disabled">{log.resourceId || '—'}</td>
+                    <td className="py-2 text-text-tertiary max-w-[120px] truncate">{log.userEmail}</td>
+                    <td className="py-2 text-text-disabled whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString('fa-IR')}
                     </td>
                   </tr>
@@ -267,7 +269,7 @@ export function AnalyticsPanel() {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-slate-600 text-center py-8">هنوز فعالیتی ثبت نشده</p>
+          <p className="text-sm text-text-disabled text-center py-8">هنوز فعالیتی ثبت نشده</p>
         )}
       </Card>
 
@@ -280,10 +282,10 @@ export function AnalyticsPanel() {
             { label: 'پروژه فعال', value: s?.activeProjects ?? 0, color: '#ef4444', icon: '◆' },
             { label: 'خدمت فعال', value: s?.activeServices ?? 0, color: '#f59e0b', icon: '◈' },
           ].map((item, i) => (
-            <div key={i} className="text-center p-4 bg-[#0c0c14] rounded-xl border border-[#1e1e2e]">
+            <div key={i} className="text-center p-4 bg-background rounded-xl border border-border">
               <span className="text-2xl" style={{ color: item.color }}>{item.icon}</span>
               <p className="text-2xl font-bold text-white mt-1">{item.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{item.label}</p>
+              <p className="text-xs text-text-tertiary mt-0.5">{item.label}</p>
             </div>
           ))}
         </div>

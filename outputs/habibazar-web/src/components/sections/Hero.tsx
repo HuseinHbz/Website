@@ -106,10 +106,15 @@ function Badge({ label }: { label: string }) {
 }
 
 function StatBar({ stats }: { stats: HeroContent['stats'] }) {
+  const validStats = stats.filter(s => s.value)
   return (
-    <div className="grid grid-cols-4 border border-border rounded-xl overflow-hidden bg-surface/30 backdrop-blur-sm">
-      {stats.map((s, i) => s.value && (
-        <div key={i} className={`flex flex-col items-center py-4 px-2 text-center ${i < stats.length - 1 ? 'border-r border-border' : ''}`}>
+    <div className="grid grid-cols-2 sm:grid-cols-4 border border-border rounded-xl overflow-hidden bg-surface/30 backdrop-blur-sm">
+      {validStats.map((s, i) => (
+        <div key={i} className={`flex flex-col items-center py-4 px-3 text-center ${
+          i < validStats.length - 1
+            ? i === 1 ? 'sm:border-r border-border' : 'border-r border-border'
+            : ''
+        } ${i < 2 ? 'border-b sm:border-b-0 border-border' : ''}`}>
           <span className="text-xl lg:text-2xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
           <span className="text-[10px] text-text-muted mt-0.5 leading-tight">{s.label}</span>
         </div>
@@ -587,7 +592,7 @@ function VariantMagazine({ c }: { c: HeroContent }) {
       <div className={`flex flex-col lg:flex-row gap-12 ${c.isRTL?'lg:flex-row-reverse':''}`}>
         {/* Left */}
         <motion.div initial={{ opacity:0, x:c.isRTL?20:-20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }}
-          className="flex-1 flex flex-col gap-5 border-r border-border/40 pr-12">
+          className={`flex-1 flex flex-col gap-5 ${c.isRTL ? 'border-l pl-12' : 'border-r pr-12'} border-border/40`}>
           <span className="text-[10px] tracking-[0.4em] uppercase text-text-muted">{c.headlineHi}</span>
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-[1.15]">
             <span className="block text-text-primary pb-1">{c.isRTL?'حسین':'HUSEIN'}</span>
@@ -798,7 +803,7 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
           <CtaButtons c={c} />
         </motion.div>
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-          className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-3">
+          className="hidden lg:flex flex-col gap-3 absolute right-8 top-1/2 -translate-y-1/2">
           {c.stats.filter(s=>s.value).map((s,i) => (
             <div key={i} className="px-5 py-3 rounded-xl text-right"
               style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}30`, backdropFilter:'blur(12px)' }}>
@@ -806,6 +811,10 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
               <div className="text-[10px] text-text-muted">{s.label}</div>
             </div>
           ))}
+        </motion.div>
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
+          className="lg:hidden mt-6">
+          <StatBar stats={c.stats} />
         </motion.div>
       </div>
     </div>

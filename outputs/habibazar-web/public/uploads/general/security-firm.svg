@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
-  <rect width="80" height="80" fill="#0d0d17" rx="10"/>
-  <rect x="8" y="8" width="64" height="64" fill="#7f1d1d" fill-opacity="0.2" rx="8"/>
-  <!-- Shield -->
-  <path d="M40 14 L60 22 L60 42 Q60 56 40 64 Q20 56 20 42 L20 22 Z" fill="none" stroke="#ef4444" stroke-width="2.5"/>
-  <!-- Checkmark inside -->
-  <polyline points="30,38 37,46 52,28" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="40" y="76" text-anchor="middle" fill="#ef4444" font-family="Arial,sans-serif" font-size="9" font-weight="bold">SecureCo</text>
-</svg>

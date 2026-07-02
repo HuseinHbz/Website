@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import createIntlMiddleware from 'next-intl/middleware'
+import { limiters } from '@/lib/rateLimit'
 
 const locales = ['fa', 'en']
 const defaultLocale = 'fa'
@@ -20,14 +21,33 @@ async function verifyToken(token: string) {
   await jwtVerify(token, JWT_SECRET)
 }
 
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    request.headers.get('x-real-ip') ??
+    '0.0.0.0'
+  )
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const ip = getClientIp(request)
+
+  // ── Health check — always allow ───────────────────────────────────────────
+  if (pathname === '/api/health') return NextResponse.next()
 
   // ── Admin API routes (/api/admin/*) ──────────────────────────────────────
   if (pathname.startsWith('/api/admin')) {
-    // Login endpoint is public — it creates the token
-    if (pathname === '/api/admin/auth/login') return NextResponse.next()
-
+    if (pathname === '/api/admin/auth/login') {
+      const limit = limiters.login(ip)
+      if (!limit.allowed) {
+        return NextResponse.json(
+          { error: 'Too many login attempts. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } }
+        )
+      }
+      return NextResponse.next()
+    }
     const token = request.cookies.get('admin_token')?.value
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,11 +60,43 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── AI API — stricter rate limiting ──────────────────────────────────────
+  if (pathname.startsWith('/api/ai')) {
+    const limit = limiters.ai(ip)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'AI rate limit exceeded. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } }
+      )
+    }
+  }
+
+  // ── Contact / consultation form ───────────────────────────────────────────
+  if (pathname === '/api/consultation' || pathname === '/api/contact') {
+    const limit = limiters.contact(ip)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many submissions. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } }
+      )
+    }
+  }
+
+  // ── General API rate limiting ─────────────────────────────────────────────
+  if (pathname.startsWith('/api/')) {
+    const limit = limiters.api(ip)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } }
+      )
+    }
+    return NextResponse.next()
+  }
+
   // ── Admin UI pages (/admin/*) ─────────────────────────────────────────────
   if (pathname.startsWith('/admin')) {
-    if (pathname === '/admin/login') {
-      return NextResponse.next()
-    }
+    if (pathname === '/admin/login') return NextResponse.next()
     const token = request.cookies.get('admin_token')?.value
     if (!token) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
@@ -59,9 +111,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── API routes (non-admin): pass through without intl redirect ──────────────
-  if (pathname.startsWith('/api/')) return NextResponse.next()
-
   // ── Public routes: next-intl i18n ─────────────────────────────────────────
   return intlMiddleware(request)
 }
@@ -69,7 +118,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/api/admin/:path*',
+    '/api/:path*',
     '/((?!_next|_vercel|.*\\..*).*)',
   ],
 }

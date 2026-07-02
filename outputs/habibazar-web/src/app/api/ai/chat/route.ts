@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { siteSettings, aiModules, aiKnowledgeBase } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { breakers } from '@/lib/circuitBreaker'
+import { retry, isTransient } from '@/lib/retry'
+import { logger } from '@/lib/logger'
 
 type KbSource = { id: number; title: string; excerpt: string }
 
@@ -144,42 +147,47 @@ export async function POST(req: NextRequest) {
 
     let reply = ''
 
-    switch (provider) {
-      case 'claude':
-        reply = await callClaude(apiKey, apiUrl || 'https://api.anthropic.com/v1', model, messages, systemPrompt)
-        break
-      case 'gemini':
-        reply = await callGemini(apiKey, apiUrl || 'https://generativelanguage.googleapis.com/v1beta', model, messages, systemPrompt)
-        break
-      case 'grok':
-        reply = await callGrok(apiKey, apiUrl || 'https://api.x.ai/v1', model, messages, systemPrompt)
-        break
-      case 'copilot':
-        reply = await callChatGPT(apiKey, apiUrl || 'https://api.github.com/copilot', model, messages, systemPrompt)
-        break
-      case 'conduit': {
-        const conduitModel = model || 'claude-sonnet-4-6'
-        // Claude models: use Anthropic Messages endpoint (system field works correctly)
-        // Other models: use OpenAI-compatible endpoint
-        if (conduitModel.startsWith('claude')) {
-          // Conduit Anthropic endpoint uses Bearer auth (not x-api-key)
-          reply = await callClaude(apiKey, 'https://conduit.ozdoev.net/v1', conduitModel, messages, systemPrompt, true)
-        } else {
-          reply = await callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', conduitModel, messages, systemPrompt)
+    const callProvider = async () => {
+      switch (provider) {
+        case 'claude':
+          return callClaude(apiKey, apiUrl || 'https://api.anthropic.com/v1', model, messages, systemPrompt)
+        case 'gemini':
+          return callGemini(apiKey, apiUrl || 'https://generativelanguage.googleapis.com/v1beta', model, messages, systemPrompt)
+        case 'grok':
+          return callGrok(apiKey, apiUrl || 'https://api.x.ai/v1', model, messages, systemPrompt)
+        case 'copilot':
+          return callChatGPT(apiKey, apiUrl || 'https://api.github.com/copilot', model, messages, systemPrompt)
+        case 'conduit': {
+          const conduitModel = model || 'claude-sonnet-4-6'
+          if (conduitModel.startsWith('claude')) {
+            return callClaude(apiKey, 'https://conduit.ozdoev.net/v1', conduitModel, messages, systemPrompt, true)
+          }
+          return callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', conduitModel, messages, systemPrompt)
         }
-        break
+        default:
+          return callChatGPT(apiKey, apiUrl || 'https://api.openai.com/v1', model, messages, systemPrompt)
       }
-      default: // chatgpt
-        reply = await callChatGPT(apiKey, apiUrl || 'https://api.openai.com/v1', model, messages, systemPrompt)
-        break
     }
 
+    const fallbackReply = 'متأسفانه در حال حاضر سرویس هوش مصنوعی در دسترس نیست. لطفاً کمی بعد دوباره امتحان کنید. / AI service is temporarily unavailable. Please try again shortly.'
+
+    reply = await breakers.ai.execute(
+      () => retry(callProvider, {
+        attempts: 2,
+        baseDelayMs: 500,
+        shouldRetry: isTransient,
+        onRetry: (err, attempt) => logger.warn('AI retry', { attempt, error: String(err) }),
+      }),
+      () => fallbackReply,
+    )
+
+    logger.info('AI chat', { provider, locale })
     return NextResponse.json({ reply, sources })
   } catch (err) {
-    console.error('AI chat error:', err)
+    logger.error('AI chat error', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'AI service error' },
-      { status: 500 },
+      { error: 'AI service error. Please try again.' },
+      { status: 503 },
     )
   }
 }

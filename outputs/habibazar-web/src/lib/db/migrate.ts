@@ -1349,5 +1349,43 @@ export function runMigrations() {
     for (const p of DEFAULT_PRODUCT_CATS) { insertProdCat.run(p.slug, p.nameEn, p.nameFa, p.icon, p.color, p.sortOrder) }
   }
 
+  // ── Performance indexes (idempotent) ─────────────────────────────────────
+  // Slugs/emails/tokens already have implicit indexes via UNIQUE. These cover
+  // the hot filter/sort/foreign-key columns used by public pages and admin lists.
+  const perfIndexes = [
+    `CREATE INDEX IF NOT EXISTS idx_projects_active_sort ON projects(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_projects_featured ON projects(featured)`,
+    `CREATE INDEX IF NOT EXISTS idx_services_active_sort ON services(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_solutions_active_sort ON solutions(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_solutions_featured ON solutions(featured)`,
+    `CREATE INDEX IF NOT EXISTS idx_industries_active_sort ON industries(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_technologies_active_cat ON technologies(active, category)`,
+    `CREATE INDEX IF NOT EXISTS idx_testimonials_active_featured ON testimonials(active, featured)`,
+    `CREATE INDEX IF NOT EXISTS idx_timeline_active_sort ON timeline_items(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_skills_active_sort ON skills(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_certifications_active_sort ON certifications(active, sort_order)`,
+    `CREATE INDEX IF NOT EXISTS idx_clients_active ON clients(active)`,
+    `CREATE INDEX IF NOT EXISTS idx_navigation_location ON navigation_items(location, active)`,
+    `CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_blog_posts_category ON blog_posts(category_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_sections_type_status ON sections(section_type, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_pages_status ON pages(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_page_sections_page ON page_sections(page_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_section_versions_section ON section_versions(section_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_sessions_user ON admin_sessions(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_sessions_expires ON admin_sessions(expires_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_logs(resource)`,
+    `CREATE INDEX IF NOT EXISTS idx_analytics_type_created ON analytics_events(type, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_requests(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_consultation_status ON consultation_requests(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_media_folder ON media_files(folder)`,
+    `CREATE INDEX IF NOT EXISTS idx_ai_kb_active ON ai_knowledge_base(active)`,
+    `CREATE INDEX IF NOT EXISTS idx_ai_conversations_module ON ai_conversations(module_slug)`,
+  ]
+  for (const stmt of perfIndexes) {
+    try { sqlite.exec(stmt) } catch { /* table/column may not exist on older schemas */ }
+  }
+
   sqlite.close()
 }

@@ -33,6 +33,7 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
     setFiles(Array.isArray(d) ? d : [])
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reload when opened / folder changes
   useEffect(() => { if (open) load() }, [open, folder])
 
   async function upload(fileList: FileList) {
@@ -50,6 +51,7 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
     if (e.dataTransfer.files.length) upload(e.dataTransfer.files)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- upload is stable
   }, [folder])
 
   function pick(url: string) { onChange(url); setOpen(false) }
@@ -161,6 +163,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
     setFiles(Array.isArray(d) ? d : [])
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reload when opened / folder changes
   useEffect(() => { if (open) load() }, [open, folder])
 
   async function upload(fileList: FileList) {
@@ -178,6 +181,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
     if (e.dataTransfer.files.length) upload(e.dataTransfer.files)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- upload is stable
   }, [folder])
 
   function toggle(url: string) {

@@ -12,6 +12,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(String(email))) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+    }
+
     const db = getDb()
     await db.insert(consultationRequests).values({
       name: String(name).trim(),

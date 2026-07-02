@@ -1,13 +1,11 @@
-import createMDX from '@next/mdx'
 import createNextIntlPlugin from 'next-intl/plugin'
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
-const withMDX = createMDX({})
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
-  pageExtensions: ['js', 'jsx', 'mdx', 'ts', 'tsx'],
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
   async headers() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.habibazar.ir'
     return [
@@ -54,8 +52,8 @@ const nextConfig = {
 }
 
 // Admin routes bypass next-intl — only apply intl plugin for non-admin routes
-export default withNextIntl(withMDX({
+export default withNextIntl({
   ...nextConfig,
   // Allow server-only modules in API routes
-  serverExternalPackages: ['better-sqlite3', 'bcryptjs'],
-}))
+  serverExternalPackages: ['better-sqlite3', 'bcryptjs', 'nodemailer'],
+})

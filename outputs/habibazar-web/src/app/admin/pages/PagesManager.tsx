@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 import { SECTION_TYPE_MAP, type SectionTypeId } from '@/lib/sectionTypes'
 
 type PageRow = {
@@ -53,6 +54,7 @@ const EMPTY_PAGE = {
 }
 
 export function PagesManager() {
+  const t = useT()
   const [pages, setPages] = useState<PageRow[]>([])
   const [modal, setModal] = useState(false)
   const [builderModal, setBuilderModal] = useState(false)
@@ -86,24 +88,24 @@ export function PagesManager() {
     })
     setSaving(false)
     if (res.ok) {
-      toast(editing.id ? 'Page updated' : 'Page created', 'success')
+      toast(editing.id ? t('updated') : t('created'), 'success')
       setModal(false)
       load()
     } else {
       const d = await res.json()
-      toast(d.error || 'Failed', 'error')
+      toast(d.error || t('failed'), 'error')
     }
   }
 
   async function del(id: string) {
-    if (!confirm('Delete this page?')) return
+    if (!confirm(t('confirmDel'))) return
     const res = await fetch('/api/admin/pages', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
-    if (res.ok) { toast('Deleted', 'success'); load() }
-    else { const d = await res.json(); toast(d.error || 'Failed', 'error') }
+    if (res.ok) { toast(t('deleted'), 'success'); load() }
+    else { const d = await res.json(); toast(d.error || t('failed'), 'error') }
   }
 
   async function openBuilder(page: PageRow) {
@@ -126,8 +128,8 @@ export function PagesManager() {
       }),
     })
     setSaving(false)
-    if (res.ok) { toast('Page layout saved', 'success'); setBuilderModal(false); load() }
-    else { const d = await res.json(); toast(d.error || 'Failed', 'error') }
+    if (res.ok) { toast(t('pageLayoutSaved'), 'success'); setBuilderModal(false); load() }
+    else { const d = await res.json(); toast(d.error || t('failed'), 'error') }
   }
 
   function moveSection(idx: number, dir: -1 | 1) {
@@ -155,7 +157,7 @@ export function PagesManager() {
   function addSection(section: AvailableSection) {
     if (!builderPage) return
     if (builderPage.sections.find((s) => s.sectionId === section.id)) {
-      toast('Section already in page', 'error')
+      toast(t('sectionAlreadyIn'), 'error')
       return
     }
     const newLink: SectionLink = {
@@ -176,9 +178,9 @@ export function PagesManager() {
     <>
       <ToastContainer />
       <PageHeader
-        title="Page Builder"
-        subtitle="Create pages and arrange sections with drag & drop"
-        action={<Btn onClick={() => { setEditing(EMPTY_PAGE); setModal(true) }}>+ New Page</Btn>}
+        title={t('pagesTitle')}
+        subtitle={t('pagesSub')}
+        action={<Btn onClick={() => { setEditing(EMPTY_PAGE); setModal(true) }}>{t('addPage')}</Btn>}
       />
 
       <Card>
@@ -188,35 +190,35 @@ export function PagesManager() {
               <TD>
                 <div>
                   <div className="font-medium text-white text-sm">{p.titleEn}</div>
-                  {p.titleFa && <div className="text-xs text-slate-500 mt-0.5" dir="rtl">{p.titleFa}</div>}
+                  {p.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{p.titleFa}</div>}
                 </div>
               </TD>
-              <TD><span className="text-xs text-indigo-300 font-mono">/{p.slug}</span></TD>
-              <TD><span className="text-xs text-slate-400">{p.layout}</span></TD>
+              <TD><span className="text-xs text-brand font-mono">/{p.slug}</span></TD>
+              <TD><span className="text-xs text-text-secondary">{p.layout}</span></TD>
               <TD><Badge color={STATUS_COLOR[p.status] || 'slate'}>{p.status}</Badge></TD>
-              <TD className="text-xs text-slate-500">{p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}</TD>
-              <TD className="text-xs text-slate-500">{new Date(p.updatedAt).toLocaleDateString()}</TD>
+              <TD className="text-xs text-text-tertiary">{p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}</TD>
+              <TD className="text-xs text-text-tertiary">{new Date(p.updatedAt).toLocaleDateString()}</TD>
               <TD>
                 <div className="flex gap-1 flex-wrap">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing(p); setModal(true) }}>Edit</Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => { setEditing(p); setModal(true) }}>{t('edit')}</Btn>
                   <Btn size="sm" variant="ghost" onClick={() => openBuilder(p)}>🧩 Builder</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(p.id)}>Del</Btn>
+                  <Btn size="sm" variant="danger" onClick={() => del(p.id)}>{t('del')}</Btn>
                 </div>
               </TD>
             </TR>
           ))}
         </Table>
         {pages.length === 0 && (
-          <div className="text-center py-12 text-slate-500 text-sm">No pages yet. Create your first page!</div>
+          <div className="text-center py-12 text-text-tertiary text-sm">No pages yet. Create your first page!</div>
         )}
       </Card>
 
       {/* Page create/edit modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Page' : 'Create New Page'} size="md">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('editPage') : t('createPage')} size="md">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Title (EN) *" value={editing.titleEn || ''} onChange={(v) => setEditing({ ...editing, titleEn: v })} />
-            <Input label="Title (FA) *" value={editing.titleFa || ''} onChange={(v) => setEditing({ ...editing, titleFa: v })} />
+            <Input label={t('titleEn')} value={editing.titleEn || ''} onChange={(v) => setEditing({ ...editing, titleEn: v })} />
+            <Input label={t('titleFa')} value={editing.titleFa || ''} onChange={(v) => setEditing({ ...editing, titleFa: v })} />
           </div>
           <Input label="Slug *" value={editing.slug || ''} onChange={(v) => setEditing({ ...editing, slug: v.toLowerCase().replace(/\s+/g, '-') })} placeholder="about-us" />
           <div className="grid grid-cols-2 gap-3">
@@ -243,8 +245,8 @@ export function PagesManager() {
             />
           </div>
           <Input label="Description (EN)" value={editing.descriptionEn || ''} onChange={(v) => setEditing({ ...editing, descriptionEn: v })} />
-          <div className="border-t border-[#1e1e2e] pt-4">
-            <p className="text-xs text-slate-500 mb-3 uppercase tracking-wider font-medium">SEO</p>
+          <div className="border-t border-border pt-4">
+            <p className="text-xs text-text-tertiary mb-3 uppercase tracking-wider font-medium">SEO</p>
             <Input label="SEO Title" value={editing.seoTitle || ''} onChange={(v) => setEditing({ ...editing, seoTitle: v })} />
             <div className="mt-3">
               <Input label="SEO Description" value={editing.seoDescription || ''} onChange={(v) => setEditing({ ...editing, seoDescription: v })} />
@@ -254,8 +256,8 @@ export function PagesManager() {
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : editing.id ? 'Update Page' : 'Create Page'}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? t('saving') : editing.id ? t('editPage') : t('createPage')}</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('cancel')}</Btn>
           </div>
         </div>
       </Modal>
@@ -266,9 +268,9 @@ export function PagesManager() {
           <div className="grid grid-cols-5 gap-4 max-h-[70vh]">
             {/* Canvas */}
             <div className="col-span-3 overflow-y-auto">
-              <p className="text-xs text-slate-500 mb-3 font-medium uppercase tracking-wider">Page Sections (drag to reorder)</p>
+              <p className="text-xs text-text-tertiary mb-3 font-medium uppercase tracking-wider">Page Sections (drag to reorder)</p>
               {builderPage.sections.length === 0 ? (
-                <div className="border-2 border-dashed border-[#2a2a3e] rounded-xl p-8 text-center text-slate-500 text-sm">
+                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-text-tertiary text-sm">
                   No sections yet. Add sections from the panel →
                 </div>
               ) : (
@@ -279,21 +281,21 @@ export function PagesManager() {
                       <div
                         key={s.id}
                         className={`flex items-center gap-2 p-3 rounded-xl border transition-colors ${
-                          s.active ? 'bg-[#111122] border-[#2a2a3e]' : 'bg-[#0a0a12] border-[#1a1a2a] opacity-50'
+                          s.active ? 'bg-surface border-border' : 'bg-background border-border opacity-50'
                         }`}
                       >
-                        <span className="text-slate-600 text-sm font-mono w-5 text-center">{idx + 1}</span>
+                        <span className="text-text-disabled text-sm font-mono w-5 text-center">{idx + 1}</span>
                         <span className="text-base">{typeInfo?.icon || '📦'}</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm text-white truncate">{s.titleEn || 'Untitled'}</div>
-                          <div className="text-xs text-slate-500">{typeInfo?.labelEn || s.sectionType} · {s.variant}</div>
+                          <div className="text-xs text-text-tertiary">{typeInfo?.labelEn || s.sectionType} · {s.variant}</div>
                         </div>
                         <Badge color={s.status === 'published' ? 'green' : 'slate'}>{s.status || 'draft'}</Badge>
                         <div className="flex gap-1">
-                          <button onClick={() => moveSection(idx, -1)} disabled={idx === 0} className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white disabled:opacity-20">↑</button>
-                          <button onClick={() => moveSection(idx, 1)} disabled={idx === builderPage.sections.length - 1} className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white disabled:opacity-20">↓</button>
-                          <button onClick={() => toggleSectionActive(idx)} className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-yellow-400">{s.active ? '👁' : '🙈'}</button>
-                          <button onClick={() => removeSection(idx)} className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-red-400">✕</button>
+                          <button onClick={() => moveSection(idx, -1)} disabled={idx === 0} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-white disabled:opacity-20">↑</button>
+                          <button onClick={() => moveSection(idx, 1)} disabled={idx === builderPage.sections.length - 1} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-white disabled:opacity-20">↓</button>
+                          <button onClick={() => toggleSectionActive(idx)} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-yellow-400">{s.active ? '👁' : '🙈'}</button>
+                          <button onClick={() => removeSection(idx)} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-red-400">✕</button>
                         </div>
                       </div>
                     )
@@ -303,8 +305,8 @@ export function PagesManager() {
             </div>
 
             {/* Section Picker */}
-            <div className="col-span-2 overflow-y-auto border-l border-[#1e1e2e] pl-4">
-              <p className="text-xs text-slate-500 mb-3 font-medium uppercase tracking-wider">Available Sections</p>
+            <div className="col-span-2 overflow-y-auto border-l border-border pl-4">
+              <p className="text-xs text-text-tertiary mb-3 font-medium uppercase tracking-wider">Available Sections</p>
               <div className="space-y-1.5">
                 {availableSections.map((s) => {
                   const typeInfo = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]
@@ -316,15 +318,15 @@ export function PagesManager() {
                       disabled={already}
                       className={`w-full text-left p-2.5 rounded-lg border transition-colors ${
                         already
-                          ? 'bg-[#0a0a12] border-[#1a1a2a] opacity-40 cursor-not-allowed'
-                          : 'bg-[#111122] border-[#2a2a3e] hover:border-indigo-500/50 hover:bg-[#15152a]'
+                          ? 'bg-background border-border opacity-40 cursor-not-allowed'
+                          : 'bg-surface border-border hover:border-brand/50 hover:bg-surface'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-sm">{typeInfo?.icon || '📦'}</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-medium text-white truncate">{s.titleEn || 'Untitled'}</div>
-                          <div className="text-xs text-slate-500">{typeInfo?.labelEn || s.sectionType}</div>
+                          <div className="text-xs text-text-tertiary">{typeInfo?.labelEn || s.sectionType}</div>
                         </div>
                         {already && <span className="text-xs text-green-400">✓</span>}
                       </div>
@@ -332,16 +334,16 @@ export function PagesManager() {
                   )
                 })}
                 {availableSections.length === 0 && (
-                  <p className="text-xs text-slate-600 text-center py-4">No sections available. Create sections first.</p>
+                  <p className="text-xs text-text-disabled text-center py-4">No sections available. Create sections first.</p>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 mt-4 pt-4 border-t border-[#1e1e2e]">
-            <Btn onClick={saveBuilder} disabled={saving}>{saving ? 'Saving...' : 'Save Layout'}</Btn>
-            <Btn variant="secondary" onClick={() => setBuilderModal(false)}>Cancel</Btn>
-            <span className="text-xs text-slate-500 self-center ml-auto">{builderPage.sections.length} section{builderPage.sections.length !== 1 ? 's' : ''}</span>
+          <div className="flex gap-3 mt-4 pt-4 border-t border-border">
+            <Btn onClick={saveBuilder} disabled={saving}>{saving ? t('saving') : t('saveLayout')}</Btn>
+            <Btn variant="secondary" onClick={() => setBuilderModal(false)}>{t('cancel')}</Btn>
+            <span className="text-xs text-text-tertiary self-center ml-auto">{builderPage.sections.length} section{builderPage.sections.length !== 1 ? 's' : ''}</span>
           </div>
         </Modal>
       )}

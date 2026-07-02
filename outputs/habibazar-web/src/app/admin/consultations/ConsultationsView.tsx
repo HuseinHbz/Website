@@ -43,40 +43,40 @@ export function ConsultationsView() {
           {items.map((c) => (
             <TR key={c.id} onClick={() => setSelected(c)}>
               <TD><span className="font-medium text-white">{c.name}</span></TD>
-              <TD className="text-slate-400">{c.email}</TD>
-              <TD className="text-slate-400 max-w-28 truncate">{c.serviceInterest || '—'}</TD>
+              <TD className="text-text-secondary">{c.email}</TD>
+              <TD className="text-text-secondary max-w-28 truncate">{c.serviceInterest || '—'}</TD>
               <TD><Badge>{c.type}</Badge></TD>
-              <TD className="text-slate-500">{c.budget || '—'}</TD>
+              <TD className="text-text-tertiary">{c.budget || '—'}</TD>
               <TD><Badge color={STATUS_COLOR[c.status]}>{statusLabel[c.status] || c.status}</Badge></TD>
-              <TD className="text-xs text-slate-600">{new Date(c.createdAt).toLocaleDateString()}</TD>
+              <TD className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</TD>
               <TD onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                 <Btn size="sm" variant="danger" onClick={() => del(c.id)}>{t('delete')}</Btn>
               </TD>
             </TR>
           ))}
         </Table>
-        {items.length === 0 && <div className="text-center py-12 text-slate-600">{t('noData')}</div>}
+        {items.length === 0 && <div className="text-center py-12 text-text-disabled">{t('noData')}</div>}
       </Card>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={t('consultTitle')} size="lg">
         {selected && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><p className="text-slate-500 text-xs mb-1">{t('name')}</p><p className="text-white font-medium">{selected.name}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('email')}</p><p className="text-blue-400">{selected.email}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('phone')}</p><p className="text-slate-300">{selected.phone || '—'}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('company')}</p><p className="text-slate-300">{selected.company || '—'}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('serviceInterest')}</p><p className="text-slate-300">{selected.serviceInterest || '—'}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('budget')}</p><p className="text-slate-300">{selected.budget || '—'}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('timeline')}</p><p className="text-slate-300">{selected.timeline || '—'}</p></div>
-              <div><p className="text-slate-500 text-xs mb-1">{t('prefDate')}</p><p className="text-slate-300">{selected.preferredDate} {selected.preferredTime}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('name')}</p><p className="text-white font-medium">{selected.name}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('email')}</p><p className="text-blue-400">{selected.email}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('phone')}</p><p className="text-text-primary">{selected.phone || '—'}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('company')}</p><p className="text-text-primary">{selected.company || '—'}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('serviceInterest')}</p><p className="text-text-primary">{selected.serviceInterest || '—'}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('budget')}</p><p className="text-text-primary">{selected.budget || '—'}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('timeline')}</p><p className="text-text-primary">{selected.timeline || '—'}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('prefDate')}</p><p className="text-text-primary">{selected.preferredDate} {selected.preferredTime}</p></div>
             </div>
             {selected.projectDescription && (
-              <div><p className="text-slate-500 text-xs mb-1">{t('projectDesc')}</p>
-              <div className="bg-[#0c0c14] rounded-lg p-3 text-sm text-slate-300">{selected.projectDescription}</div></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('projectDesc')}</p>
+              <div className="bg-background rounded-lg p-3 text-sm text-text-primary">{selected.projectDescription}</div></div>
             )}
             <div>
-              <p className="text-slate-500 text-xs mb-2">{t('updateStatus')}</p>
+              <p className="text-text-tertiary text-xs mb-2">{t('updateStatus')}</p>
               <div className="flex gap-2 flex-wrap">
                 {['new', 'scheduled', 'completed', 'cancelled'].map((s) => (
                   <Btn key={s} size="sm" variant={selected.status === s ? 'primary' : 'secondary'} onClick={() => updateStatus(selected.id, s)}>
@@ -85,8 +85,8 @@ export function ConsultationsView() {
                 ))}
               </div>
             </div>
-            <div className="flex gap-2 pt-2 border-t border-[#1e1e2e]">
-              <a href={`mailto:${selected.email}`} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+            <div className="flex gap-2 pt-2 border-t border-border">
+              <a href={`mailto:${selected.email}`} className="bg-brand hover:bg-brand text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                 {t('replyByEmail')}
               </a>
               <Btn size="sm" variant="danger" onClick={() => del(selected.id)}>{t('delete')}</Btn>

@@ -30,7 +30,7 @@ export default async function AboutPage({ params }: Props) {
   const { locale } = await params
   const [dbAbout, dbTimeline, dbSkills, dbCerts,
     contactEmail, contactPhone, contactLocationEn, contactLocationFa,
-    socialLinkedin, socialGithub, socialTwitter, socialInstagram, socialTelegram,
+    socialLinkedin, socialGithub, socialTwitter, socialInstagram, socialTelegram, socialWhatsapp,
   ] = await Promise.all([
     getPublicAbout(locale),
     getPublicTimeline(),
@@ -45,6 +45,7 @@ export default async function AboutPage({ params }: Props) {
     getPublicSetting('social_twitter'),
     getPublicSetting('social_instagram'),
     getPublicSetting('social_telegram'),
+    getPublicSetting('social_whatsapp'),
   ])
 
   const contactInfo = {
@@ -60,6 +61,7 @@ export default async function AboutPage({ params }: Props) {
     twitter: socialTwitter,
     instagram: socialInstagram,
     telegram: socialTelegram,
+    whatsapp: socialWhatsapp,
     email: contactEmail,
   }
 
@@ -67,6 +69,7 @@ export default async function AboutPage({ params }: Props) {
     <>
       <JsonLd schema={personSchema()} />
       <div className="pt-16">
+        <h1 className="sr-only">{locale === 'fa' ? 'درباره حسین حبیب‌آذر' : 'About Husein Habibazar'}</h1>
         <AboutSection
           locale={locale}
           dbAbout={dbAbout}

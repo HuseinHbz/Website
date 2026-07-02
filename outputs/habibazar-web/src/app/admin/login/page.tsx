@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080810] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: 'linear-gradient(#6366f1 1px, transparent 1px), linear-gradient(90deg, #6366f1 1px, transparent 1px)',
         backgroundSize: '40px 40px',
@@ -60,48 +60,52 @@ export default function AdminLoginPage() {
             HBZ
           </div>
           <h1 className="text-xl font-bold text-white">Admin Panel</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-text-tertiary mt-1">
             {step === 'totp' ? 'Two-Factor Authentication' : 'Sign in to manage your website'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-[#111122] border border-[#1e1e2e] rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-2xl p-6 space-y-4">
           {step === 'credentials' ? (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Email Address</label>
+                <label htmlFor="admin-email" className="block text-xs font-medium text-text-secondary mb-1.5">Email Address</label>
                 <input
+                  id="admin-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="username"
-                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+                <label htmlFor="admin-password" className="block text-xs font-medium text-text-secondary mb-1.5">Password</label>
                 <input
+                  id="admin-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
             </>
           ) : (
             <div>
               <div className="flex items-center justify-center mb-4">
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-2xl">
                   🔐
                 </div>
               </div>
-              <p className="text-xs text-slate-400 text-center mb-4">
+              <p className="text-xs text-text-secondary text-center mb-4">
                 Enter the 6-digit code from your authenticator app
               </p>
               <input
+                id="admin-totp"
+                aria-label="Authentication code"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]{6}"
@@ -112,12 +116,12 @@ export default function AdminLoginPage() {
                 autoFocus
                 autoComplete="one-time-code"
                 placeholder="000000"
-                className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.5em] font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.5em] font-mono focus:outline-none focus:border-brand transition-colors"
               />
               <button
                 type="button"
                 onClick={() => { setStep('credentials'); setError(''); setTotpCode('') }}
-                className="mt-3 w-full text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                className="mt-3 w-full text-xs text-text-tertiary hover:text-text-primary transition-colors"
               >
                 ← Back to login
               </button>
@@ -125,7 +129,7 @@ export default function AdminLoginPage() {
           )}
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-sm text-red-400">
+            <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-sm text-red-400">
               {error}
             </div>
           )}
@@ -133,7 +137,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading || (step === 'totp' && totpCode.length < 6)}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+            className="w-full bg-brand hover:bg-brand disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
           >
             {loading ? 'Verifying...' : step === 'totp' ? 'Verify Code' : 'Sign In'}
           </button>

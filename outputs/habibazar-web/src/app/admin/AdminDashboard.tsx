@@ -174,7 +174,7 @@ export function AdminDashboard() {
       <div className="animate-pulse space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-24 bg-[#111122] rounded-xl" />
+            <div key={i} className="h-24 bg-surface rounded-xl" />
           ))}
         </div>
       </div>
@@ -209,7 +209,7 @@ export function AdminDashboard() {
       <div className="flex justify-end">
         <button
           onClick={() => setShowCustomize(v => !v)}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-[#2a2a3e] hover:border-[#4a4a6e] rounded-lg transition-colors bg-[#0c0c14]"
+          className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-white border border-border hover:border-border rounded-lg transition-colors bg-background"
         >
           <span>⚙</span>
           <span>شخصی‌سازی داشبورد</span>
@@ -226,7 +226,7 @@ export function AdminDashboard() {
                 setEnabledWidgets(new Set(DEFAULT_WIDGETS))
                 saveWidgetPrefs(new Set(DEFAULT_WIDGETS))
               }}
-              className="text-xs text-indigo-400 hover:text-indigo-300"
+              className="text-xs text-brand hover:text-brand"
             >
               بازنشانی همه
             </button>
@@ -236,11 +236,11 @@ export function AdminDashboard() {
               <label key={id} className="flex items-center gap-2 cursor-pointer group">
                 <div
                   onClick={() => toggleWidget(id)}
-                  className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${enabledWidgets.has(id) ? 'bg-indigo-600' : 'bg-[#2a2a3e]'}`}
+                  className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${enabledWidgets.has(id) ? 'bg-brand' : 'bg-surface-2'}`}
                 >
                   <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${enabledWidgets.has(id) ? 'right-0.5' : 'left-0.5'}`} />
                 </div>
-                <span className="text-xs text-slate-400 group-hover:text-slate-300">
+                <span className="text-xs text-text-secondary group-hover:text-text-primary">
                   {WIDGET_LABELS[id]}
                 </span>
               </label>
@@ -284,7 +284,7 @@ export function AdminDashboard() {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-48 flex items-center justify-center text-slate-600 text-sm">
+                <div className="h-48 flex items-center justify-center text-text-disabled text-sm">
                   {t('noAnalytics')}
                 </div>
               )}
@@ -298,22 +298,22 @@ export function AdminDashboard() {
                 <div className="space-y-2">
                   {topPagesData.slice(0, 8).map((p, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500 w-4 text-right">{i + 1}</span>
+                      <span className="text-xs text-text-tertiary w-4 text-right">{i + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-slate-300 truncate mb-1">{p.page}</div>
-                        <div className="h-1.5 bg-[#1e1e2e] rounded-full overflow-hidden">
+                        <div className="text-xs text-text-primary truncate mb-1">{p.page}</div>
+                        <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-indigo-500"
+                            className="h-full rounded-full bg-brand"
                             style={{ width: `${(p.count / (topPagesData[0]?.count || 1)) * 100}%` }}
                           />
                         </div>
                       </div>
-                      <span className="text-xs font-mono text-indigo-400 w-6 text-right">{p.count}</span>
+                      <span className="text-xs font-mono text-brand w-6 text-right">{p.count}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="h-48 flex items-center justify-center text-slate-600 text-sm">{t('noTopPages')}</div>
+                <div className="h-48 flex items-center justify-center text-text-disabled text-sm">{t('noTopPages')}</div>
               )}
             </Card>
           )}
@@ -327,57 +327,57 @@ export function AdminDashboard() {
           {data?.recentActivity && data.recentActivity.length > 0 ? (
             <div className="space-y-2">
               {data.recentActivity.map((log) => (
-                <div key={log.id} className="flex items-center gap-3 py-2 border-b border-[#1e1e2e]/50 last:border-0">
-                  <span className={`text-xs font-bold uppercase w-16 ${ACTION_COLORS[log.action] || 'text-slate-400'}`}>
+                <div key={log.id} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+                  <span className={`text-xs font-bold uppercase w-16 ${ACTION_COLORS[log.action] || 'text-text-secondary'}`}>
                     {log.action}
                   </span>
-                  <span className="text-sm text-slate-300 flex-1">
-                    <span className="text-slate-500">{log.resource}</span>
-                    {log.resourceId && <span className="text-slate-600 text-xs ml-1">#{log.resourceId}</span>}
+                  <span className="text-sm text-text-primary flex-1">
+                    <span className="text-text-tertiary">{log.resource}</span>
+                    {log.resourceId && <span className="text-text-disabled text-xs ml-1">#{log.resourceId}</span>}
                   </span>
-                  <span className="text-xs text-slate-600">{log.userEmail}</span>
-                  <span className="text-xs text-slate-700">
+                  <span className="text-xs text-text-disabled">{log.userEmail}</span>
+                  <span className="text-xs text-text-disabled">
                     {new Date(log.createdAt).toLocaleString()}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-600 text-center py-8">{t('noActivity')}</p>
+            <p className="text-sm text-text-disabled text-center py-8">{t('noActivity')}</p>
           )}
         </Card>
       )}
 
       {/* Sync public content button */}
       {has('syncButton') && (
-        <div className="p-4 bg-[#0c0c14] border border-[#2a2a3e] rounded-xl space-y-3">
+        <div className="p-4 bg-background border border-border rounded-xl space-y-3">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <p className="text-sm font-medium text-white">{t('resyncTitle')}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{t('resyncDesc')}</p>
+              <p className="text-xs text-text-tertiary mt-0.5">{t('resyncDesc')}</p>
               {syncMsg && <p className="text-xs text-green-400 mt-1">{syncMsg}</p>}
             </div>
             <button
               onClick={() => resyncContent(false)}
               disabled={syncing}
-              className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors whitespace-nowrap"
+              className="px-4 py-2 text-xs font-medium bg-brand hover:bg-brand disabled:opacity-50 text-white rounded-lg transition-colors whitespace-nowrap"
             >
               {syncing ? t('syncing') : t('resyncBtn')}
             </button>
           </div>
           {/* Auto-sync timer */}
-          <div className="flex items-center gap-3 pt-2 border-t border-[#1e1e2e]">
-            <span className="text-xs text-slate-400 whitespace-nowrap">همگام‌سازی خودکار:</span>
+          <div className="flex items-center gap-3 pt-2 border-t border-border">
+            <span className="text-xs text-text-secondary whitespace-nowrap">همگام‌سازی خودکار:</span>
             <div className="flex gap-1 flex-wrap">
               {[0, 5, 10, 15, 20, 30, 60].map(m => (
                 <button key={m} onClick={() => setAutoSyncInterval(m)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${autoSyncInterval === m ? 'bg-indigo-600 text-white' : 'bg-[#1a1a2e] text-slate-400 hover:text-white'}`}>
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${autoSyncInterval === m ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary hover:text-white'}`}>
                   {m === 0 ? 'خاموش' : `${m} دقیقه`}
                 </button>
               ))}
             </div>
             {autoSyncInterval > 0 && nextSyncIn > 0 && (
-              <span className="text-xs text-slate-500 mr-auto whitespace-nowrap">
+              <span className="text-xs text-text-tertiary mr-auto whitespace-nowrap">
                 {Math.floor(nextSyncIn / 60)}:{String(nextSyncIn % 60).padStart(2, '0')} مانده
               </span>
             )}
@@ -397,10 +397,10 @@ export function AdminDashboard() {
             <a
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 p-4 bg-[#111122] border border-[#1e1e2e] rounded-xl hover:bg-[#1a1a2e] transition-colors group"
+              className="flex items-center gap-3 p-4 bg-surface border border-border rounded-xl hover:bg-surface-2 transition-colors group"
             >
               <span className="text-xl" style={{ color: item.color }}>{item.icon}</span>
-              <span className="text-sm font-medium text-slate-300 group-hover:text-white">{item.label}</span>
+              <span className="text-sm font-medium text-text-primary group-hover:text-white">{item.label}</span>
             </a>
           ))}
         </div>

@@ -31,3 +31,8 @@ data/*.db-wal
 
 # Uploads
 public/uploads/
+
+# Playwright / Lighthouse CI artifacts
+test-results/
+playwright-report/
+.lighthouseci/

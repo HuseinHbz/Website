@@ -9,9 +9,9 @@
 
 ```
 outputs/
-├── habibazar-web/     ← Next.js 15 App Router (سایت عمومی + ادمین پنل)
-├── habibazar-api/     ← API جداگانه (اختیاری)
-└── habibazar-deploy/  ← اسکریپت‌های deploy و nginx
+└── habibazar-web/     ← Next.js 15 App Router (سایت عمومی + ادمین پنل)
+deploy/                ← اسکریپت‌های نصب، آپدیت و تعمیر (install/update/fix-pm2)
+docs/                  ← مستندات عملیاتی و راهنماها
 ```
 
 **یک اپ Next.js** روی port `3000`، SQLite به عنوان database.  
@@ -206,19 +206,19 @@ CONTACT_EMAIL=hosseinhabibazar@gmail.com
 ### Deploy اول‌بار
 
 ```bash
-wget -O deploy.sh \
-  https://raw.githubusercontent.com/HuseinHbz/Website/hbz/outputs/habibazar-deploy/deploy.sh
-
-chmod +x deploy.sh
-./deploy.sh
+git clone --branch feature/v2-enterprise-upgrade \
+  https://github.com/HuseinHbz/Website.git
+cd Website
+sudo bash deploy/install.sh
 ```
 
 اسکریپت این کارها را انجام می‌دهد:
-1. Clone ریپو از branch `hbz`
-2. Build Next.js
-3. نصب Nginx config
-4. راه‌اندازی PM2
-5. Health check
+1. نصب وابستگی‌های سیستم (Node.js، PM2، Nginx، sqlite3)
+2. Clone ریپو در `/var/www/habibazar`
+3. Build Next.js
+4. نصب Nginx config
+5. راه‌اندازی PM2
+6. Health check
 
 ### SSL (بعد از deploy)
 
@@ -231,8 +231,8 @@ sudo certbot --nginx \
 ### آپدیت بعد از تغییرات
 
 ```bash
-cd /var/www/habibazar/repo/outputs/habibazar-deploy
-./update.sh
+cd /var/www/Website
+sudo bash deploy/update.sh
 ```
 
 ---
@@ -280,11 +280,21 @@ outputs/habibazar-web/
 │       │   ├── auth.ts             ← getAdminUser()
 │       │   └── audit.ts            ← logAction()
 │       └── publicData.ts           ← توابع خواندن داده عمومی
-outputs/habibazar-deploy/
-├── deploy.sh                       ← deploy اول‌بار
-├── update.sh                       ← آپدیت سریع
-├── ecosystem.config.js             ← PM2 config
-└── nginx.conf                      ← Nginx config
+deploy/
+├── install.sh                      ← نصب اول‌بار روی سرور تازه
+├── update.sh                       ← آپدیت (zero-downtime)
+├── fix-pm2.sh                      ← تعمیر سریع PM2
+├── uninstall.sh                    ← حذف کامل پروژه از سرور
+├── backup.sh                       ← بکاپ دیتابیس
+└── health-check.sh                 ← بررسی سلامت سرویس
+```
+
+### حذف کامل از سرور
+
+```bash
+cd /var/www/Website
+sudo bash deploy/uninstall.sh          # با تأیید تعاملی + بکاپ نهایی دیتابیس
+# گزینه‌ها: --yes  --no-backup  --keep-user  --keep-nginx  --remove-repo <path>
 ```
 
 ---

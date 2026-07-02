@@ -8,11 +8,11 @@ const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibaz
 export async function seedDatabase() {
   const sqlite = new Database(DB_PATH)
 
-  // Super admin user
+  // Super admin user — INSERT OR IGNORE is safe across parallel build workers
   const existingUser = sqlite.prepare('SELECT id FROM users WHERE email = ?').get('admin@habibazar.com')
   if (!existingUser) {
     const hash = await bcrypt.hash('HBZ@Admin2025!', 12)
-    sqlite.prepare(`INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`)
+    sqlite.prepare(`INSERT OR IGNORE INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`)
       .run(nanoid(), 'Husein Habibazar', 'admin@habibazar.com', hash, 'super_admin')
   }
 
@@ -33,6 +33,7 @@ export async function seedDatabase() {
     ['social_github', '', 'social'],
     ['social_twitter', '', 'social'],
     ['social_instagram', '', 'social'],
+    ['social_whatsapp', '', 'social'],
     ['smtp_host', '', 'email'],
     ['smtp_port', '587', 'email'],
     ['smtp_user', '', 'email'],
@@ -77,7 +78,7 @@ export async function seedDatabase() {
   }
 
   // Timeline items
-  const timelineCount = (sqlite.prepare('SELECT COUNT(*) as c FROM timeline_items').get() as { c: number }).c
+  const timelineCount = (sqlite.prepare('SELECT COUNT(*) as c FROM timeline_items').get() as { c: number } | undefined)?.c ?? 0
   if (timelineCount === 0) {
     const items = [
       { year: '2013', title_en: 'Started in IT Support', title_fa: 'شروع در پشتیبانی IT', company_en: 'Local ISP', company_fa: 'ISP محلی', desc_en: 'Began career maintaining network infrastructure and providing technical support for small businesses.', desc_fa: 'آغاز مسیر با نگهداری زیرساخت شبکه و پشتیبانی فنی از کسب‌وکارهای کوچک.', color: '#6366f1', sort_order: 1 },
@@ -91,7 +92,7 @@ export async function seedDatabase() {
   }
 
   // Skills
-  const skillsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM skills').get() as { c: number }).c
+  const skillsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM skills').get() as { c: number } | undefined)?.c ?? 0
   if (skillsCount === 0) {
     const sk = [
       ['MikroTik RouterOS', 'میکروتیک RouterOS', 'Networking', 'شبکه', 95, '#c03030'],
@@ -112,7 +113,7 @@ export async function seedDatabase() {
   }
 
   // Certifications
-  const certsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM certifications').get() as { c: number }).c
+  const certsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM certifications').get() as { c: number } | undefined)?.c ?? 0
   if (certsCount === 0) {
     const certs = [
       ['MikroTik MTCNA', 'میکروتیک MTCNA', 'MikroTik', '#c03030', 1],
@@ -127,7 +128,7 @@ export async function seedDatabase() {
   }
 
   // Services
-  const servicesCount = (sqlite.prepare('SELECT COUNT(*) as c FROM services').get() as { c: number }).c
+  const servicesCount = (sqlite.prepare('SELECT COUNT(*) as c FROM services').get() as { c: number } | undefined)?.c ?? 0
   if (servicesCount === 0) {
     const svcs = [
       { slug: 'network-design', title_en: 'Network Design & Architecture', title_fa: 'طراحی و معماری شبکه', category_en: 'Networking', category_fa: 'شبکه', short_desc_en: 'Enterprise network design with MikroTik, Cisco, VLANs, OSPF, BGP.', short_desc_fa: 'طراحی شبکه سازمانی با میکروتیک، سیسکو، VLAN، OSPF، BGP.', features_en: '["MikroTik RouterOS","Cisco IOS","VLAN Design","OSPF/BGP Routing","QoS Configuration","Network Documentation"]', features_fa: '["میکروتیک RouterOS","سیسکو IOS","طراحی VLAN","مسیریابی OSPF/BGP","پیکربندی QoS","مستندسازی شبکه"]', color: '#6366f1', sort_order: 1 },
@@ -145,7 +146,7 @@ export async function seedDatabase() {
   }
 
   // Projects
-  const projectsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM projects').get() as { c: number }).c
+  const projectsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM projects').get() as { c: number } | undefined)?.c ?? 0
   if (projectsCount === 0) {
     const projs = [
       { slug: 'kenzo-restaurant', name_en: 'Kenzo Restaurant', name_fa: 'رستوران کنزو', industry_en: 'Hospitality', industry_fa: 'مهمانداری', challenge_en: 'Unreliable network causing POS downtime and poor guest WiFi experience.', challenge_fa: 'شبکه ناپایدار که باعث خرابی POS و تجربه بد WiFi مهمانان می‌شد.', solution_en: 'Deployed MikroTik CHR with redundant ISP links, guest VLAN isolation, and QoS for POS priority.', solution_fa: 'استقرار MikroTik CHR با لینک‌های ISP افزونه، جداسازی VLAN مهمانان و QoS برای اولویت POS.', results_en: '["99.9% uptime achieved","POS latency reduced by 80%","Guest WiFi satisfaction increased","Secure VLAN isolation implemented"]', results_fa: '["دسترس‌پذیری ۹۹.۹٪ محقق شد","تأخیر POS ۸۰٪ کاهش یافت","رضایت WiFi مهمانان افزایش یافت","جداسازی VLAN امن پیاده‌سازی شد"]', tags_en: '["MikroTik","VLAN","QoS","WiFi","POS"]', tags_fa: '["میکروتیک","VLAN","QoS","وایفای","POS"]', color: '#c03030', year: '2023', featured: 1, sort_order: 1 },
@@ -158,7 +159,7 @@ export async function seedDatabase() {
   }
 
   // Clients
-  const clientsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM clients').get() as { c: number }).c
+  const clientsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM clients').get() as { c: number } | undefined)?.c ?? 0
   if (clientsCount === 0) {
     const cl = [
       ['Kenzo Restaurant', 'رستوران کنزو', 'Hospitality', 'مهمانداری', 0],
@@ -177,7 +178,7 @@ export async function seedDatabase() {
   }
 
   // Blog categories
-  const catCount = (sqlite.prepare('SELECT COUNT(*) as c FROM blog_categories').get() as { c: number }).c
+  const catCount = (sqlite.prepare('SELECT COUNT(*) as c FROM blog_categories').get() as { c: number } | undefined)?.c ?? 0
   if (catCount === 0) {
     const cats = [
       ['mikrotik', 'MikroTik', 'میکروتیک', '🌐', '#c03030'],
@@ -196,10 +197,11 @@ export async function seedDatabase() {
   }
 
   // Blog posts
-  const postsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM blog_posts').get() as { c: number }).c
+  const postsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM blog_posts').get() as { c: number } | undefined)?.c ?? 0
   if (postsCount === 0) {
-    const catId = (sqlite.prepare('SELECT id FROM blog_categories WHERE slug = ?').get('mikrotik') as { id: number })?.id || 1
-    const secId = (sqlite.prepare('SELECT id FROM blog_categories WHERE slug = ?').get('security') as { id: number })?.id || 7
+    const catId = (sqlite.prepare('SELECT id FROM blog_categories WHERE slug = ?').get('mikrotik') as { id: number } | undefined)?.id
+    const secId = (sqlite.prepare('SELECT id FROM blog_categories WHERE slug = ?').get('security') as { id: number } | undefined)?.id
+    if (!catId || !secId) { sqlite.close(); return }
     const posts = [
       { slug: 'mikrotik-ospf-multi-site', title_en: 'Building a Multi-Site MikroTik Network with OSPF', title_fa: 'ساخت شبکه چند سایته MikroTik با OSPF', excerpt_en: 'A complete guide to designing and deploying multi-site OSPF routing with MikroTik RouterOS for enterprise branch offices.', excerpt_fa: 'راهنمای کامل طراحی و استقرار مسیریابی OSPF چند سایته با MikroTik RouterOS برای دفاتر شعبه سازمانی.', category_id: catId, read_time_en: '12 min read', read_time_fa: '۱۲ دقیقه مطالعه', published_at_en: 'Jan 2025', published_at_fa: 'دی ۱۴۰۳', status: 'published', featured: 1 },
       { slug: 'zero-trust-fortigate', title_en: 'Zero-Trust Network Architecture with Fortigate', title_fa: 'معماری شبکه Zero-Trust با Fortigate', excerpt_en: 'Implementing a zero-trust security model using Fortigate NGFW, SSL inspection, and micro-segmentation.', excerpt_fa: 'پیاده‌سازی مدل امنیتی Zero-Trust با استفاده از Fortigate NGFW، بازرسی SSL و میکرو-تقسیم‌بندی.', category_id: secId, read_time_en: '15 min read', read_time_fa: '۱۵ دقیقه مطالعه', published_at_en: 'Feb 2025', published_at_fa: 'بهمن ۱۴۰۳', status: 'published', featured: 1 },
@@ -209,7 +211,7 @@ export async function seedDatabase() {
   }
 
   // Navigation items
-  const navCount = (sqlite.prepare('SELECT COUNT(*) as c FROM navigation_items').get() as { c: number }).c
+  const navCount = (sqlite.prepare('SELECT COUNT(*) as c FROM navigation_items').get() as { c: number } | undefined)?.c ?? 0
   if (navCount === 0) {
     const navItems = [
       ['Home', 'خانه', '/', 'header', 1],
@@ -224,7 +226,7 @@ export async function seedDatabase() {
   }
 
   // AI knowledge base defaults
-  const aiCount = (sqlite.prepare('SELECT COUNT(*) as c FROM ai_knowledge_base').get() as { c: number }).c
+  const aiCount = (sqlite.prepare('SELECT COUNT(*) as c FROM ai_knowledge_base').get() as { c: number } | undefined)?.c ?? 0
   if (aiCount === 0) {
     sqlite.prepare(`INSERT INTO ai_knowledge_base (title, type, content, tags, locale) VALUES (?,?,?,?,?)`)
       .run('HBZ Professional Profile', 'snippet', 'Husein Habibazar (HBZ) is an Infrastructure Architect and Network Security Consultant with 10+ years of experience. Specializes in MikroTik, Cisco, Fortigate, VMware, Proxmox, Zabbix, Ansible, and Linux administration. Serves enterprise clients in hospitality, corporate, and industrial sectors.', 'profile,about,background', 'both')

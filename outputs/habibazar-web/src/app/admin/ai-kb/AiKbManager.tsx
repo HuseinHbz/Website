@@ -49,11 +49,11 @@ export function AiKbManager() {
             <TR key={item.id}>
               <TD>
                 <div className="font-medium text-white">{item.title}</div>
-                {item.tags && <div className="text-xs text-slate-600 mt-0.5">{item.tags}</div>}
+                {item.tags && <div className="text-xs text-text-disabled mt-0.5">{item.tags}</div>}
               </TD>
               <TD><Badge color={typeColor[item.type]}>{item.type}</Badge></TD>
-              <TD className="text-slate-500">{item.locale}</TD>
-              <TD className="text-slate-500">{item.priority}</TD>
+              <TD className="text-text-tertiary">{item.locale}</TD>
+              <TD className="text-text-tertiary">{item.priority}</TD>
               <TD><Badge color={item.active ? 'green' : 'slate'}>{item.active ? 'Active' : 'Disabled'}</Badge></TD>
               <TD>
                 <div className="flex gap-2">
@@ -64,7 +64,7 @@ export function AiKbManager() {
             </TR>
           ))}
         </Table>
-        {items.length === 0 && <div className="text-center py-12 text-slate-600 text-sm">No knowledge items yet. Add your first one to power the AI chatbot.</div>}
+        {items.length === 0 && <div className="text-center py-12 text-text-disabled text-sm">No knowledge items yet. Add your first one to power the AI chatbot.</div>}
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Knowledge Item' : 'New Knowledge Item'} size="lg">

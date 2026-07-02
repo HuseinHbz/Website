@@ -6,7 +6,7 @@
  * No hardcoded hex colors.
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -291,11 +291,14 @@ export function EmptyState({ icon, title, description, action }: {
 export function useToast() {
   const [toasts, setToasts] = useState<{ id: number; msg: string; type: 'success' | 'error' | 'info' }[]>([])
 
-  function toast(msg: string, type: 'success' | 'error' | 'info' = 'success') {
+  // Memoized so effects that depend on `toast` (e.g. `[toast]` deps) don't
+  // re-run on every render — an unstable toast caused load effects to refetch
+  // in a loop and overwrite user input in forms.
+  const toast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Date.now()
     setToasts(t => [...t.slice(-3), { id, msg, type }])
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
-  }
+  }, [])
 
   function ToastContainer() {
     const styles = {

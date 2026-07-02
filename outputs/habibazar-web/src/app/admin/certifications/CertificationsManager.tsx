@@ -96,26 +96,26 @@ export function CertificationsManager() {
       />
 
       {/* Filter bar */}
-      <div className="mb-4 rounded-xl border border-[#2a2a3e] bg-[#0f0f1a] p-4">
+      <div className="mb-4 rounded-xl border border-border bg-background p-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
+            <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'جستجو' : 'Search'}</label>
             <div className="relative">
-              <span className={`absolute top-1/2 -translate-y-1/2 text-slate-500 text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
+              <span className={`absolute top-1/2 -translate-y-1/2 text-text-tertiary text-sm ${isFA ? 'right-3' : 'left-3'}`}>🔍</span>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={isFA ? 'نام یا صادرکننده...' : 'name or issuer...'}
-                className={`w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-white placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
               />
             </div>
           </div>
           <div className="w-36">
-            <label className="block text-xs text-slate-400 mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
+            <label className="block text-xs text-text-secondary mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
             <select
               value={filterActive}
               onChange={(e) => setFilterActive(e.target.value)}
-              className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
             >
               <option value="">{isFA ? 'همه' : 'All'}</option>
               <option value="active">{isFA ? 'فعال' : 'Active'}</option>
@@ -125,11 +125,11 @@ export function CertificationsManager() {
           <div className={`flex items-end gap-2 ${isFA ? 'mr-auto' : 'ml-auto'}`}>
             {(search || filterActive) && (
               <button onClick={() => { setSearch(''); setFilterActive('') }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-slate-400 border border-[#2a2a3e] hover:border-red-500 hover:text-red-400 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-text-secondary border border-border hover:border-red-500 hover:text-red-400 transition-colors">
                 ✕ {isFA ? 'پاک کردن' : 'Clear'}
               </button>
             )}
-            <span className="text-xs text-slate-500 py-2 px-1 whitespace-nowrap">
+            <span className="text-xs text-text-tertiary py-2 px-1 whitespace-nowrap">
               {filtered.length} / {certs.length} {isFA ? 'گواهینامه' : 'certs'}
             </span>
           </div>
@@ -154,18 +154,18 @@ export function CertificationsManager() {
                   )}
                   <div>
                     <div className="font-medium text-white">{c.nameEn}</div>
-                    <div className="text-xs text-slate-500">{c.nameFa}</div>
+                    <div className="text-xs text-text-tertiary">{c.nameFa}</div>
                   </div>
                 </div>
               </TD>
               <TD>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
-                  <span className="text-slate-300">{c.issuer || '—'}</span>
+                  <span className="text-text-primary">{c.issuer || '—'}</span>
                 </span>
               </TD>
-              <TD className="text-slate-400 text-sm">{c.issueDate || '—'}</TD>
-              <TD className="text-slate-400 text-sm">{c.expiryDate || <span className="text-green-500 text-xs">{isFA ? 'بدون انقضا' : 'No expiry'}</span>}</TD>
+              <TD className="text-text-secondary text-sm">{c.issueDate || '—'}</TD>
+              <TD className="text-text-secondary text-sm">{c.expiryDate || <span className="text-green-500 text-xs">{isFA ? 'بدون انقضا' : 'No expiry'}</span>}</TD>
               <TD><Badge color={c.active ? 'green' : 'slate'}>{c.active ? (isFA ? 'فعال' : 'Active') : (isFA ? 'غیرفعال' : 'Inactive')}</Badge></TD>
               <TD>
                 <div className="flex gap-2">
@@ -177,7 +177,7 @@ export function CertificationsManager() {
             </TR>
           ))}
           {filtered.length === 0 && (
-            <TR><TD colSpan={6} className="text-center text-slate-500 py-8">{isFA ? 'گواهینامه‌ای یافت نشد' : 'No certifications found'}</TD></TR>
+            <TR><TD colSpan={6} className="text-center text-text-tertiary py-8">{isFA ? 'گواهینامه‌ای یافت نشد' : 'No certifications found'}</TD></TR>
           )}
         </Table>
       </Card>
@@ -201,13 +201,13 @@ export function CertificationsManager() {
 
           {/* Badge image */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-400">{isFA ? 'تصویر بج / لوگو' : 'Badge / Logo Image'}</p>
+            <p className="text-xs font-medium text-text-secondary">{isFA ? 'تصویر بج / لوگو' : 'Badge / Logo Image'}</p>
             <div className="flex items-center gap-4">
               {editing.badgeUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={editing.badgeUrl} alt="badge" className="w-14 h-14 rounded-lg object-contain border border-[#2a2a3e]" style={{ background: `${editing.color}15` }} />
+                <img src={editing.badgeUrl} alt="badge" className="w-14 h-14 rounded-lg object-contain border border-border" style={{ background: `${editing.color}15` }} />
               ) : (
-                <div className="w-14 h-14 rounded-lg flex items-center justify-center text-sm font-bold text-white border border-[#2a2a3e]" style={{ background: editing.color }}>
+                <div className="w-14 h-14 rounded-lg flex items-center justify-center text-sm font-bold text-white border border-border" style={{ background: editing.color }}>
                   {editing.nameEn.slice(0, 3).toUpperCase() || '?'}
                 </div>
               )}
@@ -224,11 +224,11 @@ export function CertificationsManager() {
             <Input label={isFA ? 'رنگ' : 'Color'} type="color" value={editing.color} onChange={(v) => set('color', v)} />
             <Input label={isFA ? 'ترتیب نمایش' : 'Sort Order'} type="number" value={String(editing.sortOrder)} onChange={(v) => set('sortOrder', Number(v))} />
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">{isFA ? 'وضعیت' : 'Status'}</label>
               <select
                 value={editing.active ? 'true' : 'false'}
                 onChange={(e) => set('active', e.target.value === 'true')}
-                className="w-full bg-[#0c0c14] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
               >
                 <option value="true">{isFA ? 'فعال' : 'Active'}</option>
                 <option value="false">{isFA ? 'غیرفعال' : 'Inactive'}</option>
