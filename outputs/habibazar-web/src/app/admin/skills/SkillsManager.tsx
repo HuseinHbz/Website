@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
+import { crud, useResource } from '@/lib/admin/crud'
 
 type Skill = { id?: number; nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number; color: string; sortOrder: number; active: boolean }
 type Cert = { id?: number; nameEn: string; nameFa: string; issuer: string; issueDate: string; credentialUrl: string; color: string; sortOrder: number; active: boolean }
@@ -12,8 +13,8 @@ const EMPTY_CERT: Cert = { nameEn: '', nameFa: '', issuer: '', issueDate: '', cr
 
 export function SkillsManager() {
   const t = useT()
-  const [skills, setSkills] = useState<Skill[]>([])
-  const [certs, setCerts] = useState<Cert[]>([])
+  const { data: skills, reload: loadSkills } = useResource<Skill>('/api/admin/skills')
+  const { data: certs, reload: loadCerts } = useResource<Cert>('/api/admin/certifications')
   const [tab, setTab] = useState<'skills' | 'certs'>('skills')
   const [modal, setModal] = useState(false)
   const [editS, setEditS] = useState<Skill>(EMPTY_SKILL)
@@ -39,49 +40,39 @@ export function SkillsManager() {
     return true
   }), [certs, search, filterActive])
 
-  async function loadSkills() {
-    const r = await fetch('/api/admin/skills')
-    const d = await r.json(); setSkills(Array.isArray(d) ? d : [])
-  }
-  async function loadCerts() {
-    const r = await fetch('/api/admin/certifications')
-    const d = await r.json(); setCerts(Array.isArray(d) ? d : [])
-  }
-  useEffect(() => { loadSkills(); loadCerts() }, [])
-
   async function saveSkill() {
     setSaving(true)
-    const res = await fetch('/api/admin/skills', { method: editS.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editS) })
+    const res = await crud.save('/api/admin/skills', editS)
     setSaving(false)
     if (res.ok) { toast(t('saved')); setModal(false); loadSkills() } else toast(t('failed'), 'error')
   }
 
   async function saveCert() {
     setSaving(true)
-    const res = await fetch('/api/admin/certifications', { method: editC.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editC) })
+    const res = await crud.save('/api/admin/certifications', editC)
     setSaving(false)
     if (res.ok) { toast(t('saved')); setModal(false); loadCerts() } else toast(t('failed'), 'error')
   }
 
   async function delSkill(id: number) {
     if (!confirm(t('confirmDel'))) return
-    await fetch('/api/admin/skills', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    await crud.remove('/api/admin/skills', id)
     toast(t('deleted')); loadSkills()
   }
 
   async function delCert(id: number) {
     if (!confirm(t('confirmDel'))) return
-    await fetch('/api/admin/certifications', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    await crud.remove('/api/admin/certifications', id)
     toast(t('deleted')); loadCerts()
   }
 
   async function toggleSkill(s: Skill) {
-    await fetch('/api/admin/skills', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, active: !s.active }) })
+    await crud.patch('/api/admin/skills', { id: s.id, active: !s.active })
     toast(t('saved')); loadSkills()
   }
 
   async function toggleCert(c: Cert) {
-    await fetch('/api/admin/certifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, active: !c.active }) })
+    await crud.patch('/api/admin/certifications', { id: c.id, active: !c.active })
     toast(t('saved')); loadCerts()
   }
 

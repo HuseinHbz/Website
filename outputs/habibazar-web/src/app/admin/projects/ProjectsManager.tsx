@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { crud, useResource } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
 import { MediaPicker, GalleryPicker } from '@/components/admin/MediaPicker'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
@@ -91,38 +92,28 @@ export function ProjectsManager() {
   const t = useT()
   const locale = useAdminLocale()
   const isFa = locale === 'fa'
-  const [projects, setProjects] = useState<Project[]>([])
+  const { data: projects, reload: load } = useResource<Project>('/api/admin/projects')
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Project>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<TabId>('basic')
   const { toast, ToastContainer } = useToast()
 
-  async function load() {
-    try {
-      const r = await fetch('/api/admin/projects')
-      if (!r.ok) return
-      const d = await r.json()
-      setProjects(Array.isArray(d) ? d : [])
-    } catch { /* network error — leave existing list */ }
-  }
-  useEffect(() => { load() }, [])
-
   async function save() {
     setSaving(true)
-    const res = await fetch('/api/admin/projects', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
+    const res = await crud.save('/api/admin/projects', editing)
     setSaving(false)
     if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(t('failed'), 'error')
   }
 
   async function del(id: number) {
     if (!confirm(t('confirmDel'))) return
-    const res = await fetch('/api/admin/projects', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const res = await crud.remove('/api/admin/projects', id)
     if (res.ok) { toast(t('deleted')); load() } else toast(t('failed'), 'error')
   }
 
   async function toggle(p: Project) {
-    const res = await fetch('/api/admin/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, active: !p.active }) })
+    const res = await crud.patch('/api/admin/projects', { id: p.id, active: !p.active })
     if (res.ok) { toast(t('saved')); load() } else toast(t('failed'), 'error')
   }
 

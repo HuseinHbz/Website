@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
+import { crud, useResource } from '@/lib/admin/crud'
 
 type Client = { id?: number; nameEn: string; nameFa: string; typeEn: string; typeFa: string; logoUrl: string; website: string; isTechPartner: boolean; sortOrder: number; active: boolean }
 const EMPTY: Client = { nameEn: '', nameFa: '', typeEn: '', typeFa: '', logoUrl: '', website: '', isTechPartner: false, sortOrder: 0, active: true }
 
 export function ClientsManager() {
   const t = useT()
-  const [clients, setClients] = useState<Client[]>([])
+  const { data: clients, reload: load } = useResource<Client>('/api/admin/clients')
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Client>(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -28,27 +29,21 @@ export function ClientsManager() {
     return true
   }), [clients, search, filterType, filterActive])
 
-  async function load() {
-    const r = await fetch('/api/admin/clients')
-    const d = await r.json(); setClients(Array.isArray(d) ? d : [])
-  }
-  useEffect(() => { load() }, [])
-
   async function save() {
     setSaving(true)
-    const res = await fetch('/api/admin/clients', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
+    const res = await crud.save('/api/admin/clients', editing)
     setSaving(false)
     if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(t('failed'), 'error')
   }
 
   async function del(id: number) {
     if (!confirm(t('confirmDel'))) return
-    await fetch('/api/admin/clients', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    await crud.remove('/api/admin/clients', id)
     toast(t('deleted')); load()
   }
 
   async function toggle(c: Client) {
-    await fetch('/api/admin/clients', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, active: !c.active }) })
+    await crud.patch('/api/admin/clients', { id: c.id, active: !c.active })
     toast(t('saved')); load()
   }
 
