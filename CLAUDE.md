@@ -116,6 +116,13 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   level/source/service/date, search, pause/resume, error grouping,
   JSON/CSV export (`/api/admin/logs/export`), history query
   (`/api/admin/logs/query`), backup-engine status strip + alert badge.
+- Admin **Operations Center** (`/admin/operations`, `OperationsCenter`) — SRE
+  dashboard on **real** telemetry via `GET /api/admin/operations/overview`
+  (`lib/ops/snapshot.ts`): live CPU/memory/disk, DB probe latency, log-derived
+  requests/min + error rate, a subsystem health matrix (app/db/backup/scheduler/
+  logging/memory/storage/email/AI/cache/queue → healthy|warning|critical|offline),
+  infra facts (OS/kernel/node/sqlite/CPU/uptime), recent real errors, and
+  SLI/SLO/error-budget. Auto-refreshes every 10s. (Replaced the old mock data.)
 - Admin **Database Center** (`/admin/database`, `DatabaseHealth`) — read-only
   diagnostics via `GET /api/admin/database/health`: integrity_check + quick_check,
   foreign_key_check, WAL/journal + page/free stats, table+index census, per-table
