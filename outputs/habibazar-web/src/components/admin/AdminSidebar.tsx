@@ -114,7 +114,6 @@ const NAV = [
       { labelEn: 'User Management', labelFa: 'مدیریت کاربران', href: '/admin/users', icon: '◉' },
       { labelEn: 'Security & 2FA', labelFa: 'امنیت و ۲FA', href: '/admin/security', icon: '🔐' },
       { labelEn: 'Audit Center', labelFa: 'مرکز حسابرسی', href: '/admin/audit', icon: '▦' },
-      { labelEn: 'System Logs', labelFa: 'لاگ‌های سیستم', href: '/admin/logs', icon: '📜' },
       { labelEn: 'Logs & Monitoring', labelFa: 'لاگ‌ها و پایش زنده', href: '/admin/logs-monitoring', icon: '📡' },
       { labelEn: 'Backup & Recovery', labelFa: 'پشتیبان‌گیری و بازیابی', href: '/admin/backup', icon: '💾' },
     ],

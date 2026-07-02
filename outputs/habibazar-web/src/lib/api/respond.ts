@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger'
 import { getAdminUser, canDo, type AdminUser } from '@/lib/admin/auth'
 
 // Generic 500 — never leak internal error messages to the client. The real
-// error is logged server-side (visible in /admin/logs).
+// error is logged server-side (visible in /admin/logs-monitoring).
 export function apiError(e: unknown, message = 'Internal server error', status = 500) {
   logger.error(message, { error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined })
   return NextResponse.json({ error: message }, { status })
