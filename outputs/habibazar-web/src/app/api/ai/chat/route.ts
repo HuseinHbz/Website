@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { getDb } from '@/lib/db'
 import { siteSettings, aiModules, aiKnowledgeBase } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { breakers } from '@/lib/circuitBreaker'
 import { retry, isTransient } from '@/lib/retry'
 import { logger } from '@/lib/logger'
+import { limiters } from '@/lib/rateLimit'
+import { guardMessages, sanitize, REFUSAL, MAX_MESSAGE_LEN, MAX_MESSAGES } from '@/lib/ai/guard'
+
+// Public, untrusted input — validate + cap. The client may only send
+// user/assistant turns; a client-supplied `system` role is rejected so it cannot
+// smuggle its own system prompt past ours.
+const chatSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string().min(1).max(MAX_MESSAGE_LEN),
+  })).min(1).max(MAX_MESSAGES),
+  locale: z.enum(['en', 'fa']).optional(),
+  chatContext: z.string().max(2000).optional(),
+  moduleSlug: z.string().max(80).optional(),
+})
 
 type KbSource = { id: number; title: string; excerpt: string }
 
@@ -107,7 +123,33 @@ async function callGrok(apiKey: string, apiUrl: string, model: string, messages:
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, locale, chatContext, moduleSlug } = await req.json() as { messages: { role: string; content: string }[]; locale?: string; chatContext?: string; moduleSlug?: string }
+    // Rate limit (abuse / cost protection): 20 req/min per IP.
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown'
+    const rl = limiters.ai(ip)
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please slow down.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
+    }
+
+    // Validate + cap untrusted input.
+    let raw: unknown
+    try { raw = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }
+    const parsed = chatSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' }, { status: 400 })
+    }
+    const { messages: rawMessages, locale, chatContext, moduleSlug } = parsed.data
+
+    // AI security: detect prompt-injection / jailbreak / exfiltration attempts.
+    const guard = guardMessages(rawMessages)
+    if (guard.verdict === 'block') {
+      logger.security('AI prompt-injection blocked', { ip, risk: guard.risk, reasons: guard.reasons.join(','), source: 'ai' })
+      return NextResponse.json({ reply: REFUSAL, sources: [], blocked: true })
+    }
+    if (guard.risk === 'low') {
+      logger.warn('AI input flagged', { ip, reasons: guard.reasons.join(','), source: 'ai' })
+    }
+    // Neutralize any injected RAG context delimiters before we build the prompt.
+    const messages = rawMessages.map((m) => (m.role === 'user' ? { ...m, content: sanitize(m.content) } : m))
     const userContext = chatContext || ''
 
     const db = getDb()

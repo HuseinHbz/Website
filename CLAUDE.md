@@ -86,6 +86,14 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   audit via `logAction`. Middleware already guarantees a valid admin JWT.
   (Known hardening backlog: no zod input validation yet; raw `e.message` returned
   on 500; RBAC granularity not enforced per-route.)
+- **AI chat** (`POST /api/ai/chat`) — multi-provider (OpenAI/Claude/Gemini/Grok/
+  Conduit, chosen by `ai_provider` setting), RAG over `ai_knowledge_base` with
+  citations, circuit-breaker + retry. Guarded by `lib/ai/guard.ts`: zod-validated
+  body (client may only send `user`/`assistant` roles — a client `system` role is
+  rejected), 20 req/min rate limit (`limiters.ai`), and prompt-injection/jailbreak/
+  secret-exfiltration detection → blocked requests get a safe refusal + a
+  `logger.security` audit entry (source `ai`). Injected RAG delimiters are
+  sanitized. Unit-tested in `src/lib/ai/__tests__/guard.test.ts`.
 - Images from the CMS use plain `<img>` (dynamic/uploaded) — `no-img-element`
   is intentionally disabled project-wide in `.eslintrc.json`.
 - Fonts via `next/font/google` (Inter, JetBrains_Mono, Vazirmatn→`--font-persian`).
