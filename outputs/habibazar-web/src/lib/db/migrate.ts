@@ -375,6 +375,19 @@ export function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Feature Flag Center (Phase 18): global feature toggles with deterministic
+    -- percentage rollout. Evaluated by lib/flags/evaluate.ts.
+    CREATE TABLE IF NOT EXISTS feature_flags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT NOT NULL UNIQUE,
+      description TEXT,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      rollout_percent INTEGER NOT NULL DEFAULT 100 CHECK(rollout_percent BETWEEN 0 AND 100),
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- ERP asset register (Phase 16 foundation): IT asset lifecycle for HBZ
     -- Technology — servers, network gear, endpoints, licenses, cloud resources.
     CREATE TABLE IF NOT EXISTS assets (

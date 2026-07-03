@@ -159,6 +159,12 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   permission-denied, rate-limit and security-error events + audit LOGINs into a
   24h threat posture. Risk level/score is pure, unit-tested (`src/lib/soc/risk.ts`).
   Distinct from `/admin/security` (2FA/sessions) and Logs & Monitoring (raw stream).
+- **Feature Flag Center** (`/admin/flags`, `FlagsManager`) — Phase-18 SaaS building
+  block. `feature_flags` table (key/enabled/rollout_percent). Evaluation
+  `src/lib/flags/evaluate.ts` is pure + unit-tested: `isEnabled(flag, subject)`
+  with **deterministic, monotonic** percentage rollout (stable sha1 bucket).
+  `GET/POST/PUT/DELETE /api/admin/flags`: zod-validated, RBAC-gated, audit-logged;
+  GET previews each flag's evaluation for the current admin.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
