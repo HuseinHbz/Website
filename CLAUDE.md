@@ -147,6 +147,12 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   zod-validated, RBAC-gated (`requireAdmin('edit'|'delete')`), audit-logged. Lead
   scoring + pipeline stats are pure, unit-tested (`src/lib/crm/leads.ts`); writes
   re-score server-side. GET returns leads + aggregate sales KPIs.
+- **Asset Center** (`/admin/assets`, `AssetManager`) — Phase-16 ERP foundation.
+  `assets` table (IT asset lifecycle: type/serial/vendor/status/location/
+  assignment/warranty). `GET/POST/PUT/DELETE /api/admin/erp/assets`: zod-validated,
+  RBAC-gated, audit-logged. Warranty state (ok/expiring/expired) + portfolio stats
+  are pure, unit-tested (`src/lib/erp/assets.ts`); GET returns assets + warranty
+  health + rollup KPIs.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

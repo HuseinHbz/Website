@@ -1,0 +1,153 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+
+type Type = 'server' | 'network' | 'firewall' | 'switch' | 'router' | 'access_point' | 'storage' | 'vm' | 'cloud' | 'laptop' | 'license' | 'other'
+type Status = 'active' | 'maintenance' | 'retired' | 'spare'
+type WState = 'ok' | 'expiring' | 'expired' | 'none'
+interface Asset {
+  id?: number; name: string; type: Type; serial: string | null; vendor: string | null; status: Status
+  location: string | null; assignedTo: string | null; purchaseDate: string | null; warrantyExpiry: string | null; notes: string | null
+  warranty?: { state: WState; days: number | null }
+}
+interface Stats { total: number; byType: Record<string, number>; byStatus: Record<Status, number>; warrantyExpiring: number; warrantyExpired: number; active: number }
+
+const TYPES: Type[] = ['server', 'network', 'firewall', 'switch', 'router', 'access_point', 'storage', 'vm', 'cloud', 'laptop', 'license', 'other']
+const STATUSES: Status[] = ['active', 'maintenance', 'retired', 'spare']
+const STATUS_COLOR: Record<Status, string> = { active: 'green', maintenance: 'yellow', retired: 'slate', spare: 'blue' }
+const WARRANTY_COLOR: Record<WState, string> = { ok: 'green', expiring: 'yellow', expired: 'red', none: 'slate' }
+const EMPTY: Asset = { name: '', type: 'server', serial: '', vendor: '', status: 'active', location: '', assignedTo: '', purchaseDate: '', warrantyExpiry: '', notes: '' }
+
+export function AssetManager() {
+  const { toast, ToastContainer } = useToast()
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [typeFilter, setTypeFilter] = useState<Type | 'all'>('all')
+  const [search, setSearch] = useState('')
+  const [modal, setModal] = useState(false)
+  const [editing, setEditing] = useState<Asset>(EMPTY)
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/erp/assets')
+      if (r.ok) { const d = await r.json(); setAssets(d.assets ?? []); setStats(d.stats ?? null) }
+    } catch { toast('Failed to load assets', 'error') } finally { setLoading(false) }
+  }, [toast])
+  useEffect(() => { load() }, [load])
+
+  async function save() {
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/assets', {
+        method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
+      })
+      if (!r.ok) throw new Error()
+      toast('Asset saved', 'success'); setModal(false); load()
+    } catch { toast('Save failed (check required fields)', 'error') } finally { setSaving(false) }
+  }
+  async function del(id: number) {
+    if (!confirm('Delete this asset?')) return
+    try {
+      const r = await fetch('/api/admin/erp/assets', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+      if (!r.ok) throw new Error()
+      toast('Asset deleted', 'success'); load()
+    } catch { toast('Delete failed', 'error') }
+  }
+  function set<K extends keyof Asset>(k: K, v: Asset[K]) { setEditing((e) => ({ ...e, [k]: v })) }
+
+  const filtered = useMemo(() => assets.filter((a) => {
+    if (typeFilter !== 'all' && a.type !== typeFilter) return false
+    if (search) { const q = search.toLowerCase(); if (!`${a.name} ${a.serial ?? ''} ${a.vendor ?? ''} ${a.location ?? ''} ${a.assignedTo ?? ''}`.toLowerCase().includes(q)) return false }
+    return true
+  }), [assets, typeFilter, search])
+
+  return (
+    <>
+      <ToastContainer />
+      <PageHeader title="Asset Center" action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>New Asset</Btn>} />
+
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">Total assets</p><p className="text-2xl font-bold text-text-primary">{stats.total}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-success/40"><p className="text-xs text-text-tertiary mb-1">Active</p><p className="text-2xl font-bold text-success">{stats.active}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-warning/40"><p className="text-xs text-text-tertiary mb-1">In maintenance</p><p className="text-2xl font-bold text-text-primary">{stats.byStatus.maintenance}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-warning/40"><p className="text-xs text-text-tertiary mb-1">Warranty expiring</p><p className="text-2xl font-bold text-warning">{stats.warrantyExpiring}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-danger/40"><p className="text-xs text-text-tertiary mb-1">Warranty expired</p><p className="text-2xl font-bold text-danger">{stats.warrantyExpired}</p></div>
+        </div>
+      )}
+
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as Type | 'all')} className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white capitalize">
+          <option value="all">All types ({assets.length})</option>
+          {TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')} ({stats?.byType[t] ?? 0})</option>)}
+        </select>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name / serial / vendor / location…" className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-text-disabled" />
+      </div>
+
+      <Card className="p-0 overflow-hidden">
+        {loading ? <p className="text-sm text-text-tertiary p-5">Loading…</p>
+          : filtered.length === 0 ? <p className="text-sm text-text-tertiary p-5">No assets. Click “New Asset” to add one.</p>
+          : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
+                {['Asset', 'Type', 'Serial', 'Status', 'Warranty', 'Assigned / Location', 'Actions'].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {filtered.map((a) => (
+                  <tr key={a.id} className="border-b border-subtle/50">
+                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{a.name}</div><div className="text-xs text-text-tertiary">{a.vendor || '—'}</div></td>
+                    <td className="px-4 py-2.5 text-text-tertiary text-xs capitalize">{a.type.replace('_', ' ')}</td>
+                    <td className="px-4 py-2.5 text-text-secondary text-xs font-mono">{a.serial || '—'}</td>
+                    <td className="px-4 py-2.5"><Badge color={STATUS_COLOR[a.status]}>{a.status}</Badge></td>
+                    <td className="px-4 py-2.5">
+                      {a.warranty && a.warranty.state !== 'none'
+                        ? <Badge color={WARRANTY_COLOR[a.warranty.state]}>{a.warranty.state}{a.warranty.days != null ? ` · ${a.warranty.days}d` : ''}</Badge>
+                        : <span className="text-xs text-text-disabled">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-text-tertiary text-xs">{[a.assignedTo, a.location].filter(Boolean).join(' · ') || '—'}</td>
+                    <td className="px-4 py-2.5"><div className="flex gap-2">
+                      <Btn size="sm" variant="secondary" onClick={() => { setEditing(a); setModal(true) }}>Edit</Btn>
+                      <Btn size="sm" variant="danger" onClick={() => del(a.id!)}>Del</Btn>
+                    </div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Asset' : 'New Asset'} size="lg">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Name *" value={editing.name} onChange={(v) => set('name', v)} />
+            <Input label="Vendor" value={editing.vendor || ''} onChange={(v) => set('vendor', v)} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Select label="Type" value={editing.type} onChange={(v) => set('type', v as Type)} options={TYPES.map((t) => ({ value: t, label: t.replace('_', ' ') }))} />
+            <Select label="Status" value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: s }))} />
+            <Input label="Serial" value={editing.serial || ''} onChange={(v) => set('serial', v)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Assigned to" value={editing.assignedTo || ''} onChange={(v) => set('assignedTo', v)} />
+            <Input label="Location" value={editing.location || ''} onChange={(v) => set('location', v)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Purchase date" type="date" value={editing.purchaseDate || ''} onChange={(v) => set('purchaseDate', v)} />
+            <Input label="Warranty expiry" type="date" value={editing.warrantyExpiry || ''} onChange={(v) => set('warrantyExpiry', v)} />
+          </div>
+          <Input label="Notes" value={editing.notes || ''} onChange={(v) => set('notes', v)} multiline rows={3} />
+          <div className="flex gap-3">
+            <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Asset'}</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+          </div>
+        </div>
+      </Modal>
+    </>
+  )
+}

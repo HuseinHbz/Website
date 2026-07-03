@@ -375,6 +375,25 @@ export function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- ERP asset register (Phase 16 foundation): IT asset lifecycle for HBZ
+    -- Technology — servers, network gear, endpoints, licenses, cloud resources.
+    CREATE TABLE IF NOT EXISTS assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'other' CHECK(type IN ('server','network','firewall','switch','router','access_point','storage','vm','cloud','laptop','license','other')),
+      serial TEXT,
+      vendor TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','maintenance','retired','spare')),
+      location TEXT,
+      assigned_to TEXT,
+      purchase_date TEXT,
+      warranty_expiry TEXT,
+      notes TEXT,
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- Real-time system log stream (application/API/db/backup/security events).
     CREATE TABLE IF NOT EXISTS system_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1437,6 +1456,8 @@ export function runMigrations() {
     `CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint)`,
     `CREATE INDEX IF NOT EXISTS idx_backups_started ON backups(started_at)`,
     `CREATE INDEX IF NOT EXISTS idx_backups_status ON backups(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_assets_type_status ON assets(type, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_assets_warranty ON assets(warranty_expiry)`,
     `CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_requests(status)`,
     `CREATE INDEX IF NOT EXISTS idx_consultation_status ON consultation_requests(status)`,
     `CREATE INDEX IF NOT EXISTS idx_media_folder ON media_files(folder)`,
