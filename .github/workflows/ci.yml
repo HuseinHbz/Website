@@ -50,6 +50,8 @@ jobs:
         run: npm run audit:deps
       - name: Link & media integrity
         run: npm run audit:links
+      - name: Translation-key integrity
+        run: npm run audit:i18n
 
   # ── Unit tests ─────────────────────────────────────────────────────────────
   test:
