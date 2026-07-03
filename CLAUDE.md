@@ -155,7 +155,7 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
 - E2E seeds/logs in via the seeded admin above (see `e2e/helpers.ts`).
 - Target: zero TS errors, zero lint warnings, 0 vulnerabilities, all tests green.
 
-## Governance audits (`npm run audit` runs all four; docs in `docs/governance/`)
+## Governance audits (`npm run audit` runs all five; docs in `docs/governance/`)
 - `audit:tokens` — design tokens: fails on arbitrary Tailwind color classes
   (drift). Source of truth: `tailwind.config.ts` + `src/lib/design/tokens.ts`
   (`BRAND`, `CHART_PALETTE`, `SOCIAL_BRAND`) for values that can't be a class.
@@ -166,7 +166,10 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
 - `audit:deps` — dependency/bundle: fails on unused runtime deps, build tools in
   `dependencies`, or `@types/*` in runtime. Heavy recharts is code-split via
   `next/dynamic` (`src/app/admin/ViewsChart.tsx`) — `/admin` First Load 136 kB.
-- `tokens`, `content` and `deps` audits gate CI (in the ESLint job).
+- `audit:links` — link & media integrity: enumerates real public routes from the
+  App Router and **fails on broken internal links** (a nav/CTA pointing at a
+  non-existent page); warns on `/uploads/` media missing from `public/`.
+- `tokens`, `content`, `deps` and `links` audits gate CI (in the ESLint job).
 
 ## CI (`.github/workflows/ci.yml`)
 Jobs: TypeScript, ESLint, Unit Tests, Build, Security Audit

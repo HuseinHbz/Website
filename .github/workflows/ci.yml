@@ -48,6 +48,8 @@ jobs:
         run: npm run audit:content
       - name: Dependency & bundle governance
         run: npm run audit:deps
+      - name: Link & media integrity
+        run: npm run audit:links
 
   # ── Unit tests ─────────────────────────────────────────────────────────────
   test:
