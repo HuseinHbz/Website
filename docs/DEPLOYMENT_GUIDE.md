@@ -160,6 +160,35 @@ crontab -e
 
 ---
 
+## مهاجرت به PostgreSQL (اختیاری)
+
+پلتفرم به‌صورت پیش‌فرض روی **SQLite** اجرا می‌شود. برای مهاجرت لایهٔ داده به
+**PostgreSQL 17**، مجموعه اسکریپت‌های `deploy/postgres/` آماده است (Debian 12 /
+Ubuntu 24.04):
+
+```bash
+# ۱) نصب PostgreSQL 17 + اکستنشن‌ها (DATABASE_URL در /root/.habibazar-pg-dsn نوشته می‌شود)
+sudo deploy/postgres/install-postgresql.sh
+
+# ۲) بکاپ SQLite + مهاجرت داده + اعتبارسنجی تطابق (row-count + checksum)
+sudo deploy/postgres/sqlite-to-postgresql.sh
+
+# ۳) بررسی روی PostgreSQL زنده
+DATABASE_URL="$(cat /root/.habibazar-pg-dsn)" deploy/postgres/verify-postgresql.sh
+
+# rollback به SQLite در صورت نیاز
+sudo deploy/postgres/rollback-to-sqlite.sh
+```
+
+> **وضعیت صادقانه:** موتور مهاجرت و اسکریپت‌ها واقعی و اجراشده‌اند (۶۴ جدول با
+> تطابق دقیق). اما **runtime برنامه هنوز روی درایور `better-sqlite3` است**؛ تبدیل
+> کامل به درایور async با `npm run audit:pgcompat` ردیابی می‌شود (هدف: صفر). تا
+> پیش از آن، production روی SQLite اجرا می‌شود. جزئیات:
+> `deploy/postgres/README.md` و
+> `outputs/habibazar-web/docs/governance/phase20-postgres-migration.md`.
+
+---
+
 ## Health Check
 
 ```bash

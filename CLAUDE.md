@@ -236,6 +236,18 @@ start the app, `wait-on /api/health`, then run.
     tools; monitor the engine at `/admin/logs-monitoring` + `/api/admin/backup/engine`.
 - First-time/after-config-change: `git pull && sudo bash deploy/update.sh &&
   sudo bash deploy/fix-pm2.sh`. Routine updates: `git pull && sudo bash deploy/update.sh`.
+- **PostgreSQL migration (optional, `deploy/postgres/`).** Runtime is still SQLite
+  (`better-sqlite3`, synchronous). The data tier has a real, executed migration
+  path to PostgreSQL 17: `install-postgresql.sh` (PG17 + extensions on Debian/
+  Ubuntu, writes `DATABASE_URL`), `sqlite-to-postgresql.sh` (SQLite backup →
+  engine → validate), `verify-postgresql.sh`, `restore-postgresql.sh`,
+  `rollback-to-sqlite.sh`. Engine: `scripts/migrate-to-postgres.mjs`
+  (`npm run db:migrate:pg`) — introspect → FK-topological order → value-preserving
+  schema → batched load → sequence sync → row-count + checksum validation → JSON
+  report. The remaining runtime async-driver cutover is tracked by
+  `npm run audit:pgcompat` (target: 0). `pg`/`@types/pg` are devDependencies
+  (migration tooling, not the runtime bundle). See `deploy/postgres/README.md` +
+  `docs/governance/phase20-postgres-migration.md`.
 
 ## Gotchas learned
 - Parallel Next build workers each run seed → use `INSERT OR IGNORE` (fixed).
