@@ -94,6 +94,12 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   secret-exfiltration detection → blocked requests get a safe refusal + a
   `logger.security` audit entry (source `ai`). Injected RAG delimiters are
   sanitized. Unit-tested in `src/lib/ai/__tests__/guard.test.ts`.
+- **CMS → AI knowledge sync** (`src/lib/ai/sync.ts`) — keeps `ai_knowledge_base`
+  current with published content (blog/projects/solutions/technologies/journey).
+  Each synced row is keyed by `source_url = cms://<type>/<id>` → idempotent upsert
+  + orphan cleanup + duplicate detection. Auto-runs debounced from
+  `audit.logAction` on content edits; manual via `POST /api/admin/ai-kb/sync`.
+  Mapping is a pure, unit-tested function (`buildEntry`).
 - Images from the CMS use plain `<img>` (dynamic/uploaded) — `no-img-element`
   is intentionally disabled project-wide in `.eslintrc.json`.
 - Fonts via `next/font/google` (Inter, JetBrains_Mono, Vazirmatn→`--font-persian`).

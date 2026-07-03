@@ -2,6 +2,7 @@ import { getDb } from '@/lib/db'
 import { auditLogs } from '@/lib/db/schema'
 import { logBus } from '@/lib/logs/bus'
 import { scheduler } from '@/lib/backup/scheduler'
+import { scheduleKbSync } from '@/lib/ai/sync'
 import type { AdminUser } from './auth'
 
 export async function logAction(
@@ -32,7 +33,11 @@ export async function logAction(
       userId: user?.id ?? null, meta: { action, resource, resourceId, ip: ipAddress },
     })
     // Event-driven backup: any admin data mutation debounces a backup.
-    if (action !== 'LOGIN' && action !== 'LOGOUT') scheduler.notifyDataChange('data-change')
+    if (action !== 'LOGIN' && action !== 'LOGOUT') {
+      scheduler.notifyDataChange('data-change')
+      // Auto-refresh AI knowledge when synced CMS content changes.
+      scheduleKbSync(resource)
+    }
   } catch {
     // Non-fatal
   }
