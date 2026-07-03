@@ -804,6 +804,17 @@ const T: Record<string, { fa: string; en: string }> = {
   kbStatusLabel:      { fa: 'وضعیت', en: 'Status' },
   kbActive:           { fa: 'فعال — در RAG گنجانده می‌شود', en: 'Active — included in RAG' },
   saveItem:           { fa: 'ذخیره آیتم', en: 'Save Item' },
+  on:                 { fa: 'روشن', en: 'On' },
+  both:               { fa: 'هر دو', en: 'Both' },
+  english:            { fa: 'انگلیسی', en: 'English' },
+  persian:            { fa: 'فارسی', en: 'Persian' },
+  loadingAnalytics:   { fa: 'در حال بارگذاری تحلیل‌ها...', en: 'Loading analytics...' },
+  ragEnabledTitle:    { fa: '✓ RAG فعال است', en: '✓ RAG Enabled' },
+  ragEnabledNote:     { fa: 'پایگاه دانش برای هر پیام کاربر به‌صورت خودکار جستجو می‌شود. ۴ مورد مرتبط برتر به‌عنوان زمینه تزریق می‌شوند.', en: 'Knowledge base is automatically searched for each user message. Top 4 relevant items injected as context.' },
+  archReadyTitle:     { fa: '📐 معماری آماده', en: '📐 Architecture Ready' },
+  archReadyNote:      { fa: 'سیستم برای یکپارچه‌سازی آینده با پایگاه داده برداری (pgvector، Chroma، Pinecone) با حداقل تغییر کد طراحی شده است.', en: 'System designed for future vector DB (pgvector, Chroma, Pinecone) integration with minimal code changes.' },
+  voiceArchTitle:     { fa: '🎙 معماری صوتی', en: '🎙 Voice Architecture' },
+  voiceArchNote:      { fa: 'رابط‌های تبدیل گفتار به متن (Whisper) و متن به گفتار (ElevenLabs/OpenAI TTS) تعریف شده‌اند. برای فعال‌سازی تنظیمات ai_tts_enabled و ai_stt_enabled را اضافه کنید.', en: 'Speech-to-text (Whisper API) and text-to-speech (ElevenLabs/OpenAI TTS) interfaces are defined. Add ai_tts_enabled and ai_stt_enabled settings to activate.' },
 
   // Form Builder
   formBuilderTitle:   { fa: 'سازنده فرم', en: 'Form Builder' },

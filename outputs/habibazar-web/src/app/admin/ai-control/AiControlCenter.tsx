@@ -145,10 +145,10 @@ export function AiControlCenter() {
   }
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'modules', label: '🤖 AI Modules' },
-    { id: 'knowledge', label: '📚 Knowledge Base' },
-    { id: 'analytics', label: '📊 Analytics' },
-    { id: 'settings', label: '⚙ AI Settings' },
+    { id: 'modules', label: t('tabModules') },
+    { id: 'knowledge', label: t('tabKnowledge') },
+    { id: 'analytics', label: t('tabAnalytics') },
+    { id: 'settings', label: t('tabAiSettings') },
   ]
 
   const enabledCount = modules.filter(m => m.enabled).length
@@ -159,12 +159,12 @@ export function AiControlCenter() {
       <ToastContainer />
       <PageHeader
         title={t('aiControlTitle')}
-        subtitle="Manage HBZ AI Platform — modules, knowledge base, analytics, and provider settings"
+        subtitle={t('aiControlSub')}
         action={
           <div className="flex items-center gap-3">
-            <span className="text-xs text-text-tertiary">{enabledCount}/{modules.length} modules active · {kbActiveCount} KB items</span>
+            <span className="text-xs text-text-tertiary">{enabledCount}/{modules.length} {t('activeModules')} · {kbActiveCount} {t('kbItemsLabel')}</span>
             <a href="/en/ai" target="_blank" className="px-3 py-1.5 text-xs font-medium text-brand border border-brand/30 rounded-lg hover:bg-brand/10 transition-all">
-              ↗ Open AI Platform
+              {t('openAiPlatform')}
             </a>
           </div>
         }
@@ -204,9 +204,9 @@ export function AiControlCenter() {
                     <p className="text-xs text-text-tertiary mt-0.5 truncate">{mod.descriptionEn}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full text-text-secondary" style={{ background: 'rgba(255,255,255,0.05)' }}>{mod.category}</span>
-                      <span className="text-xs text-text-disabled">{mod.usageCount} uses</span>
+                      <span className="text-xs text-text-disabled">{mod.usageCount} {t('usesLabel')}</span>
                       <button onClick={() => { setEditingModule(mod); setModuleModal(true) }}
-                        className="ml-auto text-xs text-text-tertiary hover:text-brand transition-colors">✏ Edit</button>
+                        className="ml-auto text-xs text-text-tertiary hover:text-brand transition-colors">{t('editModule')}</button>
                     </div>
                   </div>
                 </div>
@@ -220,7 +220,7 @@ export function AiControlCenter() {
       {tab === 'knowledge' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-text-tertiary">{kbItems.length} items · {kbActiveCount} active · Used for RAG context injection</p>
+            <p className="text-sm text-text-tertiary">{kbItems.length} {t('kbItemsLabel')} · {kbActiveCount} {t('kbActiveLabel')}</p>
             <Btn onClick={() => { setEditingKb(EMPTY_KB); setKbModal(true) }}>{t('addKbItem')}</Btn>
           </div>
           <div className="grid gap-3">
@@ -232,7 +232,7 @@ export function AiControlCenter() {
                       <span className="text-xs font-bold text-brand">[{(item as { id?: number }).id}]</span>
                       <p className="text-sm font-medium text-white">{item.title}</p>
                       <Badge color={item.type === 'document' ? 'blue' : item.type === 'faq' ? 'green' : item.type === 'snippet' ? 'yellow' : 'indigo'}>{item.type}</Badge>
-                      {!item.active && <Badge color="slate">Disabled</Badge>}
+                      {!item.active && <Badge color="slate">{t('disabledLabel')}</Badge>}
                     </div>
                     {item.content && <p className="text-xs text-text-tertiary line-clamp-2">{item.content}</p>}
                     <div className="flex items-center gap-2 mt-1">
@@ -250,7 +250,7 @@ export function AiControlCenter() {
           </div>
           {kbItems.length === 0 && (
             <Card className="p-12 text-center">
-              <p className="text-text-disabled text-sm mb-4">No knowledge items yet. Add content to power RAG-based AI responses.</p>
+              <p className="text-text-disabled text-sm mb-4">{t('noKbItems')}</p>
               <Btn onClick={() => { setEditingKb(EMPTY_KB); setKbModal(true) }}>{t('addKbItem')}</Btn>
             </Card>
           )}
@@ -263,10 +263,10 @@ export function AiControlCenter() {
           {/* Stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Conversations', value: analytics.totalConversations, icon: '💬', color: 'indigo' },
-              { label: 'Total Messages', value: analytics.totalMessages, icon: '📨', color: 'blue' },
-              { label: 'Active Modules', value: enabledCount, icon: '🤖', color: 'green' },
-              { label: 'Bookmarked', value: analytics.bookmarked, icon: '🔖', color: 'yellow' },
+              { label: t('totalConvs'), value: analytics.totalConversations, icon: '💬', color: 'indigo' },
+              { label: t('totalMsgs'), value: analytics.totalMessages, icon: '📨', color: 'blue' },
+              { label: t('activeModules'), value: enabledCount, icon: '🤖', color: 'green' },
+              { label: t('bookmarked'), value: analytics.bookmarked, icon: '🔖', color: 'yellow' },
             ].map(stat => (
               <Card key={stat.label} className="p-4">
                 <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ export function AiControlCenter() {
 
           {/* Top modules */}
           <Card className="p-6">
-            <SectionDivider label="Module Usage" />
+            <SectionDivider label={t('moduleUsage')} />
             <div className="space-y-3 mt-4">
               {analytics.topModules.map(mod => {
                 const maxUsage = Math.max(...analytics.topModules.map(m => m.usageCount), 1)
@@ -292,18 +292,18 @@ export function AiControlCenter() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-xs text-text-primary">{mod.nameEn.replace('HBZ ', '')}</p>
-                        <span className="text-xs text-text-tertiary">{mod.usageCount} sessions</span>
+                        <span className="text-xs text-text-tertiary">{mod.usageCount} {t('sessionsLabel')}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-surface-2">
                         <div className="h-full rounded-full bg-brand/60" style={{ width: `${(mod.usageCount / maxUsage) * 100}%` }} />
                       </div>
                     </div>
-                    <Badge color={mod.enabled ? 'green' : 'slate'}>{mod.enabled ? 'On' : 'Off'}</Badge>
+                    <Badge color={mod.enabled ? 'green' : 'slate'}>{mod.enabled ? t('on') : t('off')}</Badge>
                   </div>
                 )
               })}
               {analytics.topModules.every(m => m.usageCount === 0) && (
-                <p className="text-center text-text-disabled text-sm py-4">No usage data yet. Start conversations from the AI Platform.</p>
+                <p className="text-center text-text-disabled text-sm py-4">{t('noUsageData')}</p>
               )}
             </div>
           </Card>
@@ -311,7 +311,7 @@ export function AiControlCenter() {
           {/* Daily activity */}
           {analytics.dailyActivity.length > 0 && (
             <Card className="p-6">
-              <SectionDivider label="14-Day Activity" />
+              <SectionDivider label={t('activityDays')} />
               <div className="flex items-end gap-1 mt-4 h-24">
                 {analytics.dailyActivity.map(day => {
                   const max = Math.max(...analytics.dailyActivity.map(d => d.count), 1)
@@ -328,7 +328,7 @@ export function AiControlCenter() {
         </div>
       )}
       {tab === 'analytics' && !analytics && (
-        <div className="text-center py-16 text-text-disabled">Loading analytics...</div>
+        <div className="text-center py-16 text-text-disabled">{t('loadingAnalytics')}</div>
       )}
 
       {/* ── Settings Tab ───────────────────────────────────────── */}
@@ -346,33 +346,33 @@ export function AiControlCenter() {
                 { value: 'conduit', label: 'Conduit (Multi-model proxy)' },
                 { value: 'copilot', label: 'GitHub Copilot' },
               ]} />
-            <Input label="API Key" value={settings.ai_api_key || ''} onChange={v => setSettings(s => ({ ...s, ai_api_key: v }))} type="password" placeholder="sk-..." />
-            <Input label="Model" value={settings.ai_model || ''} onChange={v => setSettings(s => ({ ...s, ai_model: v }))} placeholder="gpt-4o / claude-sonnet-4-6 / gemini-1.5-pro" />
-            <Input label="API Base URL (optional)" value={settings.ai_api_url || ''} onChange={v => setSettings(s => ({ ...s, ai_api_url: v }))} placeholder="https://api.openai.com/v1" />
+            <Input label={t('apiKeyLabel')} value={settings.ai_api_key || ''} onChange={v => setSettings(s => ({ ...s, ai_api_key: v }))} type="password" placeholder="sk-..." />
+            <Input label={t('modelLabel')} value={settings.ai_model || ''} onChange={v => setSettings(s => ({ ...s, ai_model: v }))} placeholder="gpt-4o / claude-sonnet-4-6 / gemini-1.5-pro" />
+            <Input label={t('apiBaseUrl')} value={settings.ai_api_url || ''} onChange={v => setSettings(s => ({ ...s, ai_api_url: v }))} placeholder="https://api.openai.com/v1" />
           </Card>
 
           <Card className="p-6 space-y-4">
-            <SectionDivider label="Default System Prompt" />
-            <p className="text-xs text-text-tertiary">This prompt is used when no module-specific prompt is set. Module prompts override this.</p>
-            <Input label="Global System Prompt" value={settings.ai_system_prompt || ''} onChange={v => setSettings(s => ({ ...s, ai_system_prompt: v }))} multiline rows={6}
+            <SectionDivider label={t('defaultSysPrompt')} />
+            <p className="text-xs text-text-tertiary">{t('sysPromptNote')}</p>
+            <Input label={t('globalSysPrompt')} value={settings.ai_system_prompt || ''} onChange={v => setSettings(s => ({ ...s, ai_system_prompt: v }))} multiline rows={6}
               placeholder="You are HBZ AI Platform, an enterprise technology advisor..." />
           </Card>
 
           <Card className="p-6 space-y-4">
-            <SectionDivider label="RAG & Knowledge" />
+            <SectionDivider label={t('ragKnowledge')} />
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
-                <p className="text-xs font-semibold text-emerald-400 mb-1">✓ RAG Enabled</p>
-                <p className="text-xs text-text-tertiary">Knowledge base is automatically searched for each user message. Top 4 relevant items injected as context.</p>
+              <div className="p-3 rounded-lg bg-success/[0.06] border border-success/15">
+                <p className="text-xs font-semibold text-success mb-1">{t('ragEnabledTitle')}</p>
+                <p className="text-xs text-text-tertiary">{t('ragEnabledNote')}</p>
               </div>
-              <div className="p-3 rounded-lg" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-                <p className="text-xs font-semibold text-brand mb-1">📐 Architecture Ready</p>
-                <p className="text-xs text-text-tertiary">System designed for future vector DB (pgvector, Chroma, Pinecone) integration with minimal code changes.</p>
+              <div className="p-3 rounded-lg bg-brand/[0.06] border border-brand/15">
+                <p className="text-xs font-semibold text-brand mb-1">{t('archReadyTitle')}</p>
+                <p className="text-xs text-text-tertiary">{t('archReadyNote')}</p>
               </div>
             </div>
-            <div className="p-3 rounded-lg" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
-              <p className="text-xs font-semibold text-amber-400 mb-2">🎙 Voice Architecture</p>
-              <p className="text-xs text-text-tertiary">Speech-to-text (Whisper API) and text-to-speech (ElevenLabs/OpenAI TTS) interfaces are defined. Add <code className="text-amber-300">ai_tts_enabled</code> and <code className="text-amber-300">ai_stt_enabled</code> settings to activate.</p>
+            <div className="p-3 rounded-lg bg-warning/[0.06] border border-warning/15">
+              <p className="text-xs font-semibold text-warning mb-2">{t('voiceArchTitle')}</p>
+              <p className="text-xs text-text-tertiary">{t('voiceArchNote')}</p>
             </div>
           </Card>
 
@@ -395,12 +395,12 @@ export function AiControlCenter() {
               <Input label={t('descriptionFa')} value={editingModule.descriptionFa || ''} onChange={v => setEditingModule(e => e ? { ...e, descriptionFa: v } : e)} />
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <Input label="Icon (emoji)" value={editingModule.icon} onChange={v => setEditingModule(e => e ? { ...e, icon: v } : e)} />
-              <Select label="Color" value={editingModule.color} onChange={v => setEditingModule(e => e ? { ...e, color: v } : e)}
+              <Input label={t('iconEmoji')} value={editingModule.icon} onChange={v => setEditingModule(e => e ? { ...e, icon: v } : e)} />
+              <Select label={t('color')} value={editingModule.color} onChange={v => setEditingModule(e => e ? { ...e, color: v } : e)}
                 options={COLOR_PRESETS} />
               <Input label={t('sortOrder')} type="number" value={String(editingModule.sortOrder)} onChange={v => setEditingModule(e => e ? { ...e, sortOrder: Number(v) } : e)} />
             </div>
-            <Input label="System Prompt (overrides global prompt for this module)" value={editingModule.systemPrompt || ''} onChange={v => setEditingModule(e => e ? { ...e, systemPrompt: v } : e)} multiline rows={8} placeholder="You are HBZ [Module Name], an expert in..." />
+            <Input label={t('systemPromptLabel')} value={editingModule.systemPrompt || ''} onChange={v => setEditingModule(e => e ? { ...e, systemPrompt: v } : e)} multiline rows={8} placeholder="You are HBZ [Module Name], an expert in..." />
             <div className="flex gap-3">
               <Btn onClick={saveModule} disabled={saving}>{saving ? t('saving') : t('saveModule')}</Btn>
               <Btn variant="secondary" onClick={() => setModuleModal(false)}>{t('cancel')}</Btn>
@@ -412,27 +412,27 @@ export function AiControlCenter() {
       {/* KB edit modal */}
       <Modal open={kbModal} onClose={() => setKbModal(false)} title={(editingKb as { id?: number }).id ? t('editKbItem') : t('newKbItem')} size="lg">
         <div className="space-y-4">
-          <Input label="Title *" value={editingKb.title} onChange={v => setEditingKb(e => ({ ...e, title: v }))} placeholder="HBZ Professional Profile" />
+          <Input label={t('kbTitleStar')} value={editingKb.title} onChange={v => setEditingKb(e => ({ ...e, title: v }))} placeholder="HBZ Professional Profile" />
           <div className="grid grid-cols-3 gap-4">
-            <Select label="Type" value={editingKb.type} onChange={v => setEditingKb(e => ({ ...e, type: v as KbItem['type'] }))}
+            <Select label={t('kbTypeLabel')} value={editingKb.type} onChange={v => setEditingKb(e => ({ ...e, type: v as KbItem['type'] }))}
               options={[{ value: 'snippet', label: 'Snippet' }, { value: 'document', label: 'Document' }, { value: 'faq', label: 'FAQ' }, { value: 'url', label: 'URL' }]} />
-            <Select label="Locale" value={editingKb.locale} onChange={v => setEditingKb(e => ({ ...e, locale: v }))}
-              options={[{ value: 'both', label: 'Both' }, { value: 'en', label: 'English' }, { value: 'fa', label: 'Persian' }]} />
-            <Input label="Priority (0–100)" type="number" value={String(editingKb.priority)} onChange={v => setEditingKb(e => ({ ...e, priority: Number(v) }))} />
+            <Select label={t('kbLocaleLabel')} value={editingKb.locale} onChange={v => setEditingKb(e => ({ ...e, locale: v }))}
+              options={[{ value: 'both', label: t('both') }, { value: 'en', label: t('english') }, { value: 'fa', label: t('persian') }]} />
+            <Input label={t('kbPriority')} type="number" value={String(editingKb.priority)} onChange={v => setEditingKb(e => ({ ...e, priority: Number(v) }))} />
           </div>
           {(editingKb.type === 'snippet' || editingKb.type === 'faq' || editingKb.type === 'document') && (
-            <Input label="Content" value={editingKb.content} onChange={v => setEditingKb(e => ({ ...e, content: v }))} multiline rows={10}
+            <Input label={t('kbContentLabel')} value={editingKb.content} onChange={v => setEditingKb(e => ({ ...e, content: v }))} multiline rows={10}
               placeholder="Knowledge content injected as RAG context for AI responses..." />
           )}
           {editingKb.type === 'url' && (
-            <Input label="Source URL" value={editingKb.sourceUrl} onChange={v => setEditingKb(e => ({ ...e, sourceUrl: v }))} placeholder="https://..." />
+            <Input label={t('kbSourceUrl')} value={editingKb.sourceUrl} onChange={v => setEditingKb(e => ({ ...e, sourceUrl: v }))} placeholder="https://..." />
           )}
           {editingKb.type === 'document' && (
-            <Input label="File URL (uploaded)" value={editingKb.fileUrl} onChange={v => setEditingKb(e => ({ ...e, fileUrl: v }))} placeholder="/uploads/knowledge/doc.pdf" />
+            <Input label={t('kbFileUrl')} value={editingKb.fileUrl} onChange={v => setEditingKb(e => ({ ...e, fileUrl: v }))} placeholder="/uploads/knowledge/doc.pdf" />
           )}
-          <Input label="Tags (comma-separated, used for search matching)" value={editingKb.tags} onChange={v => setEditingKb(e => ({ ...e, tags: v }))} placeholder="network, cisco, mikrotik, bgp" />
-          <Select label="Status" value={editingKb.active ? 'true' : 'false'} onChange={v => setEditingKb(e => ({ ...e, active: v === 'true' }))}
-            options={[{ value: 'true', label: 'Active — included in RAG' }, { value: 'false', label: 'Disabled' }]} />
+          <Input label={t('kbTagsLabel')} value={editingKb.tags} onChange={v => setEditingKb(e => ({ ...e, tags: v }))} placeholder="network, cisco, mikrotik, bgp" />
+          <Select label={t('kbStatusLabel')} value={editingKb.active ? 'true' : 'false'} onChange={v => setEditingKb(e => ({ ...e, active: v === 'true' }))}
+            options={[{ value: 'true', label: t('kbActive') }, { value: 'false', label: t('disabledLabel') }]} />
           <div className="flex gap-3">
             <Btn onClick={saveKb} disabled={saving}>{saving ? t('saving') : t('saveItem')}</Btn>
             <Btn variant="secondary" onClick={() => setKbModal(false)}>{t('cancel')}</Btn>
