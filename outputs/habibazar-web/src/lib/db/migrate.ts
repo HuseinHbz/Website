@@ -356,6 +356,25 @@ export function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- CRM lead pipeline (Phase 15 foundation). Distinct from raw inbound
+    -- contact_requests/consultation_requests — a lead carries pipeline stage,
+    -- source, score and an owner.
+    CREATE TABLE IF NOT EXISTS crm_leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      company TEXT,
+      source TEXT NOT NULL DEFAULT 'other' CHECK(source IN ('website','referral','consultation','contact_form','event','social','email','other')),
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','contacted','qualified','proposal','won','lost')),
+      score INTEGER NOT NULL DEFAULT 0,
+      value INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- Real-time system log stream (application/API/db/backup/security events).
     CREATE TABLE IF NOT EXISTS system_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

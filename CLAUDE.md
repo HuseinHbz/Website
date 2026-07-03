@@ -141,6 +141,12 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   diagnostics via `GET /api/admin/database/health`: integrity_check + quick_check,
   foreign_key_check, WAL/journal + page/free stats, table+index census, per-table
   row counts, critical-schema validation, and a 0–100 health score. Never mutates.
+- **CRM Leads** (`/admin/crm`, `LeadsManager`) — Phase-15 business foundation.
+  `crm_leads` table (pipeline stage/source/score/owner, distinct from raw
+  contact/consultation requests). `GET/POST/PUT/DELETE /api/admin/crm/leads`:
+  zod-validated, RBAC-gated (`requireAdmin('edit'|'delete')`), audit-logged. Lead
+  scoring + pipeline stats are pure, unit-tested (`src/lib/crm/leads.ts`); writes
+  re-score server-side. GET returns leads + aggregate sales KPIs.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

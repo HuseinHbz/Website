@@ -93,8 +93,9 @@ const NAV = [
     ],
   },
   {
-    group: { en: 'Requests', fa: 'درخواست‌ها' },
+    group: { en: 'Business', fa: 'کسب‌وکار' },
     items: [
+      { labelEn: 'CRM — Leads', labelFa: 'مدیریت سرنخ‌ها (CRM)', href: '/admin/crm', icon: '📇' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
       { labelEn: 'Consultations', labelFa: 'مشاوره‌ها', href: '/admin/consultations', icon: '◎' },
     ],
