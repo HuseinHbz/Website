@@ -153,6 +153,12 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
   RBAC-gated, audit-logged. Warranty state (ok/expiring/expired) + portfolio stats
   are pure, unit-tested (`src/lib/erp/assets.ts`); GET returns assets + warranty
   health + rollup KPIs.
+- **Security Operations Center** (`/admin/soc`, `SocDashboard`) — Phase-17 SOC on
+  **real** signal via `GET /api/admin/soc/overview`: aggregates failed logins,
+  brute-force IPs (from `system_logs` security meta), AI prompt-injection blocks,
+  permission-denied, rate-limit and security-error events + audit LOGINs into a
+  24h threat posture. Risk level/score is pure, unit-tested (`src/lib/soc/risk.ts`).
+  Distinct from `/admin/security` (2FA/sessions) and Logs & Monitoring (raw stream).
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
