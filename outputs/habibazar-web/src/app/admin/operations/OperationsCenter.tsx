@@ -7,7 +7,7 @@ import { useT } from '@/lib/admin/locale'
 type Health = 'healthy' | 'warning' | 'critical' | 'offline'
 interface Subsystem { name: string; status: Health; detail: string }
 interface Overview {
-  infra: { hostname: string; platform: string; release: string; arch: string; node: string; sqlite: string | null; cpuModel: string; cpuCount: number; uptimeSec: number; processUptimeSec: number; env: string }
+  infra: { hostname: string; platform: string; release: string; arch: string; node: string; dbVersion: string | null; cpuModel: string; cpuCount: number; uptimeSec: number; processUptimeSec: number; env: string }
   metrics: {
     cpuLoad1: number; cpuLoadPct: number; memUsedMb: number; memTotalMb: number; memPct: number; rssMb: number; heapUsedMb: number
     diskUsedPct: number | null; diskFreeGb: number | null; diskTotalGb: number | null; dbLatencyMs: number | null; dbSizeMb: number | null
@@ -135,7 +135,7 @@ export function OperationsCenter() {
             <dl className="text-xs space-y-1.5">
               {[
                 ['Hostname', data.infra.hostname], ['Platform', `${data.infra.platform} (${data.infra.arch})`],
-                ['Kernel', data.infra.release], ['Node', data.infra.node], ['SQLite', data.infra.sqlite ?? '—'],
+                ['Kernel', data.infra.release], ['Node', data.infra.node], ['PostgreSQL', data.infra.dbVersion ?? '—'],
                 ['Environment', data.infra.env], ['OS uptime', fmtUptime(data.infra.uptimeSec)], ['Process uptime', fmtUptime(data.infra.processUptimeSec)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4"><dt className="text-text-tertiary">{k}</dt><dd className="text-text-secondary font-mono truncate">{v}</dd></div>

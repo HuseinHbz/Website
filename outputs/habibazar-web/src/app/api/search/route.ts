@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   // Knowledge Base
   if (should('knowledge')) {
-    const kbItems = db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true)).all()
+    const kbItems = await db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true))
     for (const item of kbItems) {
       const s = score(item.title, terms) * 3 + score(item.content, terms) + score(item.tags, terms) * 2
       if (s > 0) results.push({ type: 'knowledge', id: item.id, title: item.title, excerpt: (item.content || '').slice(0, 200), url: '/admin/ai-kb', icon: '📚', score: s + item.priority })
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
   // Docs
   if (should('docs')) {
-    const allDocs = db.select().from(docs).where(eq(docs.status, 'published')).all()
+    const allDocs = await db.select().from(docs).where(eq(docs.status, 'published'))
     for (const d of allDocs) {
       const title = locale === 'fa' ? (d.titleFa || d.titleEn) : d.titleEn
       const s = score(title, terms) * 3 + score(d.excerptEn, terms) * 2 + score(d.contentEn, terms)
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 
   // Products
   if (should('products')) {
-    const allProducts = db.select().from(products).where(eq(products.active, true)).all()
+    const allProducts = await db.select().from(products).where(eq(products.active, true))
     for (const p of allProducts) {
       const title = locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn
       const s = score(title, terms) * 3 + score(p.taglineEn, terms) * 2 + score(p.descriptionEn, terms)
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
   // Courses
   if (should('academy')) {
-    const allCourses = db.select().from(courses).where(eq(courses.status, 'published')).all()
+    const allCourses = await db.select().from(courses).where(eq(courses.status, 'published'))
     for (const c of allCourses) {
       const title = locale === 'fa' ? (c.titleFa || c.titleEn) : c.titleEn
       const s = score(title, terms) * 3 + score(c.descriptionEn, terms)
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 
   // Solutions
   if (should('solutions')) {
-    const allSolutions = db.select().from(solutions).where(eq(solutions.active, true)).all()
+    const allSolutions = await db.select().from(solutions).where(eq(solutions.active, true))
     for (const sol of allSolutions) {
       const title = locale === 'fa' ? (sol.nameFa || sol.nameEn) : sol.nameEn
       const s = score(title, terms) * 3 + score(sol.taglineEn, terms) * 2
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
   // Case Studies
   if (should('projects')) {
-    const allProjects = db.select().from(projects).all()
+    const allProjects = await db.select().from(projects)
     for (const p of allProjects) {
       const title = locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn
       const desc = locale === 'fa' ? (p.challengeFa || '') : (p.challengeEn || '')
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
 
   // Blog
   if (should('blog')) {
-    const allPosts = db.select().from(blogPosts).where(eq(blogPosts.status, 'published')).all()
+    const allPosts = await db.select().from(blogPosts).where(eq(blogPosts.status, 'published'))
     for (const post of allPosts) {
       const title = locale === 'fa' ? (post.titleFa || post.titleEn) : post.titleEn
       const excerpt = locale === 'fa' ? (post.excerptFa || post.excerptEn || '') : (post.excerptEn || '')
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 
   // Events
   if (should('events')) {
-    const allEvents = db.select().from(events).all()
+    const allEvents = await db.select().from(events)
     for (const e of allEvents) {
       const title = locale === 'fa' ? (e.titleFa || e.titleEn) : e.titleEn
       const s = score(title, terms) * 3 + score(e.descriptionEn, terms)

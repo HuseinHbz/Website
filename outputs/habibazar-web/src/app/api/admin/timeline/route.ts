@@ -9,7 +9,7 @@ import { logAction } from '@/lib/admin/audit'
 export async function GET() {
   try {
     const db = getDb()
-    return NextResponse.json(await db.select().from(timelineItems).orderBy(asc(timelineItems.sortOrder)).all())
+    return await NextResponse.json(await db.select().from(timelineItems).orderBy(asc(timelineItems.sortOrder)))
   } catch (e: unknown) {
     return apiError(e)
   }
@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
     const { id, ...data } = await req.json()
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const db = getDb()
-    const old = await db.select().from(timelineItems).where(eq(timelineItems.id, id)).get()
+    const old = (await db.select().from(timelineItems).where(eq(timelineItems.id, id)))[0]
     await db.update(timelineItems).set({ ...data, updatedAt: new Date().toISOString(), updatedBy: user?.id }).where(eq(timelineItems.id, id))
     await logAction(user, 'UPDATE', 'timeline_items', id, old, data)
     return NextResponse.json({ ok: true })

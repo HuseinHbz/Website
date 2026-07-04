@@ -9,14 +9,14 @@ import path from 'path'
 import { nanoid } from 'nanoid'
 
 export async function GET(req: NextRequest) {
-  const folder = req.nextUrl.searchParams.get('folder') || undefined
+  const folder = await req.nextUrl.searchParams.get('folder') || undefined
   const db = getDb()
   let query = db.select().from(mediaFiles).orderBy(desc(mediaFiles.uploadedAt))
   if (folder) {
     // @ts-expect-error drizzle where chaining
     query = query.where(eq(mediaFiles.folder, folder))
   }
-  return NextResponse.json(await query.all())
+  return NextResponse.json(await query)
 }
 
 export async function POST(req: NextRequest) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     uploadedBy: user?.id,
   })
 
-  const inserted = await db.select().from(mediaFiles).where(eq(mediaFiles.filename, filename)).get()
+  const inserted = (await db.select().from(mediaFiles).where(eq(mediaFiles.filename, filename)))[0]
   await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder })
   return NextResponse.json(inserted ?? { url, filename, originalName: file.name, mimeType: file.type, size: file.size, folder, alt })
 }
@@ -57,7 +57,7 @@ export async function DELETE(req: NextRequest) {
   const user = await getAdminUser()
   const { id } = await req.json()
   const db = getDb()
-  const file = await db.select().from(mediaFiles).where(eq(mediaFiles.id, id)).get()
+  const file = (await db.select().from(mediaFiles).where(eq(mediaFiles.id, id)))[0]
   if (file) {
     try {
       const { unlink } = await import('fs/promises')

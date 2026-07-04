@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import v8 from 'node:v8'
-import { getDb } from '@/lib/db/index'
+import { pgQuery } from '@/lib/db/index'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -15,10 +15,7 @@ interface Check {
 async function checkDatabase(): Promise<Check> {
   const start = Date.now()
   try {
-    const db = getDb()
-    // Access the underlying better-sqlite3 instance via Drizzle's $client
-    const client = (db as unknown as { $client: { prepare: (sql: string) => { get: () => unknown } } }).$client
-    client.prepare('SELECT 1').get()
+    await pgQuery('SELECT 1')
     return { name: 'database', status: 'ok', latencyMs: Date.now() - start }
   } catch (err) {
     return { name: 'database', status: 'down', detail: String(err) }

@@ -42,7 +42,7 @@ export default async function TechnologiesPage({ params }: Props) {
   const { locale } = await params
   const fa = locale === 'fa'
   const db = getDb()
-  const allTech = db.select().from(technologies).where(eq(technologies.active, true)).orderBy(technologies.sortOrder).all()
+  const allTech = await db.select().from(technologies).where(eq(technologies.active, true)).orderBy(technologies.sortOrder)
 
   const grouped = allTech.reduce<Record<string, typeof allTech>>((acc, t) => {
     const cat = t.category

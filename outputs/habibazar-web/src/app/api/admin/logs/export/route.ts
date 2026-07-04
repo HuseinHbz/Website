@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type Database from 'better-sqlite3'
 import { apiError, badRequest, requireAdmin } from '@/lib/api/respond'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 
 // Export filtered logs as JSON or CSV for the Logs & Monitoring module.
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
+function toPg(sql: string): string { let i = 0; return sql.replace(/\?/g, () => `$${++i}`) }
 
 const COLS = ['ts', 'level', 'source', 'service', 'message', 'stacktrace', 'request_id', 'user_id'] as const
 
@@ -35,9 +32,10 @@ export async function GET(req: NextRequest) {
     const to = sp.get('to'); if (to) { clauses.push('ts <= ?'); params.push(to) }
     const w = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
 
-    const rows = client().prepare(
-      `SELECT ${COLS.join(', ')} FROM system_logs ${w} ORDER BY id DESC LIMIT 50000`
-    ).all(...params) as Record<string, unknown>[]
+    const rows = await pgQuery(
+      toPg(`SELECT ${COLS.join(', ')} FROM system_logs ${w} ORDER BY id DESC LIMIT 50000`),
+      params,
+    ) as Record<string, unknown>[]
 
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
     if (format === 'csv') {

@@ -7,7 +7,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   const db = getDb()
-  return NextResponse.json(await db.select().from(seoSettings).all())
+  return await NextResponse.json(await db.select().from(seoSettings))
 }
 
 export async function PUT(req: NextRequest) {
@@ -16,9 +16,9 @@ export async function PUT(req: NextRequest) {
   const { pageKey, locale, ...data } = body
   if (!pageKey || !locale) return NextResponse.json({ error: 'pageKey and locale required' }, { status: 400 })
   const db = getDb()
-  const existing = await db.select().from(seoSettings).where(
+  const existing = (await db.select().from(seoSettings).where(
     and(eq(seoSettings.pageKey, pageKey), eq(seoSettings.locale, locale))
-  ).get()
+  ))[0]
   if (existing) {
     await db.update(seoSettings).set({ ...data, updatedAt: new Date().toISOString(), updatedBy: user?.id }).where(
       and(eq(seoSettings.pageKey, pageKey), eq(seoSettings.locale, locale))

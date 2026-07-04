@@ -11,7 +11,7 @@ interface Props { params: Promise<{ locale: string; slug: string }> }
 export async function generateStaticParams() {
   try {
     const db = getDb()
-    const rows = db.select({ slug: solutions.slug }).from(solutions).all()
+    const rows = await db.select({ slug: solutions.slug }).from(solutions)
     const locales = ['en', 'fa']
     return locales.flatMap(locale => rows.map(r => ({ locale, slug: r.slug })))
   } catch {
@@ -22,7 +22,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params
   const db = getDb()
-  const solution = db.select().from(solutions).where(eq(solutions.slug, slug)).get()
+  const solution = (await db.select().from(solutions).where(eq(solutions.slug, slug)))[0]
   if (!solution) return {}
   const fa = locale === 'fa'
   const title = fa ? (solution.nameFa || solution.nameEn) : solution.nameEn
@@ -56,7 +56,7 @@ export default async function SolutionPage({ params }: Props) {
   const { locale, slug } = await params
   const fa = locale === 'fa'
   const db = getDb()
-  const solution = db.select().from(solutions).where(eq(solutions.slug, slug)).get()
+  const solution = (await db.select().from(solutions).where(eq(solutions.slug, slug)))[0]
   if (!solution) notFound()
 
   const challenges = safeJson<Challenge[]>(solution.challengesJson, [])
@@ -70,13 +70,13 @@ export default async function SolutionPage({ params }: Props) {
   // Related case studies
   const slugs = (solution.relatedCaseStudySlugs || '').split(',').map(s => s.trim()).filter(Boolean)
   const relatedProjects = slugs.length
-    ? db.select({ slug: projects.slug, nameEn: projects.nameEn, nameFa: projects.nameFa, industryEn: projects.industryEn })
-        .from(projects).all().filter(p => slugs.includes(p.slug))
+    ? (await db.select({ slug: projects.slug, nameEn: projects.nameEn, nameFa: projects.nameFa, industryEn: projects.industryEn })
+        .from(projects)).filter(p => slugs.includes(p.slug))
     : []
 
   // Testimonials for this solution
-  const solutionTestimonials = db.select().from(testimonials)
-    .where(eq(testimonials.solutionSlug, slug)).all()
+  const solutionTestimonials = (await db.select().from(testimonials)
+    .where(eq(testimonials.solutionSlug, slug)))
     .filter(t => t.active)
 
   const name = fa ? (solution.nameFa || solution.nameEn) : solution.nameEn

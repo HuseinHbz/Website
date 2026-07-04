@@ -13,7 +13,7 @@ export async function POST() {
   try {
     const auth = await requireAdmin('manage_settings')
     if ('error' in auth) return auth.error
-    const result = syncKnowledgeFromCms(auth.user.id)
+    const result = await syncKnowledgeFromCms(auth.user.id)
     await logAction(auth.user, 'SYNC', 'ai_knowledge_base', undefined, undefined, result)
     return NextResponse.json(result)
   } catch (e: unknown) {

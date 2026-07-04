@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getDb()
-  const allEvents = db.select().from(events).orderBy(events.startDate).all()
+  const allEvents = await db.select().from(events).orderBy(events.startDate)
   return NextResponse.json(allEvents)
 }
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()
   const db = getDb()
-  const result = db.insert(events).values({ ...body, createdBy: user.id }).returning().get()
+  const result = (await db.insert(events).values({ ...body, createdBy: user.id }).returning())[0]
   await logAction(user, 'CREATE', 'event', String(result.id), null, result)
   return NextResponse.json(result, { status: 201 })
 }
@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, ...data } = await req.json()
   const db = getDb()
-  const result = db.update(events).set({ ...data, updatedAt: new Date().toISOString() }).where(eq(events.id, id)).returning().get()
+  const result = (await db.update(events).set({ ...data, updatedAt: new Date().toISOString() }).where(eq(events.id, id)).returning())[0]
   await logAction(user, 'UPDATE', 'event', String(id), null, result)
   return NextResponse.json(result)
 }
@@ -38,8 +38,8 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await req.json()
   const db = getDb()
-  db.delete(eventRegistrations).where(eq(eventRegistrations.eventId, id)).run()
-  db.delete(events).where(eq(events.id, id)).run()
+  await db.delete(eventRegistrations).where(eq(eventRegistrations.eventId, id))
+  await db.delete(events).where(eq(events.id, id))
   await logAction(user, 'DELETE', 'event', String(id), null, null)
   return NextResponse.json({ ok: true })
 }

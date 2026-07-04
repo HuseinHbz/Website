@@ -9,8 +9,8 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = getDb()
-  const convs = db.select().from(aiConversations).orderBy(desc(aiConversations.createdAt)).limit(500).all()
-  const modules = db.select().from(aiModules).all()
+  const convs = await db.select().from(aiConversations).orderBy(desc(aiConversations.createdAt)).limit(500)
+  const modules = await db.select().from(aiModules)
 
   const totalConversations = convs.length
   const bookmarked = convs.filter(c => c.bookmarked).length

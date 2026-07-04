@@ -9,7 +9,7 @@ import { logAction } from '@/lib/admin/audit'
 export async function GET() {
   try {
     const db = getDb()
-    const rows = await db.select().from(redirects).orderBy(desc(redirects.createdAt)).all()
+    const rows = await db.select().from(redirects).orderBy(desc(redirects.createdAt))
     return NextResponse.json(rows)
   } catch (e: unknown) {
     return apiError(e)

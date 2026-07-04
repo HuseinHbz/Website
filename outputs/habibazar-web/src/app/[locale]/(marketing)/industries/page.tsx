@@ -23,7 +23,7 @@ export default async function IndustriesPage({ params }: Props) {
   const { locale } = await params
   const fa = locale === 'fa'
   const db = getDb()
-  const allIndustries = db.select().from(industries).where(eq(industries.active, true)).orderBy(industries.sortOrder).all()
+  const allIndustries = await db.select().from(industries).where(eq(industries.active, true)).orderBy(industries.sortOrder)
 
   return (
     <div className="min-h-screen bg-background" dir={fa ? 'rtl' : 'ltr'}>

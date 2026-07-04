@@ -48,7 +48,7 @@ export default async function SolutionsPage({ params }: Props) {
   const { locale } = await params
   const fa = locale === 'fa'
   const db = getDb()
-  const allSolutions = db.select().from(solutions).where(eq(solutions.active, true)).orderBy(solutions.sortOrder).all()
+  const allSolutions = await db.select().from(solutions).where(eq(solutions.active, true)).orderBy(solutions.sortOrder)
 
   const grouped = allSolutions.reduce<Record<string, typeof allSolutions>>((acc, s) => {
     const cat = SOLUTION_CATEGORIES[s.slug] || 'consulting'

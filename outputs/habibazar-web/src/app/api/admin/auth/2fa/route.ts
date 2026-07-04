@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   const db = getDb()
-  const user = await db.select().from(users).where(eq(users.id, targetId)).get()
+  const user = (await db.select().from(users).where(eq(users.id, targetId)))[0]
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const secret = (user.totpSecret && !user.totpEnabled) ? user.totpSecret : generateTotpSecret()
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb()
-  const user = await db.select().from(users).where(eq(users.id, targetId)).get()
+  const user = (await db.select().from(users).where(eq(users.id, targetId)))[0]
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   if (action === 'enable') {

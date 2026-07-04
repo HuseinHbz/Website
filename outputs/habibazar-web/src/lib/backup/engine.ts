@@ -20,8 +20,7 @@ import { spawn } from 'child_process'
 import { tmpdir } from 'os'
 import path from 'path'
 import crypto from 'crypto'
-import Database from 'better-sqlite3'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { logBus } from '@/lib/logs/bus'
 import { encryptFile, decryptFile, sha256File } from './crypto'
 import { buildAdapters, type StoredCopy } from './storage'
@@ -31,7 +30,7 @@ export type Bucket = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 const MAX_ATTEMPTS = 3
 
 const ENV = process.env.NODE_ENV === 'production' ? 'production' : 'development'
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibazar.db')
+const DATABASE_URL = process.env.DATABASE_URL || 'postgres://habibazar:habibazar_local@127.0.0.1:5432/habibazar'
 const BACKUP_ROOT = process.env.BACKUP_ROOT || path.join(process.cwd(), 'data', 'backups-engine')
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads')
 const ENV_FILE = path.join(process.cwd(), '.env.local')
@@ -55,9 +54,6 @@ export interface BackupRecord {
   finishedAt: string | null
 }
 
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
 function log(level: 'info' | 'warn' | 'error', message: string, meta: Record<string, unknown>) {
   logBus.publish({ level, source: 'backup', service: 'backup-engine', message, meta })
 }
@@ -68,6 +64,21 @@ function run(cmd: string, args: string[], opts: { cwd?: string } = {}): Promise<
     p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`))))
   })
 }
+/** Run a command capturing stdout (for pg_restore -l table counting). */
+function runOut(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const p = spawn(cmd, args)
+    let out = ''
+    p.stdout.on('data', (d) => { out += d.toString() })
+    p.on('error', reject)
+    p.on('close', (code) => (code === 0 ? resolve(out) : reject(new Error(`${cmd} exited ${code}`))))
+  })
+}
+/** Count TABLE entries in a pg_dump custom archive's table of contents. */
+async function dumpTableCount(dumpFile: string): Promise<number> {
+  const toc = await runOut('pg_restore', ['-l', dumpFile])
+  return toc.split('\n').filter((l) => / TABLE DATA | TABLE /.test(l)).length
+}
 
 class BackupEngine extends EventEmitter {
   private running = false
@@ -75,21 +86,18 @@ class BackupEngine extends EventEmitter {
 
   get isRunning() { return this.running }
 
-  /** Persist/patch a catalog row. */
+  /** Persist/patch a catalog row (best-effort, fire-and-forget). */
   private save(r: BackupRecord) {
-    try {
-      client().prepare(
-        `INSERT INTO backups (id, version, env, trigger, bucket, status, size, checksum, manifest, copies, verified, verify_detail, attempts, error, started_at, finished_at)
-         VALUES (@id,@version,@env,@trigger,@bucket,@status,@size,@checksum,@manifest,@copies,@verified,@verify_detail,@attempts,@error,@started_at,@finished_at)
-         ON CONFLICT(id) DO UPDATE SET status=@status, size=@size, checksum=@checksum, manifest=@manifest,
-           copies=@copies, verified=@verified, verify_detail=@verify_detail, attempts=@attempts, error=@error, finished_at=@finished_at`
-      ).run({
-        id: r.id, version: r.version, env: r.env, trigger: r.trigger, bucket: r.bucket,
-        status: r.status, size: r.size, checksum: r.checksum, manifest: r.manifest,
-        copies: JSON.stringify(r.copies), verified: r.verified ? 1 : 0, verify_detail: r.verifyDetail,
-        attempts: r.attempts, error: r.error, started_at: r.startedAt, finished_at: r.finishedAt,
-      })
-    } catch { /* catalog write is best-effort */ }
+    pgQuery(
+      `INSERT INTO backups (id, version, env, trigger, bucket, status, size, checksum, manifest, copies, verified, verify_detail, attempts, error, started_at, finished_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ON CONFLICT(id) DO UPDATE SET status=$6, size=$7, checksum=$8, manifest=$9,
+         copies=$10, verified=$11, verify_detail=$12, attempts=$13, error=$14, finished_at=$16`,
+      [r.id, r.version, r.env, r.trigger, r.bucket,
+        r.status, r.size, r.checksum, r.manifest,
+        JSON.stringify(r.copies), r.verified ? 1 : 0, r.verifyDetail,
+        r.attempts, r.error, r.startedAt, r.finishedAt],
+    ).catch(() => { /* catalog write is best-effort */ })
   }
 
   /** Public entry point. Runs in the background; retries up to MAX_ATTEMPTS. */
@@ -149,16 +157,13 @@ class BackupEngine extends EventEmitter {
     const rel = `${rec.env}/${date}/${rec.version}`
     const staging = await mkdtemp(path.join(tmpdir(), 'hbz-backup-'))
     try {
-      // 1. Consistent WAL-safe DB snapshot + integrity check.
-      const dbSnap = path.join(staging, 'database.sqlite')
-      await client().backup(dbSnap)
-      const snapDb = new Database(dbSnap, { readonly: true })
-      const integ = (snapDb.pragma('integrity_check', { simple: true }) as string)
-      const tables = (snapDb.prepare(`SELECT count(*) c FROM sqlite_master WHERE type='table'`).get() as { c: number }).c
-      snapDb.close()
-      if (integ !== 'ok') throw new Error(`integrity_check failed: ${integ}`)
+      // 1. Consistent PostgreSQL snapshot (pg_dump custom format) + archive check.
+      const dbSnap = path.join(staging, 'database.dump')
+      await run('pg_dump', ['-Fc', '--no-owner', '--no-privileges', '-f', dbSnap, DATABASE_URL])
+      const tables = await dumpTableCount(dbSnap) // valid archive TOC ⇒ dump integrity ok
+      if (tables < 1) throw new Error('pg_dump produced an empty/invalid archive')
 
-      const contents = ['database.sqlite']
+      const contents = ['database.dump']
       // 2. Config snapshot.
       const cfgDir = path.join(staging, 'config')
       await mkdir(cfgDir, { recursive: true })
@@ -231,13 +236,11 @@ class BackupEngine extends EventEmitter {
       const tarball = path.join(sandbox, 'archive.tar.gz')
       await decryptFile(encPath, tarball)
       await run('tar', ['-xzf', tarball, '-C', sandbox])
-      const dbFile = path.join(sandbox, 'database.sqlite')
-      if (!(await exists(dbFile))) return { ok: false, reason: 'archive missing database.sqlite', checksum: true }
-      const sdb = new Database(dbFile, { readonly: true })
-      const integ = sdb.pragma('integrity_check', { simple: true }) as string
-      const tables = (sdb.prepare(`SELECT count(*) c FROM sqlite_master WHERE type='table'`).get() as { c: number }).c
-      sdb.close()
-      if (integ !== 'ok') return { ok: false, reason: `restored integrity ${integ}`, checksum: true, decryption: true }
+      const dbFile = path.join(sandbox, 'database.dump')
+      if (!(await exists(dbFile))) return { ok: false, reason: 'archive missing database.dump', checksum: true }
+      // Validate the dump archive by listing its TOC (isolated; never touches live DB).
+      let tables = 0
+      try { tables = await dumpTableCount(dbFile) } catch (e) { return { ok: false, reason: `restored archive invalid: ${e instanceof Error ? e.message : String(e)}`, checksum: true, decryption: true } }
       if (tables < expectedTables) return { ok: false, reason: `schema drift (${tables}<${expectedTables})`, checksum: true, decryption: true, integrity: false }
       return { ok: true, reason: 'ok', checksum: true, decryption: true, integrity: true, tables }
     } catch (e) {
@@ -251,10 +254,10 @@ class BackupEngine extends EventEmitter {
   private async pruneRetention() {
     const KEEP = Number(process.env.BACKUP_KEEP || 50)
     try {
-      const rows = client().prepare(`SELECT id FROM backups ORDER BY started_at DESC LIMIT -1 OFFSET ?`).all(KEEP) as { id: string }[]
+      const rows = await pgQuery(`SELECT id FROM backups ORDER BY started_at DESC OFFSET $1`, [KEEP]) as { id: string }[]
       for (const r of rows) {
         // Remove the catalog row; on-disk files age out via BACKUP_ROOT housekeeping.
-        client().prepare(`DELETE FROM backups WHERE id=?`).run(r.id)
+        await pgQuery(`DELETE FROM backups WHERE id=$1`, [r.id])
       }
     } catch { /* best-effort */ }
   }

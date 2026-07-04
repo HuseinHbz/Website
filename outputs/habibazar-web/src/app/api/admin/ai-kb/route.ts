@@ -8,7 +8,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   try {      const db = getDb()
-      return NextResponse.json(await db.select().from(aiKnowledgeBase).orderBy(desc(aiKnowledgeBase.priority), desc(aiKnowledgeBase.createdAt)).all())
+      return await NextResponse.json(await db.select().from(aiKnowledgeBase).orderBy(desc(aiKnowledgeBase.priority), desc(aiKnowledgeBase.createdAt)))
   } catch (e: unknown) {
     return apiError(e)
   }

@@ -7,7 +7,7 @@ import { getAdminUser } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
-  const db = getDb()
+  const db = await getDb()
   const posts = await db.select({
     id: blogPosts.id,
     slug: blogPosts.slug,
@@ -20,8 +20,8 @@ export async function GET() {
     publishedAtEn: blogPosts.publishedAtEn,
     createdAt: blogPosts.createdAt,
     updatedAt: blogPosts.updatedAt,
-  }).from(blogPosts).orderBy(desc(blogPosts.createdAt)).all()
-  const cats = await db.select().from(blogCategories).all()
+  }).from(blogPosts).orderBy(desc(blogPosts.createdAt))
+  const cats = await db.select().from(blogCategories)
   return NextResponse.json({ posts, categories: cats })
 }
 

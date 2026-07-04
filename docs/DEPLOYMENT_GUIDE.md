@@ -180,10 +180,10 @@ DATABASE_URL="$(cat /root/.habibazar-pg-dsn)" deploy/postgres/verify-postgresql.
 sudo deploy/postgres/rollback-to-sqlite.sh
 ```
 
-> **وضعیت صادقانه:** موتور مهاجرت و اسکریپت‌ها واقعی و اجراشده‌اند (۶۴ جدول با
-> تطابق دقیق). اما **runtime برنامه هنوز روی درایور `better-sqlite3` است**؛ تبدیل
-> کامل به درایور async با `npm run audit:pgcompat` ردیابی می‌شود (هدف: صفر). تا
-> پیش از آن، production روی SQLite اجرا می‌شود. جزئیات:
+> **وضعیت:** مهاجرت **کامل** شد — runtime برنامه اکنون **کاملاً روی PostgreSQL**
+> اجرا می‌شود (درایور async `pg` با Drizzle `pg-core`)؛ `npm run audit:pgcompat`
+> برابر صفر و به‌صورت end-to-end تأیید شد. `better-sqlite3` فقط به‌عنوان
+> devDependency برای ابزار یک‌بارهٔ مهاجرت باقی مانده است. جزئیات:
 > `deploy/postgres/README.md` و
 > `outputs/habibazar-web/docs/governance/phase20-postgres-migration.md`.
 

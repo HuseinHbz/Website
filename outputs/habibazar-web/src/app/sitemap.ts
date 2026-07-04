@@ -20,7 +20,7 @@ function buildUrl(path: string, locale: string) {
   return `${SITE.url}/${locale}${path === '/' ? '' : path}`
 }
 
-const staticRoutes: Array<{ path: string; changeFrequency: Frequency; priority: number }> = [
+const staticRoutes: Array<{ path: string; changeFrequency: Frequency; priority: number }> = await [
   { path: '/',                    changeFrequency: 'weekly',  priority: 1.0 },
   { path: '/about',               changeFrequency: 'monthly', priority: 0.8 },
   { path: '/solutions',           changeFrequency: 'weekly',  priority: 0.9 },
@@ -36,18 +36,18 @@ const staticRoutes: Array<{ path: string; changeFrequency: Frequency; priority: 
   { path: '/search',              changeFrequency: 'weekly',  priority: 0.5 },
 ]
 
-function getDynamicSlugs(): string[] {
+async function getDynamicSlugs(): Promise<string[]> {
   try {
     const db = getDb()
-    return db.select({ slug: solutions.slug }).from(solutions)
-      .where(eq(solutions.active, true)).all()
+    return (await db.select({ slug: solutions.slug }).from(solutions)
+      .where(eq(solutions.active, true)))
       .map(r => r.slug)
   } catch {
     return []
   }
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: SitemapEntry[] = []
 
   for (const route of staticRoutes) {
@@ -66,7 +66,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   // Dynamic solution pages
-  const slugs = getDynamicSlugs()
+  const slugs = await getDynamicSlugs()
   for (const slug of slugs) {
     const languages: Record<string, string> = {}
     for (const locale of locales) languages[locale] = buildUrl(`/solutions/${slug}`, locale)

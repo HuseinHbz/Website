@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiError } from '@/lib/api/respond'
 import { readdir, stat, mkdir, unlink, readFile } from 'fs/promises'
+import { spawn } from 'child_process'
 import path from 'path'
-import type Database from 'better-sqlite3'
-import { getDb } from '@/lib/db'
 import { getAdminUser } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibazar.db')
-const BACKUP_DIR = path.join(path.dirname(DB_PATH), 'backups')
+const DATABASE_URL = process.env.DATABASE_URL || 'postgres://habibazar:habibazar_local@127.0.0.1:5432/habibazar'
+const BACKUP_DIR = path.join(process.cwd(), 'data', 'backups')
 
 // Only allow simple backup filenames — blocks path traversal on download/delete.
-const NAME_RE = /^[a-zA-Z0-9._-]+\.db$/
+const NAME_RE = /^[a-zA-Z0-9._-]+\.dump$/
+
+function pgDump(outFile: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const p = spawn('pg_dump', ['-Fc', '--no-owner', '--no-privileges', '-f', outFile, DATABASE_URL], { stdio: 'ignore' })
+    p.on('error', reject)
+    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`pg_dump exited ${code}`))))
+  })
+}
 
 async function listBackups() {
   await mkdir(BACKUP_DIR, { recursive: true })
-  const files = (await readdir(BACKUP_DIR)).filter((f) => f.endsWith('.db'))
+  const files = (await readdir(BACKUP_DIR)).filter((f) => f.endsWith('.dump'))
   const entries = await Promise.all(
     files.map(async (name) => {
       const s = await stat(path.join(BACKUP_DIR, name))
@@ -60,9 +67,8 @@ export async function POST() {
     const user = await getAdminUser()
     await mkdir(BACKUP_DIR, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19)
-    const name = `db-backup-${stamp}.db`
-    const client = (getDb() as unknown as { $client: Database.Database }).$client
-    await client.backup(path.join(BACKUP_DIR, name))
+    const name = `db-backup-${stamp}.dump`
+    await pgDump(path.join(BACKUP_DIR, name))
     const s = await stat(path.join(BACKUP_DIR, name))
     await logAction(user, 'BACKUP', 'database', name, null, { size: s.size })
     return NextResponse.json({ name, size: s.size, createdAt: s.mtime.toISOString() })

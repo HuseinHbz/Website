@@ -7,7 +7,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   const db = getDb()
-  const rows = db.select().from(aiModules).orderBy(aiModules.sortOrder).all()
+  const rows = await db.select().from(aiModules).orderBy(aiModules.sortOrder)
   return NextResponse.json(rows)
 }
 
@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json() as { id: number; enabled?: boolean; nameEn?: string; nameFa?: string; descriptionEn?: string; descriptionFa?: string; icon?: string; color?: string; systemPrompt?: string; sortOrder?: number }
   const db = getDb()
-  const before = db.select().from(aiModules).where(eq(aiModules.id, body.id)).get()
+  const before = (await db.select().from(aiModules).where(eq(aiModules.id, body.id)))[0]
   const update: Partial<typeof aiModules.$inferInsert> = {}
   if (body.enabled !== undefined) update.enabled = body.enabled
   if (body.nameEn !== undefined) update.nameEn = body.nameEn
@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest) {
   if (body.color !== undefined) update.color = body.color
   if (body.systemPrompt !== undefined) update.systemPrompt = body.systemPrompt
   if (body.sortOrder !== undefined) update.sortOrder = body.sortOrder
-  db.update(aiModules).set(update).where(eq(aiModules.id, body.id)).run()
+  await db.update(aiModules).set(update).where(eq(aiModules.id, body.id))
   logAction(user, 'UPDATE', 'ai_module', String(body.id), before, update)
   return NextResponse.json({ ok: true })
 }

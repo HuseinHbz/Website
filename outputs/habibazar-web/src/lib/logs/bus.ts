@@ -13,8 +13,7 @@
  */
 import { EventEmitter } from 'events'
 import crypto from 'crypto'
-import type Database from 'better-sqlite3'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -45,26 +44,10 @@ function fingerprint(level: string, source: string, message: string): string {
 class LogBus extends EventEmitter {
   private ring: SystemLog[] = []
   private inserts = 0
-  private insertStmt: Database.Statement | null = null
-  private client: Database.Database | null = null
 
   constructor() {
     super()
     this.setMaxListeners(0) // many SSE subscribers
-  }
-
-  private db(): Database.Database | null {
-    if (this.client) return this.client
-    try {
-      this.client = (getDb() as unknown as { $client: Database.Database }).$client
-      this.insertStmt = this.client.prepare(
-        `INSERT INTO system_logs (ts, level, source, service, message, stacktrace, request_id, user_id, fingerprint, meta)
-         VALUES (@ts, @level, @source, @service, @message, @stacktrace, @requestId, @userId, @fingerprint, @meta)`
-      )
-      return this.client
-    } catch {
-      return null // DB not ready yet (very early boot) — ring buffer still works
-    }
   }
 
   /** Publish a log entry: fan out live, buffer, and persist. */
@@ -90,31 +73,25 @@ class LogBus extends EventEmitter {
     return entry
   }
 
-  private persist(entry: SystemLog) {
+  private async persist(entry: SystemLog) {
     try {
-      const db = this.db()
-      if (!db || !this.insertStmt) return
-      this.insertStmt.run({
-        ts: entry.ts,
-        level: entry.level,
-        source: entry.source,
-        service: entry.service,
-        message: entry.message,
-        stacktrace: entry.stacktrace ?? null,
-        requestId: entry.requestId ?? null,
-        userId: entry.userId ?? null,
-        fingerprint: entry.fingerprint,
-        meta: entry.meta ? JSON.stringify(entry.meta) : null,
-      })
-      if (++this.inserts % PRUNE_EVERY === 0) this.prune(db)
+      await pgQuery(
+        `INSERT INTO system_logs (ts, level, source, service, message, stacktrace, request_id, user_id, fingerprint, meta)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [entry.ts, entry.level, entry.source, entry.service, entry.message,
+          entry.stacktrace ?? null, entry.requestId ?? null, entry.userId ?? null,
+          entry.fingerprint, entry.meta ? JSON.stringify(entry.meta) : null],
+      )
+      if (++this.inserts % PRUNE_EVERY === 0) await this.prune()
     } catch { /* logging must never throw */ }
   }
 
-  private prune(db: Database.Database) {
+  private async prune() {
     try {
-      db.prepare(
-        `DELETE FROM system_logs WHERE id NOT IN (SELECT id FROM system_logs ORDER BY id DESC LIMIT ?)`
-      ).run(MAX_ROWS)
+      await pgQuery(
+        `DELETE FROM system_logs WHERE id NOT IN (SELECT id FROM system_logs ORDER BY id DESC LIMIT $1)`,
+        [MAX_ROWS],
+      )
     } catch { /* best-effort */ }
   }
 

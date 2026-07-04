@@ -3,10 +3,10 @@ import { siteSettings } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { breakers } from '@/lib/circuitBreaker'
 
-function getSetting(key: string): string {
+async function getSetting(key: string): Promise<string> {
   try {
     const db = getDb()
-    const row = db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
+    const row = (await db.select().from(siteSettings).where(eq(siteSettings.key, key)))[0]
     return row?.value ?? ''
   } catch { return '' }
 }
@@ -18,13 +18,13 @@ export interface NotificationData {
 }
 
 export async function sendEmailNotification(data: NotificationData) {
-  const smtpHost = getSetting('smtp_host')
-  const smtpPort = getSetting('smtp_port')
-  const smtpUser = getSetting('smtp_user')
-  const smtpPass = getSetting('smtp_pass')
-  const smtpFrom = getSetting('smtp_from')
-  const notifyTo = getSetting('notify_email_to')
-  const notifyEnabled = getSetting(`notify_email_${data.type}s`)
+  const smtpHost = await getSetting('smtp_host')
+  const smtpPort = await getSetting('smtp_port')
+  const smtpUser = await getSetting('smtp_user')
+  const smtpPass = await getSetting('smtp_pass')
+  const smtpFrom = await getSetting('smtp_from')
+  const notifyTo = await getSetting('notify_email_to')
+  const notifyEnabled = await getSetting(`notify_email_${data.type}s`)
 
   if (!smtpHost || !notifyTo || notifyEnabled !== '1') return
 
@@ -49,10 +49,10 @@ export async function sendEmailNotification(data: NotificationData) {
 }
 
 export async function sendSmsNotification(data: NotificationData) {
-  const apiKey = getSetting('sms_ir_api_key')
-  const lineNumber = getSetting('sms_ir_line')
-  const toNumber = getSetting('sms_notify_to')
-  const notifyEnabled = getSetting(`notify_sms_${data.type}s`)
+  const apiKey = await getSetting('sms_ir_api_key')
+  const lineNumber = await getSetting('sms_ir_line')
+  const toNumber = await getSetting('sms_notify_to')
+  const notifyEnabled = await getSetting(`notify_sms_${data.type}s`)
 
   if (!apiKey || !toNumber || notifyEnabled !== '1') return
 

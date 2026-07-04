@@ -1,52 +1,54 @@
 import { sql } from 'drizzle-orm'
 import {
+  boolean,
+  doublePrecision,
   integer,
-  real,
-  sqliteTable,
+  pgTable,
+  serial,
   text,
-} from 'drizzle-orm/sqlite-core'
+} from 'drizzle-orm/pg-core'
 
 // ─── Users & Auth ────────────────────────────────────────────────────────────
 
-export const users = sqliteTable('users', {
+export const users = pgTable('users', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['super_admin', 'administrator', 'editor'] }).notNull().default('editor'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   avatar: text('avatar'),
   totpSecret: text('totp_secret'),
-  totpEnabled: integer('totp_enabled', { mode: 'boolean' }).notNull().default(false),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  totpEnabled: boolean('totp_enabled').notNull().default(false),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   lastLogin: text('last_login'),
 })
 
-export const adminSessions = sqliteTable('admin_sessions', {
+export const adminSessions = pgTable('admin_sessions', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
   expiresAt: text('expires_at').notNull(),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
 })
 
 // ─── Site Settings ───────────────────────────────────────────────────────────
 
-export const siteSettings = sqliteTable('site_settings', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const siteSettings = pgTable('site_settings', {
+  id: serial('id').primaryKey(),
   key: text('key').notNull().unique(),
   value: text('value'),
   group: text('group').notNull().default('general'),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── SEO Settings ────────────────────────────────────────────────────────────
 
-export const seoSettings = sqliteTable('seo_settings', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const seoSettings = pgTable('seo_settings', {
+  id: serial('id').primaryKey(),
   pageKey: text('page_key').notNull(),
   locale: text('locale').notNull().default('en'),
   metaTitle: text('meta_title'),
@@ -57,14 +59,14 @@ export const seoSettings = sqliteTable('seo_settings', {
   ogImage: text('og_image'),
   schemaMarkup: text('schema_markup'),
   canonicalUrl: text('canonical_url'),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Hero Content ─────────────────────────────────────────────────────────────
 
-export const heroContent = sqliteTable('hero_content', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const heroContent = pgTable('hero_content', {
+  id: serial('id').primaryKey(),
   locale: text('locale').notNull().default('en'),
   badge: text('badge'),
   headline: text('headline'),
@@ -84,14 +86,14 @@ export const heroContent = sqliteTable('hero_content', {
   stat3Value: text('stat3_value'),
   stat4Label: text('stat4_label'),
   stat4Value: text('stat4_value'),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── About Content ───────────────────────────────────────────────────────────
 
-export const aboutContent = sqliteTable('about_content', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const aboutContent = pgTable('about_content', {
+  id: serial('id').primaryKey(),
   locale: text('locale').notNull().default('en'),
   headline: text('headline'),
   subheadline: text('subheadline'),
@@ -102,14 +104,14 @@ export const aboutContent = sqliteTable('about_content', {
   projectsCount: text('projects_count'),
   endpointsCount: text('endpoints_count'),
   deploymentsCount: text('deployments_count'),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Timeline (Career Path) ───────────────────────────────────────────────────
 
-export const timelineItems = sqliteTable('timeline_items', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const timelineItems = pgTable('timeline_items', {
+  id: serial('id').primaryKey(),
   year: text('year').notNull(),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa').notNull(),
@@ -120,16 +122,16 @@ export const timelineItems = sqliteTable('timeline_items', {
   color: text('color').default('#6366f1'),
   icon: text('icon'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Skills ───────────────────────────────────────────────────────────────────
 
-export const skills = sqliteTable('skills', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const skills = pgTable('skills', {
+  id: serial('id').primaryKey(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   categoryEn: text('category_en').notNull(),
@@ -138,15 +140,15 @@ export const skills = sqliteTable('skills', {
   icon: text('icon'),
   color: text('color'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Certifications ──────────────────────────────────────────────────────────
 
-export const certifications = sqliteTable('certifications', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const certifications = pgTable('certifications', {
+  id: serial('id').primaryKey(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   issuer: text('issuer'),
@@ -157,15 +159,15 @@ export const certifications = sqliteTable('certifications', {
   badgeUrl: text('badge_url'),
   color: text('color').default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Services ─────────────────────────────────────────────────────────────────
 
-export const services = sqliteTable('services', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const services = pgTable('services', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa').notNull(),
@@ -180,15 +182,15 @@ export const services = sqliteTable('services', {
   icon: text('icon'),
   color: text('color').default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
-export const projects = sqliteTable('projects', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const projects = pgTable('projects', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -225,7 +227,7 @@ export const projects = sqliteTable('projects', {
   businessScopeFa: text('business_scope_fa'),
   collaborationType: text('collaboration_type'),
   projectStatus: text('project_status').default('completed'),
-  isConfidential: integer('is_confidential', { mode: 'boolean' }).notNull().default(false),
+  isConfidential: boolean('is_confidential').notNull().default(false),
   networkDiagramUrl: text('network_diagram_url'),
   infraDiagramUrl: text('infra_diagram_url'),
   downloadPdfUrl: text('download_pdf_url'),
@@ -253,48 +255,48 @@ export const projects = sqliteTable('projects', {
   businessImpactJson: text('business_impact_json'),
   relatedTags: text('related_tags'),
   relatedCaseStudySlugs: text('related_case_study_slugs'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Clients / Companies ──────────────────────────────────────────────────────
 
-export const clients = sqliteTable('clients', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const clients = pgTable('clients', {
+  id: serial('id').primaryKey(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   typeEn: text('type_en'),
   typeFa: text('type_fa'),
   logoUrl: text('logo_url'),
   website: text('website'),
-  isTechPartner: integer('is_tech_partner', { mode: 'boolean' }).notNull().default(false),
+  isTechPartner: boolean('is_tech_partner').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Blog Categories ──────────────────────────────────────────────────────────
 
-export const blogCategories = sqliteTable('blog_categories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const blogCategories = pgTable('blog_categories', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   icon: text('icon'),
   color: text('color').default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
 })
 
 // ─── Blog Posts ───────────────────────────────────────────────────────────────
 
-export const blogPosts = sqliteTable('blog_posts', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const blogPosts = pgTable('blog_posts', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa').notNull(),
@@ -309,17 +311,17 @@ export const blogPosts = sqliteTable('blog_posts', {
   publishedAtEn: text('published_at_en'),
   publishedAtFa: text('published_at_fa'),
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   views: integer('views').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
-export const navigationItems = sqliteTable('navigation_items', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const navigationItems = pgTable('navigation_items', {
+  id: serial('id').primaryKey(),
   labelEn: text('label_en').notNull(),
   labelFa: text('label_fa').notNull(),
   href: text('href').notNull(),
@@ -327,14 +329,14 @@ export const navigationItems = sqliteTable('navigation_items', {
   location: text('location', { enum: ['header', 'footer'] }).notNull().default('header'),
   parentId: integer('parent_id'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Media Files ──────────────────────────────────────────────────────────────
 
-export const mediaFiles = sqliteTable('media_files', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const mediaFiles = pgTable('media_files', {
+  id: serial('id').primaryKey(),
   filename: text('filename').notNull(),
   originalName: text('original_name').notNull(),
   mimeType: text('mime_type').notNull(),
@@ -343,14 +345,14 @@ export const mediaFiles = sqliteTable('media_files', {
   folder: text('folder').default('general'),
   alt: text('alt'),
   caption: text('caption'),
-  uploadedAt: text('uploaded_at').notNull().default(sql`(datetime('now'))`),
+  uploadedAt: text('uploaded_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   uploadedBy: text('uploaded_by').references(() => users.id),
 })
 
 // ─── AI Knowledge Base ────────────────────────────────────────────────────────
 
-export const aiKnowledgeBase = sqliteTable('ai_knowledge_base', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const aiKnowledgeBase = pgTable('ai_knowledge_base', {
+  id: serial('id').primaryKey(),
   title: text('title').notNull(),
   type: text('type', { enum: ['document', 'faq', 'snippet', 'url'] }).notNull().default('document'),
   content: text('content'),
@@ -358,17 +360,17 @@ export const aiKnowledgeBase = sqliteTable('ai_knowledge_base', {
   sourceUrl: text('source_url'),
   tags: text('tags'),
   locale: text('locale').default('both'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   priority: integer('priority').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
-export const forms = sqliteTable('forms', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const forms = pgTable('forms', {
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
@@ -379,10 +381,10 @@ export const forms = sqliteTable('forms', {
   emailSubject: text('email_subject'),
   successMessageEn: text('success_message_en'),
   successMessageFa: text('success_message_fa'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   submissionsCount: integer('submissions_count').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -390,8 +392,8 @@ export type Form = typeof forms.$inferSelect
 
 // ─── AI Platform ─────────────────────────────────────────────────────────────
 
-export const aiModules = sqliteTable('ai_modules', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const aiModules = pgTable('ai_modules', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -401,28 +403,28 @@ export const aiModules = sqliteTable('ai_modules', {
   category: text('category').notNull().default('general'),
   systemPrompt: text('system_prompt'),
   color: text('color').notNull().default('indigo'),
-  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  enabled: boolean('enabled').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   usageCount: integer('usage_count').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
-export const aiConversations = sqliteTable('ai_conversations', {
+export const aiConversations = pgTable('ai_conversations', {
   id: text('id').primaryKey(),
   moduleSlug: text('module_slug'),
   titleEn: text('title_en'),
   locale: text('locale').notNull().default('en'),
   messagesJson: text('messages_json').notNull().default('[]'),
   sourcesJson: text('sources_json').notNull().default('[]'),
-  bookmarked: integer('bookmarked', { mode: 'boolean' }).notNull().default(false),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  bookmarked: boolean('bookmarked').notNull().default(false),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Solutions (Phase 6) ──────────────────────────────────────────────────────
 
-export const solutions = sqliteTable('solutions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const solutions = pgTable('solutions', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -444,18 +446,18 @@ export const solutions = sqliteTable('solutions', {
   seoDescription: text('seo_description'),
   seoKeywords: text('seo_keywords'),
   ogImage: text('og_image'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 export type Solution = typeof solutions.$inferSelect
 
-export const industries = sqliteTable('industries', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const industries = pgTable('industries', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -472,15 +474,15 @@ export const industries = sqliteTable('industries', {
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type Industry = typeof industries.$inferSelect
 
-export const technologies = sqliteTable('technologies', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const technologies = pgTable('technologies', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -493,14 +495,14 @@ export const technologies = sqliteTable('technologies', {
   logoUrl: text('logo_url'),
   tier: text('tier', { enum: ['core', 'advanced', 'specialized'] }).notNull().default('core'),
   certifications: text('certifications'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
 })
 
 export type Technology = typeof technologies.$inferSelect
 
-export const testimonials = sqliteTable('testimonials', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const testimonials = pgTable('testimonials', {
+  id: serial('id').primaryKey(),
   clientName: text('client_name').notNull(),
   clientTitle: text('client_title'),
   clientCompany: text('client_company'),
@@ -510,16 +512,16 @@ export const testimonials = sqliteTable('testimonials', {
   rating: integer('rating').notNull().default(5),
   projectSlug: text('project_slug'),
   solutionSlug: text('solution_slug'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  featured: boolean('featured').notNull().default(false),
+  active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type Testimonial = typeof testimonials.$inferSelect
 
-export const pageTemplates = sqliteTable('page_templates', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const pageTemplates = pgTable('page_templates', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -528,32 +530,32 @@ export const pageTemplates = sqliteTable('page_templates', {
   sectionsJson: text('sections_json').notNull().default('[]'),
   defaultPropsJson: text('default_props_json').notNull().default('{}'),
   previewImage: text('preview_image'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type PageTemplate = typeof pageTemplates.$inferSelect
 
 // ─── Redirects ────────────────────────────────────────────────────────────────
 
-export const redirects = sqliteTable('redirects', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const redirects = pgTable('redirects', {
+  id: serial('id').primaryKey(),
   fromPath: text('from_path').notNull().unique(),
   toPath: text('to_path').notNull(),
   statusCode: integer('status_code').notNull().default(301),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   hits: integer('hits').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type Redirect = typeof redirects.$inferSelect
 
 // ─── Contact Requests ─────────────────────────────────────────────────────────
 
-export const contactRequests = sqliteTable('contact_requests', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const contactRequests = pgTable('contact_requests', {
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull(),
   phone: text('phone'),
@@ -563,14 +565,14 @@ export const contactRequests = sqliteTable('contact_requests', {
   status: text('status', { enum: ['new', 'read', 'replied', 'archived'] }).notNull().default('new'),
   ipAddress: text('ip_address'),
   locale: text('locale').default('en'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Consultation Requests ────────────────────────────────────────────────────
 
-export const consultationRequests = sqliteTable('consultation_requests', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const consultationRequests = pgTable('consultation_requests', {
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull(),
   phone: text('phone'),
@@ -586,14 +588,14 @@ export const consultationRequests = sqliteTable('consultation_requests', {
   notes: text('notes'),
   ipAddress: text('ip_address'),
   locale: text('locale').default('en'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Analytics Events ─────────────────────────────────────────────────────────
 
-export const analyticsEvents = sqliteTable('analytics_events', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const analyticsEvents = pgTable('analytics_events', {
+  id: serial('id').primaryKey(),
   type: text('type').notNull(),
   page: text('page'),
   referrer: text('referrer'),
@@ -602,13 +604,13 @@ export const analyticsEvents = sqliteTable('analytics_events', {
   locale: text('locale'),
   sessionId: text('session_id'),
   metadata: text('metadata'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 
-export const auditLogs = sqliteTable('audit_logs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
   userId: text('user_id').references(() => users.id),
   userEmail: text('user_email'),
   action: text('action').notNull(),
@@ -618,12 +620,12 @@ export const auditLogs = sqliteTable('audit_logs', {
   newValue: text('new_value'),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Section Builder ──────────────────────────────────────────────────────────
 
-export const sections = sqliteTable('sections', {
+export const sections = pgTable('sections', {
   id: text('id').primaryKey(),
   sectionType: text('section_type').notNull(),
   variant: text('variant').notNull().default('default'),
@@ -636,7 +638,7 @@ export const sections = sqliteTable('sections', {
   theme: text('theme').notNull().default('dark'),
   bgColor: text('bg_color'),
   bgImage: text('bg_image'),
-  bgOverlay: real('bg_overlay').default(0),
+  bgOverlay: doublePrecision('bg_overlay').default(0),
   mediaUrl: text('media_url'),
   mediaAlt: text('media_alt'),
   animationIn: text('animation_in').default('fade'),
@@ -649,22 +651,22 @@ export const sections = sqliteTable('sections', {
   scheduledAt: text('scheduled_at'),
   archivedAt: text('archived_at'),
   version: integer('version').notNull().default(1),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
-export const sectionVersions = sqliteTable('section_versions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const sectionVersions = pgTable('section_versions', {
+  id: serial('id').primaryKey(),
   sectionId: text('section_id').notNull().references(() => sections.id, { onDelete: 'cascade' }),
   version: integer('version').notNull(),
   snapshot: text('snapshot').notNull(),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
 })
 
-export const pages = sqliteTable('pages', {
+export const pages = pgTable('pages', {
   id: text('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   titleEn: text('title_en').notNull(),
@@ -677,18 +679,18 @@ export const pages = sqliteTable('pages', {
   layout: text('layout').notNull().default('default'),
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
   publishedAt: text('published_at'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
-export const pageSections = sqliteTable('page_sections', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const pageSections = pgTable('page_sections', {
+  id: serial('id').primaryKey(),
   pageId: text('page_id').notNull().references(() => pages.id, { onDelete: 'cascade' }),
   sectionId: text('section_id').notNull().references(() => sections.id, { onDelete: 'cascade' }),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -720,7 +722,7 @@ export type AiConversation = typeof aiConversations.$inferSelect
 
 // ─── Phase 7: Multi-Site & Workspace Management ───────────────────────────────
 
-export const sites = sqliteTable('sites', {
+export const sites = pgTable('sites', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
@@ -736,19 +738,19 @@ export const sites = sqliteTable('sites', {
   homePageSlug: text('home_page_slug'),
   configJson: text('config_json').notNull().default('{}'),
   seoJson: text('seo_json').notNull().default('{}'),
-  shareMedia: integer('share_media', { mode: 'boolean' }).notNull().default(true),
-  shareTemplates: integer('share_templates', { mode: 'boolean' }).notNull().default(true),
-  shareKb: integer('share_kb', { mode: 'boolean' }).notNull().default(false),
-  shareUsers: integer('share_users', { mode: 'boolean' }).notNull().default(false),
+  shareMedia: boolean('share_media').notNull().default(true),
+  shareTemplates: boolean('share_templates').notNull().default(true),
+  shareKb: boolean('share_kb').notNull().default(false),
+  shareUsers: boolean('share_users').notNull().default(false),
   workspaceId: text('workspace_id'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
 })
 
 export type Site = typeof sites.$inferSelect
 
-export const workspaces = sqliteTable('workspaces', {
+export const workspaces = pgTable('workspaces', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
@@ -758,10 +760,10 @@ export const workspaces = sqliteTable('workspaces', {
   descriptionEn: text('description_en'),
   configJson: text('config_json').notNull().default('{}'),
   isolationLevel: text('isolation_level', { enum: ['shared', 'isolated', 'partial'] }).notNull().default('partial'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -769,8 +771,8 @@ export type Workspace = typeof workspaces.$inferSelect
 
 // ─── Phase 7: Organization Management ────────────────────────────────────────
 
-export const organization = sqliteTable('organization', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const organization = pgTable('organization', {
+  id: serial('id').primaryKey(),
   legalNameEn: text('legal_name_en').notNull().default('HBZ Technology'),
   legalNameFa: text('legal_name_fa').notNull().default('فناوری HBZ'),
   brandNameEn: text('brand_name_en').notNull().default('HBZ Technology'),
@@ -791,24 +793,24 @@ export const organization = sqliteTable('organization', {
   legalJson: text('legal_json').default('{}'),
   businessUnitsJson: text('business_units_json').default('[]'),
   certificationsJson: text('certifications_json').default('[]'),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
-export const departments = sqliteTable('departments', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const departments = pgTable('departments', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   icon: text('icon').notNull().default('🏢'),
   headUserId: text('head_user_id').references(() => users.id),
   parentId: integer('parent_id'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
 })
 
-export const officeLocations = sqliteTable('office_locations', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const officeLocations = pgTable('office_locations', {
+  id: serial('id').primaryKey(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   type: text('type', { enum: ['hq', 'branch', 'remote', 'partner'] }).notNull().default('branch'),
@@ -817,27 +819,27 @@ export const officeLocations = sqliteTable('office_locations', {
   addressEn: text('address_en'),
   phone: text('phone'),
   email: text('email'),
-  lat: real('lat'),
-  lng: real('lng'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
 })
 
 // ─── Phase 7: Product Platform ────────────────────────────────────────────────
 
-export const productCategories = sqliteTable('product_categories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const productCategories = pgTable('product_categories', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   icon: text('icon').notNull().default('📦'),
   color: text('color').notNull().default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
 })
 
-export const products = sqliteTable('products', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const products = pgTable('products', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -861,18 +863,18 @@ export const products = sqliteTable('products', {
   repoUrl: text('repo_url'),
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
 export type Product = typeof products.$inferSelect
 
-export const productReleases = sqliteTable('product_releases', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const productReleases = pgTable('product_releases', {
+  id: serial('id').primaryKey(),
   productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   version: text('version').notNull(),
   type: text('type', { enum: ['major', 'minor', 'patch', 'hotfix', 'beta', 'rc'] }).notNull().default('minor'),
@@ -880,15 +882,15 @@ export const productReleases = sqliteTable('product_releases', {
   changelogEn: text('changelog_en'),
   changelogFa: text('changelog_fa'),
   downloadUrl: text('download_url'),
-  breakingChanges: integer('breaking_changes', { mode: 'boolean' }).notNull().default(false),
-  publishedAt: text('published_at').notNull().default(sql`(datetime('now'))`),
+  breakingChanges: boolean('breaking_changes').notNull().default(false),
+  publishedAt: text('published_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
 })
 
 // ─── Phase 7: Documentation Platform ─────────────────────────────────────────
 
-export const docCategories = sqliteTable('doc_categories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const docCategories = pgTable('doc_categories', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -897,11 +899,11 @@ export const docCategories = sqliteTable('doc_categories', {
   parentId: integer('parent_id'),
   type: text('type', { enum: ['docs', 'api', 'runbook', 'tutorial', 'guide', 'release'] }).notNull().default('docs'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
 })
 
-export const docs = sqliteTable('docs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const docs = pgTable('docs', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa'),
@@ -922,10 +924,10 @@ export const docs = sqliteTable('docs', {
   notHelpful: integer('not_helpful').notNull().default(0),
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -933,19 +935,19 @@ export type Doc = typeof docs.$inferSelect
 
 // ─── Phase 7: Academy Platform ────────────────────────────────────────────────
 
-export const courseCategories = sqliteTable('course_categories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const courseCategories = pgTable('course_categories', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
   icon: text('icon').notNull().default('🎓'),
   color: text('color').notNull().default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
 })
 
-export const courses = sqliteTable('courses', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const courses = pgTable('courses', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa'),
@@ -961,22 +963,22 @@ export const courses = sqliteTable('courses', {
   prerequisitesJson: text('prerequisites_json').notNull().default('[]'),
   outcomesJson: text('outcomes_json').notNull().default('[]'),
   instructorId: text('instructor_id').references(() => users.id),
-  price: real('price').notNull().default(0),
-  isFree: integer('is_free', { mode: 'boolean' }).notNull().default(true),
-  certificateEnabled: integer('certificate_enabled', { mode: 'boolean' }).notNull().default(false),
+  price: doublePrecision('price').notNull().default(0),
+  isFree: boolean('is_free').notNull().default(true),
+  certificateEnabled: boolean('certificate_enabled').notNull().default(false),
   enrollmentsCount: integer('enrollments_count').notNull().default(0),
-  rating: real('rating').notNull().default(0),
+  rating: doublePrecision('rating').notNull().default(0),
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type Course = typeof courses.$inferSelect
 
-export const courseLessons = sqliteTable('course_lessons', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const courseLessons = pgTable('course_lessons', {
+  id: serial('id').primaryKey(),
   courseId: integer('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa'),
@@ -985,14 +987,14 @@ export const courseLessons = sqliteTable('course_lessons', {
   videoUrl: text('video_url'),
   durationMinutes: integer('duration_minutes').default(0),
   sortOrder: integer('sort_order').notNull().default(0),
-  isFree: integer('is_free', { mode: 'boolean' }).notNull().default(false),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  isFree: boolean('is_free').notNull().default(false),
+  active: boolean('active').notNull().default(true),
 })
 
 // ─── Phase 7: Events & Community ─────────────────────────────────────────────
 
-export const events = sqliteTable('events', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const events = pgTable('events', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   titleEn: text('title_en').notNull(),
   titleFa: text('title_fa'),
@@ -1012,39 +1014,39 @@ export const events = sqliteTable('events', {
   tagsJson: text('tags_json').notNull().default('[]'),
   maxAttendees: integer('max_attendees'),
   registrationsCount: integer('registrations_count').notNull().default(0),
-  registrationOpen: integer('registration_open', { mode: 'boolean' }).notNull().default(true),
-  isFree: integer('is_free', { mode: 'boolean' }).notNull().default(true),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  registrationOpen: boolean('registration_open').notNull().default(true),
+  isFree: boolean('is_free').notNull().default(true),
+  featured: boolean('featured').notNull().default(false),
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   createdBy: text('created_by').references(() => users.id),
 })
 
 export type Event = typeof events.$inferSelect
 
-export const eventRegistrations = sqliteTable('event_registrations', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const eventRegistrations = pgTable('event_registrations', {
+  id: serial('id').primaryKey(),
   eventId: integer('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   email: text('email').notNull(),
   company: text('company'),
   phone: text('phone'),
   status: text('status', { enum: ['pending', 'confirmed', 'attended', 'cancelled'] }).notNull().default('pending'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Phase 7: Integrations ────────────────────────────────────────────────────
 
-export const integrations = sqliteTable('integrations', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const integrations = pgTable('integrations', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   category: text('category').notNull().default('productivity'),
   icon: text('icon').notNull().default('🔌'),
   color: text('color').notNull().default('#6366f1'),
-  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+  enabled: boolean('enabled').notNull().default(false),
   configJson: text('config_json').notNull().default('{}'),
   secretsJson: text('secrets_json').notNull().default('{}'),
   webhookUrl: text('webhook_url'),
@@ -1052,7 +1054,7 @@ export const integrations = sqliteTable('integrations', {
   lastSyncAt: text('last_sync_at'),
   errorMessage: text('error_message'),
   sortOrder: integer('sort_order').notNull().default(0),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1060,8 +1062,8 @@ export type Integration = typeof integrations.$inferSelect
 
 // ─── Phase 7: Partner & Customer Portals (Architecture) ───────────────────────
 
-export const partners = sqliteTable('partners', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const partners = pgTable('partners', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa'),
@@ -1073,32 +1075,32 @@ export const partners = sqliteTable('partners', {
   descriptionEn: text('description_en'),
   certificationsJson: text('certifications_json').notNull().default('[]'),
   regionsJson: text('regions_json').notNull().default('[]'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type Partner = typeof partners.$inferSelect
 
 // ─── Phase 7: RBAC Role Assignments ──────────────────────────────────────────
 
-export const roleAssignments = sqliteTable('role_assignments', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const roleAssignments = pgTable('role_assignments', {
+  id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: text('role').notNull(),
   scope: text('scope', { enum: ['global', 'workspace', 'site', 'department'] }).notNull().default('global'),
   scopeId: text('scope_id'),
   grantedBy: text('granted_by').references(() => users.id),
   expiresAt: text('expires_at'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ─── Phase 7: Global Search Index ────────────────────────────────────────────
 
-export const searchIndex = sqliteTable('search_index', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const searchIndex = pgTable('search_index', {
+  id: serial('id').primaryKey(),
   type: text('type').notNull(),
   entityId: text('entity_id').notNull(),
   titleEn: text('title_en').notNull(),
@@ -1110,8 +1112,8 @@ export const searchIndex = sqliteTable('search_index', {
   workspaceId: text('workspace_id'),
   siteId: text('site_id'),
   locale: text('locale').default('both'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  active: boolean('active').notNull().default(true),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1122,8 +1124,8 @@ export const searchIndex = sqliteTable('search_index', {
 // Consolidates: clients + partners
 // type: client | employer | tech_partner | reseller | distributor | consultant
 //       | vendor | referral | branch
-export const organizations = sqliteTable('organizations', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const organizations = pgTable('organizations', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa'),
@@ -1142,11 +1144,11 @@ export const organizations = sqliteTable('organizations', {
   certificationsJson: text('certifications_json').notNull().default('[]'),
   regionsJson: text('regions_json').notNull().default('[]'),
   tagsJson: text('tags_json').notNull().default('[]'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1154,8 +1156,8 @@ export type Organization = typeof organizations.$inferSelect
 
 // ─── Unified: Content Categories ──────────────────────────────────────────────
 // Consolidates: blog_categories + doc_categories + course_categories
-export const contentCategories = sqliteTable('content_categories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const contentCategories = pgTable('content_categories', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameFa: text('name_fa').notNull(),
@@ -1164,7 +1166,7 @@ export const contentCategories = sqliteTable('content_categories', {
   contentTypes: text('content_types').notNull().default('all'),
   parentId: integer('parent_id'),
   sortOrder: integer('sort_order').notNull().default(0),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  active: boolean('active').notNull().default(true),
 })
 
 export type ContentCategory = typeof contentCategories.$inferSelect
@@ -1173,8 +1175,8 @@ export type ContentCategory = typeof contentCategories.$inferSelect
 // Consolidates: blog_posts + docs
 // type: blog | news | docs | api | tutorial | guide | runbook | release
 //       | research | announcement
-export const content = sqliteTable('content', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const content = pgTable('content', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   type: text('type', {
     enum: ['blog', 'news', 'docs', 'api', 'tutorial', 'guide',
@@ -1195,15 +1197,15 @@ export const content = sqliteTable('content', {
   views: integer('views').notNull().default(0),
   helpful: integer('helpful').notNull().default(0),
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
   seoKeywords: text('seo_keywords'),
   ogImage: text('og_image'),
   sortOrder: integer('sort_order').notNull().default(0),
   publishedAt: text('published_at'),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1212,8 +1214,8 @@ export type Content = typeof content.$inferSelect
 // ─── Unified: Credentials ─────────────────────────────────────────────────────
 // Consolidates: certifications
 // type: certification | award | membership | badge | license | recognition
-export const credentials = sqliteTable('credentials', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const credentials = pgTable('credentials', {
+  id: serial('id').primaryKey(),
   type: text('type', {
     enum: ['certification', 'award', 'membership', 'badge', 'license', 'recognition'],
   }).notNull().default('certification'),
@@ -1229,10 +1231,10 @@ export const credentials = sqliteTable('credentials', {
   descriptionEn: text('description_en'),
   color: text('color').default('#6366f1'),
   icon: text('icon'),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1240,8 +1242,8 @@ export type Credential = typeof credentials.$inferSelect
 
 // ─── Unified: Success Stories ─────────────────────────────────────────────────
 // Extends testimonials with type + organization reference
-export const successStories = sqliteTable('success_stories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const successStories = pgTable('success_stories', {
+  id: serial('id').primaryKey(),
   type: text('type', {
     enum: ['testimonial', 'recommendation', 'review', 'award'],
   }).notNull().default('testimonial'),
@@ -1255,10 +1257,10 @@ export const successStories = sqliteTable('success_stories', {
   rating: integer('rating').notNull().default(5),
   caseStudySlug: text('case_study_slug'),
   solutionSlug: text('solution_slug'),
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  featured: boolean('featured').notNull().default(false),
+  active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
 })
 
 export type SuccessStory = typeof successStories.$inferSelect

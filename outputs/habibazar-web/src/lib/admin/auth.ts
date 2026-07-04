@@ -40,16 +40,16 @@ export interface AdminUser {
 
 export async function verifyTotp(userId: string, code: string): Promise<boolean> {
   const db = getDb()
-  const user = await db.select().from(users).where(eq(users.id, userId)).get()
+  const user = (await db.select().from(users).where(eq(users.id, userId)))[0]
   if (!user?.totpSecret || !user.totpEnabled) return false
   return verifyTotpCode(code, user.totpSecret)
 }
 
 export async function signIn(email: string, password: string, ipAddress?: string, userAgent?: string, totpCode?: string) {
   const db = getDb()
-  const user = await db.select().from(users).where(
+  const user = (await db.select().from(users).where(
     and(eq(users.email, email.toLowerCase()), eq(users.active, true))
-  ).get()
+  ))[0]
 
   if (!user) return { error: 'Invalid credentials' }
 
@@ -129,17 +129,17 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     const userId = payload.sub as string
 
     const db = getDb()
-    const session = await db.select().from(adminSessions).where(
+    const session = (await db.select().from(adminSessions).where(
       and(
         eq(adminSessions.token, token),
         gt(adminSessions.expiresAt, new Date().toISOString())
       )
-    ).get()
+    ))[0]
     if (!session) return null
 
-    const user = await db.select().from(users).where(
+    const user = (await db.select().from(users).where(
       and(eq(users.id, userId), eq(users.active, true))
-    ).get()
+    ))[0]
     if (!user) return null
 
     return {

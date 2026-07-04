@@ -24,11 +24,11 @@ const chatSchema = z.object({
 
 type KbSource = { id: number; title: string; excerpt: string }
 
-function retrieveContext(userMessage: string, locale: string): { contextBlock: string; sources: KbSource[] } {
+async function retrieveContext(userMessage: string, locale: string): Promise<{ contextBlock: string; sources: KbSource[] }> {
   try {
     const db = getDb()
     const terms = userMessage.toLowerCase().split(/\s+/).filter(t => t.length > 2)
-    const items = db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true)).all()
+    const items = await db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true))
     const scored = items.map(item => {
       const haystack = `${item.title} ${item.content || ''} ${item.tags || ''}`.toLowerCase()
       const score = terms.reduce((s, t) => s + (haystack.includes(t) ? 1 : 0), 0)
@@ -45,8 +45,8 @@ function retrieveContext(userMessage: string, locale: string): { contextBlock: s
   }
 }
 
-function getSetting(db: ReturnType<typeof getDb>, key: string): string {
-  const row = db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
+async function getSetting(db: ReturnType<typeof getDb>, key: string): Promise<string> {
+  const row = (await db.select().from(siteSettings).where(eq(siteSettings.key, key)))[0]
   return row?.value ?? ''
 }
 
@@ -153,11 +153,11 @@ export async function POST(req: NextRequest) {
     const userContext = chatContext || ''
 
     const db = getDb()
-    const provider = getSetting(db, 'ai_provider') || 'chatgpt'
-    const apiKey = getSetting(db, 'ai_api_key')
-    const model = getSetting(db, 'ai_model')
-    const apiUrl = getSetting(db, 'ai_api_url')
-    const customSystemPrompt = getSetting(db, 'ai_system_prompt')
+    const provider = (await getSetting(db, 'ai_provider')) || 'chatgpt'
+    const apiKey = await getSetting(db, 'ai_api_key')
+    const model = await getSetting(db, 'ai_model')
+    const apiUrl = await getSetting(db, 'ai_api_url')
+    const customSystemPrompt = await getSetting(db, 'ai_system_prompt')
 
     if (!apiKey) {
       return NextResponse.json({ error: 'AI API key not configured' }, { status: 503 })
@@ -166,15 +166,15 @@ export async function POST(req: NextRequest) {
     // Load module system prompt
     let modulePrompt = ''
     if (moduleSlug) {
-      const mod = db.select().from(aiModules).where(eq(aiModules.slug, moduleSlug)).get()
+      const mod = (await db.select().from(aiModules).where(eq(aiModules.slug, moduleSlug)))[0]
       if (mod?.systemPrompt) modulePrompt = mod.systemPrompt
       // Increment usage count
-      db.update(aiModules).set({ usageCount: (mod?.usageCount ?? 0) + 1 }).where(eq(aiModules.slug, moduleSlug)).run()
+      await db.update(aiModules).set({ usageCount: (mod?.usageCount ?? 0) + 1 }).where(eq(aiModules.slug, moduleSlug))
     }
 
     // RAG: retrieve relevant knowledge base context
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || ''
-    const { contextBlock, sources } = retrieveContext(lastUserMsg, locale || 'en')
+    const { contextBlock, sources } = await retrieveContext(lastUserMsg, locale || 'en')
 
     const isFA = locale === 'fa'
     const defaultSystemPrompt = isFA

@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getDb()
-  const row = db.select().from(organization).get()
+  const row = (await db.select().from(organization))[0]
   return NextResponse.json(row || {})
 }
 
@@ -18,13 +18,13 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()
   const db = getDb()
-  const existing = db.select().from(organization).get()
+  const existing = (await db.select().from(organization))[0]
   if (existing) {
-    const result = db.update(organization).set({ ...body, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(organization.id, existing.id)).returning().get()
+    const result = (await db.update(organization).set({ ...body, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(organization.id, existing.id)).returning())[0]
     await logAction(user, 'UPDATE', 'organization', String(existing.id), null, result)
     return NextResponse.json(result)
   } else {
-    const result = db.insert(organization).values({ ...body, updatedBy: user.id }).returning().get()
+    const result = (await db.insert(organization).values({ ...body, updatedBy: user.id }).returning())[0]
     return NextResponse.json(result, { status: 201 })
   }
 }

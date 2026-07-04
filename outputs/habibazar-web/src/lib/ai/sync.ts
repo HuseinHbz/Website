@@ -9,12 +9,11 @@
  * detection. Triggered (debounced) from `audit.logAction` on content mutations
  * and via `POST /api/admin/ai-kb/sync`.
  *
- * Runs on raw better-sqlite3 with defensive column access so it tolerates schema
+ * Runs on raw parameterized SQL with defensive column access so it tolerates schema
  * drift and never throws into a caller. The row→entry mapping is a pure function
  * (`buildEntry`) for unit testing.
  */
-import type Database from 'better-sqlite3'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { logBus } from '@/lib/logs/bus'
 
 export interface KbEntry { sourceUrl: string; title: string; content: string; tags: string }
@@ -25,10 +24,10 @@ export interface Source { type: string; table: string; where: string; titleCols:
 // active rows are synced. English + Persian text are both included for retrieval.
 const SOURCES: Source[] = [
   { type: 'blog', table: 'blog_posts', where: "status = 'published'", titleCols: ['title_en', 'title_fa'], bodyCols: ['excerpt_en', 'excerpt_fa', 'content_en'] },
-  { type: 'project', table: 'projects', where: 'active = 1', titleCols: ['name_en', 'name_fa'], bodyCols: ['industry_en', 'client_en', 'challenge_en', 'solution_en', 'results_en'] },
-  { type: 'solution', table: 'solutions', where: 'active = 1', titleCols: ['name_en', 'name_fa'], bodyCols: ['tagline_en', 'description_en', 'description_fa'] },
-  { type: 'technology', table: 'technologies', where: 'active = 1', titleCols: ['name_en', 'name_fa'], bodyCols: ['vendor', 'category', 'description_en', 'description_fa'] },
-  { type: 'journey', table: 'timeline_items', where: 'active = 1', titleCols: ['title_en', 'title_fa'], bodyCols: ['company_en', 'desc_en', 'desc_fa', 'year'] },
+  { type: 'project', table: 'projects', where: 'active = true', titleCols: ['name_en', 'name_fa'], bodyCols: ['industry_en', 'client_en', 'challenge_en', 'solution_en', 'results_en'] },
+  { type: 'solution', table: 'solutions', where: 'active = true', titleCols: ['name_en', 'name_fa'], bodyCols: ['tagline_en', 'description_en', 'description_fa'] },
+  { type: 'technology', table: 'technologies', where: 'active = true', titleCols: ['name_en', 'name_fa'], bodyCols: ['vendor', 'category', 'description_en', 'description_fa'] },
+  { type: 'journey', table: 'timeline_items', where: 'active = true', titleCols: ['title_en', 'title_fa'], bodyCols: ['company_en', 'desc_en', 'desc_fa', 'year'] },
 ]
 
 const CMS_PREFIX = 'cms://'
@@ -53,38 +52,35 @@ export function buildEntry(source: Source, row: Record<string, unknown>): KbEntr
   return { sourceUrl: `${CMS_PREFIX}${source.type}/${id}`, title: strip(title).slice(0, 300), content, tags: `cms,${source.type}` }
 }
 
-function client(): Database.Database | null {
-  try { return (getDb() as unknown as { $client: Database.Database }).$client } catch { return null }
-}
-
 export interface SyncResult { created: number; updated: number; removed: number; total: number; errors: string[] }
 
 /** Idempotent full sync of CMS content into the knowledge base. */
-export function syncKnowledgeFromCms(userId?: string): SyncResult {
-  const db = client()
+export async function syncKnowledgeFromCms(userId?: string): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, removed: 0, total: 0, errors: [] }
-  if (!db) { result.errors.push('db unavailable'); return result }
-
-  const findByUrl = db.prepare(`SELECT id FROM ai_knowledge_base WHERE source_url = ?`)
-  const insert = db.prepare(
-    `INSERT INTO ai_knowledge_base (title, type, content, source_url, tags, locale, active, priority, updated_by)
-     VALUES (@title, 'document', @content, @sourceUrl, @tags, 'both', 1, 1, @userId)`
-  )
-  const update = db.prepare(
-    `UPDATE ai_knowledge_base SET title=@title, content=@content, tags=@tags, active=1, updated_at=datetime('now'), updated_by=@userId WHERE source_url=@sourceUrl`
-  )
 
   const liveKeys = new Set<string>()
   for (const source of SOURCES) {
     try {
-      const rows = db.prepare(`SELECT * FROM ${source.table} WHERE ${source.where}`).all() as Record<string, unknown>[]
+      const rows = await pgQuery(`SELECT * FROM ${source.table} WHERE ${source.where}`) as Record<string, unknown>[]
       for (const row of rows) {
         const entry = buildEntry(source, row)
         if (!entry) continue
         liveKeys.add(entry.sourceUrl)
-        const existing = findByUrl.get(entry.sourceUrl) as { id: number } | undefined
-        if (existing) { update.run({ ...entry, userId: userId ?? null }); result.updated++ }
-        else { insert.run({ ...entry, userId: userId ?? null }); result.created++ }
+        const existing = (await pgQuery(`SELECT id FROM ai_knowledge_base WHERE source_url = $1`, [entry.sourceUrl]))[0] as { id: number } | undefined
+        if (existing) {
+          await pgQuery(
+            `UPDATE ai_knowledge_base SET title=$1, content=$2, tags=$3, active=true, updated_at=to_char(now(), 'YYYY-MM-DD HH24:MI:SS'), updated_by=$4 WHERE source_url=$5`,
+            [entry.title, entry.content, entry.tags, userId ?? null, entry.sourceUrl],
+          )
+          result.updated++
+        } else {
+          await pgQuery(
+            `INSERT INTO ai_knowledge_base (title, type, content, source_url, tags, locale, active, priority, updated_by)
+             VALUES ($1, 'document', $2, $3, $4, 'both', true, 1, $5)`,
+            [entry.title, entry.content, entry.sourceUrl, entry.tags, userId ?? null],
+          )
+          result.created++
+        }
       }
     } catch (e) {
       result.errors.push(`${source.table}: ${e instanceof Error ? e.message : String(e)}`)
@@ -93,9 +89,8 @@ export function syncKnowledgeFromCms(userId?: string): SyncResult {
 
   // Orphan cleanup: remove cms:// rows whose source no longer exists/published.
   try {
-    const cmsRows = db.prepare(`SELECT id, source_url FROM ai_knowledge_base WHERE source_url LIKE '${CMS_PREFIX}%'`).all() as { id: number; source_url: string }[]
-    const del = db.prepare(`DELETE FROM ai_knowledge_base WHERE id = ?`)
-    for (const r of cmsRows) if (!liveKeys.has(r.source_url)) { del.run(r.id); result.removed++ }
+    const cmsRows = await pgQuery(`SELECT id, source_url FROM ai_knowledge_base WHERE source_url LIKE '${CMS_PREFIX}%'`) as { id: number; source_url: string }[]
+    for (const r of cmsRows) if (!liveKeys.has(r.source_url)) { await pgQuery(`DELETE FROM ai_knowledge_base WHERE id = $1`, [r.id]); result.removed++ }
   } catch (e) {
     result.errors.push(`cleanup: ${e instanceof Error ? e.message : String(e)}`)
   }
@@ -121,6 +116,6 @@ let syncTimer: NodeJS.Timeout | null = null
 export function scheduleKbSync(resource: string) {
   if (!SYNCED_RESOURCES.has(resource)) return
   if (syncTimer) clearTimeout(syncTimer)
-  syncTimer = setTimeout(() => { try { syncKnowledgeFromCms() } catch { /* logged inside */ } }, 5000)
+  syncTimer = setTimeout(() => { syncKnowledgeFromCms().catch(() => { /* logged inside */ }) }, 5000)
   if (syncTimer.unref) syncTimer.unref()
 }

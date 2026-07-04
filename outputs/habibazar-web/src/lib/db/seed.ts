@@ -1,23 +1,26 @@
-import Database from 'better-sqlite3'
 import bcrypt from 'bcryptjs'
 import { nanoid } from 'nanoid'
-import path from 'path'
+import { eq, sql } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
+import { db, schema } from './index'
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'habibazar.db')
+async function count(tbl: PgTable): Promise<number> {
+  const [row] = await db.select({ c: sql<number>`count(*)` }).from(tbl)
+  return Number(row?.c ?? 0)
+}
 
 export async function seedDatabase() {
-  const sqlite = new Database(DB_PATH)
+  const s = schema
 
-  // Super admin user — INSERT OR IGNORE is safe across parallel build workers
-  const existingUser = sqlite.prepare('SELECT id FROM users WHERE email = ?').get('admin@habibazar.com')
-  if (!existingUser) {
+  // Super admin user (idempotent)
+  const existingUser = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, 'admin@habibazar.com')).limit(1)
+  if (existingUser.length === 0) {
     const hash = await bcrypt.hash('HBZ@Admin2025!', 12)
-    sqlite.prepare(`INSERT OR IGNORE INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`)
-      .run(nanoid(), 'Husein Habibazar', 'admin@habibazar.com', hash, 'super_admin')
+    await db.insert(s.users).values({ id: nanoid(), name: 'Husein Habibazar', email: 'admin@habibazar.com', passwordHash: hash, role: 'super_admin' }).onConflictDoNothing()
   }
 
   // Site settings
-  const settings = [
+  const settings: [string, string, string][] = [
     ['site_name', 'Husein Habibazar', 'general'],
     ['site_tagline', 'Infrastructure Architect & Network Security Consultant', 'general'],
     ['site_url', 'https://habibazar.com', 'general'],
@@ -46,55 +49,44 @@ export async function seedDatabase() {
     ['profile_photo_url', '', 'profile'],
     ['resume_url', '/resume.pdf', 'profile'],
   ]
-  const insertSetting = sqlite.prepare(`INSERT OR IGNORE INTO site_settings (key, value, "group") VALUES (?, ?, ?)`)
-  for (const [k, v, g] of settings) insertSetting.run(k, v, g)
-
-  // Hero content EN
-  const heroEn = sqlite.prepare('SELECT id FROM hero_content WHERE locale = ?').get('en')
-  if (!heroEn) {
-    sqlite.prepare(`INSERT INTO hero_content (locale, badge, headline, headline_highlight, subheadline, cta_primary, cta_primary_href, cta_secondary, cta_secondary_href, cta_tertiary, cta_tertiary_href, stat1_label, stat1_value, stat2_label, stat2_value, stat3_label, stat3_value, stat4_label, stat4_value) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run('en', 'Available for Enterprise Projects', 'Infrastructure', 'Architect', 'Designing, Securing and Automating Modern Enterprise Infrastructure — from MikroTik to Cisco, VMware to Proxmox, Zabbix to Ansible.', 'View Projects', '/projects', 'Book Consultation', '/consultation', 'Download Resume', '/resume.pdf', 'Years Experience', '10+', 'Enterprise Projects', '50+', 'Managed Endpoints', '1000+', 'Production Deployments', '20+')
+  for (const [key, value, group] of settings) {
+    await db.insert(s.siteSettings).values({ key, value, group }).onConflictDoNothing({ target: s.siteSettings.key })
   }
 
-  // Hero content FA
-  const heroFa = sqlite.prepare('SELECT id FROM hero_content WHERE locale = ?').get('fa')
-  if (!heroFa) {
-    sqlite.prepare(`INSERT INTO hero_content (locale, badge, headline, headline_highlight, subheadline, cta_primary, cta_primary_href, cta_secondary, cta_secondary_href, cta_tertiary, cta_tertiary_href, stat1_label, stat1_value, stat2_label, stat2_value, stat3_label, stat3_value, stat4_label, stat4_value) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run('fa', 'آماده همکاری با سازمان‌ها', 'معمار', 'زیرساخت', 'طراحی، ایمن‌سازی و خودکارسازی زیرساخت سازمانی مدرن — از میکروتیک تا سیسکو، VMware تا Proxmox، Zabbix تا Ansible.', 'مشاهده پروژه‌ها', '/projects', 'رزرو مشاوره', '/consultation', 'دانلود رزومه', '/resume.pdf', 'سال تجربه', '+۱۰', 'پروژه سازمانی', '+۵۰', 'تجهیز مدیریت‌شده', '+۱۰۰۰', 'استقرار تولیدی', '+۲۰')
+  // Hero content EN / FA
+  const heroEn = await db.select({ id: s.heroContent.id }).from(s.heroContent).where(eq(s.heroContent.locale, 'en')).limit(1)
+  if (heroEn.length === 0) {
+    await db.insert(s.heroContent).values({ locale: 'en', badge: 'Available for Enterprise Projects', headline: 'Infrastructure', headlineHighlight: 'Architect', subheadline: 'Designing, Securing and Automating Modern Enterprise Infrastructure — from MikroTik to Cisco, VMware to Proxmox, Zabbix to Ansible.', ctaPrimary: 'View Projects', ctaPrimaryHref: '/projects', ctaSecondary: 'Book Consultation', ctaSecondaryHref: '/consultation', ctaTertiary: 'Download Resume', ctaTertiaryHref: '/resume.pdf', stat1Label: 'Years Experience', stat1Value: '10+', stat2Label: 'Enterprise Projects', stat2Value: '50+', stat3Label: 'Managed Endpoints', stat3Value: '1000+', stat4Label: 'Production Deployments', stat4Value: '20+' })
+  }
+  const heroFa = await db.select({ id: s.heroContent.id }).from(s.heroContent).where(eq(s.heroContent.locale, 'fa')).limit(1)
+  if (heroFa.length === 0) {
+    await db.insert(s.heroContent).values({ locale: 'fa', badge: 'آماده همکاری با سازمان‌ها', headline: 'معمار', headlineHighlight: 'زیرساخت', subheadline: 'طراحی، ایمن‌سازی و خودکارسازی زیرساخت سازمانی مدرن — از میکروتیک تا سیسکو، VMware تا Proxmox، Zabbix تا Ansible.', ctaPrimary: 'مشاهده پروژه‌ها', ctaPrimaryHref: '/projects', ctaSecondary: 'رزرو مشاوره', ctaSecondaryHref: '/consultation', ctaTertiary: 'دانلود رزومه', ctaTertiaryHref: '/resume.pdf', stat1Label: 'سال تجربه', stat1Value: '+۱۰', stat2Label: 'پروژه سازمانی', stat2Value: '+۵۰', stat3Label: 'تجهیز مدیریت‌شده', stat3Value: '+۱۰۰۰', stat4Label: 'استقرار تولیدی', stat4Value: '+۲۰' })
   }
 
-  // About EN
-  const aboutEn = sqlite.prepare('SELECT id FROM about_content WHERE locale = ?').get('en')
-  if (!aboutEn) {
-    sqlite.prepare(`INSERT INTO about_content (locale, headline, subheadline, bio, years_exp, projects_count, endpoints_count, deployments_count) VALUES (?,?,?,?,?,?,?,?)`)
-      .run('en', 'Infrastructure Architect', '& Network Security Consultant', 'With over a decade of hands-on experience in enterprise infrastructure, I specialize in designing resilient, secure, and automated network environments. My expertise spans from MikroTik and Cisco routing & switching to VMware and Proxmox virtualization, Zabbix monitoring, Fortigate security, and Ansible automation. I have successfully delivered infrastructure projects for restaurants, hospitality groups, holding companies, and industrial enterprises across Iran.', '10+', '50+', '1000+', '20+')
+  // About EN / FA
+  const aboutEn = await db.select({ id: s.aboutContent.id }).from(s.aboutContent).where(eq(s.aboutContent.locale, 'en')).limit(1)
+  if (aboutEn.length === 0) {
+    await db.insert(s.aboutContent).values({ locale: 'en', headline: 'Infrastructure Architect', subheadline: '& Network Security Consultant', bio: 'With over a decade of hands-on experience in enterprise infrastructure, I specialize in designing resilient, secure, and automated network environments. My expertise spans from MikroTik and Cisco routing & switching to VMware and Proxmox virtualization, Zabbix monitoring, Fortigate security, and Ansible automation. I have successfully delivered infrastructure projects for restaurants, hospitality groups, holding companies, and industrial enterprises across Iran.', yearsExp: '10+', projectsCount: '50+', endpointsCount: '1000+', deploymentsCount: '20+' })
+  }
+  const aboutFa = await db.select({ id: s.aboutContent.id }).from(s.aboutContent).where(eq(s.aboutContent.locale, 'fa')).limit(1)
+  if (aboutFa.length === 0) {
+    await db.insert(s.aboutContent).values({ locale: 'fa', headline: 'معمار زیرساخت', subheadline: 'و مشاور امنیت شبکه', bio: 'با بیش از یک دهه تجربه عملی در زیرساخت سازمانی، در طراحی محیط‌های شبکه مقاوم، امن و خودکار تخصص دارم. تخصص من از مسیریابی و سوئیچینگ میکروتیک و سیسکو تا مجازی‌سازی VMware و Proxmox، پایش Zabbix، امنیت Fortigate و خودکارسازی Ansible گسترش می‌یابد.', yearsExp: '+۱۰', projectsCount: '+۵۰', endpointsCount: '+۱۰۰۰', deploymentsCount: '+۲۰' })
   }
 
-  // About FA
-  const aboutFa = sqlite.prepare('SELECT id FROM about_content WHERE locale = ?').get('fa')
-  if (!aboutFa) {
-    sqlite.prepare(`INSERT INTO about_content (locale, headline, subheadline, bio, years_exp, projects_count, endpoints_count, deployments_count) VALUES (?,?,?,?,?,?,?,?)`)
-      .run('fa', 'معمار زیرساخت', 'و مشاور امنیت شبکه', 'با بیش از یک دهه تجربه عملی در زیرساخت سازمانی، در طراحی محیط‌های شبکه مقاوم، امن و خودکار تخصص دارم. تخصص من از مسیریابی و سوئیچینگ میکروتیک و سیسکو تا مجازی‌سازی VMware و Proxmox، پایش Zabbix، امنیت Fortigate و خودکارسازی Ansible گسترش می‌یابد.', '+۱۰', '+۵۰', '+۱۰۰۰', '+۲۰')
-  }
-
-  // Timeline items
-  const timelineCount = (sqlite.prepare('SELECT COUNT(*) as c FROM timeline_items').get() as { c: number } | undefined)?.c ?? 0
-  if (timelineCount === 0) {
-    const items = [
-      { year: '2013', title_en: 'Started in IT Support', title_fa: 'شروع در پشتیبانی IT', company_en: 'Local ISP', company_fa: 'ISP محلی', desc_en: 'Began career maintaining network infrastructure and providing technical support for small businesses.', desc_fa: 'آغاز مسیر با نگهداری زیرساخت شبکه و پشتیبانی فنی از کسب‌وکارهای کوچک.', color: '#6366f1', sort_order: 1 },
-      { year: '2017', title_en: 'Network Engineer', title_fa: 'مهندس شبکه', company_en: 'Enterprise Clients', company_fa: 'مشتریان سازمانی', desc_en: 'Advanced to designing and implementing enterprise-grade networks with MikroTik and Cisco equipment.', desc_fa: 'ارتقا به طراحی و پیاده‌سازی شبکه‌های سطح سازمانی با تجهیزات میکروتیک و سیسکو.', color: '#06b6d4', sort_order: 2 },
-      { year: '2019', title_en: 'Security Specialization', title_fa: 'تخصص امنیت', company_en: 'Multi-client', company_fa: 'چند مشتری', desc_en: 'Obtained Fortinet NSE certification and began implementing NGFW, VPN, and zero-trust architectures.', desc_fa: 'دریافت گواهینامه Fortinet NSE و شروع پیاده‌سازی NGFW، VPN و معماری‌های zero-trust.', color: '#ef4444', sort_order: 3 },
-      { year: '2021', title_en: 'Virtualization & Cloud', title_fa: 'مجازی‌سازی و ابر', company_en: 'Enterprise Deployments', company_fa: 'استقرار سازمانی', desc_en: 'Mastered VMware vSphere and Proxmox VE for enterprise virtualization, HA clustering, and Ceph storage.', desc_fa: 'تسلط بر VMware vSphere و Proxmox VE برای مجازی‌سازی سازمانی، خوشه‌بندی HA و ذخیره‌سازی Ceph.', color: '#f59e0b', sort_order: 4 },
-      { year: '2025', title_en: 'Independent Consultant', title_fa: 'مشاور مستقل', company_en: 'HBZ Consulting', company_fa: 'مشاوره HBZ', desc_en: 'Launched independent consulting practice serving restaurants, hospitality, and industrial enterprise clients.', desc_fa: 'راه‌اندازی مشاوره مستقل برای رستوران‌ها، مهمانداری و مشتریان صنعتی سازمانی.', color: '#818cf8', sort_order: 5 },
-    ]
-    const ins = sqlite.prepare(`INSERT INTO timeline_items (year, title_en, title_fa, company_en, company_fa, desc_en, desc_fa, color, sort_order) VALUES (?,?,?,?,?,?,?,?,?)`)
-    for (const i of items) ins.run(i.year, i.title_en, i.title_fa, i.company_en, i.company_fa, i.desc_en, i.desc_fa, i.color, i.sort_order)
+  // Timeline
+  if (await count(s.timelineItems) === 0) {
+    await db.insert(s.timelineItems).values([
+      { year: '2013', titleEn: 'Started in IT Support', titleFa: 'شروع در پشتیبانی IT', companyEn: 'Local ISP', companyFa: 'ISP محلی', descEn: 'Began career maintaining network infrastructure and providing technical support for small businesses.', descFa: 'آغاز مسیر با نگهداری زیرساخت شبکه و پشتیبانی فنی از کسب‌وکارهای کوچک.', color: '#6366f1', sortOrder: 1 },
+      { year: '2017', titleEn: 'Network Engineer', titleFa: 'مهندس شبکه', companyEn: 'Enterprise Clients', companyFa: 'مشتریان سازمانی', descEn: 'Advanced to designing and implementing enterprise-grade networks with MikroTik and Cisco equipment.', descFa: 'ارتقا به طراحی و پیاده‌سازی شبکه‌های سطح سازمانی با تجهیزات میکروتیک و سیسکو.', color: '#06b6d4', sortOrder: 2 },
+      { year: '2019', titleEn: 'Security Specialization', titleFa: 'تخصص امنیت', companyEn: 'Multi-client', companyFa: 'چند مشتری', descEn: 'Obtained Fortinet NSE certification and began implementing NGFW, VPN, and zero-trust architectures.', descFa: 'دریافت گواهینامه Fortinet NSE و شروع پیاده‌سازی NGFW، VPN و معماری‌های zero-trust.', color: '#ef4444', sortOrder: 3 },
+      { year: '2021', titleEn: 'Virtualization & Cloud', titleFa: 'مجازی‌سازی و ابر', companyEn: 'Enterprise Deployments', companyFa: 'استقرار سازمانی', descEn: 'Mastered VMware vSphere and Proxmox VE for enterprise virtualization, HA clustering, and Ceph storage.', descFa: 'تسلط بر VMware vSphere و Proxmox VE برای مجازی‌سازی سازمانی، خوشه‌بندی HA و ذخیره‌سازی Ceph.', color: '#f59e0b', sortOrder: 4 },
+      { year: '2025', titleEn: 'Independent Consultant', titleFa: 'مشاور مستقل', companyEn: 'HBZ Consulting', companyFa: 'مشاوره HBZ', descEn: 'Launched independent consulting practice serving restaurants, hospitality, and industrial enterprise clients.', descFa: 'راه‌اندازی مشاوره مستقل برای رستوران‌ها، مهمانداری و مشتریان صنعتی سازمانی.', color: '#818cf8', sortOrder: 5 },
+    ])
   }
 
   // Skills
-  const skillsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM skills').get() as { c: number } | undefined)?.c ?? 0
-  if (skillsCount === 0) {
-    const sk = [
+  if (await count(s.skills) === 0) {
+    const sk: [string, string, string, string, number, string][] = [
       ['MikroTik RouterOS', 'میکروتیک RouterOS', 'Networking', 'شبکه', 95, '#c03030'],
       ['Cisco IOS/IOS-XE', 'سیسکو IOS/IOS-XE', 'Networking', 'شبکه', 85, '#1ba0d7'],
       ['Fortigate NGFW', 'فورتی‌گیت NGFW', 'Security', 'امنیت', 90, '#ef4444'],
@@ -108,14 +100,12 @@ export async function seedDatabase() {
       ['pfSense/OPNsense', 'pfSense/OPNsense', 'Security', 'امنیت', 82, '#1e90ff'],
       ['Docker/Podman', 'Docker/Podman', 'Automation', 'خودکارسازی', 75, '#2496ed'],
     ]
-    const ins = sqlite.prepare(`INSERT INTO skills (name_en, name_fa, category_en, category_fa, level, color, sort_order) VALUES (?,?,?,?,?,?,?)`)
-    sk.forEach(([ne, nf, ce, cf, lv, cl], i) => ins.run(ne, nf, ce, cf, lv, cl, i))
+    await db.insert(s.skills).values(sk.map(([nameEn, nameFa, categoryEn, categoryFa, level, color], i) => ({ nameEn, nameFa, categoryEn, categoryFa, level, color, sortOrder: i })))
   }
 
   // Certifications
-  const certsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM certifications').get() as { c: number } | undefined)?.c ?? 0
-  if (certsCount === 0) {
-    const certs = [
+  if (await count(s.certifications) === 0) {
+    const certs: [string, string, string, string, number][] = [
       ['MikroTik MTCNA', 'میکروتیک MTCNA', 'MikroTik', '#c03030', 1],
       ['MikroTik MTCRE', 'میکروتیک MTCRE', 'MikroTik', '#c03030', 2],
       ['Fortinet NSE 4', 'فورتینت NSE 4', 'Fortinet', '#ef4444', 3],
@@ -123,64 +113,54 @@ export async function seedDatabase() {
       ['Linux LPIC-1', 'لینوکس LPIC-1', 'Linux Professional Institute', '#f59e0b', 5],
       ['Cisco CCNA', 'سیسکو CCNA', 'Cisco', '#1ba0d7', 6],
     ]
-    const ins = sqlite.prepare(`INSERT INTO certifications (name_en, name_fa, issuer, color, sort_order) VALUES (?,?,?,?,?)`)
-    for (const [ne, nf, is, cl, so] of certs) ins.run(ne, nf, is, cl, so)
+    await db.insert(s.certifications).values(certs.map(([nameEn, nameFa, issuer, color, sortOrder]) => ({ nameEn, nameFa, issuer, color, sortOrder })))
   }
 
   // Services
-  const servicesCount = (sqlite.prepare('SELECT COUNT(*) as c FROM services').get() as { c: number } | undefined)?.c ?? 0
-  if (servicesCount === 0) {
-    const svcs = [
-      { slug: 'network-design', title_en: 'Network Design & Architecture', title_fa: 'طراحی و معماری شبکه', category_en: 'Networking', category_fa: 'شبکه', short_desc_en: 'Enterprise network design with MikroTik, Cisco, VLANs, OSPF, BGP.', short_desc_fa: 'طراحی شبکه سازمانی با میکروتیک، سیسکو، VLAN، OSPF، BGP.', features_en: '["MikroTik RouterOS","Cisco IOS","VLAN Design","OSPF/BGP Routing","QoS Configuration","Network Documentation"]', features_fa: '["میکروتیک RouterOS","سیسکو IOS","طراحی VLAN","مسیریابی OSPF/BGP","پیکربندی QoS","مستندسازی شبکه"]', color: '#6366f1', sort_order: 1 },
-      { slug: 'network-security', title_en: 'Network Security', title_fa: 'امنیت شبکه', category_en: 'Security', category_fa: 'امنیت', short_desc_en: 'Fortigate NGFW, firewall policies, SSL inspection, zero-trust.', short_desc_fa: 'فایروال Fortigate NGFW، سیاست‌های فایروال، بازرسی SSL، zero-trust.', features_en: '["Fortigate NGFW","pfSense/OPNsense","SSL/TLS Inspection","IDS/IPS","VPN Design","Security Auditing"]', features_fa: '["Fortigate NGFW","pfSense/OPNsense","بازرسی SSL/TLS","IDS/IPS","طراحی VPN","ممیزی امنیتی"]', color: '#ef4444', sort_order: 2 },
-      { slug: 'virtualization', title_en: 'Virtualization & Cloud', title_fa: 'مجازی‌سازی و ابر', category_en: 'Infrastructure', category_fa: 'زیرساخت', short_desc_en: 'VMware vSphere, Proxmox VE clusters, Ceph storage, HA.', short_desc_fa: 'VMware vSphere، خوشه‌های Proxmox VE، ذخیره‌سازی Ceph، HA.', features_en: '["VMware vSphere","Proxmox VE","Ceph Storage","HA Clustering","Live Migration","Backup Strategies"]', features_fa: '["VMware vSphere","Proxmox VE","ذخیره‌سازی Ceph","خوشه‌بندی HA","انتقال زنده","راهبردهای پشتیبان"]', color: '#60b6e0', sort_order: 3 },
-      { slug: 'monitoring', title_en: 'Monitoring & Observability', title_fa: 'پایش و دیده‌بانی', category_en: 'Operations', category_fa: 'عملیات', short_desc_en: 'Zabbix, Grafana, SNMP, custom dashboards, alerting.', short_desc_fa: 'Zabbix، Grafana، SNMP، داشبوردهای اختصاصی، هشداردهی.', features_en: '["Zabbix 7.0","Grafana","SNMP Monitoring","Custom Dashboards","Alert Management","SLA Reporting"]', features_fa: '["Zabbix 7.0","Grafana","پایش SNMP","داشبوردهای اختصاصی","مدیریت هشدار","گزارش SLA"]', color: '#f59e0b', sort_order: 4 },
-      { slug: 'backup-dr', title_en: 'Backup & Disaster Recovery', title_fa: 'پشتیبان‌گیری و بازیابی فاجعه', category_en: 'Infrastructure', category_fa: 'زیرساخت', short_desc_en: 'Veeam, Duplicati, offsite backup, RTO/RPO planning.', short_desc_fa: 'Veeam، Duplicati، پشتیبان خارجی، برنامه‌ریزی RTO/RPO.', features_en: '["Veeam Backup","Duplicati","Offsite Storage","DR Planning","RTO/RPO Targets","Recovery Testing"]', features_fa: '["Veeam Backup","Duplicati","ذخیره‌سازی خارجی","برنامه‌ریزی DR","اهداف RTO/RPO","تست بازیابی"]', color: '#8b5cf6', sort_order: 5 },
-      { slug: 'linux', title_en: 'Linux Administration', title_fa: 'مدیریت لینوکس', category_en: 'Systems', category_fa: 'سیستم‌ها', short_desc_en: 'RHEL, Debian, Ubuntu server hardening, automation.', short_desc_fa: 'RHEL، Debian، Ubuntu، سخت‌سازی سرور، خودکارسازی.', features_en: '["RHEL/Rocky Linux","Debian/Ubuntu","Server Hardening","Shell Scripting","Service Management","Performance Tuning"]', features_fa: '["RHEL/Rocky Linux","Debian/Ubuntu","سخت‌سازی سرور","اسکریپت‌نویسی","مدیریت سرویس","تنظیم کارایی"]', color: '#f59e0b', sort_order: 6 },
-      { slug: 'microsoft', title_en: 'Microsoft Infrastructure', title_fa: 'زیرساخت مایکروسافت', category_en: 'Systems', category_fa: 'سیستم‌ها', short_desc_en: 'Windows Server, Active Directory, Group Policy, Hyper-V.', short_desc_fa: 'ویندوز سرور، Active Directory، Group Policy، Hyper-V.', features_en: '["Windows Server 2019/2022","Active Directory","Group Policy","Hyper-V","Exchange","WSUS"]', features_fa: '["ویندوز سرور ۲۰۱۹/۲۰۲۲","Active Directory","Group Policy","Hyper-V","Exchange","WSUS"]', color: '#00adef', sort_order: 7 },
-      { slug: 'voip', title_en: 'VoIP & Telephony', title_fa: 'VoIP و تلفن', category_en: 'Communications', category_fa: 'ارتباطات', short_desc_en: 'Asterisk, FreePBX, SIP trunks, call center solutions.', short_desc_fa: 'Asterisk، FreePBX، SIP trunk، راه‌حل‌های مرکز تماس.', features_en: '["Asterisk PBX","FreePBX","SIP Trunking","IVR Design","Call Recording","QoS for VoIP"]', features_fa: '["Asterisk PBX","FreePBX","SIP Trunk","طراحی IVR","ضبط مکالمه","QoS برای VoIP"]', color: '#10b981', sort_order: 8 },
-      { slug: 'automation', title_en: 'Network Automation', title_fa: 'خودکارسازی شبکه', category_en: 'Operations', category_fa: 'عملیات', short_desc_en: 'Ansible playbooks, Python scripts, CI/CD for infrastructure.', short_desc_fa: 'Ansible playbook، اسکریپت Python، CI/CD برای زیرساخت.', features_en: '["Ansible Automation","Python Scripting","NETCONF/YANG","Infrastructure as Code","CI/CD Pipelines","Config Management"]', features_fa: '["خودکارسازی Ansible","اسکریپت Python","NETCONF/YANG","زیرساخت به عنوان کد","CI/CD","مدیریت پیکربندی"]', color: '#06b6d4', sort_order: 9 },
-    ]
-    const ins = sqlite.prepare(`INSERT INTO services (slug, title_en, title_fa, category_en, category_fa, short_desc_en, short_desc_fa, features_en, features_fa, color, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-    for (const s of svcs) ins.run(s.slug, s.title_en, s.title_fa, s.category_en, s.category_fa, s.short_desc_en, s.short_desc_fa, s.features_en, s.features_fa, s.color, s.sort_order)
+  if (await count(s.services) === 0) {
+    await db.insert(s.services).values([
+      { slug: 'network-design', titleEn: 'Network Design & Architecture', titleFa: 'طراحی و معماری شبکه', categoryEn: 'Networking', categoryFa: 'شبکه', shortDescEn: 'Enterprise network design with MikroTik, Cisco, VLANs, OSPF, BGP.', shortDescFa: 'طراحی شبکه سازمانی با میکروتیک، سیسکو، VLAN، OSPF، BGP.', featuresEn: '["MikroTik RouterOS","Cisco IOS","VLAN Design","OSPF/BGP Routing","QoS Configuration","Network Documentation"]', featuresFa: '["میکروتیک RouterOS","سیسکو IOS","طراحی VLAN","مسیریابی OSPF/BGP","پیکربندی QoS","مستندسازی شبکه"]', color: '#6366f1', sortOrder: 1 },
+      { slug: 'network-security', titleEn: 'Network Security', titleFa: 'امنیت شبکه', categoryEn: 'Security', categoryFa: 'امنیت', shortDescEn: 'Fortigate NGFW, firewall policies, SSL inspection, zero-trust.', shortDescFa: 'فایروال Fortigate NGFW، سیاست‌های فایروال، بازرسی SSL، zero-trust.', featuresEn: '["Fortigate NGFW","pfSense/OPNsense","SSL/TLS Inspection","IDS/IPS","VPN Design","Security Auditing"]', featuresFa: '["Fortigate NGFW","pfSense/OPNsense","بازرسی SSL/TLS","IDS/IPS","طراحی VPN","ممیزی امنیتی"]', color: '#ef4444', sortOrder: 2 },
+      { slug: 'virtualization', titleEn: 'Virtualization & Cloud', titleFa: 'مجازی‌سازی و ابر', categoryEn: 'Infrastructure', categoryFa: 'زیرساخت', shortDescEn: 'VMware vSphere, Proxmox VE clusters, Ceph storage, HA.', shortDescFa: 'VMware vSphere، خوشه‌های Proxmox VE، ذخیره‌سازی Ceph، HA.', featuresEn: '["VMware vSphere","Proxmox VE","Ceph Storage","HA Clustering","Live Migration","Backup Strategies"]', featuresFa: '["VMware vSphere","Proxmox VE","ذخیره‌سازی Ceph","خوشه‌بندی HA","انتقال زنده","راهبردهای پشتیبان"]', color: '#60b6e0', sortOrder: 3 },
+      { slug: 'monitoring', titleEn: 'Monitoring & Observability', titleFa: 'پایش و دیده‌بانی', categoryEn: 'Operations', categoryFa: 'عملیات', shortDescEn: 'Zabbix, Grafana, SNMP, custom dashboards, alerting.', shortDescFa: 'Zabbix، Grafana، SNMP، داشبوردهای اختصاصی، هشداردهی.', featuresEn: '["Zabbix 7.0","Grafana","SNMP Monitoring","Custom Dashboards","Alert Management","SLA Reporting"]', featuresFa: '["Zabbix 7.0","Grafana","پایش SNMP","داشبوردهای اختصاصی","مدیریت هشدار","گزارش SLA"]', color: '#f59e0b', sortOrder: 4 },
+      { slug: 'backup-dr', titleEn: 'Backup & Disaster Recovery', titleFa: 'پشتیبان‌گیری و بازیابی فاجعه', categoryEn: 'Infrastructure', categoryFa: 'زیرساخت', shortDescEn: 'Veeam, Duplicati, offsite backup, RTO/RPO planning.', shortDescFa: 'Veeam، Duplicati، پشتیبان خارجی، برنامه‌ریزی RTO/RPO.', featuresEn: '["Veeam Backup","Duplicati","Offsite Storage","DR Planning","RTO/RPO Targets","Recovery Testing"]', featuresFa: '["Veeam Backup","Duplicati","ذخیره‌سازی خارجی","برنامه‌ریزی DR","اهداف RTO/RPO","تست بازیابی"]', color: '#8b5cf6', sortOrder: 5 },
+      { slug: 'linux', titleEn: 'Linux Administration', titleFa: 'مدیریت لینوکس', categoryEn: 'Systems', categoryFa: 'سیستم‌ها', shortDescEn: 'RHEL, Debian, Ubuntu server hardening, automation.', shortDescFa: 'RHEL، Debian، Ubuntu، سخت‌سازی سرور، خودکارسازی.', featuresEn: '["RHEL/Rocky Linux","Debian/Ubuntu","Server Hardening","Shell Scripting","Service Management","Performance Tuning"]', featuresFa: '["RHEL/Rocky Linux","Debian/Ubuntu","سخت‌سازی سرور","اسکریپت‌نویسی","مدیریت سرویس","تنظیم کارایی"]', color: '#f59e0b', sortOrder: 6 },
+      { slug: 'microsoft', titleEn: 'Microsoft Infrastructure', titleFa: 'زیرساخت مایکروسافت', categoryEn: 'Systems', categoryFa: 'سیستم‌ها', shortDescEn: 'Windows Server, Active Directory, Group Policy, Hyper-V.', shortDescFa: 'ویندوز سرور، Active Directory، Group Policy، Hyper-V.', featuresEn: '["Windows Server 2019/2022","Active Directory","Group Policy","Hyper-V","Exchange","WSUS"]', featuresFa: '["ویندوز سرور ۲۰۱۹/۲۰۲۲","Active Directory","Group Policy","Hyper-V","Exchange","WSUS"]', color: '#00adef', sortOrder: 7 },
+      { slug: 'voip', titleEn: 'VoIP & Telephony', titleFa: 'VoIP و تلفن', categoryEn: 'Communications', categoryFa: 'ارتباطات', shortDescEn: 'Asterisk, FreePBX, SIP trunks, call center solutions.', shortDescFa: 'Asterisk، FreePBX، SIP trunk، راه‌حل‌های مرکز تماس.', featuresEn: '["Asterisk PBX","FreePBX","SIP Trunking","IVR Design","Call Recording","QoS for VoIP"]', featuresFa: '["Asterisk PBX","FreePBX","SIP Trunk","طراحی IVR","ضبط مکالمه","QoS برای VoIP"]', color: '#10b981', sortOrder: 8 },
+      { slug: 'automation', titleEn: 'Network Automation', titleFa: 'خودکارسازی شبکه', categoryEn: 'Operations', categoryFa: 'عملیات', shortDescEn: 'Ansible playbooks, Python scripts, CI/CD for infrastructure.', shortDescFa: 'Ansible playbook، اسکریپت Python، CI/CD برای زیرساخت.', featuresEn: '["Ansible Automation","Python Scripting","NETCONF/YANG","Infrastructure as Code","CI/CD Pipelines","Config Management"]', featuresFa: '["خودکارسازی Ansible","اسکریپت Python","NETCONF/YANG","زیرساخت به عنوان کد","CI/CD","مدیریت پیکربندی"]', color: '#06b6d4', sortOrder: 9 },
+    ])
   }
 
   // Projects
-  const projectsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM projects').get() as { c: number } | undefined)?.c ?? 0
-  if (projectsCount === 0) {
-    const projs = [
-      { slug: 'kenzo-restaurant', name_en: 'Kenzo Restaurant', name_fa: 'رستوران کنزو', industry_en: 'Hospitality', industry_fa: 'مهمانداری', challenge_en: 'Unreliable network causing POS downtime and poor guest WiFi experience.', challenge_fa: 'شبکه ناپایدار که باعث خرابی POS و تجربه بد WiFi مهمانان می‌شد.', solution_en: 'Deployed MikroTik CHR with redundant ISP links, guest VLAN isolation, and QoS for POS priority.', solution_fa: 'استقرار MikroTik CHR با لینک‌های ISP افزونه، جداسازی VLAN مهمانان و QoS برای اولویت POS.', results_en: '["99.9% uptime achieved","POS latency reduced by 80%","Guest WiFi satisfaction increased","Secure VLAN isolation implemented"]', results_fa: '["دسترس‌پذیری ۹۹.۹٪ محقق شد","تأخیر POS ۸۰٪ کاهش یافت","رضایت WiFi مهمانان افزایش یافت","جداسازی VLAN امن پیاده‌سازی شد"]', tags_en: '["MikroTik","VLAN","QoS","WiFi","POS"]', tags_fa: '["میکروتیک","VLAN","QoS","وایفای","POS"]', color: '#c03030', year: '2023', featured: 1, sort_order: 1 },
-      { slug: 'popcorn-holding', name_en: 'Popcorn Holding', name_fa: 'هلدینگ پاپ‌کورن', industry_en: 'Corporate', industry_fa: 'شرکتی', challenge_en: 'Multi-branch connectivity issues, no centralized security policy, data scattered across locations.', challenge_fa: 'مشکلات اتصال چند شعبه، بدون سیاست امنیتی متمرکز، داده‌های پراکنده.', solution_en: 'Implemented SD-WAN with Fortigate hub-and-spoke, centralized AD, and Veeam backup across all branches.', solution_fa: 'پیاده‌سازی SD-WAN با Fortigate hub-and-spoke، AD متمرکز و Veeam backup در تمام شعب.', results_en: '["Unified security policy across 5 branches","Centralized backup with 4-hour RTO","30% reduction in IT operational costs","Full network visibility via Zabbix"]', results_fa: '["سیاست امنیتی یکپارچه در ۵ شعبه","پشتیبان متمرکز با RTO ۴ ساعته","کاهش ۳۰٪ هزینه‌های IT","دید کامل شبکه از طریق Zabbix"]', tags_en: '["Fortigate","SD-WAN","Active Directory","Veeam","Zabbix"]', tags_fa: '["فورتی‌گیت","SD-WAN","Active Directory","Veeam","Zabbix"]', color: '#ef4444', year: '2024', featured: 1, sort_order: 2 },
-      { slug: 'senso-restaurant-group', name_en: 'Senso Restaurant Group', name_fa: 'گروه رستوران سنسو', industry_en: 'Hospitality', industry_fa: 'مهمانداری', challenge_en: 'Rapidly expanding restaurant chain needing scalable, manageable network across new locations.', challenge_fa: 'زنجیره رستوران در حال گسترش سریع نیاز به شبکه مقیاس‌پذیر و قابل مدیریت دارد.', solution_en: 'Designed template-based network for rapid deployment: Cisco switches, MikroTik routers, Zabbix monitoring, automated config via Ansible.', solution_fa: 'طراحی شبکه مبتنی بر قالب برای استقرار سریع: سوئیچ‌های سیسکو، روترهای میکروتیک، پایش Zabbix، پیکربندی خودکار با Ansible.', results_en: '["New location deployment in under 4 hours","Automated config eliminates human error","Centralized monitoring for all branches","Consistent security posture"]', results_fa: '["استقرار موقعیت جدید در کمتر از ۴ ساعت","پیکربندی خودکار خطای انسانی را حذف می‌کند","پایش متمرکز برای همه شعب","وضعیت امنیتی یکسان"]', tags_en: '["Cisco","MikroTik","Ansible","Zabbix","Multi-site"]', tags_fa: '["سیسکو","میکروتیک","Ansible","Zabbix","چند سایته"]', color: '#1ba0d7', year: '2024', featured: 1, sort_order: 3 },
-      { slug: 'industrial-enterprise', name_en: 'Industrial Enterprise', name_fa: 'سازمان صنعتی', industry_en: 'Industrial', industry_fa: 'صنعتی', challenge_en: 'Legacy OT network with no segmentation between IT and OT, critical machinery exposed to internet.', challenge_fa: 'شبکه OT قدیمی بدون تفکیک بین IT و OT، ماشین‌آلات حیاتی در معرض اینترنت.', solution_en: 'Implemented IT/OT network segregation with DMZ, Fortigate NGFW, industrial-grade switches, and SCADA monitoring.', solution_fa: 'پیاده‌سازی تفکیک شبکه IT/OT با DMZ، Fortigate NGFW، سوئیچ‌های صنعتی و پایش SCADA.', results_en: '["IT/OT fully isolated with controlled DMZ","Zero security incidents post-implementation","OT visibility via SCADA monitoring","Compliance with IEC 62443 standards"]', results_fa: '["IT/OT کاملاً جدا با DMZ کنترل‌شده","صفر حادثه امنیتی پس از پیاده‌سازی","دید OT از طریق پایش SCADA","انطباق با استانداردهای IEC 62443"]', tags_en: '["ICS/OT Security","Fortigate","DMZ","SCADA","Network Segmentation"]', tags_fa: '["امنیت ICS/OT","فورتی‌گیت","DMZ","SCADA","تفکیک شبکه"]', color: '#f59e0b', year: '2025', featured: 1, sort_order: 4 },
-    ]
-    const ins = sqlite.prepare(`INSERT INTO projects (slug, name_en, name_fa, industry_en, industry_fa, challenge_en, challenge_fa, solution_en, solution_fa, results_en, results_fa, tags_en, tags_fa, color, year, featured, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    for (const p of projs) ins.run(p.slug, p.name_en, p.name_fa, p.industry_en, p.industry_fa, p.challenge_en, p.challenge_fa, p.solution_en, p.solution_fa, p.results_en, p.results_fa, p.tags_en, p.tags_fa, p.color, p.year, p.featured, p.sort_order)
+  if (await count(s.projects) === 0) {
+    await db.insert(s.projects).values([
+      { slug: 'kenzo-restaurant', nameEn: 'Kenzo Restaurant', nameFa: 'رستوران کنزو', industryEn: 'Hospitality', industryFa: 'مهمانداری', challengeEn: 'Unreliable network causing POS downtime and poor guest WiFi experience.', challengeFa: 'شبکه ناپایدار که باعث خرابی POS و تجربه بد WiFi مهمانان می‌شد.', solutionEn: 'Deployed MikroTik CHR with redundant ISP links, guest VLAN isolation, and QoS for POS priority.', solutionFa: 'استقرار MikroTik CHR با لینک‌های ISP افزونه، جداسازی VLAN مهمانان و QoS برای اولویت POS.', resultsEn: '["99.9% uptime achieved","POS latency reduced by 80%","Guest WiFi satisfaction increased","Secure VLAN isolation implemented"]', resultsFa: '["دسترس‌پذیری ۹۹.۹٪ محقق شد","تأخیر POS ۸۰٪ کاهش یافت","رضایت WiFi مهمانان افزایش یافت","جداسازی VLAN امن پیاده‌سازی شد"]', tagsEn: '["MikroTik","VLAN","QoS","WiFi","POS"]', tagsFa: '["میکروتیک","VLAN","QoS","وایفای","POS"]', color: '#c03030', year: '2023', featured: true, sortOrder: 1 },
+      { slug: 'popcorn-holding', nameEn: 'Popcorn Holding', nameFa: 'هلدینگ پاپ‌کورن', industryEn: 'Corporate', industryFa: 'شرکتی', challengeEn: 'Multi-branch connectivity issues, no centralized security policy, data scattered across locations.', challengeFa: 'مشکلات اتصال چند شعبه، بدون سیاست امنیتی متمرکز، داده‌های پراکنده.', solutionEn: 'Implemented SD-WAN with Fortigate hub-and-spoke, centralized AD, and Veeam backup across all branches.', solutionFa: 'پیاده‌سازی SD-WAN با Fortigate hub-and-spoke، AD متمرکز و Veeam backup در تمام شعب.', resultsEn: '["Unified security policy across 5 branches","Centralized backup with 4-hour RTO","30% reduction in IT operational costs","Full network visibility via Zabbix"]', resultsFa: '["سیاست امنیتی یکپارچه در ۵ شعبه","پشتیبان متمرکز با RTO ۴ ساعته","کاهش ۳۰٪ هزینه‌های IT","دید کامل شبکه از طریق Zabbix"]', tagsEn: '["Fortigate","SD-WAN","Active Directory","Veeam","Zabbix"]', tagsFa: '["فورتی‌گیت","SD-WAN","Active Directory","Veeam","Zabbix"]', color: '#ef4444', year: '2024', featured: true, sortOrder: 2 },
+      { slug: 'senso-restaurant-group', nameEn: 'Senso Restaurant Group', nameFa: 'گروه رستوران سنسو', industryEn: 'Hospitality', industryFa: 'مهمانداری', challengeEn: 'Rapidly expanding restaurant chain needing scalable, manageable network across new locations.', challengeFa: 'زنجیره رستوران در حال گسترش سریع نیاز به شبکه مقیاس‌پذیر و قابل مدیریت دارد.', solutionEn: 'Designed template-based network for rapid deployment: Cisco switches, MikroTik routers, Zabbix monitoring, automated config via Ansible.', solutionFa: 'طراحی شبکه مبتنی بر قالب برای استقرار سریع: سوئیچ‌های سیسکو، روترهای میکروتیک، پایش Zabbix، پیکربندی خودکار با Ansible.', resultsEn: '["New location deployment in under 4 hours","Automated config eliminates human error","Centralized monitoring for all branches","Consistent security posture"]', resultsFa: '["استقرار موقعیت جدید در کمتر از ۴ ساعت","پیکربندی خودکار خطای انسانی را حذف می‌کند","پایش متمرکز برای همه شعب","وضعیت امنیتی یکسان"]', tagsEn: '["Cisco","MikroTik","Ansible","Zabbix","Multi-site"]', tagsFa: '["سیسکو","میکروتیک","Ansible","Zabbix","چند سایته"]', color: '#1ba0d7', year: '2024', featured: true, sortOrder: 3 },
+      { slug: 'industrial-enterprise', nameEn: 'Industrial Enterprise', nameFa: 'سازمان صنعتی', industryEn: 'Industrial', industryFa: 'صنعتی', challengeEn: 'Legacy OT network with no segmentation between IT and OT, critical machinery exposed to internet.', challengeFa: 'شبکه OT قدیمی بدون تفکیک بین IT و OT، ماشین‌آلات حیاتی در معرض اینترنت.', solutionEn: 'Implemented IT/OT network segregation with DMZ, Fortigate NGFW, industrial-grade switches, and SCADA monitoring.', solutionFa: 'پیاده‌سازی تفکیک شبکه IT/OT با DMZ، Fortigate NGFW، سوئیچ‌های صنعتی و پایش SCADA.', resultsEn: '["IT/OT fully isolated with controlled DMZ","Zero security incidents post-implementation","OT visibility via SCADA monitoring","Compliance with IEC 62443 standards"]', resultsFa: '["IT/OT کاملاً جدا با DMZ کنترل‌شده","صفر حادثه امنیتی پس از پیاده‌سازی","دید OT از طریق پایش SCADA","انطباق با استانداردهای IEC 62443"]', tagsEn: '["ICS/OT Security","Fortigate","DMZ","SCADA","Network Segmentation"]', tagsFa: '["امنیت ICS/OT","فورتی‌گیت","DMZ","SCADA","تفکیک شبکه"]', color: '#f59e0b', year: '2025', featured: true, sortOrder: 4 },
+    ])
   }
 
   // Clients
-  const clientsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM clients').get() as { c: number } | undefined)?.c ?? 0
-  if (clientsCount === 0) {
-    const cl = [
-      ['Kenzo Restaurant', 'رستوران کنزو', 'Hospitality', 'مهمانداری', 0],
-      ['Popcorn Holding', 'هلدینگ پاپ‌کورن', 'Corporate', 'شرکتی', 0],
-      ['Senso Restaurant Group', 'گروه رستوران سنسو', 'Hospitality', 'مهمانداری', 0],
-      ['Industrial Enterprise', 'سازمان صنعتی', 'Industrial', 'صنعتی', 0],
-      ['MikroTik', 'میکروتیک', 'Technology Partner', 'شریک فناوری', 1],
-      ['Cisco', 'سیسکو', 'Technology Partner', 'شریک فناوری', 1],
-      ['Fortinet', 'فورتینت', 'Technology Partner', 'شریک فناوری', 1],
-      ['VMware', 'VMware', 'Technology Partner', 'شریک فناوری', 1],
-      ['Proxmox', 'Proxmox', 'Technology Partner', 'شریک فناوری', 1],
-      ['Zabbix', 'Zabbix', 'Technology Partner', 'شریک فناوری', 1],
+  if (await count(s.clients) === 0) {
+    const cl: [string, string, string, string, boolean][] = [
+      ['Kenzo Restaurant', 'رستوران کنزو', 'Hospitality', 'مهمانداری', false],
+      ['Popcorn Holding', 'هلدینگ پاپ‌کورن', 'Corporate', 'شرکتی', false],
+      ['Senso Restaurant Group', 'گروه رستوران سنسو', 'Hospitality', 'مهمانداری', false],
+      ['Industrial Enterprise', 'سازمان صنعتی', 'Industrial', 'صنعتی', false],
+      ['MikroTik', 'میکروتیک', 'Technology Partner', 'شریک فناوری', true],
+      ['Cisco', 'سیسکو', 'Technology Partner', 'شریک فناوری', true],
+      ['Fortinet', 'فورتینت', 'Technology Partner', 'شریک فناوری', true],
+      ['VMware', 'VMware', 'Technology Partner', 'شریک فناوری', true],
+      ['Proxmox', 'Proxmox', 'Technology Partner', 'شریک فناوری', true],
+      ['Zabbix', 'Zabbix', 'Technology Partner', 'شریک فناوری', true],
     ]
-    const ins = sqlite.prepare(`INSERT INTO clients (name_en, name_fa, type_en, type_fa, is_tech_partner, sort_order) VALUES (?,?,?,?,?,?)`)
-    cl.forEach(([ne, nf, te, tf, itp], i) => ins.run(ne, nf, te, tf, itp, i))
+    await db.insert(s.clients).values(cl.map(([nameEn, nameFa, typeEn, typeFa, isTechPartner], i) => ({ nameEn, nameFa, typeEn, typeFa, isTechPartner, sortOrder: i })))
   }
 
   // Blog categories
-  const catCount = (sqlite.prepare('SELECT COUNT(*) as c FROM blog_categories').get() as { c: number } | undefined)?.c ?? 0
-  if (catCount === 0) {
-    const cats = [
+  if (await count(s.blogCategories) === 0) {
+    const cats: [string, string, string, string, string][] = [
       ['mikrotik', 'MikroTik', 'میکروتیک', '🌐', '#c03030'],
       ['cisco', 'Cisco', 'سیسکو', '🔷', '#1ba0d7'],
       ['linux', 'Linux', 'لینوکس', '🐧', '#f59e0b'],
@@ -192,28 +172,24 @@ export async function seedDatabase() {
       ['automation', 'Automation', 'خودکارسازی', '⚙️', '#06b6d4'],
       ['devops', 'DevOps', 'دواپس', '🚀', '#818cf8'],
     ]
-    const ins = sqlite.prepare(`INSERT INTO blog_categories (slug, name_en, name_fa, icon, color, sort_order) VALUES (?,?,?,?,?,?)`)
-    cats.forEach(([sl, ne, nf, ic, co], i) => ins.run(sl, ne, nf, ic, co, i))
+    await db.insert(s.blogCategories).values(cats.map(([slug, nameEn, nameFa, icon, color], i) => ({ slug, nameEn, nameFa, icon, color, sortOrder: i })))
   }
 
   // Blog posts
-  const postsCount = (sqlite.prepare('SELECT COUNT(*) as c FROM blog_posts').get() as { c: number } | undefined)?.c ?? 0
-  if (postsCount === 0) {
-    const catId = (sqlite.prepare('SELECT id FROM blog_categories WHERE slug = ?').get('mikrotik') as { id: number } | undefined)?.id
-    const secId = (sqlite.prepare('SELECT id FROM blog_categories WHERE slug = ?').get('security') as { id: number } | undefined)?.id
-    if (!catId || !secId) { sqlite.close(); return }
-    const posts = [
-      { slug: 'mikrotik-ospf-multi-site', title_en: 'Building a Multi-Site MikroTik Network with OSPF', title_fa: 'ساخت شبکه چند سایته MikroTik با OSPF', excerpt_en: 'A complete guide to designing and deploying multi-site OSPF routing with MikroTik RouterOS for enterprise branch offices.', excerpt_fa: 'راهنمای کامل طراحی و استقرار مسیریابی OSPF چند سایته با MikroTik RouterOS برای دفاتر شعبه سازمانی.', category_id: catId, read_time_en: '12 min read', read_time_fa: '۱۲ دقیقه مطالعه', published_at_en: 'Jan 2025', published_at_fa: 'دی ۱۴۰۳', status: 'published', featured: 1 },
-      { slug: 'zero-trust-fortigate', title_en: 'Zero-Trust Network Architecture with Fortigate', title_fa: 'معماری شبکه Zero-Trust با Fortigate', excerpt_en: 'Implementing a zero-trust security model using Fortigate NGFW, SSL inspection, and micro-segmentation.', excerpt_fa: 'پیاده‌سازی مدل امنیتی Zero-Trust با استفاده از Fortigate NGFW، بازرسی SSL و میکرو-تقسیم‌بندی.', category_id: secId, read_time_en: '15 min read', read_time_fa: '۱۵ دقیقه مطالعه', published_at_en: 'Feb 2025', published_at_fa: 'بهمن ۱۴۰۳', status: 'published', featured: 1 },
-    ]
-    const ins = sqlite.prepare(`INSERT INTO blog_posts (slug, title_en, title_fa, excerpt_en, excerpt_fa, category_id, read_time_en, read_time_fa, published_at_en, published_at_fa, status, featured) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
-    for (const p of posts) ins.run(p.slug, p.title_en, p.title_fa, p.excerpt_en, p.excerpt_fa, p.category_id, p.read_time_en, p.read_time_fa, p.published_at_en, p.published_at_fa, p.status, p.featured)
+  if (await count(s.blogPosts) === 0) {
+    const mk = await db.select({ id: s.blogCategories.id }).from(s.blogCategories).where(eq(s.blogCategories.slug, 'mikrotik')).limit(1)
+    const sec = await db.select({ id: s.blogCategories.id }).from(s.blogCategories).where(eq(s.blogCategories.slug, 'security')).limit(1)
+    if (mk[0] && sec[0]) {
+      await db.insert(s.blogPosts).values([
+        { slug: 'mikrotik-ospf-multi-site', titleEn: 'Building a Multi-Site MikroTik Network with OSPF', titleFa: 'ساخت شبکه چند سایته MikroTik با OSPF', excerptEn: 'A complete guide to designing and deploying multi-site OSPF routing with MikroTik RouterOS for enterprise branch offices.', excerptFa: 'راهنمای کامل طراحی و استقرار مسیریابی OSPF چند سایته با MikroTik RouterOS برای دفاتر شعبه سازمانی.', categoryId: mk[0].id, readTimeEn: '12 min read', readTimeFa: '۱۲ دقیقه مطالعه', publishedAtEn: 'Jan 2025', publishedAtFa: 'دی ۱۴۰۳', status: 'published', featured: true },
+        { slug: 'zero-trust-fortigate', titleEn: 'Zero-Trust Network Architecture with Fortigate', titleFa: 'معماری شبکه Zero-Trust با Fortigate', excerptEn: 'Implementing a zero-trust security model using Fortigate NGFW, SSL inspection, and micro-segmentation.', excerptFa: 'پیاده‌سازی مدل امنیتی Zero-Trust با استفاده از Fortigate NGFW، بازرسی SSL و میکرو-تقسیم‌بندی.', categoryId: sec[0].id, readTimeEn: '15 min read', readTimeFa: '۱۵ دقیقه مطالعه', publishedAtEn: 'Feb 2025', publishedAtFa: 'بهمن ۱۴۰۳', status: 'published', featured: true },
+      ])
+    }
   }
 
-  // Navigation items
-  const navCount = (sqlite.prepare('SELECT COUNT(*) as c FROM navigation_items').get() as { c: number } | undefined)?.c ?? 0
-  if (navCount === 0) {
-    const navItems = [
+  // Navigation
+  if (await count(s.navigationItems) === 0) {
+    const navItems: [string, string, string, 'header' | 'footer', number][] = [
       ['Home', 'خانه', '/', 'header', 1],
       ['About', 'درباره', '/about', 'header', 2],
       ['Services', 'خدمات', '/services', 'header', 3],
@@ -221,16 +197,11 @@ export async function seedDatabase() {
       ['Blog', 'وبلاگ', '/blog', 'header', 5],
       ['Consultation', 'مشاوره', '/consultation', 'header', 6],
     ]
-    const ins = sqlite.prepare(`INSERT INTO navigation_items (label_en, label_fa, href, location, sort_order) VALUES (?,?,?,?,?)`)
-    for (const [le, lf, hr, lo, so] of navItems) ins.run(le, lf, hr, lo, so)
+    await db.insert(s.navigationItems).values(navItems.map(([labelEn, labelFa, href, location, sortOrder]) => ({ labelEn, labelFa, href, location, sortOrder })))
   }
 
-  // AI knowledge base defaults
-  const aiCount = (sqlite.prepare('SELECT COUNT(*) as c FROM ai_knowledge_base').get() as { c: number } | undefined)?.c ?? 0
-  if (aiCount === 0) {
-    sqlite.prepare(`INSERT INTO ai_knowledge_base (title, type, content, tags, locale) VALUES (?,?,?,?,?)`)
-      .run('HBZ Professional Profile', 'snippet', 'Husein Habibazar (HBZ) is an Infrastructure Architect and Network Security Consultant with 10+ years of experience. Specializes in MikroTik, Cisco, Fortigate, VMware, Proxmox, Zabbix, Ansible, and Linux administration. Serves enterprise clients in hospitality, corporate, and industrial sectors.', 'profile,about,background', 'both')
+  // AI knowledge base default
+  if (await count(s.aiKnowledgeBase) === 0) {
+    await db.insert(s.aiKnowledgeBase).values({ title: 'HBZ Professional Profile', type: 'snippet', content: 'Husein Habibazar (HBZ) is an Infrastructure Architect and Network Security Consultant with 10+ years of experience. Specializes in MikroTik, Cisco, Fortigate, VMware, Proxmox, Zabbix, Ansible, and Linux administration. Serves enterprise clients in hospitality, corporate, and industrial sectors.', tags: 'profile,about,background', locale: 'both' })
   }
-
-  sqlite.close()
 }

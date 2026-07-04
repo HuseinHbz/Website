@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import type Database from 'better-sqlite3'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { isEnabled, type Flag } from '@/lib/flags/evaluate'
 
@@ -11,10 +10,6 @@ import { isEnabled, type Flag } from '@/lib/flags/evaluate'
 // the UI can preview cohort membership.
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
 
 const schema = z.object({
   id: z.number().int().positive().optional(),
@@ -28,10 +23,10 @@ export async function GET() {
   try {
     const auth = await requireAdmin()
     if ('error' in auth) return auth.error
-    const rows = client().prepare(
-      `SELECT id, key, description, enabled, rollout_percent AS rolloutPercent, updated_at AS updatedAt
+    const rows = await pgQuery(
+      `SELECT id, key, description, enabled, rollout_percent AS "rolloutPercent", updated_at AS "updatedAt"
        FROM feature_flags ORDER BY key`
-    ).all() as (Flag & { id: number; enabled: number | boolean })[]
+    ) as (Flag & { id: number; enabled: number | boolean })[]
     const flags = rows.map((r) => {
       const flag: Flag = { key: r.key, enabled: !!r.enabled, rolloutPercent: r.rolloutPercent }
       return { ...r, enabled: !!r.enabled, evaluatedForMe: isEnabled(flag, auth.user.id) }
@@ -50,17 +45,15 @@ export async function POST(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     try {
-      const result = client().prepare(
+      const result = (await pgQuery(
         `INSERT INTO feature_flags (key, description, enabled, rollout_percent, owner_id)
-         VALUES (@key,@description,@enabled,@rolloutPercent,@ownerId) RETURNING id`
-      ).get({
-        key: d.key, description: d.description || null, enabled: d.enabled ? 1 : 0,
-        rolloutPercent: d.rolloutPercent ?? 100, ownerId: auth.user.id,
-      }) as { id: number }
+         VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+        [d.key, d.description || null, d.enabled ? 1 : 0, d.rolloutPercent ?? 100, auth.user.id],
+      ))[0] as { id: number }
       await logAction(auth.user, 'CREATE', 'feature_flags', result.id, null, d)
       return NextResponse.json({ id: result.id })
     } catch (e) {
-      if (String(e).includes('UNIQUE')) return badRequest('a flag with that key already exists')
+      if (/unique|duplicate key/i.test(String(e))) return badRequest('a flag with that key already exists')
       throw e
     }
   } catch (e: unknown) {
@@ -76,17 +69,15 @@ export async function PUT(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     if (!d.id) return badRequest('id required')
-    const db = client()
-    const existing = db.prepare(`SELECT * FROM feature_flags WHERE id=?`).get(d.id) as Record<string, unknown> | undefined
+    const existing = (await pgQuery(`SELECT * FROM feature_flags WHERE id=$1`, [d.id]))[0] as Record<string, unknown> | undefined
     if (!existing) return badRequest('flag not found')
-    db.prepare(
-      `UPDATE feature_flags SET key=@key, description=@description, enabled=@enabled,
-        rollout_percent=@rolloutPercent, updated_at=datetime('now') WHERE id=@id`
-    ).run({
-      id: d.id, key: d.key, description: d.description ?? existing.description ?? null,
-      enabled: (d.enabled ?? !!existing.enabled) ? 1 : 0,
-      rolloutPercent: d.rolloutPercent ?? existing.rollout_percent,
-    })
+    await pgQuery(
+      `UPDATE feature_flags SET key=$2, description=$3, enabled=$4,
+        rollout_percent=$5, updated_at=to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
+      [d.id, d.key, d.description ?? existing.description ?? null,
+        (d.enabled ?? !!existing.enabled) ? 1 : 0,
+        d.rolloutPercent ?? existing.rollout_percent],
+    )
     await logAction(auth.user, 'UPDATE', 'feature_flags', d.id, existing, d)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
@@ -100,7 +91,7 @@ export async function DELETE(req: NextRequest) {
     if ('error' in auth) return auth.error
     const { id } = await req.json().catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')
-    client().prepare(`DELETE FROM feature_flags WHERE id=?`).run(id)
+    await pgQuery(`DELETE FROM feature_flags WHERE id=$1`, [id])
     await logAction(auth.user, 'DELETE', 'feature_flags', id)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {

@@ -22,32 +22,32 @@ export async function GET() {
     dailyViews,
     topPages,
   ] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(analyticsEvents).where(eq(analyticsEvents.type, 'pageview')).get(),
+    db.select({ count: sql<number>`count(*)` }).from(analyticsEvents).where(eq(analyticsEvents.type, 'pageview')).then(r => r[0]),
     db.select({ count: sql<number>`count(*)` }).from(analyticsEvents).where(
       sql`type = 'pageview' AND created_at >= ${sevenDaysAgo}`
-    ).get(),
+    ).then(r => r[0]),
     db.select({ count: sql<number>`count(*)` }).from(contactRequests).where(
       sql`status = 'new' AND created_at >= ${thirtyDaysAgo}`
-    ).get(),
+    ).then(r => r[0]),
     db.select({ count: sql<number>`count(*)` }).from(consultationRequests).where(
       sql`status = 'new' AND created_at >= ${thirtyDaysAgo}`
-    ).get(),
-    db.select({ count: sql<number>`count(*)` }).from(blogPosts).where(eq(blogPosts.status, 'published')).get(),
-    db.select({ count: sql<number>`count(*)` }).from(projects).where(eq(projects.active, true)).get(),
-    db.select({ count: sql<number>`count(*)` }).from(services).where(eq(services.active, true)).get(),
-    db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(10).all(),
+    ).then(r => r[0]),
+    db.select({ count: sql<number>`count(*)` }).from(blogPosts).where(eq(blogPosts.status, 'published')).then(r => r[0]),
+    db.select({ count: sql<number>`count(*)` }).from(projects).where(eq(projects.active, true)).then(r => r[0]),
+    db.select({ count: sql<number>`count(*)` }).from(services).where(eq(services.active, true)).then(r => r[0]),
+    db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(10),
     db.select({
       date: sql<string>`date(created_at)`,
       count: sql<number>`count(*)`,
     }).from(analyticsEvents).where(
       sql`type = 'pageview' AND created_at >= ${thirtyDaysAgo}`
-    ).groupBy(sql`date(created_at)`).orderBy(sql`date(created_at)`).all(),
+    ).groupBy(sql`date(created_at)`).orderBy(sql`date(created_at)`),
     db.select({
       page: analyticsEvents.page,
       count: sql<number>`count(*)`,
     }).from(analyticsEvents).where(
       sql`type = 'pageview' AND created_at >= ${thirtyDaysAgo}`
-    ).groupBy(analyticsEvents.page).orderBy(sql`count(*) DESC`).limit(10).all(),
+    ).groupBy(analyticsEvents.page).orderBy(sql`count(*) DESC`).limit(10),
   ])
 
   return NextResponse.json({

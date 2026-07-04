@@ -19,13 +19,13 @@ export async function GET(req: NextRequest) {
     const db = getDb()
 
     if (id) {
-      const section = await db.select().from(sections).where(eq(sections.id, id)).get()
+      const section = (await db.select().from(sections).where(eq(sections.id, id)))[0]
       if (!section) return NextResponse.json({ error: 'Not found' }, { status: 404 })
       const versions = await db.select().from(sectionVersions)
         .where(eq(sectionVersions.sectionId, id))
         .orderBy(desc(sectionVersions.version))
-        .all()
-      return NextResponse.json({ ...section, versions })
+        
+      return await NextResponse.json({ ...section, versions })
     }
 
     const conditions = []
@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
     if (status) conditions.push(eq(sections.status, status as 'draft' | 'published' | 'archived'))
 
     const rows = conditions.length > 0
-      ? await db.select().from(sections).where(and(...conditions)).orderBy(desc(sections.updatedAt)).all()
-      : await db.select().from(sections).orderBy(desc(sections.updatedAt)).all()
+      ? await db.select().from(sections).where(and(...conditions)).orderBy(desc(sections.updatedAt))
+      : await db.select().from(sections).orderBy(desc(sections.updatedAt))
 
     return NextResponse.json(rows)
   } catch (e: unknown) {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       updatedBy: me.id,
     })
 
-    const created = await db.select().from(sections).where(eq(sections.id, id)).get()
+    const created = (await db.select().from(sections).where(eq(sections.id, id)))[0]
     await logAction(me, 'CREATE', 'sections', id, null, { sectionType, titleEn })
     return NextResponse.json(created, { status: 201 })
   } catch (e: unknown) {
@@ -84,7 +84,7 @@ export async function PUT(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const db = getDb()
-    const existing = await db.select().from(sections).where(eq(sections.id, id)).get()
+    const existing = (await db.select().from(sections).where(eq(sections.id, id)))[0]
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     // Save version snapshot before update
@@ -103,7 +103,7 @@ export async function PUT(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     }).where(eq(sections.id, id))
 
-    const updated = await db.select().from(sections).where(eq(sections.id, id)).get()
+    const updated = (await db.select().from(sections).where(eq(sections.id, id)))[0]
     await logAction(me, 'UPDATE', 'sections', id, null, { version: newVersion })
     return NextResponse.json(updated)
   } catch (e: unknown) {

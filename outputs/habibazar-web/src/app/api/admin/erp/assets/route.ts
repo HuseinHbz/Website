@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import type Database from 'better-sqlite3'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { assetStats, warrantyState, ASSET_TYPES, ASSET_STATUSES, type AssetType, type AssetStatus } from '@/lib/erp/assets'
 
@@ -10,10 +9,6 @@ import { assetStats, warrantyState, ASSET_TYPES, ASSET_STATUSES, type AssetType,
 // requireAdmin RBAC, and audit logging.
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
 
 const schema = z.object({
   id: z.number().int().positive().optional(),
@@ -35,12 +30,12 @@ export async function GET() {
   try {
     const auth = await requireAdmin()
     if ('error' in auth) return auth.error
-    const rows = client().prepare(
-      `SELECT id, name, type, serial, vendor, status, location, assigned_to AS assignedTo,
-              purchase_date AS purchaseDate, warranty_expiry AS warrantyExpiry, notes,
-              created_at AS createdAt, updated_at AS updatedAt
+    const rows = await pgQuery(
+      `SELECT id, name, type, serial, vendor, status, location, assigned_to AS "assignedTo",
+              purchase_date AS "purchaseDate", warranty_expiry AS "warrantyExpiry", notes,
+              created_at AS "createdAt", updated_at AS "updatedAt"
        FROM assets ORDER BY updated_at DESC`
-    ).all() as (Row & Record<string, unknown>)[]
+    ) as (Row & Record<string, unknown>)[]
     const withHealth = rows.map((r) => ({ ...r, warranty: warrantyState(r.warrantyExpiry) }))
     const stats = assetStats(rows.map((r) => ({ type: r.type, status: r.status, warrantyExpiry: r.warrantyExpiry })))
     return NextResponse.json({ assets: withHealth, stats })
@@ -56,15 +51,14 @@ export async function POST(req: NextRequest) {
     const parsed = await readJson(req, schema)
     if ('error' in parsed) return parsed.error
     const d = parsed.data
-    const result = client().prepare(
+    const result = (await pgQuery(
       `INSERT INTO assets (name, type, serial, vendor, status, location, assigned_to, purchase_date, warranty_expiry, notes, owner_id)
-       VALUES (@name,@type,@serial,@vendor,@status,@location,@assignedTo,@purchaseDate,@warrantyExpiry,@notes,@ownerId) RETURNING id`
-    ).get({
-      name: d.name, type: d.type ?? 'other', serial: d.serial || null, vendor: d.vendor || null,
-      status: d.status ?? 'active', location: d.location || null, assignedTo: d.assignedTo || null,
-      purchaseDate: d.purchaseDate || null, warrantyExpiry: d.warrantyExpiry || null, notes: d.notes || null,
-      ownerId: auth.user.id,
-    }) as { id: number }
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+      [d.name, d.type ?? 'other', d.serial || null, d.vendor || null,
+        d.status ?? 'active', d.location || null, d.assignedTo || null,
+        d.purchaseDate || null, d.warrantyExpiry || null, d.notes || null,
+        auth.user.id],
+    ))[0] as { id: number }
     await logAction(auth.user, 'CREATE', 'assets', result.id, null, d)
     return NextResponse.json({ id: result.id })
   } catch (e: unknown) {
@@ -80,20 +74,18 @@ export async function PUT(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     if (!d.id) return badRequest('id required')
-    const db = client()
-    const existing = db.prepare(`SELECT * FROM assets WHERE id=?`).get(d.id) as Record<string, unknown> | undefined
+    const existing = (await pgQuery(`SELECT * FROM assets WHERE id=$1`, [d.id]))[0] as Record<string, unknown> | undefined
     if (!existing) return badRequest('asset not found')
-    db.prepare(
-      `UPDATE assets SET name=@name, type=@type, serial=@serial, vendor=@vendor, status=@status,
-        location=@location, assigned_to=@assignedTo, purchase_date=@purchaseDate, warranty_expiry=@warrantyExpiry,
-        notes=@notes, updated_at=datetime('now') WHERE id=@id`
-    ).run({
-      id: d.id, name: d.name, type: d.type ?? existing.type, serial: d.serial ?? existing.serial ?? null,
-      vendor: d.vendor ?? existing.vendor ?? null, status: d.status ?? existing.status,
-      location: d.location ?? existing.location ?? null, assignedTo: d.assignedTo ?? existing.assigned_to ?? null,
-      purchaseDate: d.purchaseDate ?? existing.purchase_date ?? null, warrantyExpiry: d.warrantyExpiry ?? existing.warranty_expiry ?? null,
-      notes: d.notes ?? existing.notes ?? null,
-    })
+    await pgQuery(
+      `UPDATE assets SET name=$2, type=$3, serial=$4, vendor=$5, status=$6,
+        location=$7, assigned_to=$8, purchase_date=$9, warranty_expiry=$10,
+        notes=$11, updated_at=to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
+      [d.id, d.name, d.type ?? existing.type, d.serial ?? existing.serial ?? null,
+        d.vendor ?? existing.vendor ?? null, d.status ?? existing.status,
+        d.location ?? existing.location ?? null, d.assignedTo ?? existing.assigned_to ?? null,
+        d.purchaseDate ?? existing.purchase_date ?? null, d.warrantyExpiry ?? existing.warranty_expiry ?? null,
+        d.notes ?? existing.notes ?? null],
+    )
     await logAction(auth.user, 'UPDATE', 'assets', d.id, existing, d)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
@@ -107,7 +99,7 @@ export async function DELETE(req: NextRequest) {
     if ('error' in auth) return auth.error
     const { id } = await req.json().catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')
-    client().prepare(`DELETE FROM assets WHERE id=?`).run(id)
+    await pgQuery(`DELETE FROM assets WHERE id=$1`, [id])
     await logAction(auth.user, 'DELETE', 'assets', id)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {

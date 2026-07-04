@@ -69,13 +69,26 @@ else
   info "مخزن clone شد"
 fi
 
-# ─── ۶. فایل .env.local ──────────────────────────────────────────────────────
+# ─── ۶الف. PostgreSQL (runtime database) ─────────────────────────────────────
+# The app runs exclusively on PostgreSQL (Phase 20). Provision it if the DSN
+# isn't already present, and capture DATABASE_URL for .env.local.
+step "راه‌اندازی PostgreSQL..."
+if [[ -f /root/.habibazar-pg-dsn ]]; then
+  DATABASE_URL="$(cat /root/.habibazar-pg-dsn)"
+  info "PostgreSQL از قبل provision شده"
+else
+  bash "$(dirname "$0")/postgres/install-postgresql.sh" || warn "provisioning PostgreSQL با خطا مواجه شد — دستی بررسی کنید"
+  DATABASE_URL="$(cat /root/.habibazar-pg-dsn 2>/dev/null || true)"
+fi
+
+# ─── ۶ب. فایل .env.local ──────────────────────────────────────────────────────
 ENV_FILE="$APP_DIR/outputs/habibazar-web/.env.local"
 if [[ ! -f "$ENV_FILE" ]]; then
   step "ساخت .env.local..."
   JWT_SECRET=$(openssl rand -hex 32)
   cat > "$ENV_FILE" <<EOF
 ADMIN_JWT_SECRET=${JWT_SECRET}
+DATABASE_URL=${DATABASE_URL}
 NEXT_PUBLIC_SITE_URL=https://habibazar.ir
 NEXT_PUBLIC_API_URL=https://habibazar.ir
 LOG_LEVEL=info
@@ -85,6 +98,11 @@ EOF
   warn "فایل .env.local ساخته شد — آدرس سایت را بررسی کنید: $ENV_FILE"
 else
   info ".env.local از قبل وجود دارد"
+  # Ensure DATABASE_URL is present for existing installs migrating to PostgreSQL.
+  if [[ -n "$DATABASE_URL" ]] && ! grep -q '^DATABASE_URL=' "$ENV_FILE"; then
+    echo "DATABASE_URL=${DATABASE_URL}" >> "$ENV_FILE"
+    info "DATABASE_URL به .env.local اضافه شد"
+  fi
 fi
 
 # ─── ۷. npm install + build ──────────────────────────────────────────────────

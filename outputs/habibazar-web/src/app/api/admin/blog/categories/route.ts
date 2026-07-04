@@ -7,7 +7,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   const db = getDb()
-  return NextResponse.json(await db.select().from(blogCategories).orderBy(asc(blogCategories.sortOrder)).all())
+  return await NextResponse.json(await db.select().from(blogCategories).orderBy(asc(blogCategories.sortOrder)))
 }
 
 export async function POST(req: NextRequest) {

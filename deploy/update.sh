@@ -37,6 +37,17 @@ git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 WEB_DIR="$APP_DIR/outputs/habibazar-web"
 ENV_FILE="$WEB_DIR/.env.local"
 
+# The app runs on PostgreSQL (Phase 20). For installs migrating from the old
+# SQLite runtime, ensure DATABASE_URL is present in .env.local.
+if [[ -f "$ENV_FILE" ]] && ! grep -q '^DATABASE_URL=' "$ENV_FILE" 2>/dev/null; then
+  if [[ -f /root/.habibazar-pg-dsn ]]; then
+    echo "DATABASE_URL=$(cat /root/.habibazar-pg-dsn)" >> "$ENV_FILE"
+    echo "[update] DATABASE_URL به .env.local اضافه شد"
+  else
+    echo "[update] ⚠ DATABASE_URL تنظیم نشده و PostgreSQL provision نشده — deploy/postgres/install-postgresql.sh را اجرا کنید"
+  fi
+fi
+
 echo ""
 echo "═══════════════════════════════════════════════════"
 echo "  HBZ Website — آپدیت  (branch: $BRANCH)"

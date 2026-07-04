@@ -11,11 +11,11 @@ export async function register() {
 
     // Initialize the database on startup so the app (and /api/health) works
     // immediately — no need to hit an admin route first to create the schema.
-    // Both are idempotent (CREATE TABLE IF NOT EXISTS / INSERT OR IGNORE).
+    // Both are idempotent (migrations + ON CONFLICT upserts).
     try {
       const { runMigrations } = await import('@/lib/db/migrate')
       const { seedDatabase } = await import('@/lib/db/seed')
-      runMigrations()
+      await runMigrations()
       await seedDatabase()
       logger.info('Database initialized')
     } catch (err) {

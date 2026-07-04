@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const results: SearchResult[] = []
 
   // Search knowledge base
-  const kbItems = db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true)).all()
+  const kbItems = await db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true))
   for (const item of kbItems) {
     const score = scoreText(item.title, terms) * 3 + scoreText(item.content || '', terms) + scoreText(item.tags || '', terms) * 2
     if (score > 0) {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Search case studies
-  const caseStudies = db.select().from(projects).all()
+  const caseStudies = await db.select().from(projects)
   for (const p of caseStudies) {
     const title = locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn
     const desc = locale === 'fa' ? (p.challengeFa || p.solutionFa || '') : (p.challengeEn || p.solutionEn || '')
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Search blog
-  const posts = db.select().from(blogPosts).where(eq(blogPosts.status, 'published')).all()
+  const posts = await db.select().from(blogPosts).where(eq(blogPosts.status, 'published'))
   for (const post of posts) {
     const title = locale === 'fa' ? (post.titleFa || post.titleEn) : post.titleEn
     const excerpt = locale === 'fa' ? (post.excerptFa || post.excerptEn || '') : (post.excerptEn || '')

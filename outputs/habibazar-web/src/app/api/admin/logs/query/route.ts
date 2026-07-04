@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type Database from 'better-sqlite3'
 import { apiError, requireAdmin } from '@/lib/api/respond'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 
 // Historical log query for the Logs & Monitoring module: filter by level /
 // source / service / date range, full-text-ish search, pagination, and optional
@@ -9,9 +8,8 @@ import { getDb } from '@/lib/db'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
+// Rewrite sequential '?' placeholders to positional pg '$n'.
+function toPg(sql: string): string { let i = 0; return sql.replace(/\?/g, () => `$${++i}`) }
 
 interface Filters { level?: string; source?: string; service?: string; q?: string; from?: string; to?: string }
 
@@ -39,26 +37,27 @@ export async function GET(req: NextRequest) {
     }
     const limit = Math.min(Math.max(Number(sp.get('limit')) || 200, 1), 1000)
     const offset = Math.max(Number(sp.get('offset')) || 0, 0)
-    const db = client()
     const w = where(f)
 
     if (sp.get('group') === '1') {
       // Error grouping: dedupe by fingerprint, most frequent first.
-      const groups = db.prepare(
-        `SELECT fingerprint, level, source, service, count(*) count, max(ts) lastTs, max(message) message
-         FROM system_logs ${w.sql} GROUP BY fingerprint ORDER BY count DESC LIMIT ?`
-      ).all(...w.params, limit)
+      const groups = await pgQuery(
+        toPg(`SELECT fingerprint, level, source, service, count(*) count, max(ts) lastTs, max(message) message
+         FROM system_logs ${w.sql} GROUP BY fingerprint ORDER BY count DESC LIMIT ?`),
+        [...w.params, limit],
+      )
       return NextResponse.json({ groups })
     }
 
-    const total = (db.prepare(`SELECT count(*) c FROM system_logs ${w.sql}`).get(...w.params) as { c: number }).c
-    const rows = db.prepare(
-      `SELECT id, ts, level, source, service, message, stacktrace, request_id AS requestId, user_id AS userId, fingerprint, meta
-       FROM system_logs ${w.sql} ORDER BY id DESC LIMIT ? OFFSET ?`
-    ).all(...w.params, limit, offset) as Record<string, unknown>[]
+    const total = Number(((await pgQuery(toPg(`SELECT count(*) c FROM system_logs ${w.sql}`), w.params))[0] as { c: number }).c)
+    const rows = await pgQuery(
+      toPg(`SELECT id, ts, level, source, service, message, stacktrace, request_id AS "requestId", user_id AS "userId", fingerprint, meta
+       FROM system_logs ${w.sql} ORDER BY id DESC LIMIT ? OFFSET ?`),
+      [...w.params, limit, offset],
+    ) as Record<string, unknown>[]
 
-    const sources = (db.prepare(`SELECT DISTINCT source FROM system_logs WHERE source IS NOT NULL`).all() as { source: string }[]).map((r) => r.source)
-    const services = (db.prepare(`SELECT DISTINCT service FROM system_logs WHERE service IS NOT NULL`).all() as { service: string }[]).map((r) => r.service)
+    const sources = (await pgQuery(`SELECT DISTINCT source FROM system_logs WHERE source IS NOT NULL`) as { source: string }[]).map((r) => r.source)
+    const services = (await pgQuery(`SELECT DISTINCT service FROM system_logs WHERE service IS NOT NULL`) as { service: string }[]).map((r) => r.service)
     return NextResponse.json({ entries: rows, total, limit, offset, facets: { sources, services } })
   } catch (e: unknown) {
     return apiError(e)

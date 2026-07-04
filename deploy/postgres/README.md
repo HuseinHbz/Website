@@ -3,14 +3,11 @@
 Optional, production-ready tooling to migrate the HBZ platform's **data tier**
 from SQLite to PostgreSQL on Debian 12 / Ubuntu 24.04.
 
-> **Status (honest).** The migration **engine + scripts are real and executed**:
-> the live SQLite database has been migrated into a real PostgreSQL server with
-> exact per-table row-count + checksum parity (64 tables). The **application
-> runtime still uses the synchronous `better-sqlite3` driver** — the async-driver
-> cutover is the remaining step, tracked by `npm run audit:pgcompat` (target: 0).
-> Until that cutover lands, production continues to run on SQLite; these scripts
-> provision PostgreSQL and migrate/verify the data so the cutover is a config
-> switch, not a data operation. See
+> **Status.** Migration **complete** — the application runtime now runs
+> **exclusively on PostgreSQL** (async `pg` pool via Drizzle `pg-core`);
+> `npm run audit:pgcompat` = 0 and it was verified end-to-end (auth, CMS, admin
+> APIs, public SSR, backup engine). `better-sqlite3` remains only as a
+> devDependency for the one-time SQLite→PG migration reader. See
 > `outputs/habibazar-web/docs/governance/phase20-postgres-migration.md`.
 
 ## Scripts

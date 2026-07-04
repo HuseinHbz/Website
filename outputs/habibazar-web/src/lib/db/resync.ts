@@ -1,31 +1,39 @@
-import Database from 'better-sqlite3'
-import path from 'path'
 import { BLOG_CONTENT } from './blogContent'
+import { pgQuery } from './index'
 
-const DB_PATH = path.join(process.cwd(), 'data', 'habibazar.db')
+// Async runner: rewrites SQLite '?' placeholders to pg '$n' and SQLite
+// upsert keywords to ON CONFLICT. Returns run/get/all that await the pool.
+function stmt(sqlText: string) {
+  let i = 0
+  const text = sqlText.replace(/\?/g, () => `$${++i}`)
+  return {
+    run: (...a: unknown[]) => pgQuery(text, a),
+    get: async (...a: unknown[]) => (await pgQuery(text, a))[0],
+    all: (...a: unknown[]) => pgQuery(text, a),
+  }
+}
 
-export function resyncPublicContent() {
-  const db = new Database(DB_PATH)
+export async function resyncPublicContent() {
 
   // ── About Content ────────────────────────────────────────────────────────────
   // Seed about_content if not set; preserve any manually entered bio/photo from admin
-  const existingAboutEn = db.prepare("SELECT id, photo_url FROM about_content WHERE locale = 'en'").get() as { id: number; photo_url: string | null } | undefined
-  const existingAboutFa = db.prepare("SELECT id, photo_url FROM about_content WHERE locale = 'fa'").get() as { id: number; photo_url: string | null } | undefined
+  const existingAboutEn = (await stmt("SELECT id, photo_url FROM about_content WHERE locale = 'en'").get()) as unknown as { id: number; photo_url: string | null } | undefined
+  const existingAboutFa = (await stmt("SELECT id, photo_url FROM about_content WHERE locale = 'fa'").get()) as unknown as { id: number; photo_url: string | null } | undefined
   if (!existingAboutEn) {
-    db.prepare(`INSERT INTO about_content (locale, headline, subheadline, bio, photo_url) VALUES ('en', 'Senior Infrastructure Engineer', 'Building reliable, secure, and automated enterprise infrastructure', null, null)`).run()
+    await stmt(`INSERT INTO about_content (locale, headline, subheadline, bio, photo_url) VALUES ('en', 'Senior Infrastructure Engineer', 'Building reliable, secure, and automated enterprise infrastructure', null, null)`).run()
   } else if (existingAboutEn.photo_url && existingAboutEn.photo_url.includes('/uploads/logos/')) {
     // Clear if someone accidentally set a tech logo as profile photo
-    db.prepare("UPDATE about_content SET photo_url = null WHERE locale = 'en'").run()
+    await stmt("UPDATE about_content SET photo_url = null WHERE locale = 'en'").run()
   }
   if (!existingAboutFa) {
-    db.prepare(`INSERT INTO about_content (locale, headline, subheadline, bio, photo_url) VALUES ('fa', 'مهندس ارشد زیرساخت', 'ساخت زیرساخت سازمانی قابل‌اعتماد، امن و خودکار', null, null)`).run()
+    await stmt(`INSERT INTO about_content (locale, headline, subheadline, bio, photo_url) VALUES ('fa', 'مهندس ارشد زیرساخت', 'ساخت زیرساخت سازمانی قابل‌اعتماد، امن و خودکار', null, null)`).run()
   } else if (existingAboutFa.photo_url && existingAboutFa.photo_url.includes('/uploads/logos/')) {
-    db.prepare("UPDATE about_content SET photo_url = null WHERE locale = 'fa'").run()
+    await stmt("UPDATE about_content SET photo_url = null WHERE locale = 'fa'").run()
   }
 
   // ── Timeline ────────────────────────────────────────────────────────────────
-  db.prepare('DELETE FROM timeline_items').run()
-  const insTimeline = db.prepare(`
+  await stmt('DELETE FROM timeline_items').run()
+  const insTimeline = stmt(`
     INSERT INTO timeline_items (year, title_en, title_fa, company_en, company_fa, desc_en, desc_fa, color, sort_order)
     VALUES (?,?,?,?,?,?,?,?,?)
   `)
@@ -46,18 +54,18 @@ export function resyncPublicContent() {
      'Overseeing multi-site infrastructure operations, mentoring teams and driving digital transformation.',
      'نظارت بر عملیات زیرساخت چند سایته، راهنمایی تیم‌ها و هدایت تحول دیجیتال.', '#f59e0b', 5],
   ]
-  for (const r of timeline) insTimeline.run(...r)
+  for (const r of timeline) await insTimeline.run(...r)
 
   // ── Skills ──────────────────────────────────────────────────────────────────
   // Preserve admin's active/hidden settings: read first, then DELETE + re-INSERT
   const existingSkillActive = new Map<string, boolean>()
   const existingSkillIcons = new Map<string, string | null>()
-  for (const s of db.prepare('SELECT name_en, active, icon FROM skills').all() as { name_en: string; active: number; icon: string | null }[]) {
+  for (const s of (await stmt('SELECT name_en, active, icon FROM skills').all()) as unknown as { name_en: string; active: number | boolean; icon: string | null }[]) {
     existingSkillActive.set(s.name_en, s.active === 1)
     existingSkillIcons.set(s.name_en, s.icon)
   }
-  db.prepare('DELETE FROM skills').run()
-  const insSkill = db.prepare(`
+  await stmt('DELETE FROM skills').run()
+  const insSkill = stmt(`
     INSERT INTO skills (name_en, name_fa, category_en, category_fa, level, color, icon, sort_order, active)
     VALUES (?,?,?,?,?,?,?,?,?)
   `)
@@ -77,19 +85,19 @@ export function resyncPublicContent() {
   ]
   for (const r of skills) {
     const nameEn = r[0]
-    const active = existingSkillActive.has(nameEn) ? (existingSkillActive.get(nameEn) ? 1 : 0) : r[8]
+    const active = existingSkillActive.has(nameEn) ? !!existingSkillActive.get(nameEn) : !!r[8]
     const icon = existingSkillIcons.has(nameEn) && existingSkillIcons.get(nameEn) ? existingSkillIcons.get(nameEn)! : r[6]
-    insSkill.run(r[0], r[1], r[2], r[3], r[4], r[5], icon, r[7], active)
+    await insSkill.run(r[0], r[1], r[2], r[3], r[4], r[5], icon, r[7], active)
   }
 
   // ── Certifications ──────────────────────────────────────────────────────────
   // Preserve admin's active/hidden settings: read first, then DELETE + re-INSERT
   const existingCertActive = new Map<string, boolean>()
-  for (const c of db.prepare('SELECT name_en, active FROM certifications').all() as { name_en: string; active: number }[]) {
+  for (const c of (await stmt('SELECT name_en, active FROM certifications').all()) as unknown as { name_en: string; active: number | boolean }[]) {
     existingCertActive.set(c.name_en, c.active === 1)
   }
-  db.prepare('DELETE FROM certifications').run()
-  const insCert = db.prepare(`
+  await stmt('DELETE FROM certifications').run()
+  const insCert = stmt(`
     INSERT INTO certifications (name_en, name_fa, issuer, color, sort_order, active)
     VALUES (?,?,?,?,?,?)
   `)
@@ -103,13 +111,13 @@ export function resyncPublicContent() {
   ]
   for (const r of certs) {
     const nameEn = r[0]
-    const active = existingCertActive.has(nameEn) ? (existingCertActive.get(nameEn) ? 1 : 0) : r[5]
-    insCert.run(r[0], r[1], r[2], r[3], r[4], active)
+    const active = existingCertActive.has(nameEn) ? !!existingCertActive.get(nameEn) : !!r[5]
+    await insCert.run(r[0], r[1], r[2], r[3], r[4], active)
   }
 
   // ── Services ────────────────────────────────────────────────────────────────
-  db.prepare('DELETE FROM services').run()
-  const insSvc = db.prepare(`
+  await stmt('DELETE FROM services').run()
+  const insSvc = stmt(`
     INSERT INTO services (slug, title_en, title_fa, category_en, category_fa, short_desc_en, short_desc_fa, features_en, features_fa, icon, color, sort_order)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
   `)
@@ -169,11 +177,11 @@ export function resyncPublicContent() {
      '["Ansible Playbook‌ها","مدیریت پیکربندی","CI/CD برای زیرساخت","خودکارسازی شبکه","خودکارسازی پایش"]',
      '⚙️', '#06b6d4', 9],
   ]
-  for (const r of services) insSvc.run(...r)
+  for (const r of services) await insSvc.run(...r)
 
   // ── Projects ────────────────────────────────────────────────────────────────
-  db.prepare('DELETE FROM projects').run()
-  const insProj = db.prepare(`
+  await stmt('DELETE FROM projects').run()
+  const insProj = stmt(`
     INSERT INTO projects (slug, name_en, name_fa, industry_en, industry_fa, client_en, client_fa,
       challenge_en, challenge_fa, solution_en, solution_fa, results_en, results_fa,
       tags_en, tags_fa, color, year, featured, sort_order)
@@ -221,11 +229,11 @@ export function resyncPublicContent() {
      '["سیسکو","Grafana","Prometheus","سوئیچ صنعتی","SCADA","VoIP"]',
      '#06b6d4', '2023', 1, 4],
   ]
-  for (const r of projects) insProj.run(...r)
+  for (const r of projects) await insProj.run(...r.slice(0, 17), !!r[17], r[18])
 
   // ── Clients ─────────────────────────────────────────────────────────────────
-  db.prepare('DELETE FROM clients').run()
-  const insClient = db.prepare(`
+  await stmt('DELETE FROM clients').run()
+  const insClient = stmt(`
     INSERT INTO clients (name_en, name_fa, type_en, type_fa, logo_url, is_tech_partner, sort_order)
     VALUES (?,?,?,?,?,?,?)
   `)
@@ -253,11 +261,14 @@ export function resyncPublicContent() {
     ['Linux', 'لینوکس', 'Technology Partner', 'شریک فناوری', '/uploads/logos/linux.svg', 1, 21],
     ['Ansible', 'Ansible', 'Technology Partner', 'شریک فناوری', '/uploads/logos/ansible.svg', 1, 22],
   ]
-  for (const r of clientsData) insClient.run(...r)
+  for (const r of clientsData) await insClient.run(...r.slice(0, 5), !!r[5], r[6])
 
   // ── Blog Categories ──────────────────────────────────────────────────────────
-  const insCat = db.prepare(`
-    INSERT OR IGNORE INTO blog_categories (slug, name_en, name_fa, icon, color, sort_order)
+  // DELETE + re-INSERT (idempotent upsert): drop posts first (FK)
+  await stmt('DELETE FROM blog_posts').run()
+  await stmt('DELETE FROM blog_categories').run()
+  const insCat = stmt(`
+    INSERT INTO blog_categories (slug, name_en, name_fa, icon, color, sort_order)
     VALUES (?,?,?,?,?,?)
   `)
   const blogCats = [
@@ -272,12 +283,12 @@ export function resyncPublicContent() {
     ['automation', 'Automation', 'خودکارسازی', '⚙️', '#06b6d4', 9],
     ['devops', 'DevOps', 'دواپس', '🚀', '#818cf8', 10],
   ]
-  for (const r of blogCats) insCat.run(...r)
+  for (const r of blogCats) await insCat.run(...r)
 
   // ── Blog Posts ───────────────────────────────────────────────────────────────
-  const getCatId = db.prepare('SELECT id FROM blog_categories WHERE slug = ?')
-  const insPost = db.prepare(`
-    INSERT OR REPLACE INTO blog_posts
+  const getCatId = stmt('SELECT id FROM blog_categories WHERE slug = ?')
+  const insPost = stmt(`
+    INSERT INTO blog_posts
       (slug, title_en, title_fa, excerpt_en, excerpt_fa, content_en, content_fa, category_id, read_time_en, read_time_fa, published_at_en, published_at_fa, status, featured)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `)
@@ -448,14 +459,14 @@ export function resyncPublicContent() {
     { slug: 'mikrotik-port-scan-detection-blocking', catSlug: 'mikrotik', titleEn: 'Detecting and Blocking Port Scans in MikroTik', titleFa: 'تشخیص و مسدودسازی Port Scan در MikroTik', excerptEn: 'Detect and automatically block port scanners in MikroTik using firewall rules and dynamic address lists that auto-ban scanner IPs.', excerptFa: 'Port Scanner ها را در MikroTik با قوانین فایروال و Address List های داینامیک که IP اسکنرها را خودکار بن می‌کنند شناسایی و مسدود کنید.', readTimeEn: '11 min read', readTimeFa: '۱۱ دقیقه مطالعه', publishedAtEn: 'May 2027', publishedAtFa: 'اردیبهشت ۱۴۰۶', featured: 0 },
   ]
   for (const p of blogPostsData) {
-    const cat = getCatId.get(p.catSlug) as { id: number } | undefined
+    const cat = await getCatId.get(p.catSlug) as { id: number } | undefined
     const bc = BLOG_CONTENT[p.slug]
-    insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, bc?.contentEn ?? null, bc?.contentFa ?? null, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', p.featured)
+    await insPost.run(p.slug, p.titleEn, p.titleFa, p.excerptEn, p.excerptFa, bc?.contentEn ?? null, bc?.contentFa ?? null, cat?.id ?? null, p.readTimeEn, p.readTimeFa, p.publishedAtEn, p.publishedAtFa, 'published', !!p.featured)
   }
 
   // ── Media files (seed all SVGs) ──────────────────────────────────────────
-  const insMedia = db.prepare(`
-    INSERT OR IGNORE INTO media_files (filename, original_name, mime_type, size, url, folder, alt)
+  const insMedia = stmt(`
+    INSERT INTO media_files (filename, original_name, mime_type, size, url, folder, alt)
     VALUES (?,?,?,?,?,?,?)
   `)
 
@@ -507,9 +518,8 @@ export function resyncPublicContent() {
 
   const allMedia = [...techLogos, ...orgLogos, ...iconFiles, ...avatarFiles, ...projectFiles, ...clientFiles]
   for (const [file, name, folder] of allMedia) {
-    insMedia.run(file, name, 'image/svg+xml', 1024, `/uploads/${folder}/${file}`, folder, `${name}`)
+    await insMedia.run(file, name, 'image/svg+xml', 1024, `/uploads/${folder}/${file}`, folder, `${name}`)
   }
 
-  db.close()
   return { ok: true, message: 'Public content synced to database successfully' }
 }

@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getDb()
-  return NextResponse.json(db.select().from(integrations).orderBy(integrations.sortOrder).all())
+  return await NextResponse.json(db.select().from(integrations).orderBy(integrations.sortOrder))
 }
 
 export async function PUT(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, ...data } = await req.json()
   const db = getDb()
-  const result = db.update(integrations).set({ ...data, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(integrations.id, id)).returning().get()
+  const result = (await db.update(integrations).set({ ...data, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(integrations.id, id)).returning())[0]
   await logAction(user, 'UPDATE', 'integration', String(id), null, { slug: result?.slug, enabled: result?.enabled })
   return NextResponse.json(result)
 }

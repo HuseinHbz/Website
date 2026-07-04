@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import type Database from 'better-sqlite3'
 import { apiError, requireAdmin } from '@/lib/api/respond'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { backupEngine, BACKUP_ROOT, BACKUP_ENV } from '@/lib/backup/engine'
 import { usingDedicatedKey } from '@/lib/backup/crypto'
 
@@ -9,10 +8,6 @@ import { usingDedicatedKey } from '@/lib/backup/crypto'
 // live alerts — for the Backup section of the admin panel.
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
 
 interface CatalogRow {
   id: string; version: string; trigger: string; bucket: string | null; status: string
@@ -24,22 +19,21 @@ export async function GET() {
   try {
     const auth = await requireAdmin('manage_settings')
     if ('error' in auth) return auth.error
-    const db = client()
 
-    const catalog = db.prepare(
+    const catalog = await pgQuery(
       `SELECT id, version, trigger, bucket, status, size, checksum, verified, verify_detail,
               attempts, error, started_at, finished_at, copies
        FROM backups ORDER BY started_at DESC LIMIT 50`
-    ).all() as CatalogRow[]
+    ) as CatalogRow[]
 
     const latest = catalog[0] ?? null
-    const totals = db.prepare(
-      `SELECT count(*) total, coalesce(sum(size),0) size,
-              sum(CASE WHEN status='success' THEN 1 ELSE 0 END) ok,
-              sum(CASE WHEN status IN ('failed','invalid') THEN 1 ELSE 0 END) failed,
-              sum(CASE WHEN verified=1 THEN 1 ELSE 0 END) verified
+    const totals = (await pgQuery(
+      `SELECT count(*)::int total, coalesce(sum(size),0)::bigint size,
+              sum(CASE WHEN status='success' THEN 1 ELSE 0 END)::int ok,
+              sum(CASE WHEN status IN ('failed','invalid') THEN 1 ELSE 0 END)::int failed,
+              sum(CASE WHEN verified=1 THEN 1 ELSE 0 END)::int verified
        FROM backups`
-    ).get() as { total: number; size: number; ok: number; failed: number; verified: number }
+    ))[0] as { total: number; size: number; ok: number; failed: number; verified: number }
 
     // 3-2-1 posture from configured adapters + the latest backup's copies.
     const mirror = !!process.env.BACKUP_MIRROR_DIR
@@ -50,18 +44,20 @@ export async function GET() {
 
     // Live alerts from the log stream (last 24h).
     const since = new Date(Date.now() - 86_400_000).toISOString()
-    const alertRows = db.prepare(
-      `SELECT message, count(*) count, max(ts) lastTs, level FROM system_logs
-       WHERE ts >= ? AND (
+    const alertRows = await pgQuery(
+      `SELECT message, count(*)::int count, max(ts) lastTs, level FROM system_logs
+       WHERE ts >= $1 AND (
          (source='backup' AND level IN ('warn','error')) OR
          (source='system' AND level='error') OR
          message LIKE '%storage_unreachable%'
-       ) GROUP BY message ORDER BY lastTs DESC LIMIT 20`
-    ).all(since) as { message: string; count: number; lastTs: string; level: string }[]
+       ) GROUP BY message, level ORDER BY lastTs DESC LIMIT 20`,
+      [since],
+    ) as { message: string; count: number; lastTs: string; level: string }[]
 
-    const dbErrors = (db.prepare(
-      `SELECT count(*) c FROM system_logs WHERE ts >= ? AND level='error' AND (message LIKE '%database%' OR message LIKE '%SQLITE%' OR service='db')`
-    ).get(since) as { c: number }).c
+    const dbErrors = Number(((await pgQuery(
+      `SELECT count(*) c FROM system_logs WHERE ts >= $1 AND level='error' AND (message LIKE '%database%' OR message LIKE '%postgres%' OR service='db')`,
+      [since],
+    ))[0] as { c: number }).c)
 
     const alerts: { level: string; message: string; count: number; at: string }[] = alertRows.map((a) => ({
       level: a.level === 'error' ? 'critical' : 'warning', message: a.message, count: a.count, at: a.lastTs,

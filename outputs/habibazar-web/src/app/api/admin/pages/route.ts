@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const db = getDb()
 
     if (id) {
-      const page = await db.select().from(pages).where(eq(pages.id, id)).get()
+      const page = (await db.select().from(pages).where(eq(pages.id, id)))[0]
       if (!page) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
       const sectionLinks = await db.select({
@@ -35,12 +35,12 @@ export async function GET(req: NextRequest) {
         .leftJoin(sections, eq(pageSections.sectionId, sections.id))
         .where(eq(pageSections.pageId, id))
         .orderBy(pageSections.sortOrder)
-        .all()
+        
 
       return NextResponse.json({ ...page, sections: sectionLinks })
     }
 
-    const rows = await db.select().from(pages).orderBy(desc(pages.updatedAt)).all()
+    const rows = await db.select().from(pages).orderBy(desc(pages.updatedAt))
     return NextResponse.json(rows)
   } catch (e: unknown) {
     return apiError(e)
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const id = nanoid()
     const db = getDb()
     await db.insert(pages).values({ id, ...body, createdBy: me.id, updatedBy: me.id })
-    const created = await db.select().from(pages).where(eq(pages.id, id)).get()
+    const created = (await db.select().from(pages).where(eq(pages.id, id)))[0]
     await logAction(me, 'CREATE', 'pages', id, null, { titleEn, slug })
     return NextResponse.json(created, { status: 201 })
   } catch (e: unknown) {

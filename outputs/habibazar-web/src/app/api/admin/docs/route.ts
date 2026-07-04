@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getDb()
-  return NextResponse.json(db.select().from(docs).orderBy(docs.sortOrder).all())
+  return await NextResponse.json(db.select().from(docs).orderBy(docs.sortOrder))
 }
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()
   const db = getDb()
-  const result = db.insert(docs).values({ ...body, updatedBy: user.id }).returning().get()
+  const result = (await db.insert(docs).values({ ...body, updatedBy: user.id }).returning())[0]
   await logAction(user, 'CREATE', 'doc', String(result.id), null, result)
   return NextResponse.json(result, { status: 201 })
 }
@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, ...data } = await req.json()
   const db = getDb()
-  const result = db.update(docs).set({ ...data, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(docs.id, id)).returning().get()
+  const result = (await db.update(docs).set({ ...data, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(docs.id, id)).returning())[0]
   await logAction(user, 'UPDATE', 'doc', String(id), null, result)
   return NextResponse.json(result)
 }
@@ -37,7 +37,7 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await req.json()
   const db = getDb()
-  db.delete(docs).where(eq(docs.id, id)).run()
+  await db.delete(docs).where(eq(docs.id, id))
   await logAction(user, 'DELETE', 'doc', String(id), null, null)
   return NextResponse.json({ ok: true })
 }

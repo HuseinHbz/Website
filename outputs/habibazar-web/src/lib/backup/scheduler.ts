@@ -13,8 +13,7 @@
  */
 import fs from 'fs'
 import path from 'path'
-import type Database from 'better-sqlite3'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { logBus } from '@/lib/logs/bus'
 import { backupEngine, type Bucket } from './engine'
 
@@ -28,15 +27,12 @@ const CADENCE_MS: Record<Bucket, number> = {
 }
 const DATA_CHANGE_DEBOUNCE_MS = Number(process.env.BACKUP_DATA_DEBOUNCE_MS || 5 * 60_000)
 
-function client(): Database.Database | null {
-  try { return (getDb() as unknown as { $client: Database.Database }).$client } catch { return null }
-}
-
-function lastSuccess(bucket: Bucket): number {
+async function lastSuccess(bucket: Bucket): Promise<number> {
   try {
-    const row = client()?.prepare(
-      `SELECT max(started_at) t FROM backups WHERE bucket=? AND status='success'`
-    ).get(bucket) as { t: string | null } | undefined
+    const row = (await pgQuery(
+      `SELECT max(started_at) t FROM backups WHERE bucket=$1 AND status='success'`,
+      [bucket],
+    ))[0] as { t: string | null } | undefined
     return row?.t ? new Date(row.t).getTime() : 0
   } catch { return 0 }
 }
@@ -57,13 +53,13 @@ class Scheduler {
     this.watchUploads()
   }
 
-  private tick() {
+  private async tick() {
     if (backupEngine.isRunning) return
     const now = Date.now()
     // Fire the most-granular bucket that is due (one backup per tick).
     const order: Bucket[] = ['yearly', 'monthly', 'weekly', 'daily', 'hourly']
     for (const bucket of order) {
-      const last = Math.max(lastSuccess(bucket), backupEngine.lastRun(bucket))
+      const last = Math.max(await lastSuccess(bucket), backupEngine.lastRun(bucket))
       if (now - last >= CADENCE_MS[bucket]) {
         void backupEngine.run('scheduled', bucket)
         return

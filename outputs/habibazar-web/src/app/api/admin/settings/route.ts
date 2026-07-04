@@ -8,7 +8,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   try {      const db = getDb()
-      const rows = await db.select().from(siteSettings).all()
+      const rows = await db.select().from(siteSettings)
       const obj: Record<string, string> = {}
       for (const r of rows) obj[r.key] = r.value ?? ''
       return NextResponse.json(obj)
@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest) {
       const body = await req.json() as Record<string, string>
       const db = getDb()
       for (const [key, value] of Object.entries(body)) {
-        const existing = await db.select().from(siteSettings).where(eq(siteSettings.key, key)).get()
+        const existing = (await db.select().from(siteSettings).where(eq(siteSettings.key, key)))[0]
         if (existing) {
           await db.update(siteSettings).set({ value, updatedAt: new Date().toISOString(), updatedBy: user?.id }).where(eq(siteSettings.key, key))
         } else {

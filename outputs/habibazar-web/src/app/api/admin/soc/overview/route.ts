@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import type Database from 'better-sqlite3'
 import { apiError, requireAdmin } from '@/lib/api/respond'
-import { getDb } from '@/lib/db'
+import { pgQuery } from '@/lib/db'
 import { riskLevel, riskScore, type SecuritySignals } from '@/lib/soc/risk'
 
 // SOC (Security Operations Center) overview — aggregates the REAL security signal
@@ -11,35 +10,32 @@ import { riskLevel, riskScore, type SecuritySignals } from '@/lib/soc/risk'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-function client(): Database.Database {
-  return (getDb() as unknown as { $client: Database.Database }).$client
-}
-function count(db: Database.Database, sql: string, ...params: unknown[]): number {
-  try { return (db.prepare(sql).get(...params) as { c: number }).c } catch { return 0 }
+async function count(sql: string, params: unknown[] = []): Promise<number> {
+  try { return Number(((await pgQuery(sql, params))[0] as { c: number } | undefined)?.c ?? 0) } catch { return 0 }
 }
 
 export async function GET() {
   try {
     const auth = await requireAdmin('manage_settings')
     if ('error' in auth) return auth.error
-    const db = client()
     const since = new Date(Date.now() - 86_400_000).toISOString()
 
-    const failedLogins = count(db, `SELECT count(*) c FROM system_logs WHERE ts>=? AND message LIKE '%Failed login%'`, since)
-    const injectionBlocks = count(db, `SELECT count(*) c FROM system_logs WHERE ts>=? AND message LIKE '%prompt-injection%'`, since)
-    const permissionDenied = count(db, `SELECT count(*) c FROM system_logs WHERE ts>=? AND (message LIKE '%Forbidden%' OR message LIKE '%permission%')`, since)
-    const rateLimited = count(db, `SELECT count(*) c FROM system_logs WHERE ts>=? AND (message LIKE '%Too many%' OR message LIKE '%rate limit%')`, since)
-    const securityErrors = count(db, `SELECT count(*) c FROM system_logs WHERE ts>=? AND source='security' AND level='error'`, since)
-    const successfulLogins = count(db, `SELECT count(*) c FROM audit_logs WHERE action='LOGIN' AND created_at>=?`, since)
+    const failedLogins = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND message LIKE '%Failed login%'`, [since])
+    const injectionBlocks = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND message LIKE '%prompt-injection%'`, [since])
+    const permissionDenied = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND (message LIKE '%Forbidden%' OR message LIKE '%permission%')`, [since])
+    const rateLimited = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND (message LIKE '%Too many%' OR message LIKE '%rate limit%')`, [since])
+    const securityErrors = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND source='security' AND level='error'`, [since])
+    const successfulLogins = await count(`SELECT count(*) c FROM audit_logs WHERE action='LOGIN' AND created_at>=$1`, [since])
 
     // Offending IPs from failed-login meta; ≥5 in 24h = brute-force suspect.
     let topIps: { ip: string; attempts: number }[] = []
     try {
-      topIps = db.prepare(
-        `SELECT json_extract(meta,'$.ip') ip, count(*) attempts FROM system_logs
-         WHERE ts>=? AND message LIKE '%Failed login%' AND json_extract(meta,'$.ip') IS NOT NULL
-         GROUP BY ip ORDER BY attempts DESC LIMIT 10`
-      ).all(since) as { ip: string; attempts: number }[]
+      topIps = await pgQuery(
+        `SELECT (meta::jsonb->>'ip') ip, count(*)::int attempts FROM system_logs
+         WHERE ts>=$1 AND message LIKE '%Failed login%' AND (meta::jsonb->>'ip') IS NOT NULL
+         GROUP BY ip ORDER BY attempts DESC LIMIT 10`,
+        [since],
+      ) as { ip: string; attempts: number }[]
     } catch { topIps = [] }
     const bruteForceIps = topIps.filter((r) => r.attempts >= 5).length
 
@@ -49,11 +45,11 @@ export async function GET() {
     // Recent security threat timeline.
     let timeline: { ts: string; level: string; source: string; message: string }[] = []
     try {
-      timeline = db.prepare(
+      timeline = await pgQuery(
         `SELECT ts, level, source, message FROM system_logs
          WHERE source IN ('security','ai') OR level='error' OR message LIKE '%[SECURITY]%'
          ORDER BY id DESC LIMIT 20`
-      ).all() as typeof timeline
+      ) as typeof timeline
     } catch { timeline = [] }
 
     return NextResponse.json({

@@ -5,6 +5,6 @@ import { eq } from 'drizzle-orm'
 
 export async function GET() {
   const db = getDb()
-  const rows = db.select().from(solutions).where(eq(solutions.active, true)).orderBy(solutions.sortOrder).all()
+  const rows = await db.select().from(solutions).where(eq(solutions.active, true)).orderBy(solutions.sortOrder)
   return NextResponse.json(rows)
 }

@@ -31,12 +31,15 @@ const PATTERNS = [
   { key: 'backup-dot-backup', re: /\.backup\(/g, note: 'better-sqlite3 .backup() → pg_dump / pg_basebackup / WAL' },
 ]
 
+// blogContent.ts holds blog-post markdown (tutorials that quote SQL/SQLite in
+// prose) — it is content data, not runtime DB code, so it is excluded from scan.
+const EXCLUDE = /db\/blogContent\.ts$/
 function walk(dir) {
   const out = []
   for (const name of readdirSync(dir)) {
     const p = join(dir, name)
     if (statSync(p).isDirectory()) out.push(...walk(p))
-    else if (/\.(ts|tsx|mjs)$/.test(name)) out.push(p)
+    else if (/\.(ts|tsx|mjs)$/.test(name) && !EXCLUDE.test(p)) out.push(p)
   }
   return out
 }

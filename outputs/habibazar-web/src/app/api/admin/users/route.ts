@@ -22,7 +22,7 @@ export async function GET() {
         totpEnabled: users.totpEnabled,
         createdAt: users.createdAt,
         lastLogin: users.lastLogin,
-      }).from(users).orderBy(desc(users.createdAt)).all()
+      }).from(users).orderBy(desc(users.createdAt))
       return NextResponse.json(rows)
   } catch (e: unknown) {
     return apiError(e)
@@ -84,7 +84,7 @@ export async function DELETE(req: NextRequest) {
       const cols: Record<string, string> = { audit_logs: 'user_id', media_files: 'uploaded_by' }
       for (const t of tables) {
         const col = cols[t] ?? 'updated_by'
-        try { await db.run(sql`UPDATE ${sql.identifier(t)} SET ${sql.identifier(col)} = NULL WHERE ${sql.identifier(col)} = ${id}`) } catch { /* ok */ }
+        try { await db.execute(sql`UPDATE ${sql.identifier(t)} SET ${sql.identifier(col)} = NULL WHERE ${sql.identifier(col)} = ${id}`) } catch { /* ok */ }
       }
       await db.delete(users).where(eq(users.id, id))
       await logAction(me, 'DELETE', 'users', id)

@@ -23,7 +23,7 @@
 ## Overview
 Bilingual (FA/EN) personal/enterprise site for **Husein Habibazar** (HBZ),
 infrastructure architect. **One** Next.js 15 app serves both the public site
-and a full admin CMS. Data lives in a local SQLite file — no external DB/service.
+and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle).
 
 - Repo layout: the app is at **`outputs/habibazar-web/`** (run all npm commands there).
 - On the server the repo is cloned to `/var/www/Website`; the app is installed/run
@@ -32,7 +32,13 @@ and a full admin CMS. Data lives in a local SQLite file — no external DB/servi
 
 ## Tech stack
 - **Next.js 15** (App Router, React 19), **TypeScript** (strict; no `any`).
-- **better-sqlite3** + **drizzle-orm** (SQLite, synchronous driver).
+- **PostgreSQL** (`pg`, async pool) + **drizzle-orm** (`pg-core`). Runtime DB
+  access is async: Drizzle query builder (`await db.select()…`, `[0]` for one row)
+  or the raw `pgQuery(sql, params)` helper (`$n` placeholders) in `lib/db/index.ts`.
+  Schema created by the Drizzle migrator (`drizzle/0000_init.sql`) + raw DDL for 5
+  non-ORM tables (`migrate.ts`). `better-sqlite3` is a **devDependency** only (the
+  one-time SQLite→PG migration reader — see Phase 20). `DATABASE_URL` configures
+  the connection. (Migrated from SQLite in Phase 20; `audit:pgcompat` = 0.)
 - **next-intl v4** (i18n, RTL); **Tailwind CSS** (+ `tailwind-merge`, `clsx`).
 - **jose** (JWT), **bcryptjs** (hashing), **otplib** (TOTP 2FA).
 - **framer-motion** (animation), **recharts** (charts), **react-image-crop**
@@ -236,17 +242,17 @@ start the app, `wait-on /api/health`, then run.
     tools; monitor the engine at `/admin/logs-monitoring` + `/api/admin/backup/engine`.
 - First-time/after-config-change: `git pull && sudo bash deploy/update.sh &&
   sudo bash deploy/fix-pm2.sh`. Routine updates: `git pull && sudo bash deploy/update.sh`.
-- **PostgreSQL migration (optional, `deploy/postgres/`).** Runtime is still SQLite
-  (`better-sqlite3`, synchronous). The data tier has a real, executed migration
-  path to PostgreSQL 17: `install-postgresql.sh` (PG17 + extensions on Debian/
-  Ubuntu, writes `DATABASE_URL`), `sqlite-to-postgresql.sh` (SQLite backup →
-  engine → validate), `verify-postgresql.sh`, `restore-postgresql.sh`,
-  `rollback-to-sqlite.sh`. Engine: `scripts/migrate-to-postgres.mjs`
-  (`npm run db:migrate:pg`) — introspect → FK-topological order → value-preserving
-  schema → batched load → sequence sync → row-count + checksum validation → JSON
-  report. The remaining runtime async-driver cutover is tracked by
-  `npm run audit:pgcompat` (target: 0). `pg`/`@types/pg` are devDependencies
-  (migration tooling, not the runtime bundle). See `deploy/postgres/README.md` +
+- **PostgreSQL (`deploy/postgres/`).** The runtime is **fully PostgreSQL** (Phase 20
+  cutover complete; `audit:pgcompat` = 0). Provision/migrate/verify scripts for
+  Debian/Ubuntu: `install-postgresql.sh` (PG17 + extensions, writes `DATABASE_URL`),
+  `bootstrap-postgresql.sh` (Drizzle migrate + seed), `sqlite-to-postgresql.sh`
+  (legacy SQLite backup → data migrate → validate), `verify-postgresql.sh`,
+  `restore-postgresql.sh` (`pg_dump`/`pg_restore`), `rollback-to-sqlite.sh`
+  (fallback snapshot). Data-migration engine: `scripts/migrate-to-postgres.mjs`
+  (`npm run db:migrate:pg`) — introspect SQLite → load into the Drizzle schema
+  (boolean/NUL coercion) → sequence sync → row-count + FK validation → JSON report.
+  `pg`/`@types/pg` are runtime deps; `better-sqlite3`/`drizzle-kit` are devDeps
+  (migration + schema-gen tooling). See `deploy/postgres/README.md` +
   `docs/governance/phase20-postgres-migration.md`.
 
 ## Gotchas learned
