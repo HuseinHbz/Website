@@ -21,7 +21,7 @@ async function ensureInit() {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await ensureInit()
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: 'dark' }}>
       <body className="bg-background text-white antialiased font-sans">
         {children}
       </body>

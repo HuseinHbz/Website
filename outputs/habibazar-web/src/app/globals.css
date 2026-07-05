@@ -985,3 +985,26 @@
   stroke-dasharray: 6 4;
   animation: dashFlow 1.5s linear infinite;
 }
+
+/* ── Native <select> controls (unlayered so it beats Tailwind utilities) ──────
+   Shared inputs are given a fixed height (h-9 = 36px) while .form-input also
+   carries 10px vertical padding. On a <select> the browser does not shrink the
+   value to fit, so the padding pushes the selected text past the 36px box and
+   it renders clipped at the bottom / barely visible — across every module that
+   uses a dropdown. Collapse the vertical padding and let the fixed height center
+   the value; keep it aligned to the text start so FA (RTL) and EN both read
+   correctly. Applies to the shared <Select> and any raw `.form-input` <select>. */
+select.form-input {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.2;
+  text-align: start;
+  text-align-last: start;
+}
+/* The value shown in the closed control and each option in the open list both
+   need explicit readable colors on the dark theme. */
+select.form-input,
+select.form-input option {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-elevated);
+}
