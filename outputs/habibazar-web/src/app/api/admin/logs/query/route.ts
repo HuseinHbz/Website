@@ -19,7 +19,7 @@ function where(f: Filters): { sql: string; params: unknown[] } {
   if (f.level && f.level !== 'all') { clauses.push('level = ?'); params.push(f.level) }
   if (f.source && f.source !== 'all') { clauses.push('source = ?'); params.push(f.source) }
   if (f.service && f.service !== 'all') { clauses.push('service = ?'); params.push(f.service) }
-  if (f.q) { clauses.push('(message LIKE ? OR stacktrace LIKE ?)'); params.push(`%${f.q}%`, `%${f.q}%`) }
+  if (f.q) { clauses.push('(message ILIKE ? OR stacktrace ILIKE ?)'); params.push(`%${f.q}%`, `%${f.q}%`) }
   if (f.from) { clauses.push('ts >= ?'); params.push(f.from) }
   if (f.to) { clauses.push('ts <= ?'); params.push(f.to) }
   return { sql: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', params }
@@ -41,8 +41,10 @@ export async function GET(req: NextRequest) {
 
     if (sp.get('group') === '1') {
       // Error grouping: dedupe by fingerprint, most frequent first.
+      // PostgreSQL requires non-aggregated selected columns to be grouped or
+      // aggregated (SQLite allowed bare columns) — aggregate level/source/service.
       const groups = await pgQuery(
-        toPg(`SELECT fingerprint, level, source, service, count(*) count, max(ts) lastTs, max(message) message
+        toPg(`SELECT fingerprint, max(level) level, max(source) source, max(service) service, count(*) count, max(ts) lastTs, max(message) message
          FROM system_logs ${w.sql} GROUP BY fingerprint ORDER BY count DESC LIMIT ?`),
         [...w.params, limit],
       )

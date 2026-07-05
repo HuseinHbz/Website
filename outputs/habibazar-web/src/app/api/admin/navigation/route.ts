@@ -8,7 +8,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   try {      const db = getDb()
-      return await NextResponse.json(await db.select().from(navigationItems).orderBy(asc(navigationItems.sortOrder)))
+      return NextResponse.json(await db.select().from(navigationItems).orderBy(asc(navigationItems.sortOrder)))
   } catch (e: unknown) {
     return apiError(e)
   }

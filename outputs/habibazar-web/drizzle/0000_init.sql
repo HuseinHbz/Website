@@ -10,7 +10,7 @@ CREATE TABLE "about_content" (
 	"projects_count" text,
 	"endpoints_count" text,
 	"deployments_count" text,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -19,7 +19,7 @@ CREATE TABLE "admin_sessions" (
 	"user_id" text NOT NULL,
 	"token" text NOT NULL,
 	"expires_at" text NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
 	"ip_address" text,
 	"user_agent" text,
 	CONSTRAINT "admin_sessions_token_unique" UNIQUE("token")
@@ -33,8 +33,8 @@ CREATE TABLE "ai_conversations" (
 	"messages_json" text DEFAULT '[]' NOT NULL,
 	"sources_json" text DEFAULT '[]' NOT NULL,
 	"bookmarked" boolean DEFAULT false NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "ai_knowledge_base" (
@@ -48,8 +48,8 @@ CREATE TABLE "ai_knowledge_base" (
 	"locale" text DEFAULT 'both',
 	"active" boolean DEFAULT true NOT NULL,
 	"priority" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -67,7 +67,7 @@ CREATE TABLE "ai_modules" (
 	"enabled" boolean DEFAULT true NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"usage_count" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
 	CONSTRAINT "ai_modules_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
@@ -81,7 +81,7 @@ CREATE TABLE "analytics_events" (
 	"locale" text,
 	"session_id" text,
 	"metadata" text,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "audit_logs" (
@@ -95,7 +95,7 @@ CREATE TABLE "audit_logs" (
 	"new_value" text,
 	"ip_address" text,
 	"user_agent" text,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "blog_categories" (
@@ -128,8 +128,8 @@ CREATE TABLE "blog_posts" (
 	"status" text DEFAULT 'draft' NOT NULL,
 	"featured" boolean DEFAULT false NOT NULL,
 	"views" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "blog_posts_slug_unique" UNIQUE("slug")
 );
@@ -147,7 +147,7 @@ CREATE TABLE "certifications" (
 	"color" text DEFAULT '#6366f1',
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -162,7 +162,7 @@ CREATE TABLE "clients" (
 	"is_tech_partner" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -183,8 +183,8 @@ CREATE TABLE "consultation_requests" (
 	"notes" text,
 	"ip_address" text,
 	"locale" text DEFAULT 'en',
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "contact_requests" (
@@ -198,8 +198,8 @@ CREATE TABLE "contact_requests" (
 	"status" text DEFAULT 'new' NOT NULL,
 	"ip_address" text,
 	"locale" text DEFAULT 'en',
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "content" (
@@ -228,8 +228,8 @@ CREATE TABLE "content" (
 	"og_image" text,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"published_at" text,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "content_slug_unique" UNIQUE("slug")
 );
@@ -299,8 +299,8 @@ CREATE TABLE "courses" (
 	"status" text DEFAULT 'draft' NOT NULL,
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	CONSTRAINT "courses_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
@@ -322,7 +322,7 @@ CREATE TABLE "credentials" (
 	"active" boolean DEFAULT true NOT NULL,
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -377,8 +377,8 @@ CREATE TABLE "docs" (
 	"seo_description" text,
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "docs_slug_unique" UNIQUE("slug")
 );
@@ -391,7 +391,7 @@ CREATE TABLE "event_registrations" (
 	"company" text,
 	"phone" text,
 	"status" text DEFAULT 'pending' NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "events" (
@@ -420,8 +420,8 @@ CREATE TABLE "events" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"seo_title" text,
 	"seo_description" text,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"created_by" text,
 	CONSTRAINT "events_slug_unique" UNIQUE("slug")
 );
@@ -440,8 +440,8 @@ CREATE TABLE "forms" (
 	"success_message_fa" text,
 	"active" boolean DEFAULT true NOT NULL,
 	"submissions_count" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"created_by" text,
 	CONSTRAINT "forms_slug_unique" UNIQUE("slug")
 );
@@ -467,7 +467,7 @@ CREATE TABLE "hero_content" (
 	"stat3_value" text,
 	"stat4_label" text,
 	"stat4_value" text,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -490,8 +490,8 @@ CREATE TABLE "industries" (
 	"seo_description" text,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	CONSTRAINT "industries_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
@@ -510,7 +510,7 @@ CREATE TABLE "integrations" (
 	"last_sync_at" text,
 	"error_message" text,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "integrations_slug_unique" UNIQUE("slug")
 );
@@ -525,7 +525,7 @@ CREATE TABLE "media_files" (
 	"folder" text DEFAULT 'general',
 	"alt" text,
 	"caption" text,
-	"uploaded_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"uploaded_at" text NOT NULL,
 	"uploaded_by" text
 );
 --> statement-breakpoint
@@ -539,7 +539,7 @@ CREATE TABLE "navigation_items" (
 	"parent_id" integer,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"updated_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "office_locations" (
@@ -580,7 +580,7 @@ CREATE TABLE "organization" (
 	"legal_json" text DEFAULT '{}',
 	"business_units_json" text DEFAULT '[]',
 	"certifications_json" text DEFAULT '[]',
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -604,8 +604,8 @@ CREATE TABLE "organizations" (
 	"active" boolean DEFAULT true NOT NULL,
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
 );
@@ -629,8 +629,8 @@ CREATE TABLE "page_templates" (
 	"default_props_json" text DEFAULT '{}' NOT NULL,
 	"preview_image" text,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	CONSTRAINT "page_templates_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
@@ -647,8 +647,8 @@ CREATE TABLE "pages" (
 	"layout" text DEFAULT 'default' NOT NULL,
 	"status" text DEFAULT 'draft' NOT NULL,
 	"published_at" text,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"created_by" text,
 	"updated_by" text,
 	CONSTRAINT "pages_slug_unique" UNIQUE("slug")
@@ -670,7 +670,7 @@ CREATE TABLE "partners" (
 	"active" boolean DEFAULT true NOT NULL,
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
 	CONSTRAINT "partners_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
@@ -696,7 +696,7 @@ CREATE TABLE "product_releases" (
 	"changelog_fa" text,
 	"download_url" text,
 	"breaking_changes" boolean DEFAULT false NOT NULL,
-	"published_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"published_at" text NOT NULL,
 	"created_by" text
 );
 --> statement-breakpoint
@@ -728,8 +728,8 @@ CREATE TABLE "products" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "products_slug_unique" UNIQUE("slug")
 );
@@ -803,8 +803,8 @@ CREATE TABLE "projects" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "projects_slug_unique" UNIQUE("slug")
 );
@@ -816,8 +816,8 @@ CREATE TABLE "redirects" (
 	"status_code" integer DEFAULT 301 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
 	"hits" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	CONSTRAINT "redirects_from_path_unique" UNIQUE("from_path")
 );
 --> statement-breakpoint
@@ -830,7 +830,7 @@ CREATE TABLE "role_assignments" (
 	"granted_by" text,
 	"expires_at" text,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "search_index" (
@@ -847,7 +847,7 @@ CREATE TABLE "search_index" (
 	"site_id" text,
 	"locale" text DEFAULT 'both',
 	"active" boolean DEFAULT true NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"updated_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "section_versions" (
@@ -855,7 +855,7 @@ CREATE TABLE "section_versions" (
 	"section_id" text NOT NULL,
 	"version" integer NOT NULL,
 	"snapshot" text NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
 	"created_by" text
 );
 --> statement-breakpoint
@@ -885,8 +885,8 @@ CREATE TABLE "sections" (
 	"scheduled_at" text,
 	"archived_at" text,
 	"version" integer DEFAULT 1 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"created_by" text,
 	"updated_by" text
 );
@@ -903,7 +903,7 @@ CREATE TABLE "seo_settings" (
 	"og_image" text,
 	"schema_markup" text,
 	"canonical_url" text,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -924,7 +924,7 @@ CREATE TABLE "services" (
 	"color" text DEFAULT '#6366f1',
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "services_slug_unique" UNIQUE("slug")
 );
@@ -934,7 +934,7 @@ CREATE TABLE "site_settings" (
 	"key" text NOT NULL,
 	"value" text,
 	"group" text DEFAULT 'general' NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "site_settings_key_unique" UNIQUE("key")
 );
@@ -960,8 +960,8 @@ CREATE TABLE "sites" (
 	"share_kb" boolean DEFAULT false NOT NULL,
 	"share_users" boolean DEFAULT false NOT NULL,
 	"workspace_id" text,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"created_by" text,
 	CONSTRAINT "sites_slug_unique" UNIQUE("slug")
 );
@@ -977,7 +977,7 @@ CREATE TABLE "skills" (
 	"color" text,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -1007,8 +1007,8 @@ CREATE TABLE "solutions" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text,
 	CONSTRAINT "solutions_slug_unique" UNIQUE("slug")
 );
@@ -1029,7 +1029,7 @@ CREATE TABLE "success_stories" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "technologies" (
@@ -1065,7 +1065,7 @@ CREATE TABLE "testimonials" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL
+	"created_at" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "timeline_items" (
@@ -1081,8 +1081,8 @@ CREATE TABLE "timeline_items" (
 	"icon" text,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"updated_by" text
 );
 --> statement-breakpoint
@@ -1096,7 +1096,7 @@ CREATE TABLE "users" (
 	"avatar" text,
 	"totp_secret" text,
 	"totp_enabled" boolean DEFAULT false NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
 	"last_login" text,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
@@ -1113,8 +1113,8 @@ CREATE TABLE "workspaces" (
 	"isolation_level" text DEFAULT 'partial' NOT NULL,
 	"active" boolean DEFAULT true NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
-	"updated_at" text DEFAULT (to_char(now(), 'YYYY-MM-DD HH24:MI:SS')) NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
 	"created_by" text,
 	CONSTRAINT "workspaces_slug_unique" UNIQUE("slug")
 );

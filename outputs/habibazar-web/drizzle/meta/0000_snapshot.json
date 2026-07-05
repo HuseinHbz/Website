@@ -1,5 +1,5 @@
 {
-  "id": "5cbca0f4-2ff9-4408-b5de-473883f30696",
+  "id": "192e97f4-ab26-4783-ba3a-2a2d8dc5cc61",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -79,8 +79,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -143,8 +142,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "ip_address": {
           "name": "ip_address",
@@ -243,15 +241,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -334,15 +330,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -465,8 +459,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -547,8 +540,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -627,8 +619,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -838,15 +829,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -981,8 +970,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -1084,8 +1072,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -1223,15 +1210,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -1312,15 +1297,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -1497,15 +1480,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -1994,15 +1975,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -2163,8 +2142,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -2531,15 +2509,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -2655,8 +2631,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -2850,15 +2825,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -2988,15 +2961,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -3164,8 +3135,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -3319,15 +3289,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -3446,8 +3414,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -3549,8 +3516,7 @@
           "name": "uploaded_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "uploaded_by": {
           "name": "uploaded_by",
@@ -3646,8 +3612,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -3897,8 +3862,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -4058,15 +4022,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -4249,15 +4211,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -4358,15 +4318,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -4529,8 +4487,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -4686,8 +4643,7 @@
           "name": "published_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -4911,15 +4867,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -5393,15 +5347,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -5487,15 +5439,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -5572,8 +5522,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -5699,8 +5648,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -5743,8 +5691,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -5952,15 +5899,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -6085,8 +6030,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -6224,8 +6168,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -6297,8 +6240,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -6475,15 +6417,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -6593,8 +6533,7 @@
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -6795,15 +6734,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -6945,8 +6882,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -7178,8 +7114,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         }
       },
       "indexes": {},
@@ -7273,15 +7208,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_by": {
           "name": "updated_by",
@@ -7377,8 +7310,7 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "last_login": {
           "name": "last_login",
@@ -7484,15 +7416,13 @@
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))"
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",

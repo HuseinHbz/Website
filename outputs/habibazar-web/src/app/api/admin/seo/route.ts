@@ -7,7 +7,7 @@ import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
   const db = getDb()
-  return await NextResponse.json(await db.select().from(seoSettings))
+  return NextResponse.json(await db.select().from(seoSettings))
 }
 
 export async function PUT(req: NextRequest) {

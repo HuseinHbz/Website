@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const params: unknown[] = []
     const add = (key: string, col: string) => { const v = sp.get(key); if (v && v !== 'all') { clauses.push(`${col} = ?`); params.push(v) } }
     add('level', 'level'); add('source', 'source'); add('service', 'service')
-    const q = sp.get('q'); if (q) { clauses.push('(message LIKE ? OR stacktrace LIKE ?)'); params.push(`%${q}%`, `%${q}%`) }
+    const q = sp.get('q'); if (q) { clauses.push('(message ILIKE ? OR stacktrace ILIKE ?)'); params.push(`%${q}%`, `%${q}%`) }
     const from = sp.get('from'); if (from) { clauses.push('ts >= ?'); params.push(from) }
     const to = sp.get('to'); if (to) { clauses.push('ts <= ?'); params.push(to) }
     const w = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''

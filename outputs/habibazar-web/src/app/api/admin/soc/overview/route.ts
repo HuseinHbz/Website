@@ -20,10 +20,10 @@ export async function GET() {
     if ('error' in auth) return auth.error
     const since = new Date(Date.now() - 86_400_000).toISOString()
 
-    const failedLogins = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND message LIKE '%Failed login%'`, [since])
-    const injectionBlocks = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND message LIKE '%prompt-injection%'`, [since])
-    const permissionDenied = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND (message LIKE '%Forbidden%' OR message LIKE '%permission%')`, [since])
-    const rateLimited = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND (message LIKE '%Too many%' OR message LIKE '%rate limit%')`, [since])
+    const failedLogins = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND message ILIKE '%Failed login%'`, [since])
+    const injectionBlocks = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND message ILIKE '%prompt-injection%'`, [since])
+    const permissionDenied = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND (message ILIKE '%Forbidden%' OR message ILIKE '%permission%')`, [since])
+    const rateLimited = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND (message ILIKE '%Too many%' OR message ILIKE '%rate limit%')`, [since])
     const securityErrors = await count(`SELECT count(*) c FROM system_logs WHERE ts>=$1 AND source='security' AND level='error'`, [since])
     const successfulLogins = await count(`SELECT count(*) c FROM audit_logs WHERE action='LOGIN' AND created_at>=$1`, [since])
 
@@ -32,7 +32,7 @@ export async function GET() {
     try {
       topIps = await pgQuery(
         `SELECT (meta::jsonb->>'ip') ip, count(*)::int attempts FROM system_logs
-         WHERE ts>=$1 AND message LIKE '%Failed login%' AND (meta::jsonb->>'ip') IS NOT NULL
+         WHERE ts>=$1 AND message ILIKE '%Failed login%' AND (meta::jsonb->>'ip') IS NOT NULL
          GROUP BY ip ORDER BY attempts DESC LIMIT 10`,
         [since],
       ) as { ip: string; attempts: number }[]
@@ -47,7 +47,7 @@ export async function GET() {
     try {
       timeline = await pgQuery(
         `SELECT ts, level, source, message FROM system_logs
-         WHERE source IN ('security','ai') OR level='error' OR message LIKE '%[SECURITY]%'
+         WHERE source IN ('security','ai') OR level='error' OR message ILIKE '%[SECURITY]%'
          ORDER BY id DESC LIMIT 20`
       ) as typeof timeline
     } catch { timeline = [] }

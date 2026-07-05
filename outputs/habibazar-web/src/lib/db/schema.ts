@@ -1,4 +1,3 @@
-import { sql } from 'drizzle-orm'
 import {
   boolean,
   doublePrecision,
@@ -7,6 +6,10 @@ import {
   serial,
   text,
 } from 'drizzle-orm/pg-core'
+
+// Client-side timestamp default ('YYYY-MM-DD HH24:MI:SS') so inserts never rely
+// on a DB-level default — resilient to how the table was created.
+const tsNow = () => new Date().toISOString().slice(0, 19).replace('T', ' ')
 
 // ─── Users & Auth ────────────────────────────────────────────────────────────
 
@@ -20,7 +23,7 @@ export const users = pgTable('users', {
   avatar: text('avatar'),
   totpSecret: text('totp_secret'),
   totpEnabled: boolean('totp_enabled').notNull().default(false),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
   lastLogin: text('last_login'),
 })
 
@@ -29,7 +32,7 @@ export const adminSessions = pgTable('admin_sessions', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
   expiresAt: text('expires_at').notNull(),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
 })
@@ -41,7 +44,7 @@ export const siteSettings = pgTable('site_settings', {
   key: text('key').notNull().unique(),
   value: text('value'),
   group: text('group').notNull().default('general'),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -59,7 +62,7 @@ export const seoSettings = pgTable('seo_settings', {
   ogImage: text('og_image'),
   schemaMarkup: text('schema_markup'),
   canonicalUrl: text('canonical_url'),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -86,7 +89,7 @@ export const heroContent = pgTable('hero_content', {
   stat3Value: text('stat3_value'),
   stat4Label: text('stat4_label'),
   stat4Value: text('stat4_value'),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -104,7 +107,7 @@ export const aboutContent = pgTable('about_content', {
   projectsCount: text('projects_count'),
   endpointsCount: text('endpoints_count'),
   deploymentsCount: text('deployments_count'),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -123,8 +126,8 @@ export const timelineItems = pgTable('timeline_items', {
   icon: text('icon'),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -141,7 +144,7 @@ export const skills = pgTable('skills', {
   color: text('color'),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -160,7 +163,7 @@ export const certifications = pgTable('certifications', {
   color: text('color').default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -183,7 +186,7 @@ export const services = pgTable('services', {
   color: text('color').default('#6366f1'),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -258,8 +261,8 @@ export const projects = pgTable('projects', {
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -276,7 +279,7 @@ export const clients = pgTable('clients', {
   isTechPartner: boolean('is_tech_partner').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -313,8 +316,8 @@ export const blogPosts = pgTable('blog_posts', {
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
   featured: boolean('featured').notNull().default(false),
   views: integer('views').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -330,7 +333,7 @@ export const navigationItems = pgTable('navigation_items', {
   parentId: integer('parent_id'),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Media Files ──────────────────────────────────────────────────────────────
@@ -345,7 +348,7 @@ export const mediaFiles = pgTable('media_files', {
   folder: text('folder').default('general'),
   alt: text('alt'),
   caption: text('caption'),
-  uploadedAt: text('uploaded_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  uploadedAt: text('uploaded_at').notNull().$defaultFn(tsNow),
   uploadedBy: text('uploaded_by').references(() => users.id),
 })
 
@@ -362,8 +365,8 @@ export const aiKnowledgeBase = pgTable('ai_knowledge_base', {
   locale: text('locale').default('both'),
   active: boolean('active').notNull().default(true),
   priority: integer('priority').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -383,8 +386,8 @@ export const forms = pgTable('forms', {
   successMessageFa: text('success_message_fa'),
   active: boolean('active').notNull().default(true),
   submissionsCount: integer('submissions_count').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -406,7 +409,7 @@ export const aiModules = pgTable('ai_modules', {
   enabled: boolean('enabled').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   usageCount: integer('usage_count').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 export const aiConversations = pgTable('ai_conversations', {
@@ -417,8 +420,8 @@ export const aiConversations = pgTable('ai_conversations', {
   messagesJson: text('messages_json').notNull().default('[]'),
   sourcesJson: text('sources_json').notNull().default('[]'),
   bookmarked: boolean('bookmarked').notNull().default(false),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Solutions (Phase 6) ──────────────────────────────────────────────────────
@@ -449,8 +452,8 @@ export const solutions = pgTable('solutions', {
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -475,8 +478,8 @@ export const industries = pgTable('industries', {
   seoDescription: text('seo_description'),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 export type Industry = typeof industries.$inferSelect
@@ -515,7 +518,7 @@ export const testimonials = pgTable('testimonials', {
   featured: boolean('featured').notNull().default(false),
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 export type Testimonial = typeof testimonials.$inferSelect
@@ -531,8 +534,8 @@ export const pageTemplates = pgTable('page_templates', {
   defaultPropsJson: text('default_props_json').notNull().default('{}'),
   previewImage: text('preview_image'),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 export type PageTemplate = typeof pageTemplates.$inferSelect
@@ -546,8 +549,8 @@ export const redirects = pgTable('redirects', {
   statusCode: integer('status_code').notNull().default(301),
   active: boolean('active').notNull().default(true),
   hits: integer('hits').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 export type Redirect = typeof redirects.$inferSelect
@@ -565,8 +568,8 @@ export const contactRequests = pgTable('contact_requests', {
   status: text('status', { enum: ['new', 'read', 'replied', 'archived'] }).notNull().default('new'),
   ipAddress: text('ip_address'),
   locale: text('locale').default('en'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Consultation Requests ────────────────────────────────────────────────────
@@ -588,8 +591,8 @@ export const consultationRequests = pgTable('consultation_requests', {
   notes: text('notes'),
   ipAddress: text('ip_address'),
   locale: text('locale').default('en'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Analytics Events ─────────────────────────────────────────────────────────
@@ -604,7 +607,7 @@ export const analyticsEvents = pgTable('analytics_events', {
   locale: text('locale'),
   sessionId: text('session_id'),
   metadata: text('metadata'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
@@ -620,7 +623,7 @@ export const auditLogs = pgTable('audit_logs', {
   newValue: text('new_value'),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Section Builder ──────────────────────────────────────────────────────────
@@ -651,8 +654,8 @@ export const sections = pgTable('sections', {
   scheduledAt: text('scheduled_at'),
   archivedAt: text('archived_at'),
   version: integer('version').notNull().default(1),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
   updatedBy: text('updated_by').references(() => users.id),
 })
@@ -662,7 +665,7 @@ export const sectionVersions = pgTable('section_versions', {
   sectionId: text('section_id').notNull().references(() => sections.id, { onDelete: 'cascade' }),
   version: integer('version').notNull(),
   snapshot: text('snapshot').notNull(),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -679,8 +682,8 @@ export const pages = pgTable('pages', {
   layout: text('layout').notNull().default('default'),
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
   publishedAt: text('published_at'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
   updatedBy: text('updated_by').references(() => users.id),
 })
@@ -743,8 +746,8 @@ export const sites = pgTable('sites', {
   shareKb: boolean('share_kb').notNull().default(false),
   shareUsers: boolean('share_users').notNull().default(false),
   workspaceId: text('workspace_id'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -762,8 +765,8 @@ export const workspaces = pgTable('workspaces', {
   isolationLevel: text('isolation_level', { enum: ['shared', 'isolated', 'partial'] }).notNull().default('partial'),
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -793,7 +796,7 @@ export const organization = pgTable('organization', {
   legalJson: text('legal_json').default('{}'),
   businessUnitsJson: text('business_units_json').default('[]'),
   certificationsJson: text('certifications_json').default('[]'),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -866,8 +869,8 @@ export const products = pgTable('products', {
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -883,7 +886,7 @@ export const productReleases = pgTable('product_releases', {
   changelogFa: text('changelog_fa'),
   downloadUrl: text('download_url'),
   breakingChanges: boolean('breaking_changes').notNull().default(false),
-  publishedAt: text('published_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  publishedAt: text('published_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -926,8 +929,8 @@ export const docs = pgTable('docs', {
   seoDescription: text('seo_description'),
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -971,8 +974,8 @@ export const courses = pgTable('courses', {
   status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 export type Course = typeof courses.$inferSelect
@@ -1019,8 +1022,8 @@ export const events = pgTable('events', {
   featured: boolean('featured').notNull().default(false),
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   createdBy: text('created_by').references(() => users.id),
 })
 
@@ -1034,7 +1037,7 @@ export const eventRegistrations = pgTable('event_registrations', {
   company: text('company'),
   phone: text('phone'),
   status: text('status', { enum: ['pending', 'confirmed', 'attended', 'cancelled'] }).notNull().default('pending'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Phase 7: Integrations ────────────────────────────────────────────────────
@@ -1054,7 +1057,7 @@ export const integrations = pgTable('integrations', {
   lastSyncAt: text('last_sync_at'),
   errorMessage: text('error_message'),
   sortOrder: integer('sort_order').notNull().default(0),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1078,7 +1081,7 @@ export const partners = pgTable('partners', {
   active: boolean('active').notNull().default(true),
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 export type Partner = typeof partners.$inferSelect
@@ -1094,7 +1097,7 @@ export const roleAssignments = pgTable('role_assignments', {
   grantedBy: text('granted_by').references(() => users.id),
   expiresAt: text('expires_at'),
   active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 // ─── Phase 7: Global Search Index ────────────────────────────────────────────
@@ -1113,7 +1116,7 @@ export const searchIndex = pgTable('search_index', {
   siteId: text('site_id'),
   locale: text('locale').default('both'),
   active: boolean('active').notNull().default(true),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1147,8 +1150,8 @@ export const organizations = pgTable('organizations', {
   active: boolean('active').notNull().default(true),
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1204,8 +1207,8 @@ export const content = pgTable('content', {
   ogImage: text('og_image'),
   sortOrder: integer('sort_order').notNull().default(0),
   publishedAt: text('published_at'),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1234,7 +1237,7 @@ export const credentials = pgTable('credentials', {
   active: boolean('active').notNull().default(true),
   featured: boolean('featured').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
-  updatedAt: text('updated_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  updatedAt: text('updated_at').notNull().$defaultFn(tsNow),
   updatedBy: text('updated_by').references(() => users.id),
 })
 
@@ -1260,7 +1263,7 @@ export const successStories = pgTable('success_stories', {
   featured: boolean('featured').notNull().default(false),
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: text('created_at').notNull().default(sql`(to_char(now(), 'YYYY-MM-DD HH24:MI:SS'))`),
+  createdAt: text('created_at').notNull().$defaultFn(tsNow),
 })
 
 export type SuccessStory = typeof successStories.$inferSelect

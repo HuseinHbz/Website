@@ -10,7 +10,7 @@ export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getDb()
-  return await NextResponse.json(db.select().from(sites))
+  return NextResponse.json(await db.select().from(sites))
 }
 
 export async function POST(req: NextRequest) {

@@ -16,27 +16,38 @@ let initialized = false
 
 async function ensureInit() {
   if (!initialized) {
-    runMigrations()
+    await runMigrations()
     await seedDatabase()
     initialized = true
   }
 }
 
 export async function POST(req: NextRequest) {
-  await ensureInit()
-  const parsed = await readJson(req, schema)
-  if ('error' in parsed) return parsed.error
-  const { email, password, totpCode } = parsed.data
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
-  const ua = req.headers.get('user-agent') || undefined
-  const result = await signIn(email, password, ip ?? undefined, ua, totpCode ?? undefined)
-  if (result.error) {
-    logger.security('Failed login attempt', { email, ip, ua: ua?.slice(0, 100) })
-    return NextResponse.json({ error: result.error }, { status: 401 })
+  try {
+    await ensureInit()
+    const parsed = await readJson(req, schema)
+    if ('error' in parsed) return parsed.error
+    const { email, password, totpCode } = parsed.data
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
+    const ua = req.headers.get('user-agent') || undefined
+    const result = await signIn(email, password, ip ?? undefined, ua, totpCode ?? undefined)
+    if (result.error) {
+      logger.security('Failed login attempt', { email, ip, ua: ua?.slice(0, 100) })
+      return NextResponse.json({ error: result.error }, { status: 401 })
+    }
+    if (result.requireTotp) {
+      return NextResponse.json({ requireTotp: true }, { status: 200 })
+    }
+    logger.audit('LOGIN', 'admin', undefined, { email, ip })
+    return NextResponse.json({ user: result.user })
+  } catch (e) {
+    // Never let the login route emit a non-JSON 500 (the client would show a
+    // generic "Network error"). Surface a real message + log the server detail.
+    // Include the underlying driver cause (e.g. `column ... does not exist`),
+    // which pinpoints schema drift far better than Drizzle's "Failed query".
+    const cause = (e as { cause?: { message?: string } })?.cause?.message
+    const detail = `${e instanceof Error ? e.message : String(e)}${cause ? ` — ${cause}` : ''}`
+    logger.error('Login route failed', { error: detail })
+    return NextResponse.json({ error: `Login failed: ${detail}` }, { status: 500 })
   }
-  if (result.requireTotp) {
-    return NextResponse.json({ requireTotp: true }, { status: 200 })
-  }
-  logger.audit('LOGIN', 'admin', undefined, { email, ip })
-  return NextResponse.json({ user: result.user })
 }

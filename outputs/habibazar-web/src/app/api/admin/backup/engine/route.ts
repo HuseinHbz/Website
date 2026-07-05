@@ -49,13 +49,13 @@ export async function GET() {
        WHERE ts >= $1 AND (
          (source='backup' AND level IN ('warn','error')) OR
          (source='system' AND level='error') OR
-         message LIKE '%storage_unreachable%'
+         message ILIKE '%storage_unreachable%'
        ) GROUP BY message, level ORDER BY lastTs DESC LIMIT 20`,
       [since],
     ) as { message: string; count: number; lastTs: string; level: string }[]
 
     const dbErrors = Number(((await pgQuery(
-      `SELECT count(*) c FROM system_logs WHERE ts >= $1 AND level='error' AND (message LIKE '%database%' OR message LIKE '%postgres%' OR service='db')`,
+      `SELECT count(*) c FROM system_logs WHERE ts >= $1 AND level='error' AND (message ILIKE '%database%' OR message ILIKE '%postgres%' OR service='db')`,
       [since],
     ))[0] as { c: number }).c)
 

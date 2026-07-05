@@ -9,7 +9,7 @@ import { logAction } from '@/lib/admin/audit'
 export async function GET() {
   try {
     const db = getDb()
-    return await NextResponse.json(await db.select().from(heroContent))
+    return NextResponse.json(await db.select().from(heroContent))
   } catch (e: unknown) {
     return apiError(e)
   }

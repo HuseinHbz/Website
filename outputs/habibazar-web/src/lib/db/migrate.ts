@@ -14,8 +14,18 @@ import { getDb, pgQuery } from './index'
  * Runs on server startup from `instrumentation.ts`.
  */
 export async function runMigrations() {
-  // 1) ORM tables via the Drizzle migrator
-  await migrate(getDb(), { migrationsFolder: path.join(process.cwd(), 'drizzle') })
+  // 1) ORM tables via the Drizzle migrator. On a database that was already
+  //    provisioned (e.g. by an earlier deploy) whose migration ledger is out of
+  //    sync, the migrator can throw "already exists"/"does not exist" while trying
+  //    to (re)apply. The schema is present, so treat that as non-fatal and carry
+  //    on — the raw-table step below is idempotent (CREATE TABLE IF NOT EXISTS).
+  try {
+    await migrate(getDb(), { migrationsFolder: path.join(process.cwd(), 'drizzle') })
+  } catch (e) {
+    const msg = String(e instanceof Error ? e.message : e)
+    if (!/already exists|does not exist/i.test(msg)) throw e
+    console.warn('[migrate] drizzle migrator skipped (schema already present):', msg.slice(0, 160))
+  }
 
   // 2) raw-SQL-only tables (accessed via pgQuery, not the ORM)
   const NOW = "to_char(now(), 'YYYY-MM-DD HH24:MI:SS')"

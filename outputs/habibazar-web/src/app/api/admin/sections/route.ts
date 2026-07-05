@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
         .where(eq(sectionVersions.sectionId, id))
         .orderBy(desc(sectionVersions.version))
         
-      return await NextResponse.json({ ...section, versions })
+      return NextResponse.json({ ...section, versions })
     }
 
     const conditions = []
