@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext } from 'react'
+import { createContext, useCallback, useContext } from 'react'
 
 export type AdminLocale = 'fa' | 'en'
 const Ctx = createContext<AdminLocale>('fa')
@@ -1132,5 +1132,10 @@ const T: Record<string, { fa: string; en: string }> = {
 
 export function useT() {
   const locale = useAdminLocale()
-  return (key: string): string => T[key]?.[locale] ?? key
+  // Memoized so the returned `t` is stable across renders. Consumers put `t` in
+  // useCallback/useEffect dependency arrays (e.g. a data-loading effect); an
+  // unstable function there re-creates the effect every render → infinite
+  // refetch loop (the same class of bug as an unstable `toast`). Only changes
+  // when the locale changes.
+  return useCallback((key: string): string => T[key]?.[locale] ?? key, [locale])
 }
