@@ -165,6 +165,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   permission-denied, rate-limit and security-error events + audit LOGINs into a
   24h threat posture. Risk level/score is pure, unit-tested (`src/lib/soc/risk.ts`).
   Distinct from `/admin/security` (2FA/sessions) and Logs & Monitoring (raw stream).
+- **Workflow Designer** (`/admin/workflows`, `WorkflowManager`) — Phase-21 automation
+  foundation. `workflows` + `workflow_runs` tables (definition graph JSON, versioned,
+  status-gated, full run history). The execution engine `src/lib/workflow/engine.ts`
+  is pure + unit-tested: `executeWorkflow(def, input, {handlers})` walks a node graph
+  (`start·end·set·condition·log·task·delay·approval`), deterministic, loop-safe (step
+  budget), pauses at `approval` (→ `waiting`), side effects only via injected
+  `TaskHandler`s. `GET/POST/PUT/DELETE /api/admin/workflows` + `POST/GET
+  /api/admin/workflows/run`: zod-validated, RBAC-gated, audit-logged; definition is
+  engine-validated before persist; external task actions (email/webhook/http) are
+  recorded as intents, not executed, until wired. Rules Engine + Integration Hub are
+  the documented roadmap (`docs/governance/phase21-automation-platform.md`) — they
+  compose via the engine's handler seam (no duplicated logic).
 - **Feature Flag Center** (`/admin/flags`, `FlagsManager`) — Phase-18 SaaS building
   block. `feature_flags` table (key/enabled/rollout_percent). Evaluation
   `src/lib/flags/evaluate.ts` is pure + unit-tested: `isEnabled(flag, subject)`

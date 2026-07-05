@@ -102,6 +102,12 @@ const NAV = [
     ],
   },
   {
+    group: { en: 'Automation', fa: 'اتوماسیون' },
+    items: [
+      { labelEn: 'Workflow Designer', labelFa: 'طراح گردش‌کار', href: '/admin/workflows', icon: '🔀' },
+    ],
+  },
+  {
     group: { en: 'AI Platform', fa: 'پلتفرم هوش مصنوعی' },
     items: [
       { labelEn: 'AI Control Center', labelFa: 'مرکز کنترل هوش مصنوعی', href: '/admin/ai-control', icon: '🤖' },

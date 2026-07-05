@@ -107,6 +107,41 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Enterprise Workflow Designer (Phase 21): visual, script-less business
+    -- workflows. The definition column is the node/edge graph (JSON), executed
+    -- by the pure engine in lib/workflow/engine.ts. Versioned + status-gated.
+    CREATE TABLE IF NOT EXISTS workflows (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      description TEXT,
+      definition TEXT NOT NULL DEFAULT '{}',
+      version INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
+      active INTEGER NOT NULL DEFAULT 1,
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Execution history for each workflow run (status + log + variables).
+    CREATE TABLE IF NOT EXISTS workflow_runs (
+      id SERIAL PRIMARY KEY,
+      workflow_id INTEGER NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('completed','waiting','failed')),
+      trigger TEXT NOT NULL DEFAULT 'manual',
+      input TEXT,
+      variables TEXT,
+      log TEXT,
+      error TEXT,
+      steps INTEGER NOT NULL DEFAULT 0,
+      waiting_node TEXT,
+      run_by TEXT REFERENCES users(id),
+      started_at TEXT NOT NULL DEFAULT (${NOW}),
+      finished_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_syslogs_ts ON system_logs(ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
@@ -115,5 +150,7 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_backups_status ON backups(status);
     CREATE INDEX IF NOT EXISTS idx_assets_type_status ON assets(type, status);
     CREATE INDEX IF NOT EXISTS idx_assets_warranty ON assets(warranty_expiry);
+    CREATE INDEX IF NOT EXISTS idx_wf_runs_wf ON workflow_runs(workflow_id, started_at);
+    CREATE INDEX IF NOT EXISTS idx_wf_status ON workflows(status);
   `)
 }
