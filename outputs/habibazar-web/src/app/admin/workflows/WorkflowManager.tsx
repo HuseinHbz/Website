@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Status = 'draft' | 'active' | 'archived'
 interface Workflow {
@@ -33,6 +34,7 @@ function statusColor(s: Status) { return s === 'active' ? 'green' : s === 'archi
 function runColor(s: Run['status']) { return s === 'completed' ? 'green' : s === 'waiting' ? 'yellow' : 'red' }
 
 export function WorkflowManager() {
+  const t = useT()
   const { toast, ToastContainer } = useToast()
   const [items, setItems] = useState<Workflow[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,15 +50,15 @@ export function WorkflowManager() {
     try {
       const r = await fetch('/api/admin/workflows')
       if (r.ok) { const d = await r.json(); setItems(d.workflows ?? []) }
-    } catch { toast('Failed to load workflows', 'error') } finally { setLoading(false) }
-  }, [toast])
+    } catch { toast(t('wf_loadFail'), 'error') } finally { setLoading(false) }
+  }, [toast, t])
   useEffect(() => { load() }, [load])
 
   function set<K extends keyof Workflow>(k: K, v: Workflow[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
   async function save() {
     // client-side JSON sanity before hitting the API (which fully validates)
-    try { JSON.parse(editing.definition) } catch { toast('Definition is not valid JSON', 'error'); return }
+    try { JSON.parse(editing.definition) } catch { toast(t('wf_jsonInvalid'), 'error'); return }
     setSaving(true)
     try {
       const r = await fetch('/api/admin/workflows', {
@@ -66,29 +68,29 @@ export function WorkflowManager() {
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'save failed')
-      toast('Workflow saved', 'success'); setModal(false); load()
-    } catch (e) { toast(e instanceof Error ? e.message : 'Save failed', 'error') } finally { setSaving(false) }
+      toast(t('wf_savedOk'), 'success'); setModal(false); load()
+    } catch (e) { toast(e instanceof Error ? e.message : t('wf_saveFail'), 'error') } finally { setSaving(false) }
   }
 
   async function del(id: number) {
-    if (!confirm('Delete this workflow and its run history?')) return
+    if (!confirm(t('wf_confirmDel'))) return
     try {
       const r = await fetch('/api/admin/workflows', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
       if (!r.ok) throw new Error()
-      toast('Deleted', 'success'); load()
-    } catch { toast('Delete failed', 'error') }
+      toast(t('wf_deleted'), 'success'); load()
+    } catch { toast(t('wf_delFail'), 'error') }
   }
 
   async function run(w: Workflow) {
     let input: unknown = {}
-    try { input = JSON.parse(runInput || '{}') } catch { toast('Run input is not valid JSON', 'error'); return }
+    try { input = JSON.parse(runInput || '{}') } catch { toast(t('wf_runInvalidInput'), 'error'); return }
     try {
       const r = await fetch('/api/admin/workflows/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: w.id, input }) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'run failed')
-      toast(`Run ${d.status} in ${d.steps} steps`, d.status === 'failed' ? 'error' : 'success')
+      toast(`${t('wf_run')}: ${d.status} · ${d.steps} ${t('wf_steps')}`, d.status === 'failed' ? 'error' : 'success')
       if (runsFor?.id === w.id) openRuns(w)
-    } catch (e) { toast(e instanceof Error ? e.message : 'Run failed', 'error') }
+    } catch (e) { toast(e instanceof Error ? e.message : t('wf_runFail'), 'error') }
   }
 
   async function openRuns(w: Workflow) {
@@ -96,28 +98,28 @@ export function WorkflowManager() {
     try {
       const r = await fetch(`/api/admin/workflows/run?workflowId=${w.id}`)
       if (r.ok) { const d = await r.json(); setRuns(d.runs ?? []) }
-    } catch { toast('Failed to load runs', 'error') }
+    } catch { toast(t('wf_loadRunsFail'), 'error') }
   }
 
   return (
     <>
       <ToastContainer />
       <PageHeader
-        title="Workflow Designer"
-        subtitle="Script-less, versioned business workflows — sequential, conditional, approval & task nodes, executed by a deterministic engine."
-        action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>New Workflow</Btn>}
+        title={t('wf_title')}
+        subtitle={t('wf_subtitle')}
+        action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('wf_newWorkflow')}</Btn>}
       />
 
       <Card className="p-0 overflow-hidden">
         {loading ? (
-          <p className="text-sm text-text-tertiary p-5">Loading…</p>
+          <p className="text-sm text-text-tertiary p-5">{t('wf_loading')}</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-text-tertiary p-5">No workflows yet. Click “New Workflow” to design one.</p>
+          <p className="text-sm text-text-tertiary p-5">{t('wf_empty')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {['Workflow', 'Key', 'Status', 'Version', 'Runs', 'Actions'].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
+                {[t('wf_colWorkflow'), t('wf_colKey'), t('wf_colStatus'), t('wf_colVersion'), t('wf_colRuns'), t('wf_colActions')].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
               </tr></thead>
               <tbody>
                 {items.map((w) => (
@@ -129,10 +131,10 @@ export function WorkflowManager() {
                     <td className="px-4 py-2.5 text-text-secondary text-xs">{w.runs ?? 0}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex gap-2 flex-wrap">
-                        <Btn size="sm" onClick={() => run(w)}>Run</Btn>
-                        <Btn size="sm" variant="secondary" onClick={() => openRuns(w)}>History</Btn>
-                        <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...w, nameFa: w.nameFa ?? '', description: w.description ?? '' }); setModal(true) }}>Edit</Btn>
-                        <Btn size="sm" variant="danger" onClick={() => del(w.id!)}>Del</Btn>
+                        <Btn size="sm" onClick={() => run(w)}>{t('wf_run')}</Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => openRuns(w)}>{t('wf_history')}</Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...w, nameFa: w.nameFa ?? '', description: w.description ?? '' }); setModal(true) }}>{t('wf_edit')}</Btn>
+                        <Btn size="sm" variant="danger" onClick={() => del(w.id!)}>{t('wf_del')}</Btn>
                       </div>
                     </td>
                   </tr>
@@ -144,21 +146,21 @@ export function WorkflowManager() {
       </Card>
 
       {/* Editor */}
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Workflow' : 'New Workflow'} size="xl">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('wf_editWorkflow') : t('wf_newWorkflow')} size="xl">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Key *" value={editing.key} onChange={(v) => set('key', v)} placeholder="expense-approval" />
-            <Select label="Status" value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: s }))} />
+            <Input label={t('wf_keyL')} value={editing.key} onChange={(v) => set('key', v)} placeholder="expense-approval" />
+            <Select label={t('wf_statusL')} value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: s }))} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Name (EN) *" value={editing.nameEn} onChange={(v) => set('nameEn', v)} />
-            <Input label="Name (FA)" value={editing.nameFa || ''} onChange={(v) => set('nameFa', v)} />
+            <Input label={t('wf_nameEnL')} value={editing.nameEn} onChange={(v) => set('nameEn', v)} />
+            <Input label={t('wf_nameFaL')} value={editing.nameFa || ''} onChange={(v) => set('nameFa', v)} />
           </div>
-          <Input label="Description" value={editing.description || ''} onChange={(v) => set('description', v)} multiline rows={2} />
+          <Input label={t('wf_description')} value={editing.description || ''} onChange={(v) => set('description', v)} multiline rows={2} />
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-text-secondary">Definition (JSON graph)</label>
-              <button type="button" onClick={() => set('definition', STARTER)} className="text-xs text-brand hover:underline">Reset to starter template</button>
+              <label className="text-xs text-text-secondary">{t('wf_definition')}</label>
+              <button type="button" onClick={() => set('definition', STARTER)} className="text-xs text-brand hover:underline">{t('wf_resetStarter')}</button>
             </div>
             <textarea
               value={editing.definition}
@@ -167,29 +169,29 @@ export function WorkflowManager() {
               spellCheck={false}
               className="w-full font-mono text-xs bg-background border border-border rounded-lg p-3 text-text-primary"
             />
-            <p className="text-xs text-text-tertiary mt-1">Node types: start · end · set · condition · log · task · delay · approval. Saved after structural validation; the graph version bumps on change.</p>
+            <p className="text-xs text-text-tertiary mt-1">{t('wf_nodeHint')}</p>
           </div>
           <div className="flex gap-3">
-            <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Workflow'}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? t('wf_saving') : t('wf_save')}</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('wf_cancel')}</Btn>
           </div>
         </div>
       </Modal>
 
       {/* Run history */}
-      <Modal open={!!runsFor} onClose={() => setRunsFor(null)} title={runsFor ? `Runs — ${runsFor.nameEn}` : ''} size="xl">
+      <Modal open={!!runsFor} onClose={() => setRunsFor(null)} title={runsFor ? `${t('wf_colRuns')} — ${runsFor.nameEn}` : ''} size="xl">
         <div className="space-y-4">
           <div className="flex items-end gap-3">
-            <div className="flex-1"><Input label="Run input (JSON)" value={runInput} onChange={setRunInput} /></div>
-            <Btn onClick={() => runsFor && run(runsFor)}>Run now</Btn>
+            <div className="flex-1"><Input label={t('wf_runsInput')} value={runInput} onChange={setRunInput} /></div>
+            <Btn onClick={() => runsFor && run(runsFor)}>{t('wf_runNow')}</Btn>
           </div>
           {runs.length === 0 ? (
-            <p className="text-sm text-text-tertiary">No runs yet.</p>
+            <p className="text-sm text-text-tertiary">{t('wf_noRuns')}</p>
           ) : runs.map((r) => (
             <div key={r.id} className="rounded-lg border border-subtle p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Badge color={runColor(r.status)}>{r.status}</Badge>
-                <span className="text-xs text-text-tertiary">#{r.id} · {r.steps} steps{r.waitingNode ? ` · waiting @ ${r.waitingNode}` : ''}</span>
+                <span className="text-xs text-text-tertiary">#{r.id} · {r.steps} {t('wf_steps')}{r.waitingNode ? ` · ${t('wf_waitingAt')} ${r.waitingNode}` : ''}</span>
                 <span className="text-xs text-text-tertiary ml-auto">{r.startedAt}</span>
               </div>
               {r.error && <p className="text-xs text-danger mb-1">{r.error}</p>}

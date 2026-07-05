@@ -796,6 +796,15 @@
 
   .form-input::placeholder { color: var(--color-text-tertiary); }
 
+  /* Native <select> dropdown options: force readable colors in dark theme
+     (otherwise the OS renders light text on a default white option list). */
+  .form-input option {
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+  /* Date-picker glyph visible on dark backgrounds */
+  .form-input::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
   .form-input:hover { border-color: var(--color-border-strong); }
 
   .form-input:focus {

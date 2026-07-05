@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, PageHeader, Badge } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Risk = 'low' | 'medium' | 'high' | 'critical'
 interface Soc {
@@ -27,6 +28,7 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: 'ok
 }
 
 export function SocDashboard() {
+  const t = useT()
   const [data, setData] = useState<Soc | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -42,53 +44,53 @@ export function SocDashboard() {
   return (
     <>
       <PageHeader
-        title="Security Operations Center"
-        subtitle={data ? `Last ${data.windowHours}h · updated ${new Date(data.generatedAt).toLocaleTimeString()}` : undefined}
-        action={<Btn size="sm" variant="secondary" onClick={load} disabled={loading}>Refresh</Btn>}
+        title={t('soc_title')}
+        subtitle={data ? `${t('soc_last')} ${data.windowHours}h · ${t('soc_updated')} ${new Date(data.generatedAt).toLocaleTimeString()}` : undefined}
+        action={<Btn size="sm" variant="secondary" onClick={load} disabled={loading}>{t('soc_refresh')}</Btn>}
       />
 
       {loading && !data ? (
-        <p className="text-sm text-text-tertiary">Loading…</p>
+        <p className="text-sm text-text-tertiary">{t('soc_loading')}</p>
       ) : !data ? (
-        <Card className="p-5"><p className="text-sm text-text-tertiary">SOC data unavailable.</p></Card>
+        <Card className="p-5"><p className="text-sm text-text-tertiary">{t('soc_unavailable')}</p></Card>
       ) : (
         <>
           {/* Risk posture */}
           <div className={`rounded-xl p-5 mb-6 border ${RISK_BG[data.risk.level]}`}>
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <p className="text-xs text-text-tertiary mb-1">Threat posture (24h)</p>
+                <p className="text-xs text-text-tertiary mb-1">{t('soc_posture')}</p>
                 <p className="text-3xl font-black text-text-primary uppercase">{data.risk.level}</p>
               </div>
               <div className="text-right">
-                <Badge color={RISK_COLOR[data.risk.level]}>risk score {data.risk.score}</Badge>
-                <p className="text-xs text-text-tertiary mt-1">{data.signals.successfulLogins} successful logins</p>
+                <Badge color={RISK_COLOR[data.risk.level]}>{t('soc_riskScore')} {data.risk.score}</Badge>
+                <p className="text-xs text-text-tertiary mt-1">{data.signals.successfulLogins} {t('soc_successfulLogins')}</p>
               </div>
             </div>
           </div>
 
           {/* Security signals */}
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-            <Tile label="Failed logins" value={data.signals.failedLogins} tone={data.signals.failedLogins > 0 ? 'warn' : 'ok'} />
-            <Tile label="Brute-force IPs" value={data.signals.bruteForceIps} tone={data.signals.bruteForceIps > 0 ? 'bad' : 'ok'} />
-            <Tile label="Injection blocks" value={data.signals.injectionBlocks} tone={data.signals.injectionBlocks > 0 ? 'warn' : 'ok'} />
-            <Tile label="Permission denied" value={data.signals.permissionDenied} tone={data.signals.permissionDenied > 0 ? 'warn' : 'ok'} />
-            <Tile label="Rate limited" value={data.signals.rateLimited} tone={data.signals.rateLimited > 0 ? 'warn' : 'ok'} />
-            <Tile label="Security errors" value={data.signals.securityErrors} tone={data.signals.securityErrors > 0 ? 'bad' : 'ok'} />
+            <Tile label={t('soc_failedLogins')} value={data.signals.failedLogins} tone={data.signals.failedLogins > 0 ? 'warn' : 'ok'} />
+            <Tile label={t('soc_bruteForceIps')} value={data.signals.bruteForceIps} tone={data.signals.bruteForceIps > 0 ? 'bad' : 'ok'} />
+            <Tile label={t('soc_injectionBlocks')} value={data.signals.injectionBlocks} tone={data.signals.injectionBlocks > 0 ? 'warn' : 'ok'} />
+            <Tile label={t('soc_permissionDenied')} value={data.signals.permissionDenied} tone={data.signals.permissionDenied > 0 ? 'warn' : 'ok'} />
+            <Tile label={t('soc_rateLimited')} value={data.signals.rateLimited} tone={data.signals.rateLimited > 0 ? 'warn' : 'ok'} />
+            <Tile label={t('soc_securityErrors')} value={data.signals.securityErrors} tone={data.signals.securityErrors > 0 ? 'bad' : 'ok'} />
           </div>
 
           <div className="grid lg:grid-cols-2 gap-4">
             {/* Top offending IPs */}
             <Card className="p-5">
-              <h3 className="text-sm font-semibold text-text-primary mb-3">Top offending IPs (failed logins)</h3>
+              <h3 className="text-sm font-semibold text-text-primary mb-3">{t('soc_topIps')}</h3>
               {data.topIps.length === 0 ? (
-                <p className="text-sm text-text-tertiary">No failed-login sources in the window.</p>
+                <p className="text-sm text-text-tertiary">{t('soc_noTopIps')}</p>
               ) : (
                 <div className="space-y-2">
                   {data.topIps.map((r) => (
                     <div key={r.ip} className="flex items-center justify-between text-sm">
                       <span className="font-mono text-text-secondary">{r.ip}</span>
-                      <Badge color={r.attempts >= 5 ? 'red' : 'yellow'}>{r.attempts} attempts</Badge>
+                      <Badge color={r.attempts >= 5 ? 'red' : 'yellow'}>{r.attempts} {t('soc_attempts')}</Badge>
                     </div>
                   ))}
                 </div>
@@ -97,9 +99,9 @@ export function SocDashboard() {
 
             {/* Threat timeline */}
             <Card className="p-5">
-              <h3 className="text-sm font-semibold text-text-primary mb-3">Threat timeline</h3>
+              <h3 className="text-sm font-semibold text-text-primary mb-3">{t('soc_timeline')}</h3>
               {data.timeline.length === 0 ? (
-                <p className="text-sm text-text-tertiary">No security events recorded.</p>
+                <p className="text-sm text-text-tertiary">{t('soc_noEvents')}</p>
               ) : (
                 <div className="space-y-1.5 max-h-72 overflow-y-auto">
                   {data.timeline.map((e, i) => (

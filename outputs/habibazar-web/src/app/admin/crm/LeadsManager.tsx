@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
 
 type Status = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 type Source = 'website' | 'referral' | 'consultation' | 'contact_form' | 'event' | 'social' | 'email' | 'other'
@@ -20,6 +21,8 @@ const EMPTY: Lead = { name: '', email: '', phone: '', company: '', source: 'othe
 function money(n: number): string { return n ? `$${n.toLocaleString()}` : '—' }
 
 export function LeadsManager() {
+  const t = useT()
+  const stLabel = useCallback((s: Status) => t(`lead_st_${s}`), [t])
   const { toast, ToastContainer } = useToast()
   const [leads, setLeads] = useState<Lead[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -34,8 +37,8 @@ export function LeadsManager() {
     try {
       const r = await fetch('/api/admin/crm/leads')
       if (r.ok) { const d = await r.json(); setLeads(d.leads ?? []); setStats(d.stats ?? null) }
-    } catch { toast('Failed to load leads', 'error') } finally { setLoading(false) }
-  }, [toast])
+    } catch { toast(t('lead_loadFail'), 'error') } finally { setLoading(false) }
+  }, [toast, t])
   useEffect(() => { load() }, [load])
 
   async function save() {
@@ -47,16 +50,16 @@ export function LeadsManager() {
         body: JSON.stringify(editing),
       })
       if (!r.ok) throw new Error()
-      toast('Lead saved', 'success'); setModal(false); load()
-    } catch { toast('Save failed (check required fields)', 'error') } finally { setSaving(false) }
+      toast(t('lead_savedOk'), 'success'); setModal(false); load()
+    } catch { toast(t('lead_saveFail'), 'error') } finally { setSaving(false) }
   }
   async function del(id: number) {
-    if (!confirm('Delete this lead?')) return
+    if (!confirm(t('lead_confirmDel'))) return
     try {
       const r = await fetch('/api/admin/crm/leads', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
       if (!r.ok) throw new Error()
-      toast('Lead deleted', 'success'); load()
-    } catch { toast('Delete failed', 'error') }
+      toast(t('lead_deletedOk'), 'success'); load()
+    } catch { toast(t('lead_delFail'), 'error') }
   }
   async function move(lead: Lead, status: Status) {
     try {
@@ -71,39 +74,39 @@ export function LeadsManager() {
   return (
     <>
       <ToastContainer />
-      <PageHeader title="CRM — Leads" action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>New Lead</Btn>} />
+      <PageHeader title={t('lead_title')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('lead_newLead')}</Btn>} />
 
       {/* Sales KPIs */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">Total leads</p><p className="text-2xl font-bold text-text-primary">{stats.total}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">Open pipeline</p><p className="text-2xl font-bold text-text-primary">{money(stats.openValue)}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-success/40"><p className="text-xs text-text-tertiary mb-1">Won value</p><p className="text-2xl font-bold text-success">{money(stats.wonValue)}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">Win rate</p><p className="text-2xl font-bold text-text-primary">{stats.winRate}%</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">Avg score</p><p className="text-2xl font-bold text-text-primary">{stats.avgScore}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">{t('lead_totalLeads')}</p><p className="text-2xl font-bold text-text-primary">{stats.total}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">{t('lead_openPipeline')}</p><p className="text-2xl font-bold text-text-primary">{money(stats.openValue)}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-success/40"><p className="text-xs text-text-tertiary mb-1">{t('lead_wonValue')}</p><p className="text-2xl font-bold text-success">{money(stats.wonValue)}</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">{t('lead_winRate')}</p><p className="text-2xl font-bold text-text-primary">{stats.winRate}%</p></div>
+          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">{t('lead_avgScore')}</p><p className="text-2xl font-bold text-text-primary">{stats.avgScore}</p></div>
         </div>
       )}
 
       {/* Pipeline filter */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === 'all' ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>All ({leads.length})</button>
+        <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === 'all' ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>{t('lead_all')} ({leads.length})</button>
         {STATUSES.map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize ${filter === s ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>
-            {s} ({stats?.byStatus[s] ?? 0})
+          <button key={s} onClick={() => setFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === s ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>
+            {stLabel(s)} ({stats?.byStatus[s] ?? 0})
           </button>
         ))}
       </div>
 
       <Card className="p-0 overflow-hidden">
         {loading ? (
-          <p className="text-sm text-text-tertiary p-5">Loading…</p>
+          <p className="text-sm text-text-tertiary p-5">{t('lead_loading')}</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-text-tertiary p-5">No leads. Click “New Lead” to add one.</p>
+          <p className="text-sm text-text-tertiary p-5">{t('lead_empty')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {['Lead', 'Company', 'Source', 'Score', 'Value', 'Stage', 'Actions'].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
+                {[t('lead_colLead'), t('lead_colCompany'), t('lead_colSource'), t('lead_colScore'), t('lead_colValue'), t('lead_colStage'), t('lead_colActions')].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
               </tr></thead>
               <tbody>
                 {filtered.map((l) => (
@@ -120,14 +123,14 @@ export function LeadsManager() {
                     <td className="px-4 py-2.5 text-text-secondary text-xs">{money(l.value)}</td>
                     <td className="px-4 py-2.5">
                       <select value={l.status} onChange={(e) => move(l, e.target.value as Status)}
-                        className="bg-background border border-border rounded-md px-2 py-1 text-xs text-white capitalize">
-                        {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        className="form-input !py-1 !px-2 text-xs w-auto">
+                        {STATUSES.map((s) => <option key={s} value={s}>{stLabel(s)}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex gap-2">
-                        <Btn size="sm" variant="secondary" onClick={() => { setEditing(l); setModal(true) }}>Edit</Btn>
-                        <Btn size="sm" variant="danger" onClick={() => del(l.id!)}>Del</Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => { setEditing(l); setModal(true) }}>{t('lead_edit')}</Btn>
+                        <Btn size="sm" variant="danger" onClick={() => del(l.id!)}>{t('lead_del')}</Btn>
                       </div>
                     </td>
                   </tr>
@@ -138,26 +141,26 @@ export function LeadsManager() {
         )}
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Lead' : 'New Lead'} size="lg">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('lead_editLead') : t('lead_newLead')} size="lg">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Name *" value={editing.name} onChange={(v) => set('name', v)} />
-            <Input label="Company" value={editing.company || ''} onChange={(v) => set('company', v)} />
+            <Input label={t('lead_nameL')} value={editing.name} onChange={(v) => set('name', v)} />
+            <Input label={t('lead_companyL')} value={editing.company || ''} onChange={(v) => set('company', v)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Email" value={editing.email || ''} onChange={(v) => set('email', v)} />
-            <Input label="Phone" value={editing.phone || ''} onChange={(v) => set('phone', v)} />
+            <Input label={t('lead_emailL')} value={editing.email || ''} onChange={(v) => set('email', v)} />
+            <Input label={t('lead_phoneL')} value={editing.phone || ''} onChange={(v) => set('phone', v)} />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <Select label="Source" value={editing.source} onChange={(v) => set('source', v as Source)} options={SOURCES.map((s) => ({ value: s, label: s.replace('_', ' ') }))} />
-            <Select label="Stage" value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: s }))} />
-            <Input label="Value ($)" type="number" value={String(editing.value)} onChange={(v) => set('value', Number(v) || 0)} />
+            <Select label={t('lead_sourceL')} value={editing.source} onChange={(v) => set('source', v as Source)} options={SOURCES.map((s) => ({ value: s, label: s.replace('_', ' ') }))} />
+            <Select label={t('lead_stageL')} value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: stLabel(s) }))} />
+            <Input label={t('lead_valueL')} type="number" value={String(editing.value)} onChange={(v) => set('value', Number(v) || 0)} />
           </div>
-          <Input label="Notes" value={editing.notes || ''} onChange={(v) => set('notes', v)} multiline rows={4} />
-          <p className="text-xs text-text-tertiary">Score is computed automatically from completeness, source, stage and value.</p>
+          <Input label={t('lead_notesL')} value={editing.notes || ''} onChange={(v) => set('notes', v)} multiline rows={4} />
+          <p className="text-xs text-text-tertiary">{t('lead_scoreHint')}</p>
           <div className="flex gap-3">
-            <Btn onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Lead'}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? t('lead_saving') : t('lead_save')}</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('lead_cancel')}</Btn>
           </div>
         </div>
       </Modal>
