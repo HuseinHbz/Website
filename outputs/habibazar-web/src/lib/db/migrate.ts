@@ -258,6 +258,20 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- Project Costing (Phase 21.4): cost + revenue entries per project. Labor
+    -- cost is also derived from timesheets × the project rate in the engine.
+    CREATE TABLE IF NOT EXISTS pm_cost_entries (
+      id SERIAL PRIMARY KEY,
+      project_id INTEGER NOT NULL REFERENCES pm_projects(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL DEFAULT 'cost' CHECK(kind IN ('cost','revenue')),
+      category TEXT NOT NULL DEFAULT 'other',
+      description TEXT,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      date TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Enterprise Sales (Phase 21 ERP, Module 2). Customers with a credit limit;
     -- a unified sales document (quote/order/invoice/credit_note) with lines
     -- carrying discount % and tax %; and payments applied to invoices.
@@ -525,6 +539,7 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_pm_milestones_project ON pm_milestones(project_id);
     CREATE INDEX IF NOT EXISTS idx_pm_timesheets_project ON pm_timesheets(project_id);
     CREATE INDEX IF NOT EXISTS idx_pm_projects_status ON pm_projects(status);
+    CREATE INDEX IF NOT EXISTS idx_pm_costs_project ON pm_cost_entries(project_id, kind);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

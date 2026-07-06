@@ -188,6 +188,13 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   range. APIs `/api/admin/erp/projects` (CRUD/list/detail/overview) +
   `/projects/items` (task/milestone/timesheet create/move/delete) — zod/RBAC/
   audited. Verified vs real PostgreSQL (progress/health/Gantt round-trip).
+  **Project Costing** (Phase-21.4, subsystem 7) is a "Costing" view in the detail
+  hub: pure engine `src/lib/erp/costing.ts` (`costByCategory`, `costingSummary`
+  with profit/margin, budget variance and earned-value forecast EAC/VAC,
+  `costingKpis`; 8 unit tests). Server layer `src/lib/erp/costingData.ts` derives
+  labor from timesheet hours × rate + manual cost/revenue entries + % progress.
+  API `/api/admin/erp/projects/costing` (detail/overview/add/delete). Verified vs
+  real PostgreSQL (profit + EVM forecast round-trip).
 - **Sales Center** (`/admin/sales`, `SalesCenter`) — Phase-21 ERP Module 2
   (Enterprise Sales). Tabbed: Dashboard · Customers · Quotations · Sales Orders ·
   Invoices · Payments. Tables `sales_customers` (credit limit), `sales_documents`

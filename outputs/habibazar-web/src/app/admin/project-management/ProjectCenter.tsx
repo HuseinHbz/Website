@@ -93,6 +93,10 @@ function Kpi({ label, value, icon, tone }: { label: string; value: string; icon:
   const ring = tone === 'ok' ? 'border-success/40' : tone === 'warn' ? 'border-warning/40' : tone === 'bad' ? 'border-danger/40' : 'border-subtle'
   return <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}><div className="flex items-center justify-between mb-1"><p className="text-xs text-text-tertiary">{label}</p><span aria-hidden>{icon}</span></div><p className="text-lg font-bold text-text-primary">{value}</p></div>
 }
+function CostKpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'ok' | 'warn' | 'bad' }) {
+  const ring = tone === 'ok' ? 'border-success/40' : tone === 'warn' ? 'border-warning/40' : tone === 'bad' ? 'border-danger/40' : 'border-subtle'
+  return <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}><p className="text-xs text-text-tertiary mb-1">{label}</p><p className="text-base font-bold text-text-primary">{value}</p>{sub && <p className="text-[11px] text-text-tertiary mt-0.5">{sub}</p>}</div>
+}
 
 function Projects({ t, toast, onOpen }: { t: T; toast: Toast; onOpen: (id: number) => void }) {
   const [rows, setRows] = useState<Project[]>([])
@@ -141,11 +145,29 @@ function Projects({ t, toast, onOpen }: { t: T; toast: Toast; onOpen: (id: numbe
   )
 }
 
+interface CostingEntry { id: number; kind: 'cost' | 'revenue'; category: string; description: string | null; amount: number; date: string }
+interface CostingSummary { totalCost: number; totalRevenue: number; profit: number; marginPct: number; isLoss: boolean; budget: number; variance: number; variancePct: number; overBudget: boolean; eac: number; vac: number; forecastOverrun: boolean }
+interface Costing { summary: CostingSummary; entries: CostingEntry[]; laborFromTimesheets: number; progressPct: number }
+const COST_CATS = ['labor', 'equipment', 'purchase', 'travel', 'expense', 'other']
+const REV_CATS = ['sales', 'service', 'milestone', 'other']
+
 function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () => void; toast: Toast }) {
   const [d, setD] = useState<Detail | null>(null)
-  const [view, setView] = useState<'kanban' | 'gantt' | 'milestones' | 'timesheet'>('kanban')
-  const load = useCallback(async () => { const r = await fetch(`/api/admin/erp/projects?id=${id}`); if (r.ok) setD(await r.json()) }, [id])
+  const [view, setView] = useState<'kanban' | 'gantt' | 'milestones' | 'timesheet' | 'costing'>('kanban')
+  const [costing, setCosting] = useState<Costing | null>(null)
+  const load = useCallback(async () => {
+    const [r, c] = await Promise.all([fetch(`/api/admin/erp/projects?id=${id}`), fetch(`/api/admin/erp/projects/costing?id=${id}`)])
+    if (r.ok) setD(await r.json()); if (c.ok) setCosting(await c.json())
+  }, [id])
   useEffect(() => { load() }, [load])
+
+  const [ceForm, setCeForm] = useState({ kind: 'cost' as 'cost' | 'revenue', category: 'purchase', description: '', amount: 0, date: new Date().toISOString().slice(0, 10) })
+  async function addEntry() {
+    if (ceForm.amount <= 0) return
+    const r = await fetch('/api/admin/erp/projects/costing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: id, ...ceForm }) })
+    if (r.ok) { toast(t('pm_saved'), 'success'); setCeForm(f => ({ ...f, description: '', amount: 0 })); load() } else { const dd = await r.json().catch(() => ({})); toast(dd.error || t('pm_saveFail'), 'error') }
+  }
+  async function delEntry(eid: number) { const r = await fetch('/api/admin/erp/projects/costing', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: eid }) }); if (r.ok) load() }
 
   const [taskModal, setTaskModal] = useState(false)
   const [task, setTask] = useState<Partial<Task>>({ status: 'todo', priority: 'medium', estimateHours: 0 })
@@ -176,7 +198,7 @@ function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () 
       <div className="mb-4"><ProgressBar pct={p.progress ?? 0} /></div>
 
       <div className="flex gap-1 mb-5 border-b border-subtle">
-        {(['kanban', 'gantt', 'milestones', 'timesheet'] as const).map(v => (
+        {(['kanban', 'gantt', 'milestones', 'timesheet', 'costing'] as const).map(v => (
           <button key={v} onClick={() => setView(v)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${view === v ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>{t(`pm_view_${v}` as 'pm_view_kanban')}</button>
         ))}
       </div>
@@ -266,6 +288,55 @@ function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () 
             </table></div>
           )}
         </Card>
+      )}
+
+      {view === 'costing' && (
+        costing ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <CostKpi label={t('pm_cBudget')} value={money(costing.summary.budget)} />
+              <CostKpi label={t('pm_cCost')} value={money(costing.summary.totalCost)} tone={costing.summary.overBudget ? 'bad' : undefined} />
+              <CostKpi label={t('pm_cRevenue')} value={money(costing.summary.totalRevenue)} />
+              <CostKpi label={costing.summary.isLoss ? t('pm_cLoss') : t('pm_cProfit')} value={money(costing.summary.profit)} tone={costing.summary.isLoss ? 'bad' : 'ok'} sub={`${costing.summary.marginPct}%`} />
+              <CostKpi label={t('pm_cVariance')} value={money(costing.summary.variance)} tone={costing.summary.variance < 0 ? 'bad' : 'ok'} sub={`${costing.summary.variancePct}%`} />
+              <CostKpi label={t('pm_cEac')} value={money(costing.summary.eac)} tone={costing.summary.forecastOverrun ? 'warn' : undefined} />
+              <CostKpi label={t('pm_cVac')} value={money(costing.summary.vac)} tone={costing.summary.vac < 0 ? 'bad' : 'ok'} />
+              <CostKpi label={t('pm_cLabor')} value={money(costing.laborFromTimesheets)} sub={`${costing.progressPct}%`} />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card className="p-5">
+                <h4 className="text-sm font-semibold text-text-primary mb-3">{t('pm_addEntry')}</h4>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select label={t('pm_ceKind')} value={ceForm.kind} onChange={v => setCeForm(f => ({ ...f, kind: v as 'cost' | 'revenue', category: v === 'cost' ? 'purchase' : 'sales' }))} options={[{ value: 'cost', label: t('pm_ce_cost') }, { value: 'revenue', label: t('pm_ce_revenue') }]} />
+                    <Select label={t('pm_ceCategory')} value={ceForm.category} onChange={v => setCeForm(f => ({ ...f, category: v }))} options={(ceForm.kind === 'cost' ? COST_CATS : REV_CATS).map(x => ({ value: x, label: t(`pm_cat_${x}` as 'pm_cat_labor') }))} />
+                  </div>
+                  <Input label={t('pm_ceDesc')} value={ceForm.description} onChange={v => setCeForm(f => ({ ...f, description: v }))} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input label={t('pm_ceAmount')} type="number" value={String(ceForm.amount)} onChange={v => setCeForm(f => ({ ...f, amount: Number(v) || 0 }))} />
+                    <Input label={t('pm_fDate')} type="date" value={ceForm.date} onChange={v => setCeForm(f => ({ ...f, date: v }))} />
+                  </div>
+                  <Btn size="sm" onClick={addEntry}>{t('pm_add')}</Btn>
+                </div>
+              </Card>
+              <Card className="p-5">
+                <h4 className="text-sm font-semibold text-text-primary mb-3">{t('pm_entries')}</h4>
+                {costing.entries.length === 0 && costing.laborFromTimesheets === 0 ? <p className="text-xs text-text-tertiary">{t('pm_noEntries')}</p> : (
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                    {costing.laborFromTimesheets > 0 && <div className="flex items-center justify-between text-xs border-b border-subtle/50 pb-1.5"><span className="text-text-secondary">{t('pm_cat_labor')} <span className="text-text-tertiary">({t('pm_fromTimesheets')})</span></span><span className="text-danger-text">−{money(costing.laborFromTimesheets)}</span></div>}
+                    {costing.entries.map(e => (
+                      <div key={e.id} className="flex items-center justify-between text-xs">
+                        <span className="text-text-secondary">{t(`pm_cat_${e.category}` as 'pm_cat_labor')}{e.description ? ` · ${e.description}` : ''} <span className="text-text-tertiary">{e.date}</span></span>
+                        <div className="flex items-center gap-2"><span className={e.kind === 'revenue' ? 'text-success-text' : 'text-danger-text'}>{e.kind === 'revenue' ? '+' : '−'}{money(e.amount)}</span><button onClick={() => delEntry(e.id)} className="text-danger hover:underline">✕</button></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        ) : <p className="text-sm text-text-tertiary">{t('pm_loading')}</p>
       )}
 
       <Modal open={taskModal} onClose={() => setTaskModal(false)} title={t('pm_newTask')} size="lg">
