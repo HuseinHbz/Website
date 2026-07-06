@@ -110,6 +110,7 @@ const NAV = [
     group: { en: 'Automation', fa: 'اتوماسیون' },
     items: [
       { labelEn: 'Workflow Designer', labelFa: 'طراح گردش‌کار', href: '/admin/workflows', icon: '🔀' },
+      { labelEn: 'Rules Center', labelFa: 'مرکز قوانین', href: '/admin/rules', icon: '⚖️' },
     ],
   },
   {

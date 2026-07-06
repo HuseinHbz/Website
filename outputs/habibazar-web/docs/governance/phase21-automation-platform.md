@@ -87,3 +87,32 @@ existing engine — `amount:500` → completed (5 steps, auto branch), `amount:5
 
 Business Rules Engine + Integration Hub remain the documented roadmap; they
 compose through the engine's `task`/`condition` handler seam.
+
+## Phase 21.7 update — Business Rules Engine (shipped)
+
+Built after the Workflow Designer, since workflows consume rules.
+
+- **Pure engine** (`src/lib/rules/engine.ts`, 7 unit tests): a decision-table
+  evaluator. `evalCondition` supports eq/ne/gt/gte/lt/lte/in/nin/contains/between/
+  truthy/falsy over dotted fact paths; `ruleMatches` combines conditions with
+  all/any; `runRules` evaluates rules highest-priority first in `first`-match or
+  `collect`-merge mode and returns matches + merged outputs + a full trace;
+  `validateRuleSet` guards structure. Covers discount/tax/validation/approval/
+  inventory/pricing/financial rules through one generic model.
+- **Versioned decision tables** (PostgreSQL): `business_rules` (head + active
+  version + status) × `business_rule_versions` (immutable history → rollback).
+- **API** `/api/admin/erp/rules` (CRUD, newVersion, setActive-rollback, activate,
+  archive) + `/rules/simulate` (test facts → matched rules + outputs + trace).
+- **UI** `/admin/rules` (bilingual): rule list, JSON decision-table editor,
+  live **simulate/test** panel, and version history with one-click rollback.
+- **Workflow ↔ Rules composition** (the point of ordering): the workflow run
+  route registers a `rule` task handler (`runRuleByKey`) that evaluates a rule's
+  active version against the workflow's variables and merges the outputs back.
+  So a workflow `task` node `{action:'rule', config:{ruleKey}}` lets the flow
+  branch on rule results. **Verified**: a workflow rule-task drives a downstream
+  condition — gold customer → rule outputs 20% → "big discount" branch; a bulk
+  order → 10% → "small discount" branch. tsc 0 · ESLint 0 · vitest 155/155 · 6
+  audits pass · build OK.
+
+Integration Hub remains the documented roadmap; it composes through the same
+`task` handler seam (connectors run as task handlers).

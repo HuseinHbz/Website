@@ -5,6 +5,7 @@ import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { logBus } from '@/lib/logs/bus'
 import { executeWorkflow, type WorkflowDefinition, type TaskHandler } from '@/lib/workflow/engine'
+import { runRuleByKey } from '@/lib/rules/ruleData'
 
 // Execute a workflow (POST) or list its run history (GET ?workflowId=). Runs are
 // recorded in workflow_runs. Task nodes dispatch to a small set of SAFE, built-in
@@ -22,6 +23,15 @@ const handlers: Record<string, TaskHandler> = {
     return { delivered: true }
   },
   log: (_a, config, ctx) => { ctx.log.push({ ts: ctx.log.length, node: 'task', type: 'task', message: String(config.message ?? ''), level: 'info' }); return true },
+  // Business Rules Engine seam: evaluate a rule set against the workflow's current
+  // variables and merge its outputs back in. This is how workflows use rules.
+  rule: async (_a, config, ctx) => {
+    const key = String(config.ruleKey ?? '')
+    const res = await runRuleByKey(key, ctx.variables)
+    if (!res) return { rule: key, matched: false, note: 'rule not found or inactive' }
+    Object.assign(ctx.variables, res.outputs)
+    return { rule: key, matched: res.matched, outputs: res.outputs }
+  },
   // External actions are recorded as intents (not executed) until wired.
   email: (_a, config) => ({ intent: 'email', to: config.to ?? null, executed: false }),
   webhook: (_a, config) => ({ intent: 'webhook', url: config.url ?? null, executed: false }),

@@ -268,6 +268,20 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   Hub remain the documented roadmap
   (`docs/governance/phase21-automation-platform.md`) — they compose via the
   engine's handler seam (no duplicated logic).
+- **Business Rules Engine** (`/admin/rules`, `RulesCenter`) — Phase-21.7. Pure
+  engine `src/lib/rules/engine.ts` (`evalCondition` with eq/ne/gt/gte/lt/lte/in/
+  nin/contains/between/truthy/falsy + dotted paths, `ruleMatches` all/any,
+  `runRules` priority first-match or collect-merge with a trace, `validateRuleSet`;
+  7 unit tests). Versioned decision tables: `business_rules` (head + active
+  version + status) × `business_rule_versions` (immutable history for rollback).
+  APIs `/api/admin/erp/rules` (CRUD/newVersion/setActive-rollback/activate/
+  archive) + `/rules/simulate` (test facts → matches+outputs+trace) — RBAC/zod/
+  audit. **Workflow integration**: the run route's `rule` task handler
+  (`runRuleByKey`, `src/lib/rules/ruleData.ts`) evaluates a rule's active version
+  against the workflow variables and merges its outputs back — so a `task` node
+  `{action:'rule', config:{ruleKey}}` lets workflows branch on rule results.
+  Verified: a workflow rule-task drives a downstream condition (gold→20% →big
+  branch; bulk→10% →small branch). Integration Hub remains the roadmap.
 - **AI Platform** (Phase-22) — the shared intelligent core. **Shared engine**
   `src/lib/ai/engine.ts` (`runCompletion({messages, systemPrompt, useRag})`)
   centralizes provider dispatch (ChatGPT/Claude/Gemini/Grok/Copilot/Conduit),

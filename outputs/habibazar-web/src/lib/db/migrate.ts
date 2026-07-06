@@ -202,6 +202,35 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Business Rules Engine (Phase 21.7). Versioned decision tables evaluated by
+    -- lib/rules/engine.ts; head (current + active version + status) × immutable
+    -- version history for rollback. Workflows call rules via the handler seam.
+    CREATE TABLE IF NOT EXISTS business_rules (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      category TEXT NOT NULL DEFAULT 'general',
+      description TEXT,
+      current_version INTEGER NOT NULL DEFAULT 1,
+      active_version INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS business_rule_versions (
+      id SERIAL PRIMARY KEY,
+      rule_id INTEGER NOT NULL REFERENCES business_rules(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      definition TEXT NOT NULL DEFAULT '{}',
+      note TEXT,
+      author_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (rule_id, version)
+    );
+
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
     -- documents (invoice/quotation/PO/contract/…); payload holds lines + meta +
     -- body; verify_code backs public QR verification.
@@ -562,6 +591,8 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_pm_costs_project ON pm_cost_entries(project_id, kind);
     CREATE INDEX IF NOT EXISTS idx_gen_docs_type ON gen_documents(type, created_at);
     CREATE INDEX IF NOT EXISTS idx_gen_docs_verify ON gen_documents(verify_code);
+    CREATE INDEX IF NOT EXISTS idx_rule_versions_rid ON business_rule_versions(rule_id, version);
+    CREATE INDEX IF NOT EXISTS idx_rules_category ON business_rules(category);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);
