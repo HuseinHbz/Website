@@ -176,6 +176,19 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   site-traffic chart and an audit-driven activity feed. Website analytics moved
   to `/admin/dashboard` (`AnalyticsPanel`). Reuses each module's data layer — no
   duplicated aggregation.
+- **Sales Center** (`/admin/sales`, `SalesCenter`) — Phase-21 ERP Module 2
+  (Enterprise Sales). Tabbed: Dashboard · Customers · Quotations · Sales Orders ·
+  Invoices · Payments. Tables `sales_customers` (credit limit), `sales_documents`
+  (unified quote/order/invoice/credit_note header, draft→sent→confirmed→partial→
+  paid→void), `sales_document_lines` (qty/unit price/discount %/tax %),
+  `sales_payments`. Pure engine `src/lib/erp/sales.ts` (`lineTotals`,
+  `documentTotals`, `customerCredit`, `invoiceStatus`, `salesKpis`; 7 unit tests)
+  — line = qty×price then discount then tax on net. Server layer
+  `src/lib/erp/salesData.ts` computes each customer's live credit position + the
+  dashboard. APIs `/api/admin/erp/sales/{customers,documents,payments,overview}`:
+  zod/RBAC/audited; totals computed server-side; quote→order→invoice convert;
+  recording an invoice payment recomputes its paid status. Verified vs real
+  PostgreSQL (credit position + invoice status round-trip).
 - **Financial Center** (`/admin/finance`, `FinanceCenter`) — Phase-21 ERP Module 1
   (Enterprise Financial System). Tabbed: Dashboard · Chart of Accounts · Journal
   Entries · Reports. Double-entry GL: `gl_accounts` (seeded standard chart),

@@ -202,6 +202,69 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Enterprise Sales (Phase 21 ERP, Module 2). Customers with a credit limit;
+    -- a unified sales document (quote/order/invoice/credit_note) with lines
+    -- carrying discount % and tax %; and payments applied to invoices.
+    CREATE TABLE IF NOT EXISTS sales_customers (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      company TEXT,
+      tax_id TEXT,
+      credit_limit NUMERIC NOT NULL DEFAULT 0,
+      address TEXT,
+      notes TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_documents (
+      id SERIAL PRIMARY KEY,
+      doc_type TEXT NOT NULL CHECK(doc_type IN ('quote','order','invoice','credit_note')),
+      doc_no TEXT NOT NULL,
+      customer_id INTEGER NOT NULL REFERENCES sales_customers(id),
+      date TEXT NOT NULL,
+      due_date TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','sent','confirmed','partial','paid','void')),
+      subtotal NUMERIC NOT NULL DEFAULT 0,
+      discount_total NUMERIC NOT NULL DEFAULT 0,
+      tax_total NUMERIC NOT NULL DEFAULT 0,
+      total NUMERIC NOT NULL DEFAULT 0,
+      source_id INTEGER REFERENCES sales_documents(id),
+      notes TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_document_lines (
+      id SERIAL PRIMARY KEY,
+      document_id INTEGER NOT NULL REFERENCES sales_documents(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      qty NUMERIC NOT NULL DEFAULT 1,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      discount_pct NUMERIC NOT NULL DEFAULT 0,
+      tax_pct NUMERIC NOT NULL DEFAULT 0,
+      line_total NUMERIC NOT NULL DEFAULT 0,
+      line_no INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_payments (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES sales_customers(id),
+      document_id INTEGER REFERENCES sales_documents(id),
+      date TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      method TEXT NOT NULL DEFAULT 'cash' CHECK(method IN ('cash','bank','card','cheque','other')),
+      reference TEXT,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Enterprise Financial System (Phase 21 ERP, Module 1) — double-entry GL.
     CREATE TABLE IF NOT EXISTS gl_fiscal_periods (
       id SERIAL PRIMARY KEY,
@@ -397,6 +460,11 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_gl_lines_account ON gl_journal_lines(account_id);
     CREATE INDEX IF NOT EXISTS idx_gl_entries_status ON gl_journal_entries(status, date);
     CREATE INDEX IF NOT EXISTS idx_gl_accounts_type ON gl_accounts(type);
+    CREATE INDEX IF NOT EXISTS idx_sales_docs_type ON sales_documents(doc_type, status);
+    CREATE INDEX IF NOT EXISTS idx_sales_docs_customer ON sales_documents(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_sales_lines_doc ON sales_document_lines(document_id);
+    CREATE INDEX IF NOT EXISTS idx_sales_payments_customer ON sales_payments(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_sales_payments_doc ON sales_payments(document_id);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

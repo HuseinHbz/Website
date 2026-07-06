@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { pgQuery } from '@/lib/db'
+import { logAction } from '@/lib/admin/audit'
+import { invoiceStatus } from '@/lib/erp/sales'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// GET — payments ledger (optionally for one customer ?customerId=).
+export async function GET(req: NextRequest) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth.error
+  try {
+    const cid = Number(req.nextUrl.searchParams.get('customerId')) || 0
+    const rows = await pgQuery(
+      `SELECT p.id, p.date, p.amount::float AS amount, p.method, p.reference, p.note,
+              c.name AS "customer", d.doc_no AS "docNo"
+       FROM sales_payments p JOIN sales_customers c ON c.id=p.customer_id
+       LEFT JOIN sales_documents d ON d.id=p.document_id
+       ${cid ? 'WHERE p.customer_id=$1' : ''}
+       ORDER BY p.date DESC, p.id DESC LIMIT 200`, cid ? [cid] : [])
+    return NextResponse.json({ payments: rows })
+  } catch (e) { return apiError(e, 'Failed to load payments') }
+}
+
+const schema = z.object({
+  customerId: z.number().int().positive(),
+  documentId: z.number().int().positive().optional(),
+  date: z.string().min(1).max(30),
+  amount: z.number().positive(),
+  method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']).default('cash'),
+  reference: z.string().max(120).optional(),
+  note: z.string().max(500).optional(),
+})
+
+// POST — record a payment. If it targets an invoice, recompute its paid status.
+export async function POST(req: NextRequest) {
+  const auth = await requireAdmin('edit')
+  if ('error' in auth) return auth.error
+  const parsed = await readJson(req, schema)
+  if ('error' in parsed) return parsed.error
+  const d = parsed.data
+  try {
+    const row = (await pgQuery(
+      `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [d.customerId, d.documentId ?? null, d.date, d.amount, d.method, d.reference ?? null, d.note ?? null, auth.user.id]))[0] as { id: number }
+
+    if (d.documentId) {
+      const doc = (await pgQuery(`SELECT total::float AS total, doc_type AS "docType" FROM sales_documents WHERE id=$1`, [d.documentId]))[0] as { total: number; docType: string } | undefined
+      if (doc?.docType === 'invoice') {
+        const paid = (await pgQuery(`SELECT COALESCE(SUM(amount),0)::float AS paid FROM sales_payments WHERE document_id=$1`, [d.documentId]))[0] as { paid: number }
+        await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`, [d.documentId, invoiceStatus(doc.total, paid.paid)])
+      }
+    }
+    await logAction(auth.user, 'sales.payment.create', 'sales_payment', row.id, null, { amount: d.amount })
+    return NextResponse.json({ id: row.id })
+  } catch (e) { return apiError(e, 'Failed to record payment') }
+}
