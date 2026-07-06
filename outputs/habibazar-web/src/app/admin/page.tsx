@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/admin/auth'
 import { AdminShell } from '@/components/admin/AdminShell'
-import { AdminDashboard } from './AdminDashboard'
+import { ExecutiveDashboard } from './ExecutiveDashboard'
 
 export default async function AdminPage() {
   const user = await getAdminUser()
@@ -9,7 +9,7 @@ export default async function AdminPage() {
 
   return (
     <AdminShell user={user} title="Dashboard">
-      <AdminDashboard />
+      <ExecutiveDashboard />
     </AdminShell>
   )
 }

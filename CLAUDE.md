@@ -167,6 +167,15 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   add assignment/maintenance/mark-done), `/assets/overview` (dashboard) —
   zod/RBAC/audited, every change writes an `asset_activity` row. Verified against
   real PostgreSQL (depreciation round-trip).
+- **Executive Dashboard** (`/admin`, `ExecutiveDashboard`) — the redesigned admin
+  home. Aggregates KPIs from every module via `GET /api/admin/overview`
+  (`lib/admin/executiveOverview.ts`, each module guarded so one failure never
+  breaks the page): 6 hero cards (net income/cash/inventory value/asset book
+  value/CRM pipeline/AI calls), per-module panels (Finance/Inventory/Assets/CRM/
+  AI/Traffic), cross-module alerts (out-of-stock, warranty, failed AI…), a live
+  site-traffic chart and an audit-driven activity feed. Website analytics moved
+  to `/admin/dashboard` (`AnalyticsPanel`). Reuses each module's data layer — no
+  duplicated aggregation.
 - **Financial Center** (`/admin/finance`, `FinanceCenter`) — Phase-21 ERP Module 1
   (Enterprise Financial System). Tabbed: Dashboard · Chart of Accounts · Journal
   Entries · Reports. Double-entry GL: `gl_accounts` (seeded standard chart),
