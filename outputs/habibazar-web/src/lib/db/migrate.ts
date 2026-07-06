@@ -202,6 +202,72 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Enterprise Financial System (Phase 21 ERP, Module 1) — double-entry GL.
+    CREATE TABLE IF NOT EXISTS gl_fiscal_periods (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS gl_accounts (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      type TEXT NOT NULL CHECK(type IN ('asset','liability','equity','revenue','expense')),
+      parent_id INTEGER REFERENCES gl_accounts(id),
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS gl_journal_entries (
+      id SERIAL PRIMARY KEY,
+      entry_no TEXT NOT NULL,
+      date TEXT NOT NULL,
+      memo TEXT,
+      reference TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','posted','void')),
+      period_id INTEGER REFERENCES gl_fiscal_periods(id),
+      total NUMERIC NOT NULL DEFAULT 0,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      posted_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS gl_journal_lines (
+      id SERIAL PRIMARY KEY,
+      entry_id INTEGER NOT NULL REFERENCES gl_journal_entries(id) ON DELETE CASCADE,
+      account_id INTEGER NOT NULL REFERENCES gl_accounts(id),
+      debit NUMERIC NOT NULL DEFAULT 0,
+      credit NUMERIC NOT NULL DEFAULT 0,
+      memo TEXT,
+      line_no INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- Seed a standard chart of accounts once (idempotent).
+    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES
+      ('1000','Cash','نقد','asset'),
+      ('1010','Bank','بانک','asset'),
+      ('1100','Accounts Receivable','حساب‌های دریافتنی','asset'),
+      ('1200','Inventory','موجودی کالا','asset'),
+      ('1500','Fixed Assets','دارایی‌های ثابت','asset'),
+      ('2000','Accounts Payable','حساب‌های پرداختنی','liability'),
+      ('2100','Taxes Payable','مالیات پرداختنی','liability'),
+      ('2500','Loans Payable','تسهیلات پرداختنی','liability'),
+      ('3000','Owner Equity','سرمایه','equity'),
+      ('3900','Retained Earnings','سود انباشته','equity'),
+      ('4000','Sales Revenue','درآمد فروش','revenue'),
+      ('4100','Service Revenue','درآمد خدمات','revenue'),
+      ('5000','Cost of Goods Sold','بهای تمام‌شدهٔ کالا','expense'),
+      ('6000','Salaries Expense','هزینهٔ حقوق','expense'),
+      ('6100','Rent Expense','هزینهٔ اجاره','expense'),
+      ('6200','Utilities Expense','هزینهٔ آب و برق','expense'),
+      ('6900','Depreciation Expense','هزینهٔ استهلاک','expense')
+    ON CONFLICT (code) DO NOTHING;
+
     -- Enterprise Inventory (Phase 21 ERP, Module 4). Multi-warehouse stock with
     -- bin locations, lot/serial tracking, a full move ledger and FIFO/LIFO/WAVG
     -- valuation (computed by lib/erp/inventory.ts from the move history).
@@ -327,6 +393,10 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_asset_maint_asset ON asset_maintenance(asset_id, scheduled_date);
     CREATE INDEX IF NOT EXISTS idx_asset_maint_status ON asset_maintenance(status);
     CREATE INDEX IF NOT EXISTS idx_asset_activity_asset ON asset_activity(asset_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_gl_lines_entry ON gl_journal_lines(entry_id);
+    CREATE INDEX IF NOT EXISTS idx_gl_lines_account ON gl_journal_lines(account_id);
+    CREATE INDEX IF NOT EXISTS idx_gl_entries_status ON gl_journal_entries(status, date);
+    CREATE INDEX IF NOT EXISTS idx_gl_accounts_type ON gl_accounts(type);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

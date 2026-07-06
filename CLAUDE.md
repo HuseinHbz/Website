@@ -167,6 +167,17 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   add assignment/maintenance/mark-done), `/assets/overview` (dashboard) —
   zod/RBAC/audited, every change writes an `asset_activity` row. Verified against
   real PostgreSQL (depreciation round-trip).
+- **Financial Center** (`/admin/finance`, `FinanceCenter`) — Phase-21 ERP Module 1
+  (Enterprise Financial System). Tabbed: Dashboard · Chart of Accounts · Journal
+  Entries · Reports. Double-entry GL: `gl_accounts` (seeded standard chart),
+  `gl_journal_entries` (draft/posted/void) + `gl_journal_lines`, `gl_fiscal_periods`.
+  Pure engine `src/lib/erp/ledger.ts` (normal sides, `entryBalanced`, `trialBalance`,
+  `incomeStatement`, `balanceSheet`, `financialKpis`; 8 unit tests). Server layer
+  `src/lib/erp/ledgerData.ts` tallies **only posted** lines (CASE-gated, drafts
+  excluded) → statements. APIs `/api/admin/erp/finance/{accounts,journal,reports,
+  overview}`: zod/RBAC/audited; journal POST is server-side balanced-validated
+  (debits=credits) before accepting; post/void lifecycle. UI journal editor shows
+  a live balance check. Verified vs real PostgreSQL (books tie out; drafts excluded).
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`
