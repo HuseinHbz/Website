@@ -4,6 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 import { listAgents, getAgent, buildAgentRun } from '@/lib/ai/agents'
+import { hasTool, gatherAgentContext } from '@/lib/ai/agentTools'
 import { runCompletion, AiConfigError } from '@/lib/ai/engine'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,7 @@ export async function GET() {
   if ('error' in auth) return auth.error
   // Strip the full system prompt from the list payload — the UI shows metadata +
   // examples; the prompt is an internal implementation detail.
-  const agents = listAgents().map(({ systemPrompt: _sp, ...rest }) => rest)
+  const agents = listAgents().map(({ systemPrompt: _sp, ...rest }) => ({ ...rest, grounded: hasTool(rest.id) }))
   return NextResponse.json({ agents })
 }
 
@@ -38,10 +39,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const { systemPrompt, messages } = buildAgentRun(agent, task)
-    const { reply, sources, provider } = await runCompletion({ messages, systemPrompt, useRag: agent.useRag })
+    // Agents v2: ground data-backed agents in a live, read-only module snapshot.
+    const liveContext = hasTool(agentId) ? await gatherAgentContext(agentId) : ''
+    const { reply, sources, provider, usageId } = await runCompletion({
+      messages, systemPrompt: systemPrompt + liveContext, useRag: agent.useRag, source: `agent:${agentId}`,
+    })
     await logAction(auth.user, 'ai.agent.run', 'ai_agent', agentId)
-    logger.info('AI agent run', { agentId, provider })
-    return NextResponse.json({ reply, sources, agentId })
+    logger.info('AI agent run', { agentId, provider, grounded: !!liveContext })
+    return NextResponse.json({ reply, sources, agentId, usageId, grounded: !!liveContext })
   } catch (e) {
     if (e instanceof AiConfigError) {
       return NextResponse.json({ error: 'AI provider is not configured. Set it in AI Control Center.' }, { status: 503 })

@@ -16,6 +16,9 @@ import { logger } from '@/lib/logger'
 
 export type ChatMsg = { role: 'user' | 'assistant'; content: string }
 export type KbSource = { id: number; title: string; excerpt: string }
+/** Token usage as reported by the provider (fields absent if not returned). */
+export type Usage = { inputTokens?: number; outputTokens?: number }
+type ProviderReply = { text: string; usage?: Usage }
 
 /** Thrown when the AI provider is not configured (missing API key). */
 export class AiConfigError extends Error {}
@@ -66,7 +69,7 @@ export async function retrieveContext(userMessage: string): Promise<{ contextBlo
   }
 }
 
-async function callChatGPT(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
+async function callChatGPT(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string): Promise<ProviderReply> {
   const url = `${apiUrl}/chat/completions`
   const body = {
     model: model || 'gpt-4o',
@@ -82,11 +85,11 @@ async function callChatGPT(apiKey: string, apiUrl: string, model: string, messag
     const errText = await res.text().catch(() => '')
     throw new Error(`AI error ${res.status}: ${errText.slice(0, 200)}`)
   }
-  const data = await res.json() as { choices: { message: { content: string } }[] }
-  return data.choices[0].message.content
+  const data = await res.json() as { choices: { message: { content: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
+  return { text: data.choices[0].message.content, usage: { inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens } }
 }
 
-async function callClaude(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string, useBearer = false) {
+async function callClaude(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string, useBearer = false): Promise<ProviderReply> {
   const url = `${apiUrl}/messages`
   const body = {
     model: model || 'claude-sonnet-4-6',
@@ -106,11 +109,11 @@ async function callClaude(apiKey: string, apiUrl: string, model: string, message
     const errText = await res.text().catch(() => '')
     throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`)
   }
-  const data = await res.json() as { content: { text: string }[] }
-  return data.content[0].text
+  const data = await res.json() as { content: { text: string }[]; usage?: { input_tokens?: number; output_tokens?: number } }
+  return { text: data.content[0].text, usage: { inputTokens: data.usage?.input_tokens, outputTokens: data.usage?.output_tokens } }
 }
 
-async function callGemini(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
+async function callGemini(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string): Promise<ProviderReply> {
   const url = `${apiUrl}/models/${model || 'gemini-1.5-pro'}:generateContent?key=${apiKey}`
   const contents = (messages as { role: string; content: string }[]).map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -124,17 +127,17 @@ async function callGemini(apiKey: string, apiUrl: string, model: string, message
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
-  const data = await res.json() as { candidates: { content: { parts: { text: string }[] } }[] }
-  return data.candidates[0].content.parts[0].text
+  const data = await res.json() as { candidates: { content: { parts: { text: string }[] } }[]; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } }
+  return { text: data.candidates[0].content.parts[0].text, usage: { inputTokens: data.usageMetadata?.promptTokenCount, outputTokens: data.usageMetadata?.candidatesTokenCount } }
 }
 
-async function callGrok(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
+async function callGrok(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string): Promise<ProviderReply> {
   // Grok uses an OpenAI-compatible API.
   return callChatGPT(apiKey, apiUrl, model || 'grok-beta', messages, systemPrompt)
 }
 
 /** Dispatch a single completion to the configured provider (no retry/breaker). */
-export function dispatchProvider(cfg: ProviderConfig, messages: ChatMsg[], systemPrompt: string): Promise<string> {
+export function dispatchProvider(cfg: ProviderConfig, messages: ChatMsg[], systemPrompt: string): Promise<ProviderReply> {
   const { provider, apiKey, model, apiUrl } = cfg
   switch (provider) {
     case 'claude':
@@ -160,17 +163,28 @@ export function dispatchProvider(cfg: ProviderConfig, messages: ChatMsg[], syste
 const FALLBACK_REPLY =
   'متأسفانه در حال حاضر سرویس هوش مصنوعی در دسترس نیست. لطفاً کمی بعد دوباره امتحان کنید. / AI service is temporarily unavailable. Please try again shortly.'
 
-export interface CompletionResult { reply: string; sources: KbSource[]; provider: string }
+export interface CompletionResult {
+  reply: string
+  sources: KbSource[]
+  provider: string
+  usage: Usage
+  /** id of the recorded ai_usage row — pass to the feedback endpoint. */
+  usageId: number | null
+}
 
 /**
  * Run one completion against the configured provider, with optional RAG,
  * circuit-breaker and retry. This is the single execution path shared by the
- * public chat and every admin AI feature.
+ * public chat and every admin AI feature. Every call is recorded in `ai_usage`
+ * (provider/model/latency/tokens/success/rag) for the AI Analytics subsystem —
+ * recording never blocks or fails the response.
  */
 export async function runCompletion(opts: {
   messages: ChatMsg[]
   systemPrompt: string
   useRag?: boolean
+  /** telemetry label, e.g. 'chat' or 'agent:seo'. */
+  source?: string
 }): Promise<CompletionResult> {
   const cfg = await loadProviderConfig()
   if (!cfg.apiKey) throw new AiConfigError('AI API key not configured')
@@ -184,14 +198,62 @@ export async function runCompletion(opts: {
     sources = rag.sources
   }
 
-  const reply = await breakers.ai.execute(
-    () => retry(() => dispatchProvider(cfg, opts.messages, systemPrompt), {
-      attempts: 2,
-      baseDelayMs: 500,
-      shouldRetry: isTransient,
-      onRetry: (err, attempt) => logger.warn('AI retry', { attempt, error: String(err) }),
-    }),
-    () => FALLBACK_REPLY,
-  )
-  return { reply, sources, provider: cfg.provider }
+  const started = Date.now()
+  let usage: Usage = {}
+  let success = false
+  let errorMsg: string | null = null
+  let reply = FALLBACK_REPLY
+  try {
+    const result = await breakers.ai.execute(
+      () => retry(() => dispatchProvider(cfg, opts.messages, systemPrompt), {
+        attempts: 2,
+        baseDelayMs: 500,
+        shouldRetry: isTransient,
+        onRetry: (err, attempt) => logger.warn('AI retry', { attempt, error: String(err) }),
+      }),
+      () => ({ text: FALLBACK_REPLY } as ProviderReply),
+    )
+    reply = result.text
+    usage = result.usage ?? {}
+    success = reply !== FALLBACK_REPLY
+    if (!success) errorMsg = 'circuit-open/fallback'
+  } catch (e) {
+    errorMsg = e instanceof Error ? e.message : String(e)
+    // still record the failed call below before re-throwing
+    await recordUsage({
+      provider: cfg.provider, model: cfg.model || '', source: opts.source || 'chat',
+      latencyMs: Date.now() - started, success: false, error: errorMsg, usage: {}, ragSources: sources.length,
+    }).catch(() => null)
+    throw e
+  }
+  const usageId = await recordUsage({
+    provider: cfg.provider,
+    model: cfg.model || '',
+    source: opts.source || 'chat',
+    latencyMs: Date.now() - started,
+    success,
+    error: errorMsg,
+    usage,
+    ragSources: sources.length,
+  }).catch(() => null)
+  return { reply, sources, provider: cfg.provider, usage, usageId }
+}
+
+/** Record one AI call into ai_usage (best-effort; returns the new row id). */
+async function recordUsage(row: {
+  provider: string; model: string; source: string; latencyMs: number
+  success: boolean; error: string | null; usage: Usage; ragSources: number
+}): Promise<number | null> {
+  try {
+    const { pgQuery } = await import('@/lib/db')
+    const res = await pgQuery(
+      `INSERT INTO ai_usage (ts, provider, model, source, latency_ms, success, error, input_tokens, output_tokens, rag_sources)
+       VALUES (to_char(now(),'YYYY-MM-DD HH24:MI:SS'), $1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [row.provider, row.model, row.source, row.latencyMs, row.success ? 1 : 0, row.error,
+       row.usage.inputTokens ?? null, row.usage.outputTokens ?? null, row.ragSources],
+    )
+    return (res[0] as { id: number } | undefined)?.id ?? null
+  } catch {
+    return null
+  }
 }

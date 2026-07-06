@@ -188,9 +188,25 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   marketing/hr) each with an anti-fabrication guardrail; `GET/POST /api/admin/ai/
   agents` (RBAC `edit`, zod, audited) runs an agent through the shared engine
   (RAG per agent). Public AI page (`/[locale]/ai`) now linked in `NAV_ITEMS`.
-  Chat Center upgrades, agent tool-handlers (live CRM/ERP/security telemetry via
-  the workflow handler seam), Automation, Prompt Center, Analytics + embeddings
-  are the documented roadmap (`docs/governance/phase22-ai-platform.md`).
+  Chat Center upgrades, Automation and embeddings are the documented roadmap
+  (`docs/governance/phase22-ai-platform.md`).
+- **AI Analytics** (`/admin/ai-analytics`, `AiAnalyticsDashboard`) — real
+  telemetry: the shared engine records every completion into `ai_usage`
+  (provider/model/source/latency/success/real token counts/rag/feedback,
+  best-effort). Pure `summarize` (`src/lib/ai/analytics.ts`, unit-tested) →
+  `GET /api/admin/ai/analytics` (calls, success rate, avg/p95 latency, tokens,
+  est. cost via `ai_cost_per_1k`, RAG-hit, thumbs, daily + by-provider/model/
+  source, recent failures). Thumbs feedback `POST` wired into the agent UI.
+- **Prompt Center** (`/admin/ai-prompts`, `PromptCenter`) — versioned prompts:
+  `ai_prompts` (head + active version + status draft/approved/archived) ×
+  `ai_prompt_versions` (immutable history). Pure helpers `src/lib/ai/prompts.ts`
+  (`extractVariables`/`renderPrompt`/`missingVariables`/`isUsable`, unit-tested)
+  for `{{var}}` templating + preview. `GET/POST/PUT/DELETE /api/admin/ai/prompts`
+  (create/newVersion/setActive-rollback/approve/archive/meta) — RBAC+zod+audit.
+- **AI Agents v2** — data-backed agents (crm/erp/security/backup/infrastructure)
+  ground answers in a live read-only module snapshot injected server-side
+  (`src/lib/ai/agentTools.ts`, the workflow handler-seam applied to agents; the
+  LLM never touches the DB). Grounded agents show a "Live data" badge.
 - **Feature Flag Center** (`/admin/flags`, `FlagsManager`) — Phase-18 SaaS building
   block. `feature_flags` table (key/enabled/rollout_percent). Evaluation
   `src/lib/flags/evaluate.ts` is pure + unit-tested: `isEnabled(flag, subject)`

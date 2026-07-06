@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = basePrompt + (userContext ? `\nUser context: ${userContext}` : '')
 
     try {
-      const { reply, sources, provider } = await runCompletion({ messages, systemPrompt, useRag: true })
+      const { reply, sources, provider } = await runCompletion({ messages, systemPrompt, useRag: true, source: 'chat' })
       logger.info('AI chat', { provider, locale })
       return NextResponse.json({ reply, sources })
     } catch (e) {

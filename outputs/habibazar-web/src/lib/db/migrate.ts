@@ -142,7 +142,58 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Prompt Center (Phase 22): named prompts with an immutable version history.
+    -- ai_prompts is the current head (active version + status); ai_prompt_versions
+    -- keeps every version for rollback/approval/audit.
+    CREATE TABLE IF NOT EXISTS ai_prompts (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      category TEXT NOT NULL DEFAULT 'general',
+      description TEXT,
+      current_version INTEGER NOT NULL DEFAULT 1,
+      active_version INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','approved','archived')),
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_prompt_versions (
+      id SERIAL PRIMARY KEY,
+      prompt_id INTEGER NOT NULL REFERENCES ai_prompts(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      body TEXT NOT NULL,
+      note TEXT,
+      author_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (prompt_id, version)
+    );
+
+    -- AI Platform telemetry (Phase 22): one row per completion run through the
+    -- shared engine (chat + agents). Powers the AI Analytics dashboard.
+    CREATE TABLE IF NOT EXISTS ai_usage (
+      id SERIAL PRIMARY KEY,
+      ts TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      model TEXT,
+      source TEXT NOT NULL DEFAULT 'chat',
+      latency_ms INTEGER NOT NULL DEFAULT 0,
+      success INTEGER NOT NULL DEFAULT 1,
+      error TEXT,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      rag_sources INTEGER NOT NULL DEFAULT 0,
+      feedback INTEGER NOT NULL DEFAULT 0
+    );
+
     CREATE INDEX IF NOT EXISTS idx_syslogs_ts ON system_logs(ts);
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_ts ON ai_usage(ts);
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_source ON ai_usage(source);
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_provider ON ai_usage(provider);
+    CREATE INDEX IF NOT EXISTS idx_ai_prompt_versions_pid ON ai_prompt_versions(prompt_id, version);
+    CREATE INDEX IF NOT EXISTS idx_ai_prompts_category ON ai_prompts(category);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

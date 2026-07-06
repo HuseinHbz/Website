@@ -11,6 +11,7 @@ interface Agent {
   descEn: string; descFa: string
   icon: string
   useRag: boolean
+  grounded?: boolean
   examplesEn: string[]; examplesFa: string[]
 }
 interface Source { id: number; title: string; excerpt: string }
@@ -26,6 +27,8 @@ export function AiAgentsManager() {
   const [running, setRunning] = useState(false)
   const [reply, setReply] = useState('')
   const [sources, setSources] = useState<Source[]>([])
+  const [usageId, setUsageId] = useState<number | null>(null)
+  const [rated, setRated] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -38,11 +41,11 @@ export function AiAgentsManager() {
 
   const examples = useMemo(() => active ? (fa ? active.examplesFa : active.examplesEn) : [], [active, fa])
 
-  function open(a: Agent) { setActive(a); setTask(''); setReply(''); setSources([]) }
+  function open(a: Agent) { setActive(a); setTask(''); setReply(''); setSources([]); setUsageId(null); setRated(false) }
 
   async function run() {
     if (!active || !task.trim()) return
-    setRunning(true); setReply(''); setSources([])
+    setRunning(true); setReply(''); setSources([]); setUsageId(null); setRated(false)
     try {
       const r = await fetch('/api/admin/ai/agents', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -50,8 +53,20 @@ export function AiAgentsManager() {
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'run failed')
-      setReply(d.reply || ''); setSources(d.sources ?? [])
+      setReply(d.reply || ''); setSources(d.sources ?? []); setUsageId(d.usageId ?? null)
     } catch (e) { toast(e instanceof Error ? e.message : t('aia_runFail'), 'error') } finally { setRunning(false) }
+  }
+
+  async function rate(value: 1 | -1) {
+    if (!usageId || rated) return
+    setRated(true)
+    try {
+      await fetch('/api/admin/ai/analytics', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usageId, value }),
+      })
+      toast(t('aia_thanks'), 'success')
+    } catch { /* ignore */ }
   }
 
   return (
@@ -71,6 +86,7 @@ export function AiAgentsManager() {
               <p className="text-xs text-text-tertiary">{fa ? active.descFa : active.descEn}</p>
             </div>
             {active.useRag && <Badge color="indigo">{t('aia_rag')}</Badge>}
+            {active.grounded && <Badge color="green">{t('aia_live')}</Badge>}
           </div>
 
           <label className="form-label">{t('aia_taskLabel')}</label>
@@ -104,6 +120,12 @@ export function AiAgentsManager() {
                   </ul>
                 </div>
               )}
+              {usageId && !rated && (
+                <div className="mt-3 pt-3 border-t border-subtle flex items-center gap-2">
+                  <button onClick={() => rate(1)} title={t('aia_up')} className="text-sm px-2 py-1 rounded-md bg-surface-2 border border-subtle hover:border-success/50">👍</button>
+                  <button onClick={() => rate(-1)} title={t('aia_down')} className="text-sm px-2 py-1 rounded-md bg-surface-2 border border-subtle hover:border-danger/50">👎</button>
+                </div>
+              )}
             </div>
           )}
         </Card>
@@ -114,7 +136,7 @@ export function AiAgentsManager() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl" aria-hidden>{a.icon}</span>
                 <span className="font-semibold text-text-primary text-sm">{fa ? a.nameFa : a.nameEn}</span>
-                {a.useRag && <Badge color="indigo">{t('aia_rag')}</Badge>}
+                {a.grounded && <Badge color="green">{t('aia_live')}</Badge>}
               </div>
               <p className="text-xs text-text-tertiary leading-relaxed">{fa ? a.descFa : a.descEn}</p>
             </button>

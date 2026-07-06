@@ -112,6 +112,8 @@ const NAV = [
     items: [
       { labelEn: 'AI Control Center', labelFa: 'مرکز کنترل هوش مصنوعی', href: '/admin/ai-control', icon: '🤖' },
       { labelEn: 'AI Agents', labelFa: 'دستیارهای هوش مصنوعی', href: '/admin/ai-agents', icon: '✨' },
+      { labelEn: 'AI Analytics', labelFa: 'تحلیل هوش مصنوعی', href: '/admin/ai-analytics', icon: '📊' },
+      { labelEn: 'Prompt Center', labelFa: 'مرکز پرامپت', href: '/admin/ai-prompts', icon: '📝' },
       { labelEn: 'AI Knowledge Base', labelFa: 'پایگاه دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '📚' },
     ],
   },

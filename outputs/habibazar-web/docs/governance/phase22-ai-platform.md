@@ -51,8 +51,37 @@ The full public AI page (`/[locale]/ai`) already existed but was unreachable —
 now linked in the main site nav (`NAV_ITEMS`) as "AI Assistant / دستیار هوشمند"
 so visitors can find it.
 
-**Verified:** tsc 0 · ESLint 0 · vitest (agents 6 + existing) green · 6
-governance audits pass (incl. links: `/ai` resolves, i18n: 0 missing) · build OK.
+### 4. AI Analytics (subsystem 5)
+Real telemetry, not mock. The shared engine records **every** completion into
+`ai_usage` (provider, model, source `chat`/`agent:<id>`, latency, success,
+real provider token counts, RAG-source count, feedback) — best-effort, never
+blocks the response. Pure aggregation `src/lib/ai/analytics.ts` (`summarize`,
+6 unit tests) → dashboard `/admin/ai-analytics`: calls, success rate, avg/p95
+latency, tokens, estimated cost (rate `ai_cost_per_1k`), RAG-hit rate, thumbs
+up/down, daily activity, by-provider/model/source breakdowns, recent failures.
+Thumbs feedback (`POST /api/admin/ai/analytics`) is wired into the agent UI.
+
+### 5. Prompt Center (subsystem 6)
+Versioned prompts with an immutable history. `ai_prompts` (head: current +
+active version + status draft/approved/archived) × `ai_prompt_versions` (every
+version). Pure helpers `src/lib/ai/prompts.ts` (`extractVariables`,
+`renderPrompt`, `missingVariables`, `isUsable`; 4 unit tests) power `{{variable}}`
+templating + a live preview. API `/api/admin/ai/prompts`: create, add version,
+set-active (rollback), approve, archive, meta, delete — RBAC + zod + audited.
+UI `/admin/ai-prompts`: list → detail with new-version editor, variable test/
+preview, and version history with one-click rollback.
+
+### 6. AI Agents v2 — live tools (subsystem 3, extended)
+Data-backed agents (CRM, ERP, Security, Backup, Infrastructure) now ground their
+answers in a **live, read-only module snapshot** injected server-side before the
+LLM call (`src/lib/ai/agentTools.ts`) — the workflow "handler seam" applied to
+agents: the model never touches the DB. This is what powers "این ماه چند سرنخ
+داشتیم؟", "چه دارایی‌هایی گارانتی‌شان رو به پایان است؟", "چه بکاپ‌هایی fail
+شده‌اند؟". Each gatherer is defensive (a tool failure just drops the live block).
+Grounded agents show a "Live data" badge.
+
+**Verified:** tsc 0 · ESLint 0 · vitest (agents+analytics+prompts+tools + existing)
+green · 6 governance audits pass (links: `/ai` resolves, i18n: 0 missing) · build OK.
 
 ## Roadmap (documented, not yet built)
 
