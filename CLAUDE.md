@@ -177,6 +177,20 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   recorded as intents, not executed, until wired. Rules Engine + Integration Hub are
   the documented roadmap (`docs/governance/phase21-automation-platform.md`) — they
   compose via the engine's handler seam (no duplicated logic).
+- **AI Platform** (Phase-22) — the shared intelligent core. **Shared engine**
+  `src/lib/ai/engine.ts` (`runCompletion({messages, systemPrompt, useRag})`)
+  centralizes provider dispatch (ChatGPT/Claude/Gemini/Grok/Copilot/Conduit),
+  settings load, RAG over `ai_knowledge_base`, and circuit-breaker+retry — the
+  ONE execution path shared by the public chat (`/api/ai/chat`, refactored onto
+  it) and every admin AI feature. **AI Agents** (`/admin/ai-agents`,
+  `AiAgentsManager`): a pure, unit-tested registry (`src/lib/ai/agents.ts`) of 10
+  role-scoped bilingual personas (content/seo/sales/crm/erp/security/infra/backup/
+  marketing/hr) each with an anti-fabrication guardrail; `GET/POST /api/admin/ai/
+  agents` (RBAC `edit`, zod, audited) runs an agent through the shared engine
+  (RAG per agent). Public AI page (`/[locale]/ai`) now linked in `NAV_ITEMS`.
+  Chat Center upgrades, agent tool-handlers (live CRM/ERP/security telemetry via
+  the workflow handler seam), Automation, Prompt Center, Analytics + embeddings
+  are the documented roadmap (`docs/governance/phase22-ai-platform.md`).
 - **Feature Flag Center** (`/admin/flags`, `FlagsManager`) — Phase-18 SaaS building
   block. `feature_flags` table (key/enabled/rollout_percent). Evaluation
   `src/lib/flags/evaluate.ts` is pure + unit-tested: `isEnabled(flag, subject)`

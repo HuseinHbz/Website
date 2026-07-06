@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getDb } from '@/lib/db'
-import { siteSettings, aiModules, aiKnowledgeBase } from '@/lib/db/schema'
+import { aiModules, siteSettings } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { breakers } from '@/lib/circuitBreaker'
-import { retry, isTransient } from '@/lib/retry'
 import { logger } from '@/lib/logger'
 import { limiters } from '@/lib/rateLimit'
 import { guardMessages, sanitize, REFUSAL, MAX_MESSAGE_LEN, MAX_MESSAGES } from '@/lib/ai/guard'
+import { runCompletion, AiConfigError } from '@/lib/ai/engine'
 
 // Public, untrusted input — validate + cap. The client may only send
 // user/assistant turns; a client-supplied `system` role is rejected so it cannot
@@ -21,105 +20,6 @@ const chatSchema = z.object({
   chatContext: z.string().max(2000).optional(),
   moduleSlug: z.string().max(80).optional(),
 })
-
-type KbSource = { id: number; title: string; excerpt: string }
-
-async function retrieveContext(userMessage: string, locale: string): Promise<{ contextBlock: string; sources: KbSource[] }> {
-  try {
-    const db = getDb()
-    const terms = userMessage.toLowerCase().split(/\s+/).filter(t => t.length > 2)
-    const items = await db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true))
-    const scored = items.map(item => {
-      const haystack = `${item.title} ${item.content || ''} ${item.tags || ''}`.toLowerCase()
-      const score = terms.reduce((s, t) => s + (haystack.includes(t) ? 1 : 0), 0)
-      return { ...item, score: score + item.priority * 0.1 }
-    }).filter(i => i.score > 0).sort((a, b) => b.score - a.score).slice(0, 4)
-
-    if (scored.length === 0) return { contextBlock: '', sources: [] }
-
-    const sources: KbSource[] = scored.map(i => ({ id: i.id, title: i.title, excerpt: (i.content || '').slice(0, 120) }))
-    const contextBlock = `\n\n--- KNOWLEDGE BASE CONTEXT ---\n${scored.map((item, idx) => `[${idx + 1}] ${item.title}: ${(item.content || '').slice(0, 600)}`).join('\n\n')}\n--- END CONTEXT ---\n\nWhen relevant, reference the above context and cite sources using [1], [2], etc.`
-    return { contextBlock, sources }
-  } catch {
-    return { contextBlock: '', sources: [] }
-  }
-}
-
-async function getSetting(db: ReturnType<typeof getDb>, key: string): Promise<string> {
-  const row = (await db.select().from(siteSettings).where(eq(siteSettings.key, key)))[0]
-  return row?.value ?? ''
-}
-
-async function callChatGPT(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
-  const url = `${apiUrl}/chat/completions`
-  const body = {
-    model: model || 'gpt-4o',
-    messages: systemPrompt
-      ? [{ role: 'system', content: systemPrompt }, ...messages]
-      : messages,
-    max_tokens: 1000,
-  }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error(`AI error ${res.status}: ${errText.slice(0, 200)}`)
-  }
-  const data = await res.json() as { choices: { message: { content: string } }[] }
-  return data.choices[0].message.content
-}
-
-async function callClaude(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string, useBearer = false) {
-  const url = `${apiUrl}/messages`
-  const body = {
-    model: model || 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    system: systemPrompt || undefined,
-    messages,
-  }
-  const authHeader: Record<string, string> = useBearer
-    ? { 'Authorization': `Bearer ${apiKey}` }
-    : { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { ...authHeader, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`)
-  }
-  const data = await res.json() as { content: { text: string }[] }
-  return data.content[0].text
-}
-
-async function callGemini(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
-  const url = `${apiUrl}/models/${model || 'gemini-1.5-pro'}:generateContent?key=${apiKey}`
-  const contents = (messages as { role: string; content: string }[]).map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }))
-  const body: Record<string, unknown> = { contents }
-  if (systemPrompt) {
-    body.systemInstruction = { parts: [{ text: systemPrompt }] }
-  }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`Gemini API error: ${res.status}`)
-  const data = await res.json() as { candidates: { content: { parts: { text: string }[] } }[] }
-  return data.candidates[0].content.parts[0].text
-}
-
-async function callGrok(apiKey: string, apiUrl: string, model: string, messages: unknown[], systemPrompt: string) {
-  // Grok uses OpenAI-compatible API
-  return callChatGPT(apiKey, apiUrl, model || 'grok-beta', messages, systemPrompt)
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -153,78 +53,37 @@ export async function POST(req: NextRequest) {
     const userContext = chatContext || ''
 
     const db = getDb()
-    const provider = (await getSetting(db, 'ai_provider')) || 'chatgpt'
-    const apiKey = await getSetting(db, 'ai_api_key')
-    const model = await getSetting(db, 'ai_model')
-    const apiUrl = await getSetting(db, 'ai_api_url')
-    const customSystemPrompt = await getSetting(db, 'ai_system_prompt')
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI API key not configured' }, { status: 503 })
-    }
-
-    // Load module system prompt
+    // Load module system prompt (and bump usage) if a module slug was supplied.
     let modulePrompt = ''
+    let customSystemPrompt = ''
     if (moduleSlug) {
       const mod = (await db.select().from(aiModules).where(eq(aiModules.slug, moduleSlug)))[0]
       if (mod?.systemPrompt) modulePrompt = mod.systemPrompt
-      // Increment usage count
       await db.update(aiModules).set({ usageCount: (mod?.usageCount ?? 0) + 1 }).where(eq(aiModules.slug, moduleSlug))
     }
-
-    // RAG: retrieve relevant knowledge base context
-    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || ''
-    const { contextBlock, sources } = await retrieveContext(lastUserMsg, locale || 'en')
+    if (!modulePrompt) {
+      const row = (await db.select().from(siteSettings).where(eq(siteSettings.key, 'ai_system_prompt')))[0]
+      customSystemPrompt = row?.value ?? ''
+    }
 
     const isFA = locale === 'fa'
     const defaultSystemPrompt = isFA
       ? 'شما HBZ AI Platform هستید — پلتفرم هوش مصنوعی سازمانی HBZ Technology. متخصص در زیرساخت IT، شبکه، امنیت، ابر، و مشاوره فناوری. پاسخ‌ها را حرفه‌ای، ساختارمند، و مفید نگه دارید.'
       : 'You are HBZ AI Platform — the enterprise AI advisor of HBZ Technology. You are an expert in IT infrastructure, networking, cybersecurity, cloud, virtualization, and technology consulting. Provide professional, structured, and actionable responses.'
     const basePrompt = modulePrompt || customSystemPrompt || defaultSystemPrompt
-    const systemPrompt = [
-      basePrompt,
-      userContext ? `\nUser context: ${userContext}` : '',
-      contextBlock,
-    ].join('')
+    const systemPrompt = basePrompt + (userContext ? `\nUser context: ${userContext}` : '')
 
-    let reply = ''
-
-    const callProvider = async () => {
-      switch (provider) {
-        case 'claude':
-          return callClaude(apiKey, apiUrl || 'https://api.anthropic.com/v1', model, messages, systemPrompt)
-        case 'gemini':
-          return callGemini(apiKey, apiUrl || 'https://generativelanguage.googleapis.com/v1beta', model, messages, systemPrompt)
-        case 'grok':
-          return callGrok(apiKey, apiUrl || 'https://api.x.ai/v1', model, messages, systemPrompt)
-        case 'copilot':
-          return callChatGPT(apiKey, apiUrl || 'https://api.github.com/copilot', model, messages, systemPrompt)
-        case 'conduit': {
-          const conduitModel = model || 'claude-sonnet-4-6'
-          if (conduitModel.startsWith('claude')) {
-            return callClaude(apiKey, 'https://conduit.ozdoev.net/v1', conduitModel, messages, systemPrompt, true)
-          }
-          return callChatGPT(apiKey, apiUrl || 'https://conduit.ozdoev.net/api/v1', conduitModel, messages, systemPrompt)
-        }
-        default:
-          return callChatGPT(apiKey, apiUrl || 'https://api.openai.com/v1', model, messages, systemPrompt)
+    try {
+      const { reply, sources, provider } = await runCompletion({ messages, systemPrompt, useRag: true })
+      logger.info('AI chat', { provider, locale })
+      return NextResponse.json({ reply, sources })
+    } catch (e) {
+      if (e instanceof AiConfigError) {
+        return NextResponse.json({ error: 'AI API key not configured' }, { status: 503 })
       }
+      throw e
     }
-
-    const fallbackReply = 'متأسفانه در حال حاضر سرویس هوش مصنوعی در دسترس نیست. لطفاً کمی بعد دوباره امتحان کنید. / AI service is temporarily unavailable. Please try again shortly.'
-
-    reply = await breakers.ai.execute(
-      () => retry(callProvider, {
-        attempts: 2,
-        baseDelayMs: 500,
-        shouldRetry: isTransient,
-        onRetry: (err, attempt) => logger.warn('AI retry', { attempt, error: String(err) }),
-      }),
-      () => fallbackReply,
-    )
-
-    logger.info('AI chat', { provider, locale })
-    return NextResponse.json({ reply, sources })
   } catch (err) {
     logger.error('AI chat error', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json(

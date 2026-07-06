@@ -111,6 +111,7 @@ const NAV = [
     group: { en: 'AI Platform', fa: 'پلتفرم هوش مصنوعی' },
     items: [
       { labelEn: 'AI Control Center', labelFa: 'مرکز کنترل هوش مصنوعی', href: '/admin/ai-control', icon: '🤖' },
+      { labelEn: 'AI Agents', labelFa: 'دستیارهای هوش مصنوعی', href: '/admin/ai-agents', icon: '✨' },
       { labelEn: 'AI Knowledge Base', labelFa: 'پایگاه دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '📚' },
     ],
   },

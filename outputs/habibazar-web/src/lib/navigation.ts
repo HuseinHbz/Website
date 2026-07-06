@@ -12,5 +12,6 @@ export const NAV_ITEMS: NavItem[] = [
   { key: 'services',      labelFa: 'خدمات',      labelEn: 'Services',     href: '/services' },
   { key: 'case-studies',  labelFa: 'مطالعات موردی', labelEn: 'Case Studies', href: '/case-studies' },
   { key: 'blog',          labelFa: 'مرکز دانش',  labelEn: 'Knowledge Center', href: '/blog' },
+  { key: 'ai',            labelFa: 'دستیار هوشمند', labelEn: 'AI Assistant', href: '/ai' },
   { key: 'consultation',  labelFa: 'مشاوره',     labelEn: 'Consultation', href: '/consultation' },
 ]
