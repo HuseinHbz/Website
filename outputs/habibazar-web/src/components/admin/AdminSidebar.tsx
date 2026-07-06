@@ -111,6 +111,7 @@ const NAV = [
     items: [
       { labelEn: 'Workflow Designer', labelFa: 'طراح گردش‌کار', href: '/admin/workflows', icon: '🔀' },
       { labelEn: 'Rules Center', labelFa: 'مرکز قوانین', href: '/admin/rules', icon: '⚖️' },
+      { labelEn: 'Integration Hub', labelFa: 'مرکز یکپارچه‌سازی', href: '/admin/integration-hub', icon: '🔌' },
     ],
   },
   {

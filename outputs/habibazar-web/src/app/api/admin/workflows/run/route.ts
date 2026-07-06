@@ -6,6 +6,7 @@ import { logAction } from '@/lib/admin/audit'
 import { logBus } from '@/lib/logs/bus'
 import { executeWorkflow, type WorkflowDefinition, type TaskHandler } from '@/lib/workflow/engine'
 import { runRuleByKey } from '@/lib/rules/ruleData'
+import { dispatchByKey } from '@/lib/integration/dispatch'
 
 // Execute a workflow (POST) or list its run history (GET ?workflowId=). Runs are
 // recorded in workflow_runs. Task nodes dispatch to a small set of SAFE, built-in
@@ -32,7 +33,15 @@ const handlers: Record<string, TaskHandler> = {
     Object.assign(ctx.variables, res.outputs)
     return { rule: key, matched: res.matched, outputs: res.outputs }
   },
-  // External actions are recorded as intents (not executed) until wired.
+  // Integration Hub seam: dispatch the workflow variables through a configured
+  // connector (REST/GraphQL/webhook/SMTP executed; brokers recorded as intents).
+  integration: async (_a, config, ctx) => {
+    const key = String(config.connectorKey ?? '')
+    const res = await dispatchByKey(key, ctx.variables)
+    if (!res) return { connector: key, status: 'not_found' }
+    return { connector: key, status: res.status, attempts: res.attempts }
+  },
+  // Legacy inline external actions are recorded as intents (not executed).
   email: (_a, config) => ({ intent: 'email', to: config.to ?? null, executed: false }),
   webhook: (_a, config) => ({ intent: 'webhook', url: config.url ?? null, executed: false }),
   http: (_a, config) => ({ intent: 'http', url: config.url ?? null, executed: false }),

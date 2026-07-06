@@ -202,6 +202,34 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Enterprise Integration Hub (Phase 21.8). Connectors + a dispatch log that
+    -- doubles as the dead-letter queue (status 'dead' after retries exhausted).
+    CREATE TABLE IF NOT EXISTS integrations (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('rest','graphql','webhook','smtp','kafka','rabbitmq','sftp')),
+      config TEXT NOT NULL DEFAULT '{}',
+      active INTEGER NOT NULL DEFAULT 1,
+      retries INTEGER NOT NULL DEFAULT 2,
+      owner_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS integration_dispatches (
+      id SERIAL PRIMARY KEY,
+      connector_id INTEGER NOT NULL REFERENCES integrations(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'success' CHECK(status IN ('success','failed','queued','dead')),
+      request TEXT,
+      response TEXT,
+      latency_ms INTEGER NOT NULL DEFAULT 0,
+      attempts INTEGER NOT NULL DEFAULT 1,
+      error TEXT,
+      resolved INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Business Rules Engine (Phase 21.7). Versioned decision tables evaluated by
     -- lib/rules/engine.ts; head (current + active version + status) × immutable
     -- version history for rollback. Workflows call rules via the handler seam.
@@ -593,6 +621,8 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_gen_docs_verify ON gen_documents(verify_code);
     CREATE INDEX IF NOT EXISTS idx_rule_versions_rid ON business_rule_versions(rule_id, version);
     CREATE INDEX IF NOT EXISTS idx_rules_category ON business_rules(category);
+    CREATE INDEX IF NOT EXISTS idx_int_dispatches_conn ON integration_dispatches(connector_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_int_dispatches_status ON integration_dispatches(status);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

@@ -281,7 +281,22 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   against the workflow variables and merges its outputs back — so a `task` node
   `{action:'rule', config:{ruleKey}}` lets workflows branch on rule results.
   Verified: a workflow rule-task drives a downstream condition (gold→20% →big
-  branch; bulk→10% →small branch). Integration Hub remains the roadmap.
+  branch; bulk→10% →small branch).
+- **Integration Hub** (`/admin/integration-hub`, `IntegrationHub`) — Phase-21.8
+  (distinct from `/admin/integrations`, the CMS integrations catalog). Connectors
+  to external systems: REST/GraphQL/Webhook (native fetch) + SMTP (nodemailer) are
+  **executed**; Kafka/RabbitMQ/SFTP are recorded as **queued intents** (no broker
+  wired — honest, not faked). Pure engine `src/lib/integration/engine.ts`
+  (`isExecutable`, `buildRequest`, `redactConfig` secret-masking, `backoffDelays`,
+  `validateConnector`; 7 unit tests). Dispatcher `src/lib/integration/dispatch.ts`
+  performs the call with retry + dead-letter, logging every attempt to
+  `integration_dispatches` (status success/failed/queued/dead; DLQ = dead+
+  unresolved). APIs `/api/admin/erp/integrations` (CRUD, config redacted) +
+  `/integrations/dispatch` (dispatch/test, DLQ list, re-dispatch, metrics).
+  **Workflow seam**: the run route's `integration` task handler (`dispatchByKey`)
+  sends the workflow variables through a connector — closing workflows → rules →
+  integrations. Verified vs real PostgreSQL (HTTP success, retry→dead, queued
+  intent, logging).
 - **AI Platform** (Phase-22) — the shared intelligent core. **Shared engine**
   `src/lib/ai/engine.ts` (`runCompletion({messages, systemPrompt, useRag})`)
   centralizes provider dispatch (ChatGPT/Claude/Gemini/Grok/Copilot/Conduit),

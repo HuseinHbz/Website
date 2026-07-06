@@ -116,3 +116,44 @@ Built after the Workflow Designer, since workflows consume rules.
 
 Integration Hub remains the documented roadmap; it composes through the same
 `task` handler seam (connectors run as task handlers).
+
+## Phase 21.8 update — Enterprise Integration Hub (shipped)
+
+The third automation subsystem, built last (all modules ready to connect out).
+
+**Honest execution model** (no heavy deps, nothing faked): REST, GraphQL and
+Webhook use native `fetch`; SMTP uses the existing nodemailer + site SMTP
+settings — these are **executed**. Kafka, RabbitMQ and SFTP need a broker + heavy
+deps + infra, so their dispatches are recorded as **queued intents** (not
+executed) — the same policy the Workflow engine already uses.
+
+- **Pure engine** (`src/lib/integration/engine.ts`, 7 unit tests): `isExecutable`,
+  `buildRequest` (REST/GraphQL/webhook with bearer/custom-header auth),
+  `redactConfig` (masks token/secret/password values for display), `backoffDelays`
+  (capped exponential), `validateConnector`.
+- **Dispatcher** (`src/lib/integration/dispatch.ts`): performs the call with
+  retry + dead-letter; every attempt is logged to `integration_dispatches`
+  (status success/failed/queued/dead). The DLQ is dead+unresolved rows; failed
+  items can be re-dispatched.
+- **Data model** (PostgreSQL): `integrations` (connectors, config JSON) +
+  `integration_dispatches` (log + DLQ).
+- **API** `/api/admin/erp/integrations` (CRUD with redacted config) +
+  `/integrations/dispatch` (dispatch/test, recent + DLQ list, re-dispatch,
+  metrics). RBAC + zod + audit.
+- **UI** `/admin/integration-hub` (bilingual): Connectors (typed editor with a
+  Test button + executes/intent badge + DLQ count), Monitoring (metrics +
+  dispatch log), Dead Letter (retry).
+- **Workflow ↔ Integration composition**: the run route registers an
+  `integration` task handler (`dispatchByKey`) that sends the workflow variables
+  through a connector — so a `task` node `{action:'integration',
+  config:{connectorKey}}` calls an external system. This closes the automation
+  loop: **workflows → rules → integrations**, one engine + handler seam, no
+  duplicated logic.
+
+**Verified vs real PostgreSQL**: a REST connector to a live local server returned
+`success` (logged); a failing endpoint retried then landed `dead` after 2
+attempts (DLQ); a Kafka connector recorded a `queued` intent. tsc 0 · ESLint 0 ·
+vitest 162/162 · 6 audits pass · build OK.
+
+All three automation subsystems now exist — Workflow Designer (visual), Business
+Rules Engine, Integration Hub — composing through the engine's task handler seam.
