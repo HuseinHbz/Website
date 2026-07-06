@@ -202,6 +202,62 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Enterprise Project Management (Phase 21 ERP, Module 6). Projects with
+    -- tasks (Kanban/Gantt), milestones and timesheets.
+    CREATE TABLE IF NOT EXISTS pm_projects (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      customer TEXT,
+      manager TEXT,
+      status TEXT NOT NULL DEFAULT 'planning' CHECK(status IN ('planning','active','on_hold','completed','cancelled')),
+      start_date TEXT,
+      end_date TEXT,
+      budget NUMERIC NOT NULL DEFAULT 0,
+      hourly_rate NUMERIC NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS pm_tasks (
+      id SERIAL PRIMARY KEY,
+      project_id INTEGER NOT NULL REFERENCES pm_projects(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'todo' CHECK(status IN ('todo','in_progress','review','done')),
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low','medium','high','urgent')),
+      assignee TEXT,
+      estimate_hours NUMERIC NOT NULL DEFAULT 0,
+      start_date TEXT,
+      due_date TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS pm_milestones (
+      id SERIAL PRIMARY KEY,
+      project_id INTEGER NOT NULL REFERENCES pm_projects(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      due_date TEXT,
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','reached','missed')),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS pm_timesheets (
+      id SERIAL PRIMARY KEY,
+      project_id INTEGER NOT NULL REFERENCES pm_projects(id) ON DELETE CASCADE,
+      task_id INTEGER REFERENCES pm_tasks(id) ON DELETE SET NULL,
+      person TEXT NOT NULL,
+      date TEXT NOT NULL,
+      hours NUMERIC NOT NULL DEFAULT 0,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Enterprise Sales (Phase 21 ERP, Module 2). Customers with a credit limit;
     -- a unified sales document (quote/order/invoice/credit_note) with lines
     -- carrying discount % and tax %; and payments applied to invoices.
@@ -465,6 +521,10 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_sales_lines_doc ON sales_document_lines(document_id);
     CREATE INDEX IF NOT EXISTS idx_sales_payments_customer ON sales_payments(customer_id);
     CREATE INDEX IF NOT EXISTS idx_sales_payments_doc ON sales_payments(document_id);
+    CREATE INDEX IF NOT EXISTS idx_pm_tasks_project ON pm_tasks(project_id, status);
+    CREATE INDEX IF NOT EXISTS idx_pm_milestones_project ON pm_milestones(project_id);
+    CREATE INDEX IF NOT EXISTS idx_pm_timesheets_project ON pm_timesheets(project_id);
+    CREATE INDEX IF NOT EXISTS idx_pm_projects_status ON pm_projects(status);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

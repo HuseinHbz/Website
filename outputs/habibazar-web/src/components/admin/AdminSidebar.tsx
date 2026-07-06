@@ -100,6 +100,7 @@ const NAV = [
       { labelEn: 'Financial Center (ERP)', labelFa: 'مرکز مالی (ERP)', href: '/admin/finance', icon: '💰' },
       { labelEn: 'Inventory Center (ERP)', labelFa: 'مرکز انبار (ERP)', href: '/admin/inventory', icon: '📦' },
       { labelEn: 'Asset Center (ERP)', labelFa: 'مرکز دارایی‌ها (ERP)', href: '/admin/assets', icon: '🖧' },
+      { labelEn: 'Project Center (ERP)', labelFa: 'مرکز پروژه (ERP)', href: '/admin/project-management', icon: '📋' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
       { labelEn: 'Consultations', labelFa: 'مشاوره‌ها', href: '/admin/consultations', icon: '◎' },
     ],

@@ -176,6 +176,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   site-traffic chart and an audit-driven activity feed. Website analytics moved
   to `/admin/dashboard` (`AnalyticsPanel`). Reuses each module's data layer — no
   duplicated aggregation.
+- **Project Center** (`/admin/project-management`, `ProjectCenter`) — Phase-21 ERP
+  Module 6 (Enterprise Project Management). Distinct from `/admin/projects` (CMS
+  Case Studies). Tabbed: Dashboard · Projects → per-project hub with **Kanban ·
+  Gantt · Milestones · Timesheet**. Tables `pm_projects`, `pm_tasks` (todo/
+  in_progress/review/done, priority, estimate, dates), `pm_milestones`,
+  `pm_timesheets`. Pure engine `src/lib/erp/projects.ts` (`projectProgress`
+  hours-weighted, `kanbanColumns`, `projectHealth` on-track/at-risk/overdue/done,
+  `ganttLayout` date→%, `loggedHours`, `projectKpis`; 11 unit tests). Server layer
+  `src/lib/erp/projectData.ts` enriches projects + builds the detail hub + Gantt
+  range. APIs `/api/admin/erp/projects` (CRUD/list/detail/overview) +
+  `/projects/items` (task/milestone/timesheet create/move/delete) — zod/RBAC/
+  audited. Verified vs real PostgreSQL (progress/health/Gantt round-trip).
 - **Sales Center** (`/admin/sales`, `SalesCenter`) — Phase-21 ERP Module 2
   (Enterprise Sales). Tabbed: Dashboard · Customers · Quotations · Sales Orders ·
   Invoices · Payments. Tables `sales_customers` (credit limit), `sales_documents`
