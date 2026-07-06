@@ -153,12 +153,20 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   zod-validated, RBAC-gated (`requireAdmin('edit'|'delete')`), audit-logged. Lead
   scoring + pipeline stats are pure, unit-tested (`src/lib/crm/leads.ts`); writes
   re-score server-side. GET returns leads + aggregate sales KPIs.
-- **Asset Center** (`/admin/assets`, `AssetManager`) — Phase-16 ERP foundation.
-  `assets` table (IT asset lifecycle: type/serial/vendor/status/location/
-  assignment/warranty). `GET/POST/PUT/DELETE /api/admin/erp/assets`: zod-validated,
-  RBAC-gated, audit-logged. Warranty state (ok/expiring/expired) + portfolio stats
-  are pure, unit-tested (`src/lib/erp/assets.ts`); GET returns assets + warranty
-  health + rollup KPIs.
+- **Asset Center** (`/admin/assets`, `AssetManager`) — Phase-21 ERP Module 5
+  (Enterprise Asset Management, completed). Tabbed: Dashboard · Assets (with a
+  per-asset detail drawer). Extended `assets` table (category/model/manufacturer/
+  purchase price/residual/useful life/depreciation method/insurance/contract/
+  barcode/GPS/department/employee/cost-center/project) + `asset_assignments`,
+  `asset_maintenance` (schedule + history), `asset_activity` (timeline). Pure
+  **depreciation engine** `src/lib/erp/depreciation.ts` (straight-line/declining-
+  balance/sum-of-years-digits, unit-tested) + `warrantyState` (`assets.ts`).
+  Server layer `src/lib/erp/assetData.ts` enriches each asset with book value +
+  warranty/insurance/calibration health + open-maintenance, shared by list and
+  dashboard. APIs `/api/admin/erp/assets` (CRUD), `/assets/lifecycle` (detail +
+  add assignment/maintenance/mark-done), `/assets/overview` (dashboard) —
+  zod/RBAC/audited, every change writes an `asset_activity` row. Verified against
+  real PostgreSQL (depreciation round-trip).
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

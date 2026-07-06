@@ -74,6 +74,66 @@ export async function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- Enterprise Asset Management (Phase 21 ERP, Module 5) — extended fields.
+    -- Idempotent ADD COLUMN so existing installs upgrade in place.
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS category TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS model TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS manufacturer TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS barcode TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS purchase_price NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS residual_value NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS useful_life_years NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS depreciation_method TEXT NOT NULL DEFAULT 'none';
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS insurance_policy TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS insurance_expiry TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS contract_ref TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS department TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS employee TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS cost_center TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS project TEXT;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS gps_lat NUMERIC;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS gps_lng NUMERIC;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS calibration_due TEXT;
+
+    -- Assignment history (who/where an asset was assigned, over time).
+    CREATE TABLE IF NOT EXISTS asset_assignments (
+      id SERIAL PRIMARY KEY,
+      asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+      assignee TEXT NOT NULL,
+      department TEXT,
+      location TEXT,
+      from_date TEXT,
+      to_date TEXT,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Maintenance + calibration schedule and history.
+    CREATE TABLE IF NOT EXISTS asset_maintenance (
+      id SERIAL PRIMARY KEY,
+      asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'maintenance' CHECK(type IN ('maintenance','calibration','repair','inspection')),
+      status TEXT NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','done','overdue','cancelled')),
+      scheduled_date TEXT,
+      done_date TEXT,
+      cost NUMERIC NOT NULL DEFAULT 0,
+      vendor TEXT,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Activity timeline / audit trail per asset.
+    CREATE TABLE IF NOT EXISTS asset_activity (
+      id SERIAL PRIMARY KEY,
+      asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      detail TEXT,
+      user_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     CREATE TABLE IF NOT EXISTS system_logs (
       id SERIAL PRIMARY KEY,
       ts TEXT NOT NULL,
@@ -263,6 +323,10 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_inv_moves_wh ON inv_moves(warehouse_id);
     CREATE INDEX IF NOT EXISTS idx_inv_products_category ON inv_products(category);
     CREATE INDEX IF NOT EXISTS idx_inv_locations_wh ON inv_locations(warehouse_id);
+    CREATE INDEX IF NOT EXISTS idx_asset_assign_asset ON asset_assignments(asset_id, from_date);
+    CREATE INDEX IF NOT EXISTS idx_asset_maint_asset ON asset_maintenance(asset_id, scheduled_date);
+    CREATE INDEX IF NOT EXISTS idx_asset_maint_status ON asset_maintenance(status);
+    CREATE INDEX IF NOT EXISTS idx_asset_activity_asset ON asset_activity(asset_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

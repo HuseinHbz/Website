@@ -1,120 +1,206 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
-type Type = 'server' | 'network' | 'firewall' | 'switch' | 'router' | 'access_point' | 'storage' | 'vm' | 'cloud' | 'laptop' | 'license' | 'other'
-type Status = 'active' | 'maintenance' | 'retired' | 'spare'
+type Tab = 'dashboard' | 'assets'
 type WState = 'ok' | 'expiring' | 'expired' | 'none'
-interface Asset {
-  id?: number; name: string; type: Type; serial: string | null; vendor: string | null; status: Status
-  location: string | null; assignedTo: string | null; purchaseDate: string | null; warrantyExpiry: string | null; notes: string | null
-  warranty?: { state: WState; days: number | null }
-}
-interface Stats { total: number; byType: Record<string, number>; byStatus: Record<Status, number>; warrantyExpiring: number; warrantyExpired: number; active: number }
 
-const TYPES: Type[] = ['server', 'network', 'firewall', 'switch', 'router', 'access_point', 'storage', 'vm', 'cloud', 'laptop', 'license', 'other']
-const STATUSES: Status[] = ['active', 'maintenance', 'retired', 'spare']
-const STATUS_COLOR: Record<Status, string> = { active: 'green', maintenance: 'yellow', retired: 'slate', spare: 'blue' }
-const WARRANTY_COLOR: Record<WState, string> = { ok: 'green', expiring: 'yellow', expired: 'red', none: 'slate' }
-const EMPTY: Asset = { name: '', type: 'server', serial: '', vendor: '', status: 'active', location: '', assignedTo: '', purchaseDate: '', warrantyExpiry: '', notes: '' }
+interface Asset {
+  id?: number; name: string; type: string; category: string | null; model: string | null; manufacturer: string | null
+  serial: string | null; barcode: string | null; vendor: string | null; status: string
+  location: string | null; department: string | null; employee: string | null; costCenter: string | null; project: string | null
+  assignedTo: string | null; purchaseDate: string | null; purchasePrice: number; residualValue: number
+  usefulLifeYears: number; depreciationMethod: string; warrantyExpiry: string | null
+  insurancePolicy: string | null; insuranceExpiry: string | null; contractRef: string | null; calibrationDue: string | null
+  gpsLat: number | null; gpsLng: number | null; notes: string | null
+  bookValue?: number; accumulatedDepreciation?: number; lifeUsedPct?: number
+  warranty?: { state: WState; days: number | null }; insurance?: { state: WState; days: number | null }
+  calibration?: { state: WState; days: number | null }; openMaintenance?: number
+}
+interface Kpis { total: number; active: number; maintenance: number; retired: number; totalCost: number; totalBookValue: number; totalDepreciation: number; warrantyExpiring: number; warrantyExpired: number; insuranceExpiring: number; calibrationDue: number; openMaintenance: number }
+interface Overview { kpis: Kpis; byType: { key: string; count: number }[]; byStatus: { key: string; count: number }[]; attention: Asset[]; upcomingMaintenance: { id: number; type: string; status: string; scheduledDate: string | null; vendor: string | null; assetName: string; assetId: number }[] }
+interface Assignment { id: number; assignee: string; department: string | null; location: string | null; fromDate: string | null; toDate: string | null; note: string | null; createdAt: string }
+interface Maintenance { id: number; type: string; status: string; scheduledDate: string | null; doneDate: string | null; cost: number; vendor: string | null; note: string | null; createdAt: string }
+interface Activity { id: number; action: string; detail: string | null; createdAt: string }
+
+const TYPES = ['server', 'network', 'firewall', 'switch', 'router', 'access_point', 'storage', 'vm', 'cloud', 'laptop', 'license', 'other']
+const STATUSES = ['active', 'maintenance', 'retired', 'spare']
+const DEP_METHODS = ['none', 'straight_line', 'declining_balance', 'sum_of_years_digits']
+const WCOLOR: Record<WState, 'green' | 'yellow' | 'red' | 'slate'> = { ok: 'green', expiring: 'yellow', expired: 'red', none: 'slate' }
+const EMPTY: Asset = {
+  name: '', type: 'server', category: '', model: '', manufacturer: '', serial: '', barcode: '', vendor: '', status: 'active',
+  location: '', department: '', employee: '', costCenter: '', project: '', assignedTo: '', purchaseDate: '',
+  purchasePrice: 0, residualValue: 0, usefulLifeYears: 0, depreciationMethod: 'none', warrantyExpiry: '',
+  insurancePolicy: '', insuranceExpiry: '', contractRef: '', calibrationDue: '', gpsLat: null, gpsLng: null, notes: '',
+}
+function money(n: number | undefined): string { return `$${(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}` }
 
 export function AssetManager() {
   const t = useT()
   const { toast, ToastContainer } = useToast()
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [typeFilter, setTypeFilter] = useState<Type | 'all'>('all')
-  const [search, setSearch] = useState('')
-  const [modal, setModal] = useState(false)
-  const [editing, setEditing] = useState<Asset>(EMPTY)
-  const [saving, setSaving] = useState(false)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await fetch('/api/admin/erp/assets')
-      if (r.ok) { const d = await r.json(); setAssets(d.assets ?? []); setStats(d.stats ?? null) }
-    } catch { toast(t('asset_loadFail'), 'error') } finally { setLoading(false) }
-  }, [toast, t])
-  useEffect(() => { load() }, [load])
-
-  async function save() {
-    setSaving(true)
-    try {
-      const r = await fetch('/api/admin/erp/assets', {
-        method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
-      })
-      if (!r.ok) throw new Error()
-      toast(t('asset_savedOk'), 'success'); setModal(false); load()
-    } catch { toast(t('asset_saveFail'), 'error') } finally { setSaving(false) }
-  }
-  async function del(id: number) {
-    if (!confirm(t('asset_confirmDel'))) return
-    try {
-      const r = await fetch('/api/admin/erp/assets', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-      if (!r.ok) throw new Error()
-      toast(t('asset_delOk'), 'success'); load()
-    } catch { toast(t('asset_delFail'), 'error') }
-  }
-  function set<K extends keyof Asset>(k: K, v: Asset[K]) { setEditing((e) => ({ ...e, [k]: v })) }
-
-  const filtered = useMemo(() => assets.filter((a) => {
-    if (typeFilter !== 'all' && a.type !== typeFilter) return false
-    if (search) { const q = search.toLowerCase(); if (!`${a.name} ${a.serial ?? ''} ${a.vendor ?? ''} ${a.location ?? ''} ${a.assignedTo ?? ''}`.toLowerCase().includes(q)) return false }
-    return true
-  }), [assets, typeFilter, search])
-
+  const [tab, setTab] = useState<Tab>('dashboard')
   return (
     <>
       <ToastContainer />
-      <PageHeader title={t('asset_title')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('asset_newAsset')}</Btn>} />
-
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <div className="rounded-xl p-4 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary mb-1">{t('asset_total')}</p><p className="text-2xl font-bold text-text-primary">{stats.total}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-success/40"><p className="text-xs text-text-tertiary mb-1">{t('asset_active')}</p><p className="text-2xl font-bold text-success">{stats.active}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-warning/40"><p className="text-xs text-text-tertiary mb-1">{t('asset_inMaint')}</p><p className="text-2xl font-bold text-text-primary">{stats.byStatus.maintenance}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-warning/40"><p className="text-xs text-text-tertiary mb-1">{t('asset_wExpiring')}</p><p className="text-2xl font-bold text-warning">{stats.warrantyExpiring}</p></div>
-          <div className="rounded-xl p-4 bg-surface-2 border border-danger/40"><p className="text-xs text-text-tertiary mb-1">{t('asset_wExpired')}</p><p className="text-2xl font-bold text-danger">{stats.warrantyExpired}</p></div>
-        </div>
-      )}
-
-      <div className="flex gap-2 mb-4 flex-wrap items-center">
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as Type | 'all')} className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white capitalize">
-          <option value="all">{t('asset_allTypes')} ({assets.length})</option>
-          {TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')} ({stats?.byType[t] ?? 0})</option>)}
-        </select>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('asset_searchPh')} className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-text-disabled" />
+      <PageHeader title={t('am_title')} subtitle={t('am_subtitle')} />
+      <div className="flex gap-1 mb-6 border-b border-subtle">
+        {(['dashboard', 'assets'] as Tab[]).map(tb => (
+          <button key={tb} onClick={() => setTab(tb)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === tb ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
+            {t(`am_tab_${tb}` as 'am_tab_dashboard')}
+          </button>
+        ))}
       </div>
+      {tab === 'dashboard' ? <Dashboard t={t} /> : <Assets t={t} toast={toast} />}
+    </>
+  )
+}
+type T = ReturnType<typeof useT>
+type Toast = ReturnType<typeof useToast>['toast']
 
+function Dashboard({ t }: { t: T }) {
+  const [d, setD] = useState<Overview | null>(null)
+  const [loading, setLoading] = useState(true)
+  const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/assets/overview'); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [])
+  useEffect(() => { load() }, [load])
+  if (loading && !d) return <p className="text-sm text-text-tertiary">{t('am_loading')}</p>
+  if (!d) return <Card className="p-5"><p className="text-sm text-text-tertiary">{t('am_empty')}</p></Card>
+  const k = d.kpis
+  const maxType = Math.max(1, ...d.byType.map(x => x.count))
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Kpi label={t('am_kTotal')} value={String(k.total)} icon="🖥️" />
+        <Kpi label={t('am_kActive')} value={String(k.active)} icon="✅" tone="ok" />
+        <Kpi label={t('am_kCost')} value={money(k.totalCost)} icon="💵" />
+        <Kpi label={t('am_kBook')} value={money(k.totalBookValue)} icon="📉" tone="ok" />
+        <Kpi label={t('am_kDep')} value={money(k.totalDepreciation)} icon="➖" />
+        <Kpi label={t('am_kOpenMaint')} value={String(k.openMaintenance)} icon="🔧" tone={k.openMaintenance ? 'warn' : undefined} />
+        <Kpi label={t('am_kWarrantyExp')} value={String(k.warrantyExpiring)} icon="⏳" tone={k.warrantyExpiring ? 'warn' : undefined} />
+        <Kpi label={t('am_kWarrantyExpired')} value={String(k.warrantyExpired)} icon="⛔" tone={k.warrantyExpired ? 'bad' : undefined} />
+        <Kpi label={t('am_kInsurance')} value={String(k.insuranceExpiring)} icon="🛡️" tone={k.insuranceExpiring ? 'warn' : undefined} />
+        <Kpi label={t('am_kCalibration')} value={String(k.calibrationDue)} icon="🎯" tone={k.calibrationDue ? 'warn' : undefined} />
+        <Kpi label={t('am_kMaintenance')} value={String(k.maintenance)} icon="🛠️" />
+        <Kpi label={t('am_kRetired')} value={String(k.retired)} icon="🗄️" />
+      </div>
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card className="p-5">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{t('am_byType')}</h3>
+          <div className="space-y-2">
+            {d.byType.map(x => (
+              <div key={x.key}>
+                <div className="flex justify-between text-xs mb-0.5"><span className="text-text-secondary capitalize">{x.key}</span><span className="text-text-tertiary">{x.count}</span></div>
+                <div className="h-1.5 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${(x.count / maxType) * 100}%` }} /></div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-5">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{t('am_upcomingMaint')}</h3>
+          {d.upcomingMaintenance.length === 0 ? <p className="text-xs text-text-tertiary">{t('am_noMaint')}</p> : (
+            <div className="space-y-2">
+              {d.upcomingMaintenance.map(m => (
+                <div key={m.id} className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary truncate">{m.assetName} <span className="text-text-tertiary text-xs">· {t(`am_mt_${m.type}` as 'am_mt_maintenance')}</span></span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-text-tertiary">{m.scheduledDate || '—'}</span>
+                    <Badge color={m.status === 'overdue' ? 'red' : 'yellow'}>{t(`am_ms_${m.status}` as 'am_ms_scheduled')}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-text-primary mb-3">{t('am_attention')}</h3>
+        {d.attention.length === 0 ? <p className="text-xs text-text-tertiary">{t('am_allGood')}</p> : (
+          <div className="flex flex-wrap gap-2">
+            {d.attention.map(a => (
+              <div key={a.id} className="rounded-lg border border-subtle px-3 py-2 text-xs">
+                <div className="font-medium text-text-secondary">{a.name}</div>
+                <div className="flex gap-1 mt-1">
+                  {a.warranty && a.warranty.state !== 'ok' && a.warranty.state !== 'none' && <Badge color={WCOLOR[a.warranty.state]}>{t('am_warranty')}</Badge>}
+                  {a.calibration && (a.calibration.state === 'expiring' || a.calibration.state === 'expired') && <Badge color={WCOLOR[a.calibration.state]}>{t('am_calibration')}</Badge>}
+                  {!!a.openMaintenance && <Badge color="yellow">{a.openMaintenance} {t('am_maint')}</Badge>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+function Kpi({ label, value, icon, tone }: { label: string; value: string; icon: string; tone?: 'ok' | 'warn' | 'bad' }) {
+  const ring = tone === 'ok' ? 'border-success/40' : tone === 'warn' ? 'border-warning/40' : tone === 'bad' ? 'border-danger/40' : 'border-subtle'
+  return (
+    <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}>
+      <div className="flex items-center justify-between mb-1"><p className="text-xs text-text-tertiary">{label}</p><span aria-hidden>{icon}</span></div>
+      <p className="text-xl font-bold text-text-primary">{value}</p>
+    </div>
+  )
+}
+
+function Assets({ t, toast }: { t: T; toast: Toast }) {
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState(false)
+  const [editing, setEditing] = useState<Asset>(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [detailId, setDetailId] = useState<number | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try { const r = await fetch('/api/admin/erp/assets'); if (r.ok) { const d = await r.json(); setAssets(d.assets ?? []) } }
+    catch { toast(t('am_loadFail'), 'error') } finally { setLoading(false) }
+  }, [toast, t])
+  useEffect(() => { load() }, [load])
+
+  function set<K extends keyof Asset>(k: K, v: Asset[K]) { setEditing(e => ({ ...e, [k]: v })) }
+  async function save() {
+    if (!editing.name.trim()) return
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/assets', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'failed')
+      toast(t('am_saved'), 'success'); setModal(false); load()
+    } catch (e) { toast(e instanceof Error ? e.message : t('am_saveFail'), 'error') } finally { setSaving(false) }
+  }
+  async function del(id: number) {
+    if (!confirm(t('am_confirmDel'))) return
+    try { const r = await fetch('/api/admin/erp/assets', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); if (!r.ok) throw new Error(); toast(t('am_deleted'), 'success'); load() }
+    catch { toast(t('am_saveFail'), 'error') }
+  }
+
+  return (
+    <>
+      <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('am_new')}</Btn></div>
       <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('asset_loading')}</p>
-          : filtered.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('asset_empty')}</p>
+        {loading ? <p className="text-sm text-text-tertiary p-5">{t('am_loading')}</p>
+          : assets.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('am_noAssets')}</p>
           : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('asset_colAsset'), t('asset_colType'), t('asset_colSerial'), t('asset_colStatus'), t('asset_colWarranty'), t('asset_colAssigned'), t('asset_colActions')].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
+                {[t('am_cName'), t('am_cCategory'), t('am_cStatus'), t('am_cBook'), t('am_cWarranty'), t('am_cAssigned'), t('am_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
               </tr></thead>
               <tbody>
-                {filtered.map((a) => (
-                  <tr key={a.id} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{a.name}</div><div className="text-xs text-text-tertiary">{a.vendor || '—'}</div></td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs capitalize">{a.type.replace('_', ' ')}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs font-mono">{a.serial || '—'}</td>
-                    <td className="px-4 py-2.5"><Badge color={STATUS_COLOR[a.status]}>{a.status}</Badge></td>
-                    <td className="px-4 py-2.5">
-                      {a.warranty && a.warranty.state !== 'none'
-                        ? <Badge color={WARRANTY_COLOR[a.warranty.state]}>{a.warranty.state}{a.warranty.days != null ? ` · ${a.warranty.days}d` : ''}</Badge>
-                        : <span className="text-xs text-text-disabled">—</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs">{[a.assignedTo, a.location].filter(Boolean).join(' · ') || '—'}</td>
-                    <td className="px-4 py-2.5"><div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditing(a); setModal(true) }}>{t('asset_edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(a.id!)}>{t('asset_del')}</Btn>
+                {assets.map(a => (
+                  <tr key={a.id} className="border-b border-subtle/50 hover:bg-surface-2 cursor-pointer" onClick={() => setDetailId(a.id!)}>
+                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{a.name}</div><div className="text-xs text-text-tertiary">{a.manufacturer || ''} {a.model || ''} {a.serial ? `· ${a.serial}` : ''}</div></td>
+                    <td className="px-4 py-2.5 text-text-secondary text-xs">{a.category || '—'}</td>
+                    <td className="px-4 py-2.5"><Badge color={a.status === 'active' ? 'green' : a.status === 'retired' ? 'slate' : 'yellow'}>{t(`am_s_${a.status}` as 'am_s_active')}</Badge></td>
+                    <td className="px-4 py-2.5 text-text-secondary text-xs">{money(a.bookValue)}</td>
+                    <td className="px-4 py-2.5">{a.warranty && a.warranty.state !== 'none' ? <Badge color={WCOLOR[a.warranty.state]}>{t(`am_w_${a.warranty.state}` as 'am_w_ok')}</Badge> : <span className="text-text-tertiary text-xs">—</span>}</td>
+                    <td className="px-4 py-2.5 text-text-secondary text-xs">{a.employee || a.assignedTo || '—'}</td>
+                    <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}><div className="flex gap-2">
+                      <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...a }); setModal(true) }}>{t('am_edit')}</Btn>
+                      <Btn size="sm" variant="danger" onClick={() => del(a.id!)}>{t('am_del')}</Btn>
                     </div></td>
                   </tr>
                 ))}
@@ -124,32 +210,189 @@ export function AssetManager() {
         )}
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('asset_editAsset') : t('asset_newAsset')} size="lg">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label={t('asset_name') + ' *'} value={editing.name} onChange={(v) => set('name', v)} />
-            <Input label={t('asset_vendor')} value={editing.vendor || ''} onChange={(v) => set('vendor', v)} />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Select label={t('asset_typeL')} value={editing.type} onChange={(v) => set('type', v as Type)} options={TYPES.map((t) => ({ value: t, label: t.replace('_', ' ') }))} />
-            <Select label={t('asset_statusL')} value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: s }))} />
-            <Input label={t('asset_serial')} value={editing.serial || ''} onChange={(v) => set('serial', v)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label={t('asset_assignedTo')} value={editing.assignedTo || ''} onChange={(v) => set('assignedTo', v)} />
-            <Input label={t('asset_location')} value={editing.location || ''} onChange={(v) => set('location', v)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label={t('asset_purchaseDate')} type="date" value={editing.purchaseDate || ''} onChange={(v) => set('purchaseDate', v)} />
-            <Input label={t('asset_warrantyExpiry')} type="date" value={editing.warrantyExpiry || ''} onChange={(v) => set('warrantyExpiry', v)} />
-          </div>
-          <Input label={t('asset_notes')} value={editing.notes || ''} onChange={(v) => set('notes', v)} multiline rows={3} />
-          <div className="flex gap-3">
-            <Btn onClick={save} disabled={saving}>{saving ? t('asset_saving') : t('asset_save')}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>{t('asset_cancel')}</Btn>
-          </div>
-        </div>
-      </Modal>
+      <AssetForm t={t} open={modal} editing={editing} set={set} onClose={() => setModal(false)} onSave={save} saving={saving} />
+      {detailId && <AssetDetail t={t} id={detailId} onClose={() => setDetailId(null)} toast={toast} onChange={load} />}
     </>
   )
+}
+
+function AssetForm({ t, open, editing, set, onClose, onSave, saving }: { t: T; open: boolean; editing: Asset; set: <K extends keyof Asset>(k: K, v: Asset[K]) => void; onClose: () => void; onSave: () => void; saving: boolean }) {
+  return (
+    <Modal open={open} onClose={onClose} title={editing.id ? t('am_editAsset') : t('am_new')} size="xl">
+      <div className="space-y-5">
+        <Section title={t('am_secIdentity')}>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label={t('am_fName')} value={editing.name} onChange={v => set('name', v)} />
+            <Select label={t('am_fType')} value={editing.type} onChange={v => set('type', v)} options={TYPES.map(x => ({ value: x, label: x }))} />
+            <Input label={t('am_fCategory')} value={editing.category || ''} onChange={v => set('category', v)} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label={t('am_fManufacturer')} value={editing.manufacturer || ''} onChange={v => set('manufacturer', v)} />
+            <Input label={t('am_fModel')} value={editing.model || ''} onChange={v => set('model', v)} />
+            <Select label={t('am_fStatus')} value={editing.status} onChange={v => set('status', v)} options={STATUSES.map(x => ({ value: x, label: t(`am_s_${x}` as 'am_s_active') }))} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label={t('am_fSerial')} value={editing.serial || ''} onChange={v => set('serial', v)} />
+            <Input label={t('am_fBarcode')} value={editing.barcode || ''} onChange={v => set('barcode', v)} />
+            <Input label={t('am_fVendor')} value={editing.vendor || ''} onChange={v => set('vendor', v)} />
+          </div>
+        </Section>
+        <Section title={t('am_secFinancial')}>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label={t('am_fPurchaseDate')} type="date" value={editing.purchaseDate || ''} onChange={v => set('purchaseDate', v)} />
+            <Input label={t('am_fPurchasePrice')} type="number" value={String(editing.purchasePrice)} onChange={v => set('purchasePrice', Number(v) || 0)} />
+            <Input label={t('am_fResidual')} type="number" value={String(editing.residualValue)} onChange={v => set('residualValue', Number(v) || 0)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label={t('am_fLife')} type="number" value={String(editing.usefulLifeYears)} onChange={v => set('usefulLifeYears', Number(v) || 0)} />
+            <Select label={t('am_fDepMethod')} value={editing.depreciationMethod} onChange={v => set('depreciationMethod', v)} options={DEP_METHODS.map(x => ({ value: x, label: t(`am_dm_${x}` as 'am_dm_none') }))} />
+          </div>
+        </Section>
+        <Section title={t('am_secCoverage')}>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label={t('am_fWarranty')} type="date" value={editing.warrantyExpiry || ''} onChange={v => set('warrantyExpiry', v)} />
+            <Input label={t('am_fInsurancePolicy')} value={editing.insurancePolicy || ''} onChange={v => set('insurancePolicy', v)} />
+            <Input label={t('am_fInsuranceExpiry')} type="date" value={editing.insuranceExpiry || ''} onChange={v => set('insuranceExpiry', v)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label={t('am_fContract')} value={editing.contractRef || ''} onChange={v => set('contractRef', v)} />
+            <Input label={t('am_fCalibration')} type="date" value={editing.calibrationDue || ''} onChange={v => set('calibrationDue', v)} />
+          </div>
+        </Section>
+        <Section title={t('am_secAssignment')}>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label={t('am_fLocation')} value={editing.location || ''} onChange={v => set('location', v)} />
+            <Input label={t('am_fDepartment')} value={editing.department || ''} onChange={v => set('department', v)} />
+            <Input label={t('am_fEmployee')} value={editing.employee || ''} onChange={v => set('employee', v)} />
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            <Input label={t('am_fCostCenter')} value={editing.costCenter || ''} onChange={v => set('costCenter', v)} />
+            <Input label={t('am_fProject')} value={editing.project || ''} onChange={v => set('project', v)} />
+            <Input label={t('am_fGpsLat')} type="number" value={editing.gpsLat != null ? String(editing.gpsLat) : ''} onChange={v => set('gpsLat', v === '' ? null : Number(v))} />
+            <Input label={t('am_fGpsLng')} type="number" value={editing.gpsLng != null ? String(editing.gpsLng) : ''} onChange={v => set('gpsLng', v === '' ? null : Number(v))} />
+          </div>
+        </Section>
+        <Input label={t('am_fNotes')} value={editing.notes || ''} onChange={v => set('notes', v)} multiline rows={2} />
+        <div className="flex gap-3">
+          <Btn onClick={onSave} disabled={saving}>{saving ? t('am_saving') : t('am_save')}</Btn>
+          <Btn variant="secondary" onClick={onClose}>{t('am_cancel')}</Btn>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">{title}</h4>
+      <div className="space-y-4">{children}</div>
+    </div>
+  )
+}
+
+function AssetDetail({ t, id, onClose, toast, onChange }: { t: T; id: number; onClose: () => void; toast: Toast; onChange: () => void }) {
+  const [data, setData] = useState<{ asset: Asset; assignments: Assignment[]; maintenance: Maintenance[]; activity: Activity[] } | null>(null)
+  const [assignForm, setAssignForm] = useState({ assignee: '', department: '', location: '', fromDate: '', note: '' })
+  const [maintForm, setMaintForm] = useState({ type: 'maintenance', scheduledDate: '', vendor: '', cost: 0, note: '' })
+
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/admin/erp/assets/lifecycle?id=${id}`); if (r.ok) setData(await r.json())
+  }, [id])
+  useEffect(() => { load() }, [load])
+
+  async function addAssignment() {
+    if (!assignForm.assignee.trim()) return
+    const r = await fetch('/api/admin/erp/assets/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'assignment', assetId: id, ...assignForm }) })
+    if (r.ok) { toast(t('am_saved'), 'success'); setAssignForm({ assignee: '', department: '', location: '', fromDate: '', note: '' }); load(); onChange() } else toast(t('am_saveFail'), 'error')
+  }
+  async function addMaint() {
+    const r = await fetch('/api/admin/erp/assets/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'maintenance', assetId: id, status: 'scheduled', ...maintForm }) })
+    if (r.ok) { toast(t('am_saved'), 'success'); setMaintForm({ type: 'maintenance', scheduledDate: '', vendor: '', cost: 0, note: '' }); load(); onChange() } else toast(t('am_saveFail'), 'error')
+  }
+  async function markDone(mid: number) {
+    const r = await fetch('/api/admin/erp/assets/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'maintenance-done', id: mid, assetId: id }) })
+    if (r.ok) { load(); onChange() }
+  }
+
+  const a = data?.asset
+  return (
+    <Modal open onClose={onClose} title={a ? a.name : t('am_loading')} size="xl">
+      {!a ? <p className="text-sm text-text-tertiary">{t('am_loading')}</p> : (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Mini label={t('am_dPrice')} value={money(a.purchasePrice)} />
+            <Mini label={t('am_dBook')} value={money(a.bookValue)} />
+            <Mini label={t('am_dDep')} value={money(a.accumulatedDepreciation)} />
+            <Mini label={t('am_dLife')} value={`${a.lifeUsedPct ?? 0}%`} />
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {a.warranty && a.warranty.state !== 'none' && <Badge color={WCOLOR[a.warranty.state]}>{t('am_warranty')}: {t(`am_w_${a.warranty.state}` as 'am_w_ok')}{a.warranty.days != null ? ` (${a.warranty.days}d)` : ''}</Badge>}
+            {a.insurance && a.insurance.state !== 'none' && <Badge color={WCOLOR[a.insurance.state]}>{t('am_insurance')}: {t(`am_w_${a.insurance.state}` as 'am_w_ok')}</Badge>}
+            {a.calibration && a.calibration.state !== 'none' && <Badge color={WCOLOR[a.calibration.state]}>{t('am_calibration')}: {t(`am_w_${a.calibration.state}` as 'am_w_ok')}</Badge>}
+            {a.contractRef && <Badge color="slate">{t('am_contract')}: {a.contractRef}</Badge>}
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-5">
+            <div>
+              <h4 className="text-sm font-semibold text-text-primary mb-2">{t('am_assignHistory')}</h4>
+              <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+                {(data?.assignments ?? []).length === 0 ? <p className="text-xs text-text-tertiary">{t('am_noAssign')}</p> : data!.assignments.map(x => (
+                  <div key={x.id} className="text-xs border border-subtle rounded p-2"><span className="text-text-secondary font-medium">{x.assignee}</span> <span className="text-text-tertiary">{x.department || ''} {x.fromDate || x.createdAt}</span></div>
+                ))}
+              </div>
+              <div className="space-y-2 rounded-lg border border-subtle p-3">
+                <Input label={t('am_fAssignee')} value={assignForm.assignee} onChange={v => setAssignForm(f => ({ ...f, assignee: v }))} />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input label={t('am_fDepartment')} value={assignForm.department} onChange={v => setAssignForm(f => ({ ...f, department: v }))} />
+                  <Input label={t('am_fFromDate')} type="date" value={assignForm.fromDate} onChange={v => setAssignForm(f => ({ ...f, fromDate: v }))} />
+                </div>
+                <Btn size="sm" onClick={addAssignment}>{t('am_addAssignment')}</Btn>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-text-primary mb-2">{t('am_maintHistory')}</h4>
+              <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+                {(data?.maintenance ?? []).length === 0 ? <p className="text-xs text-text-tertiary">{t('am_noMaint')}</p> : data!.maintenance.map(m => (
+                  <div key={m.id} className="flex items-center justify-between text-xs border border-subtle rounded p-2">
+                    <span className="text-text-secondary">{t(`am_mt_${m.type}` as 'am_mt_maintenance')} · {m.scheduledDate || m.createdAt}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge color={m.status === 'done' ? 'green' : m.status === 'overdue' ? 'red' : 'yellow'}>{t(`am_ms_${m.status}` as 'am_ms_scheduled')}</Badge>
+                      {m.status !== 'done' && <button onClick={() => markDone(m.id)} className="text-brand hover:underline">{t('am_markDone')}</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2 rounded-lg border border-subtle p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Select label={t('am_fMaintType')} value={maintForm.type} onChange={v => setMaintForm(f => ({ ...f, type: v }))} options={['maintenance', 'calibration', 'repair', 'inspection'].map(x => ({ value: x, label: t(`am_mt_${x}` as 'am_mt_maintenance') }))} />
+                  <Input label={t('am_fScheduled')} type="date" value={maintForm.scheduledDate} onChange={v => setMaintForm(f => ({ ...f, scheduledDate: v }))} />
+                </div>
+                <Input label={t('am_fMaintVendor')} value={maintForm.vendor} onChange={v => setMaintForm(f => ({ ...f, vendor: v }))} />
+                <Btn size="sm" onClick={addMaint}>{t('am_addMaint')}</Btn>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-text-primary mb-2">{t('am_activity')}</h4>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {(data?.activity ?? []).length === 0 ? <p className="text-xs text-text-tertiary">{t('am_noActivity')}</p> : data!.activity.map(x => (
+                <div key={x.id} className="flex items-start gap-2 text-xs">
+                  <span className="text-text-disabled shrink-0 w-32 font-mono">{x.createdAt}</span>
+                  <Badge color="slate">{x.action}</Badge>
+                  <span className="text-text-secondary flex-1">{x.detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-lg bg-surface-2 border border-subtle p-3"><p className="text-[11px] text-text-tertiary">{label}</p><p className="text-base font-bold text-text-primary">{value}</p></div>
 }

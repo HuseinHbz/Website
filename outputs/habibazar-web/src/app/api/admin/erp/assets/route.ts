@@ -3,45 +3,68 @@ import { z } from 'zod'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
-import { assetStats, warrantyState, ASSET_TYPES, ASSET_STATUSES, type AssetType, type AssetStatus } from '@/lib/erp/assets'
+import { ASSET_TYPES, ASSET_STATUSES } from '@/lib/erp/assets'
+import { DEPRECIATION_METHODS } from '@/lib/erp/depreciation'
+import { loadAssets, assetKpisFrom } from '@/lib/erp/assetData'
 
-// ERP Asset register API. Reuses the validated subsystems: zod validation,
-// requireAdmin RBAC, and audit logging.
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const schema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().trim().min(1).max(200),
-  type: z.enum(ASSET_TYPES).optional(),
+  type: z.enum(ASSET_TYPES).default('other'),
+  category: z.string().trim().max(80).optional().nullable(),
+  model: z.string().trim().max(120).optional().nullable(),
+  manufacturer: z.string().trim().max(120).optional().nullable(),
   serial: z.string().trim().max(120).optional().nullable(),
+  barcode: z.string().trim().max(120).optional().nullable(),
   vendor: z.string().trim().max(120).optional().nullable(),
-  status: z.enum(ASSET_STATUSES).optional(),
+  status: z.enum(ASSET_STATUSES).default('active'),
   location: z.string().trim().max(200).optional().nullable(),
+  department: z.string().trim().max(120).optional().nullable(),
+  employee: z.string().trim().max(120).optional().nullable(),
+  costCenter: z.string().trim().max(120).optional().nullable(),
+  project: z.string().trim().max(120).optional().nullable(),
   assignedTo: z.string().trim().max(200).optional().nullable(),
   purchaseDate: z.string().trim().max(30).optional().nullable(),
+  purchasePrice: z.number().min(0).default(0),
+  residualValue: z.number().min(0).default(0),
+  usefulLifeYears: z.number().min(0).max(100).default(0),
+  depreciationMethod: z.enum(DEPRECIATION_METHODS).default('none'),
   warrantyExpiry: z.string().trim().max(30).optional().nullable(),
+  insurancePolicy: z.string().trim().max(120).optional().nullable(),
+  insuranceExpiry: z.string().trim().max(30).optional().nullable(),
+  contractRef: z.string().trim().max(120).optional().nullable(),
+  calibrationDue: z.string().trim().max(30).optional().nullable(),
+  gpsLat: z.number().optional().nullable(),
+  gpsLng: z.number().optional().nullable(),
   notes: z.string().trim().max(5000).optional().nullable(),
 })
-
-interface Row { type: AssetType; status: AssetStatus; warrantyExpiry: string | null }
 
 export async function GET() {
   try {
     const auth = await requireAdmin()
     if ('error' in auth) return auth.error
-    const rows = await pgQuery(
-      `SELECT id, name, type, serial, vendor, status, location, assigned_to AS "assignedTo",
-              purchase_date AS "purchaseDate", warranty_expiry AS "warrantyExpiry", notes,
-              created_at AS "createdAt", updated_at AS "updatedAt"
-       FROM assets ORDER BY updated_at DESC`
-    ) as (Row & Record<string, unknown>)[]
-    const withHealth = rows.map((r) => ({ ...r, warranty: warrantyState(r.warrantyExpiry) }))
-    const stats = assetStats(rows.map((r) => ({ type: r.type, status: r.status, warrantyExpiry: r.warrantyExpiry })))
-    return NextResponse.json({ assets: withHealth, stats })
-  } catch (e: unknown) {
-    return apiError(e)
-  }
+    const assets = await loadAssets()
+    return NextResponse.json({ assets, stats: assetKpisFrom(assets) })
+  } catch (e) { return apiError(e) }
+}
+
+const COLS = `name, type, category, model, manufacturer, serial, barcode, vendor, status, location,
+  department, employee, cost_center, project, assigned_to, purchase_date, purchase_price, residual_value,
+  useful_life_years, depreciation_method, warranty_expiry, insurance_policy, insurance_expiry,
+  contract_ref, calibration_due, gps_lat, gps_lng, notes`
+
+function values(d: z.infer<typeof schema>) {
+  return [
+    d.name, d.type, d.category ?? null, d.model ?? null, d.manufacturer ?? null, d.serial ?? null,
+    d.barcode ?? null, d.vendor ?? null, d.status, d.location ?? null, d.department ?? null,
+    d.employee ?? null, d.costCenter ?? null, d.project ?? null, d.assignedTo ?? null,
+    d.purchaseDate ?? null, d.purchasePrice, d.residualValue, d.usefulLifeYears, d.depreciationMethod,
+    d.warrantyExpiry ?? null, d.insurancePolicy ?? null, d.insuranceExpiry ?? null, d.contractRef ?? null,
+    d.calibrationDue ?? null, d.gpsLat ?? null, d.gpsLng ?? null, d.notes ?? null,
+  ]
 }
 
 export async function POST(req: NextRequest) {
@@ -51,19 +74,18 @@ export async function POST(req: NextRequest) {
     const parsed = await readJson(req, schema)
     if ('error' in parsed) return parsed.error
     const d = parsed.data
+    const ph = values(d).map((_, i) => `$${i + 1}`).join(',')
     const result = (await pgQuery(
-      `INSERT INTO assets (name, type, serial, vendor, status, location, assigned_to, purchase_date, warranty_expiry, notes, owner_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-      [d.name, d.type ?? 'other', d.serial || null, d.vendor || null,
-        d.status ?? 'active', d.location || null, d.assignedTo || null,
-        d.purchaseDate || null, d.warrantyExpiry || null, d.notes || null,
-        auth.user.id],
+      `INSERT INTO assets (${COLS}, owner_id) VALUES (${ph}, $${values(d).length + 1}) RETURNING id`,
+      [...values(d), auth.user.id],
     ))[0] as { id: number }
-    await logAction(auth.user, 'CREATE', 'assets', result.id, null, d)
+    await pgQuery(
+      `INSERT INTO asset_activity (asset_id, action, detail, user_id) VALUES ($1,'created',$2,$3)`,
+      [result.id, `Asset "${d.name}" created`, auth.user.id],
+    )
+    await logAction(auth.user, 'CREATE', 'assets', result.id, null, { name: d.name })
     return NextResponse.json({ id: result.id })
-  } catch (e: unknown) {
-    return apiError(e)
-  }
+  } catch (e) { return apiError(e) }
 }
 
 export async function PUT(req: NextRequest) {
@@ -74,23 +96,20 @@ export async function PUT(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     if (!d.id) return badRequest('id required')
-    const existing = (await pgQuery(`SELECT * FROM assets WHERE id=$1`, [d.id]))[0] as Record<string, unknown> | undefined
+    const existing = (await pgQuery(`SELECT id, status FROM assets WHERE id=$1`, [d.id]))[0] as { id: number; status: string } | undefined
     if (!existing) return badRequest('asset not found')
+    const cols = COLS.split(',').map((c, i) => `${c.trim()}=$${i + 2}`).join(', ')
     await pgQuery(
-      `UPDATE assets SET name=$2, type=$3, serial=$4, vendor=$5, status=$6,
-        location=$7, assigned_to=$8, purchase_date=$9, warranty_expiry=$10,
-        notes=$11, updated_at=to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
-      [d.id, d.name, d.type ?? existing.type, d.serial ?? existing.serial ?? null,
-        d.vendor ?? existing.vendor ?? null, d.status ?? existing.status,
-        d.location ?? existing.location ?? null, d.assignedTo ?? existing.assigned_to ?? null,
-        d.purchaseDate ?? existing.purchase_date ?? null, d.warrantyExpiry ?? existing.warranty_expiry ?? null,
-        d.notes ?? existing.notes ?? null],
+      `UPDATE assets SET ${cols}, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
+      [d.id, ...values(d)],
     )
-    await logAction(auth.user, 'UPDATE', 'assets', d.id, existing, d)
+    if (existing.status !== d.status) {
+      await pgQuery(`INSERT INTO asset_activity (asset_id, action, detail, user_id) VALUES ($1,'status',$2,$3)`,
+        [d.id, `Status ${existing.status} → ${d.status}`, auth.user.id])
+    }
+    await logAction(auth.user, 'UPDATE', 'assets', d.id, existing, { name: d.name })
     return NextResponse.json({ ok: true })
-  } catch (e: unknown) {
-    return apiError(e)
-  }
+  } catch (e) { return apiError(e) }
 }
 
 export async function DELETE(req: NextRequest) {
@@ -102,7 +121,5 @@ export async function DELETE(req: NextRequest) {
     await pgQuery(`DELETE FROM assets WHERE id=$1`, [id])
     await logAction(auth.user, 'DELETE', 'assets', id)
     return NextResponse.json({ ok: true })
-  } catch (e: unknown) {
-    return apiError(e)
-  }
+  } catch (e) { return apiError(e) }
 }
