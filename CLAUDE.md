@@ -159,6 +159,17 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   RBAC-gated, audit-logged. Warranty state (ok/expiring/expired) + portfolio stats
   are pure, unit-tested (`src/lib/erp/assets.ts`); GET returns assets + warranty
   health + rollup KPIs.
+- **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
+  Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
+  Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`
+  (signed-qty move ledger; a transfer writes two rows sharing a ref). Valuation
+  is a pure, unit-tested engine (`src/lib/erp/inventory.ts`): **FIFO/LIFO/
+  weighted-average** cost from the move history, plus reorder status (out/below-
+  safety/reorder/ok/overstock), suggested reorder qty and KPI rollup. Server data
+  layer `src/lib/erp/inventoryData.ts` computes live on-hand/valuation once,
+  shared by the products list and dashboard. APIs under `/api/admin/erp/inventory/*`
+  (products/warehouses/moves/overview) — zod-validated, RBAC-gated, audited.
+  Verified end-to-end against real PostgreSQL (FIFO/LIFO/WAVG round-trip).
 - **Security Operations Center** (`/admin/soc`, `SocDashboard`) — Phase-17 SOC on
   **real** signal via `GET /api/admin/soc/overview`: aggregates failed logins,
   brute-force IPs (from `system_logs` security meta), AI prompt-injection blocks,

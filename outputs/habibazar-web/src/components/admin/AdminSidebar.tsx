@@ -96,6 +96,7 @@ const NAV = [
     group: { en: 'Business', fa: 'کسب‌وکار' },
     items: [
       { labelEn: 'CRM — Leads', labelFa: 'مدیریت سرنخ‌ها (CRM)', href: '/admin/crm', icon: '📇' },
+      { labelEn: 'Inventory Center (ERP)', labelFa: 'مرکز انبار (ERP)', href: '/admin/inventory', icon: '📦' },
       { labelEn: 'Asset Center (ERP)', labelFa: 'مرکز دارایی‌ها (ERP)', href: '/admin/assets', icon: '🖧' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
       { labelEn: 'Consultations', labelFa: 'مشاوره‌ها', href: '/admin/consultations', icon: '◎' },

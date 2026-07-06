@@ -142,6 +142,71 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Enterprise Inventory (Phase 21 ERP, Module 4). Multi-warehouse stock with
+    -- bin locations, lot/serial tracking, a full move ledger and FIFO/LIFO/WAVG
+    -- valuation (computed by lib/erp/inventory.ts from the move history).
+    CREATE TABLE IF NOT EXISTS inv_warehouses (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      branch TEXT,
+      address TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS inv_locations (
+      id SERIAL PRIMARY KEY,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id) ON DELETE CASCADE,
+      code TEXT NOT NULL,
+      rack TEXT,
+      shelf TEXT,
+      bin TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (warehouse_id, code)
+    );
+
+    CREATE TABLE IF NOT EXISTS inv_products (
+      id SERIAL PRIMARY KEY,
+      sku TEXT NOT NULL UNIQUE,
+      barcode TEXT,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      category TEXT NOT NULL DEFAULT 'general',
+      unit TEXT NOT NULL DEFAULT 'pcs',
+      cost NUMERIC NOT NULL DEFAULT 0,
+      price NUMERIC NOT NULL DEFAULT 0,
+      track_lot INTEGER NOT NULL DEFAULT 0,
+      track_serial INTEGER NOT NULL DEFAULT 0,
+      valuation_method TEXT NOT NULL DEFAULT 'wavg' CHECK(valuation_method IN ('fifo','lifo','wavg')),
+      reorder_point NUMERIC NOT NULL DEFAULT 0,
+      min_stock NUMERIC NOT NULL DEFAULT 0,
+      max_stock NUMERIC NOT NULL DEFAULT 0,
+      safety_stock NUMERIC NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- One row per stock movement. qty is signed: >0 in, <0 out. A transfer is
+    -- written as two rows (issue from source, receipt into destination) sharing a ref.
+    CREATE TABLE IF NOT EXISTS inv_moves (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id) ON DELETE CASCADE,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      location_id INTEGER REFERENCES inv_locations(id),
+      type TEXT NOT NULL CHECK(type IN ('receipt','issue','transfer','adjustment','return','count')),
+      qty NUMERIC NOT NULL,
+      unit_cost NUMERIC NOT NULL DEFAULT 0,
+      lot TEXT,
+      serial TEXT,
+      ref TEXT,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Prompt Center (Phase 22): named prompts with an immutable version history.
     -- ai_prompts is the current head (active version + status); ai_prompt_versions
     -- keeps every version for rollback/approval/audit.
@@ -194,6 +259,10 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_ai_usage_provider ON ai_usage(provider);
     CREATE INDEX IF NOT EXISTS idx_ai_prompt_versions_pid ON ai_prompt_versions(prompt_id, version);
     CREATE INDEX IF NOT EXISTS idx_ai_prompts_category ON ai_prompts(category);
+    CREATE INDEX IF NOT EXISTS idx_inv_moves_product ON inv_moves(product_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_inv_moves_wh ON inv_moves(warehouse_id);
+    CREATE INDEX IF NOT EXISTS idx_inv_products_category ON inv_products(category);
+    CREATE INDEX IF NOT EXISTS idx_inv_locations_wh ON inv_locations(warehouse_id);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);
