@@ -1,0 +1,151 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT } from '@/lib/admin/locale'
+
+const DOC_TYPES = ['invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty', 'delivery_note', 'service_report', 'completion_certificate', 'financial_report'] as const
+type DocType = (typeof DOC_TYPES)[number]
+const SALES_TYPES: DocType[] = ['invoice', 'quotation']
+
+interface GenDoc { id: number; type: string; number: string; title: string; partyName: string | null; date: string; status: string; createdAt: string }
+interface ManualLine { description: string; qty: number; unitPrice: number }
+interface SalesDoc { id: number; docNo: string; customerName: string; total: number }
+
+export function DocumentCenter() {
+  const t = useT()
+  const { toast, ToastContainer } = useToast()
+  const [docs, setDocs] = useState<GenDoc[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState(false)
+  const [type, setType] = useState<DocType>('invoice')
+  const [mode, setMode] = useState<'sales' | 'manual'>('sales')
+  const [salesDocs, setSalesDocs] = useState<SalesDoc[]>([])
+  const [sourceId, setSourceId] = useState(0)
+  const [manual, setManual] = useState({ title: '', partyName: '', partyInfo: '', body: '', date: new Date().toISOString().slice(0, 10) })
+  const [lines, setLines] = useState<ManualLine[]>([{ description: '', qty: 1, unitPrice: 0 }])
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try { const r = await fetch('/api/admin/erp/documents'); if (r.ok) { const d = await r.json(); setDocs(d.documents ?? []) } }
+    catch { toast(t('doc_loadFail'), 'error') } finally { setLoading(false) }
+  }, [toast, t])
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (mode === 'sales' && salesDocs.length === 0) {
+      const st = SALES_TYPES.includes(type) ? type : 'invoice'
+      fetch(`/api/admin/erp/sales/documents?type=${st}`).then(r => r.json()).then(d => setSalesDocs(d.documents ?? [])).catch(() => {})
+    }
+  }, [mode, type, salesDocs.length])
+
+  const supportsSales = SALES_TYPES.includes(type)
+
+  async function generate() {
+    setSaving(true)
+    try {
+      const body = supportsSales && mode === 'sales'
+        ? { type, sourceType: 'sales' as const, sourceId }
+        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, body: manual.body, date: manual.date, lines: lines.filter(l => l.description.trim()) }
+      const r = await fetch('/api/admin/erp/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'failed')
+      toast(t('doc_generated'), 'success'); setModal(false); load()
+      window.open(`/api/admin/erp/documents/render?id=${d.id}`, '_blank')
+    } catch (e) { toast(e instanceof Error ? e.message : t('doc_saveFail'), 'error') } finally { setSaving(false) }
+  }
+  async function void_(id: number) {
+    if (!confirm(t('doc_confirmVoid'))) return
+    const r = await fetch('/api/admin/erp/documents', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (r.ok) { toast(t('doc_voided'), 'success'); load() }
+  }
+
+  function openNew() {
+    setType('invoice'); setMode('sales'); setSalesDocs([]); setSourceId(0)
+    setManual({ title: '', partyName: '', partyInfo: '', body: '', date: new Date().toISOString().slice(0, 10) })
+    setLines([{ description: '', qty: 1, unitPrice: 0 }]); setModal(true)
+  }
+
+  return (
+    <>
+      <ToastContainer />
+      <PageHeader title={t('doc_title')} subtitle={t('doc_subtitle')} action={<Btn onClick={openNew}>{t('doc_new')}</Btn>} />
+
+      {/* Type palette */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+        {DOC_TYPES.map(dt => (
+          <button key={dt} onClick={() => { openNew(); setType(dt); setMode(SALES_TYPES.includes(dt) ? 'sales' : 'manual') }}
+            className="rounded-xl p-4 bg-surface-2 border border-subtle hover:border-brand/50 text-start transition-colors">
+            <div className="text-lg mb-1" aria-hidden>{docIcon(dt)}</div>
+            <div className="text-xs font-medium text-text-secondary">{t(`doc_t_${dt}` as 'doc_t_invoice')}</div>
+          </button>
+        ))}
+      </div>
+
+      <Card className="p-0 overflow-hidden">
+        {loading ? <p className="text-sm text-text-tertiary p-5">{t('doc_loading')}</p>
+          : docs.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('doc_empty')}</p>
+          : (
+          <div className="overflow-x-auto"><table className="w-full text-sm">
+            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('doc_cNo'), t('doc_cType'), t('doc_cParty'), t('doc_cDate'), t('doc_cStatus'), t('doc_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
+            <tbody>{docs.map(d => (
+              <tr key={d.id} className="border-b border-subtle/50">
+                <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{d.number}</td>
+                <td className="px-4 py-2.5 text-text-secondary text-xs">{t(`doc_t_${d.type}` as 'doc_t_invoice')}</td>
+                <td className="px-4 py-2.5 text-text-secondary">{d.partyName || '—'}</td>
+                <td className="px-4 py-2.5 text-text-tertiary text-xs">{d.date}</td>
+                <td className="px-4 py-2.5"><Badge color={d.status === 'issued' ? 'green' : 'red'}>{t(`doc_st_${d.status}` as 'doc_st_issued')}</Badge></td>
+                <td className="px-4 py-2.5"><div className="flex gap-2">
+                  <Btn size="sm" onClick={() => window.open(`/api/admin/erp/documents/render?id=${d.id}`, '_blank')}>{t('doc_print')}</Btn>
+                  {d.status === 'issued' && <Btn size="sm" variant="danger" onClick={() => void_(d.id)}>{t('doc_void')}</Btn>}
+                </div></td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        )}
+      </Card>
+
+      <Modal open={modal} onClose={() => setModal(false)} title={t('doc_new')} size="lg">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Select label={t('doc_fType')} value={type} onChange={v => { setType(v as DocType); setSalesDocs([]); if (!SALES_TYPES.includes(v as DocType)) setMode('manual') }} options={DOC_TYPES.map(x => ({ value: x, label: t(`doc_t_${x}` as 'doc_t_invoice') }))} />
+            {supportsSales && <Select label={t('doc_fSource')} value={mode} onChange={v => setMode(v as 'sales' | 'manual')} options={[{ value: 'sales', label: t('doc_fromSales') }, { value: 'manual', label: t('doc_manual') }]} />}
+          </div>
+
+          {supportsSales && mode === 'sales' ? (
+            <Select label={t('doc_fSalesDoc')} value={String(sourceId)} onChange={v => setSourceId(Number(v))} options={[{ value: '0', label: t('doc_selectSales') }, ...salesDocs.map(s => ({ value: String(s.id), label: `${s.docNo} — ${s.customerName}` }))]} />
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4"><Input label={t('doc_fTitle')} value={manual.title} onChange={v => setManual(m => ({ ...m, title: v }))} placeholder={t(`doc_t_${type}` as 'doc_t_invoice')} /><Input label={t('doc_fDate')} type="date" value={manual.date} onChange={v => setManual(m => ({ ...m, date: v }))} /></div>
+              <div className="grid grid-cols-2 gap-4"><Input label={t('doc_fParty')} value={manual.partyName} onChange={v => setManual(m => ({ ...m, partyName: v }))} /><Input label={t('doc_fPartyInfo')} value={manual.partyInfo} onChange={v => setManual(m => ({ ...m, partyInfo: v }))} /></div>
+              <Input label={t('doc_fBody')} value={manual.body} onChange={v => setManual(m => ({ ...m, body: v }))} multiline rows={4} />
+              <div className="space-y-2">
+                <p className="text-xs text-text-tertiary">{t('doc_lines')}</p>
+                {lines.map((l, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2">
+                    <input value={l.description} onChange={e => setLines(ls => ls.map((x, idx) => idx === i ? { ...x, description: e.target.value } : x))} className="form-input col-span-7 !py-2" placeholder={t('doc_lDesc')} />
+                    <input type="number" value={l.qty || ''} onChange={e => setLines(ls => ls.map((x, idx) => idx === i ? { ...x, qty: Number(e.target.value) || 0 } : x))} className="form-input col-span-2 text-right !py-2" />
+                    <input type="number" value={l.unitPrice || ''} onChange={e => setLines(ls => ls.map((x, idx) => idx === i ? { ...x, unitPrice: Number(e.target.value) || 0 } : x))} className="form-input col-span-2 text-right !py-2" />
+                    <button onClick={() => setLines(ls => ls.length > 1 ? ls.filter((_, idx) => idx !== i) : ls)} className="col-span-1 text-xs text-danger">✕</button>
+                  </div>
+                ))}
+                <button onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0 }])} className="text-xs text-brand hover:underline">{t('doc_addLine')}</button>
+              </div>
+            </>
+          )}
+
+          <div className="flex gap-3">
+            <Btn onClick={generate} disabled={saving || (supportsSales && mode === 'sales' && !sourceId)}>{saving ? t('doc_generating') : t('doc_generate')}</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('doc_cancel')}</Btn>
+          </div>
+        </div>
+      </Modal>
+    </>
+  )
+}
+
+function docIcon(t: string): string {
+  const m: Record<string, string> = { invoice: '💳', quotation: '📄', purchase_order: '🛒', contract: '📜', proposal: '📝', warranty: '🛡️', delivery_note: '📦', service_report: '🔧', completion_certificate: '🏅', financial_report: '📊' }
+  return m[t] ?? '📄'
+}

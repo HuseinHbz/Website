@@ -202,6 +202,26 @@ export async function runMigrations() {
       finished_at TEXT
     );
 
+    -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
+    -- documents (invoice/quotation/PO/contract/…); payload holds lines + meta +
+    -- body; verify_code backs public QR verification.
+    CREATE TABLE IF NOT EXISTS gen_documents (
+      id SERIAL PRIMARY KEY,
+      type TEXT NOT NULL,
+      number TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      party_name TEXT,
+      party_info TEXT,
+      date TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      source_type TEXT,
+      source_id INTEGER,
+      verify_code TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'issued' CHECK(status IN ('issued','void')),
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Enterprise Project Management (Phase 21 ERP, Module 6). Projects with
     -- tasks (Kanban/Gantt), milestones and timesheets.
     CREATE TABLE IF NOT EXISTS pm_projects (
@@ -540,6 +560,8 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_pm_timesheets_project ON pm_timesheets(project_id);
     CREATE INDEX IF NOT EXISTS idx_pm_projects_status ON pm_projects(status);
     CREATE INDEX IF NOT EXISTS idx_pm_costs_project ON pm_cost_entries(project_id, kind);
+    CREATE INDEX IF NOT EXISTS idx_gen_docs_type ON gen_documents(type, created_at);
+    CREATE INDEX IF NOT EXISTS idx_gen_docs_verify ON gen_documents(verify_code);
     CREATE INDEX IF NOT EXISTS idx_syslogs_level_ts ON system_logs(level, ts);
     CREATE INDEX IF NOT EXISTS idx_syslogs_source ON system_logs(source);
     CREATE INDEX IF NOT EXISTS idx_syslogs_fingerprint ON system_logs(fingerprint);

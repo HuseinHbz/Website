@@ -167,6 +167,19 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   add assignment/maintenance/mark-done), `/assets/overview` (dashboard) —
   zod/RBAC/audited, every change writes an `asset_activity` row. Verified against
   real PostgreSQL (depreciation round-trip).
+- **Document Center** (`/admin/documents`, `DocumentCenter`) — Phase-21.5 ERP
+  Module 8 (Document Generation Engine). Generates 10 document types (invoice/
+  quotation/purchase-order/contract/proposal/warranty/delivery-note/service-
+  report/completion-certificate/financial-report) to **print-ready HTML** (browser
+  "Save as PDF" — no heavy PDF dependency) with a **QR verify code**. Pure engine
+  `src/lib/erp/documents.ts` (`buildSalesPayload`, `renderDocumentHtml` with XSS
+  escaping, `escapeHtml`/`money`; 7 unit tests). Server layer
+  `src/lib/erp/documentData.ts` creates a doc from a **live sales source** (pulls
+  invoice/quote lines + customer) or a **manual composition**, catalogs it in
+  `gen_documents`, and renders HTML with a `qrcode` data-URL. APIs
+  `/api/admin/erp/documents` (list/generate/void) + `/documents/render` (HTML).
+  Public verification page `/[locale]/verify/[code]` (the QR target) confirms a
+  document is issued. Verified vs real PostgreSQL (generate→render→verify).
 - **Executive Dashboard** (`/admin`, `ExecutiveDashboard`) — the redesigned admin
   home. Aggregates KPIs from every module via `GET /api/admin/overview`
   (`lib/admin/executiveOverview.ts`, each module guarded so one failure never
