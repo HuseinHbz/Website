@@ -59,3 +59,31 @@ as done:
 The three subsystems compose through the engine's handler seam: workflows call
 rules (as `condition`/`task` handlers) which call integrations (as `task`
 handlers) — one reusable execution path, no duplication.
+
+## Phase 21.6 update — Visual Workflow Designer (shipped)
+
+The JSON-graph editor is now backed by an **n8n / Power Automate-style visual
+canvas** (`src/app/admin/workflows/WorkflowCanvas.tsx`):
+
+- **Node palette** to drop any node type (start·end·set·condition·log·task·delay·
+  approval) onto the canvas.
+- **Draggable node cards** — pointer-drag repositions a node; the position is
+  persisted as `x`/`y` on the node (the engine ignores these, so a laid-out graph
+  executes identically).
+- **SVG edges** with arrow markers, drawn from the definition; condition nodes
+  render labelled `true` / `false` branch edges.
+- **Property panel** to edit the selected node's id (with safe reference
+  renaming), label and type-specific fields, and to set its outgoing connections
+  (`next` / `whenTrue` / `whenFalse`) from a dropdown of node ids.
+- A **Canvas / JSON toggle** — the canvas serialises to (and parses from) the
+  exact `WorkflowDefinition` JSON the engine runs; JSON stays available for
+  advanced editing and as a fallback for invalid input.
+
+Pure geometry helpers `src/lib/workflow/layout.ts` (`graphEdges`, `autoLayout`
+BFS-ranked columns) are unit-tested (5 tests). **Verified:** a canvas-laid-out
+graph (x/y on every node) still `validateWorkflow` = valid and executes on the
+existing engine — `amount:500` → completed (5 steps, auto branch), `amount:5000`
+→ waiting @ approval. tsc 0 · ESLint 0 · vitest 148/148 · 6 audits pass · build OK.
+
+Business Rules Engine + Integration Hub remain the documented roadmap; they
+compose through the engine's `task`/`condition` handler seam.

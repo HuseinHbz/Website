@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
+import { WorkflowCanvas } from './WorkflowCanvas'
 
 type Status = 'draft' | 'active' | 'archived'
 interface Workflow {
@@ -162,13 +163,7 @@ export function WorkflowManager() {
               <label className="text-xs text-text-secondary">{t('wf_definition')}</label>
               <button type="button" onClick={() => set('definition', STARTER)} className="text-xs text-brand hover:underline">{t('wf_resetStarter')}</button>
             </div>
-            <textarea
-              value={editing.definition}
-              onChange={(e) => set('definition', e.target.value)}
-              rows={16}
-              spellCheck={false}
-              className="w-full font-mono text-xs bg-background border border-border rounded-lg p-3 text-text-primary"
-            />
+            <WorkflowCanvas value={editing.definition} onChange={(v) => set('definition', v)} />
             <p className="text-xs text-text-tertiary mt-1">{t('wf_nodeHint')}</p>
           </div>
           <div className="flex gap-3">

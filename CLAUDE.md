@@ -258,9 +258,16 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `TaskHandler`s. `GET/POST/PUT/DELETE /api/admin/workflows` + `POST/GET
   /api/admin/workflows/run`: zod-validated, RBAC-gated, audit-logged; definition is
   engine-validated before persist; external task actions (email/webhook/http) are
-  recorded as intents, not executed, until wired. Rules Engine + Integration Hub are
-  the documented roadmap (`docs/governance/phase21-automation-platform.md`) — they
-  compose via the engine's handler seam (no duplicated logic).
+  recorded as intents, not executed, until wired. **Visual designer** (Phase-21.6,
+  `WorkflowCanvas`): an n8n-style canvas in the workflow editor — a node palette,
+  draggable node cards (pointer-drag persists `x`/`y`, ignored by execution), SVG
+  edges with true/false branch labels, and a property panel for editing node
+  fields + connections. Pure geometry helpers `src/lib/workflow/layout.ts`
+  (`graphEdges`, `autoLayout` BFS-ranked; 5 unit tests). Reads/writes the exact
+  definition JSON the engine runs (Canvas/JSON toggle). Rules Engine + Integration
+  Hub remain the documented roadmap
+  (`docs/governance/phase21-automation-platform.md`) — they compose via the
+  engine's handler seam (no duplicated logic).
 - **AI Platform** (Phase-22) — the shared intelligent core. **Shared engine**
   `src/lib/ai/engine.ts` (`runCompletion({messages, systemPrompt, useRag})`)
   centralizes provider dispatch (ChatGPT/Claude/Gemini/Grok/Copilot/Conduit),

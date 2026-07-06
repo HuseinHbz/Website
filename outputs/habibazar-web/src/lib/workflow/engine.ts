@@ -41,6 +41,9 @@ export interface WorkflowNode {
   continueOnError?: boolean
   // delay
   ms?: number
+  // visual designer layout (ignored by execution)
+  x?: number
+  y?: number
 }
 
 export interface WorkflowDefinition {
