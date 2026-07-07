@@ -201,6 +201,9 @@ export const WORKSPACES: Workspace[] = [
 
 /** The workspace that owns a path (longest-matching href; first workspace wins ties). */
 export function workspaceForPath(pathname: string): Workspace {
+  // A workspace dashboard (/admin/dashboards/<id>) belongs to that workspace.
+  const dash = pathname.match(/^\/admin\/dashboards\/([a-z]+)/)
+  if (dash) { const w = workspaceById(dash[1]); if (w) return w }
   let best: Workspace | null = null
   let bestLen = -1
   for (const ws of WORKSPACES) {

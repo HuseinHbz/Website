@@ -112,6 +112,20 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, onOpenCmd, mo
 
       {/* Workspace nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-5">
+        {(() => {
+          const dashHref = `/admin/dashboards/${ws.id}`
+          const active = pathname === dashHref
+          return (
+            <ul className="space-y-0.5">
+              <li>
+                <Link href={dashHref} className={`flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all min-h-[40px] ${active ? 'bg-brand/20 text-brand font-medium' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'}`} title={(collapsed && !mobileOpen) ? (isRTL ? 'داشبورد' : 'Dashboard') : undefined}>
+                  <span className="text-base w-5 text-center flex-shrink-0">▦</span>
+                  {expanded && <span className="truncate">{isRTL ? 'داشبورد' : 'Dashboard'}</span>}
+                </Link>
+              </li>
+            </ul>
+          )
+        })()}
         {ws.groups.map((section) => (
           <div key={section.en}>
             {expanded && (

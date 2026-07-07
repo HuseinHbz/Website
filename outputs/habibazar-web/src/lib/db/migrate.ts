@@ -321,6 +321,17 @@ export async function runMigrations() {
     -- {RANDOM} auto-fill length (0 = off); added idempotently for existing DBs.
     ALTER TABLE numbering_formats ADD COLUMN IF NOT EXISTS random_length INTEGER NOT NULL DEFAULT 4;
 
+    -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
+    -- (user, workspace); absent → the system default layout is used.
+    CREATE TABLE IF NOT EXISTS dashboard_layouts (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      workspace TEXT NOT NULL,
+      layout TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (user_id, workspace)
+    );
+
     -- Numbering scopes: the registry of companies/branches/warehouses/departments
     -- whose codes feed a counter's scope_key (multi-company/branch/warehouse
     -- independence). Managed in the numbering console; picked when generating.

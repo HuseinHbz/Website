@@ -409,6 +409,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   workspace registry (switch-workspace + every module) and adds a live **Records**
   group from the Module 13 search API (`/api/admin/search`) when typing ≥2 chars.
   Keyboard-first. Full report: `docs/governance/phase22-workspace-platform.md`.
+- **Dashboard Platform** (Phase 22.2) — a per-workspace **Dashboard Engine** at
+  `/admin/dashboards/[workspace]` (`DashboardEngine`). Pure **widget registry**
+  `src/lib/admin/widgets.ts` (metadata + `defaultLayout`/`sanitizeLayout`; unit-
+  tested) drives everything; server resolver `src/lib/admin/widgetData.ts`
+  (`resolveWidgets`) maps each widget to **real** data from existing services
+  (`executiveOverview`/`opsSnapshot`/`backups`), computing shared snapshots once
+  per request. APIs `/api/admin/dashboards` (layout GET/PUT/DELETE, per
+  user×workspace via `dashboard_layouts`) + `/dashboards/data?ids=` (batched,
+  RBAC-filtered → `denied` payload). UI: 4-col grid with add/remove/resize/drag-
+  reorder, Customize edit mode, Save/Reset, lazy recharts, loading/empty/error/
+  denied states. 15 widgets (KPI/chart/table/list/ops). Verified vs real
+  PostgreSQL. Report: `docs/governance/phase22-dashboard-platform.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

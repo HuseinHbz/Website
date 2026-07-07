@@ -14,6 +14,9 @@ describe('workspace registry', () => {
     expect(workspaceForPath('/admin/users').id).toBe('security')
     // ai-kb must win over any '/admin/ai' prefix collision
     expect(workspaceForPath('/admin/ai-agents').id).toBe('ai')
+    // a workspace dashboard resolves to its own workspace
+    expect(workspaceForPath('/admin/dashboards/operations').id).toBe('operations')
+    expect(workspaceForPath('/admin/dashboards/erp').id).toBe('erp')
   })
 
   it('falls back to executive for unknown paths', () => {

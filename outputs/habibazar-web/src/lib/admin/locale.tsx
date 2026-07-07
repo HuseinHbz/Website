@@ -2175,6 +2175,27 @@ const T: Record<string, { fa: string; en: string }> = {
   num_engineInfo: { fa: 'دربارهٔ موتور', en: 'About the engine' },
   num_engineInfoBody: { fa: 'تولید شماره با تراکنش + قفل مشورتی PostgreSQL و درج اتمیک ON CONFLICT انجام می‌شود؛ صفر شمارهٔ تکراری حتی با صدها کاربر همزمان. همهٔ ماژول‌ها از این موتور استفاده می‌کنند.', en: 'Numbers are minted with a transaction + PostgreSQL advisory lock and an atomic ON CONFLICT insert; zero duplicates even under hundreds of concurrent users. Every module uses this engine.' },
   num_f_randomLen: { fa: 'طول {RANDOM}', en: '{RANDOM} length' },
+
+  // ── Dashboard Engine (Phase 22.2) ──
+  dash_title: { fa: 'داشبورد', en: 'Dashboard' },
+  dash_subtitle: { fa: 'ویجت‌های زندهٔ این فضای کاری — از دادهٔ واقعی ماژول‌ها.', en: 'Live widgets for this workspace — from real module data.' },
+  dash_customize: { fa: 'شخصی‌سازی', en: 'Customize' },
+  dash_done: { fa: 'پایان', en: 'Done' },
+  dash_save: { fa: 'ذخیره چیدمان', en: 'Save layout' },
+  dash_reset: { fa: 'بازنشانی', en: 'Reset' },
+  dash_addWidget: { fa: 'افزودن ویجت', en: 'Add widget' },
+  dash_addHint: { fa: 'ویجت اضافه کنید، بکشید تا جابه‌جا شود، اندازه را تغییر دهید یا حذف کنید.', en: 'Add widgets, drag to reorder, resize or remove.' },
+  dash_resize: { fa: 'تغییر اندازه', en: 'Resize' },
+  dash_remove: { fa: 'حذف', en: 'Remove' },
+  dash_saved: { fa: 'چیدمان ذخیره شد.', en: 'Layout saved.' },
+  dash_saveFail: { fa: 'ذخیرهٔ چیدمان ناموفق بود.', en: 'Failed to save layout.' },
+  dash_loadFail: { fa: 'بارگذاری داشبورد ناموفق بود.', en: 'Failed to load dashboard.' },
+  dash_confirmReset: { fa: 'چیدمان به حالت پیش‌فرض بازگردد؟', en: 'Reset the layout to the system default?' },
+  dash_resetDone: { fa: 'به پیش‌فرض بازگشت.', en: 'Reset to default.' },
+  dash_empty: { fa: 'هیچ ویجتی نیست. با «شخصی‌سازی» ویجت اضافه کنید.', en: 'No widgets. Add some with “Customize”.' },
+  dash_error: { fa: 'خطا در بارگذاری.', en: 'Failed to load.' },
+  dash_denied: { fa: 'دسترسی لازم را ندارید.', en: 'You lack permission for this widget.' },
+  dash_footnote: { fa: 'چیدمان برای هر کاربر و هر فضای کاری جداگانه ذخیره می‌شود؛ همهٔ داده‌ها واقعی و از سرویس‌های موجود هستند.', en: 'Layout is saved per user + workspace; all data is real, from existing services.' },
 }
 
 export function useT() {
