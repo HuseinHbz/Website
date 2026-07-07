@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { SECTION_TYPES, SECTION_CATEGORIES, SECTION_TYPE_MAP, type SectionTypeId } from '@/lib/sectionTypes'
 
 type Section = {
@@ -51,6 +53,7 @@ const EMPTY: Partial<Section> = {
 
 export function SectionsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [sections, setSections] = useState<Section[]>([])
   const [filtered, setFiltered] = useState<Section[]>([])
   const [search, setSearch] = useState('')
@@ -211,54 +214,28 @@ export function SectionsManager() {
 
       {/* Table */}
       <Card>
-        <Table headers={[t('section'), t('type'), t('variant'), t('theme'), t('status'), t('version'), t('updated'), t('actions')]}>
-          {filtered.map((s) => {
-            const typeInfo = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]
-            return (
-              <TR key={s.id}>
-                <TD>
-                  <div>
-                    <div className="font-medium text-white text-sm">{s.titleEn || <span className="text-text-tertiary italic">Untitled</span>}</div>
-                    {s.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{s.titleFa}</div>}
-                  </div>
-                </TD>
-                <TD>
-                  <span className="text-xs text-brand">
-                    {typeInfo ? `${typeInfo.icon} ${typeInfo.labelEn}` : s.sectionType}
-                  </span>
-                </TD>
-                <TD><span className="text-xs text-text-secondary">{s.variant}</span></TD>
-                <TD><span className="text-xs text-text-secondary">{s.theme}</span></TD>
-                <TD>
-                  <div className="relative group">
-                    <Badge color={STATUS_COLOR[s.status] || 'slate'}>{s.status}</Badge>
-                    <div className="absolute left-0 top-6 hidden group-hover:flex flex-col gap-1 bg-surface-2 border border-border rounded-lg p-2 z-10 shadow-xl">
-                      {(['draft', 'published', 'archived'] as const).filter((st) => st !== s.status).map((st) => (
-                        <button key={st} onClick={() => changeStatus(s, st)} className="text-xs text-left px-2 py-1 rounded hover:bg-surface-2 text-text-primary whitespace-nowrap">
-                          → {st}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </TD>
-                <TD><span className="text-xs text-text-tertiary">v{s.version}</span></TD>
-                <TD className="text-xs text-text-tertiary">{new Date(s.updatedAt).toLocaleDateString()}</TD>
-                <TD>
-                  <div className="flex gap-1 flex-wrap">
-                    <Btn size="sm" variant="secondary" onClick={() => openEdit(s)}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => openHistory(s)}>{t('history')}</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => del(s.id)}>{t('del')}</Btn>
-                  </div>
-                </TD>
-              </TR>
-            )
-          })}
-        </Table>
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-text-tertiary text-sm">
-            {sections.length === 0 ? t('noSections') : t('noSectionsFilter')}
-          </div>
-        )}
+        <DataTable
+          tableId="sections"
+          columns={[
+            { key: 'titleEn', labelEn: 'Section', labelFa: t('section'), render: s => <div><div className="font-medium text-white text-sm">{s.titleEn || <span className="text-text-tertiary italic">Untitled</span>}</div>{s.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{s.titleFa}</div>}</div> },
+            { key: 'sectionType', labelEn: 'Type', labelFa: t('type'), type: 'enum', value: s => { const ti = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]; return ti ? ti.labelEn : s.sectionType }, render: s => { const typeInfo = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]; return <span className="text-xs text-brand">{typeInfo ? `${typeInfo.icon} ${typeInfo.labelEn}` : s.sectionType}</span> } },
+            { key: 'variant', labelEn: 'Variant', labelFa: t('variant'), type: 'enum', render: s => <span className="text-xs text-text-secondary">{s.variant}</span> },
+            { key: 'theme', labelEn: 'Theme', labelFa: t('theme'), type: 'enum', render: s => <span className="text-xs text-text-secondary">{s.theme}</span> },
+            { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['draft', 'published', 'archived'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: s => <div className="relative group"><Badge color={STATUS_COLOR[s.status] || 'slate'}>{s.status}</Badge><div className="absolute left-0 top-6 hidden group-hover:flex flex-col gap-1 bg-surface-2 border border-border rounded-lg p-2 z-10 shadow-xl">{(['draft', 'published', 'archived'] as const).filter((st) => st !== s.status).map((st) => (<button key={st} onClick={() => changeStatus(s, st)} className="text-xs text-left px-2 py-1 rounded hover:bg-surface-2 text-text-primary whitespace-nowrap">→ {st}</button>))}</div></div> },
+            { key: 'version', labelEn: 'Version', labelFa: t('version'), type: 'number', numeric: true, render: s => <span className="text-xs text-text-tertiary">v{s.version}</span> },
+            { key: 'updatedAt', labelEn: 'Updated', labelFa: t('updated'), type: 'date', render: s => <span className="text-xs text-text-tertiary">{new Date(s.updatedAt).toLocaleDateString()}</span> },
+          ] as Column<Section>[]}
+          rows={filtered}
+          locale={locale}
+          rowKey={s => String(s.id)}
+          rowActions={[
+            { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: s => openEdit(s) },
+            { id: 'history', labelEn: 'History', labelFa: t('history'), icon: '🕓', onClick: s => openHistory(s) },
+            { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: s => del(s.id) },
+          ] as RowAction<Section>[]}
+          exportName="sections"
+          emptyLabel={sections.length === 0 ? t('noSections') : t('noSectionsFilter')}
+        />
       </Card>
 
       {/* Create/Edit Modal */}

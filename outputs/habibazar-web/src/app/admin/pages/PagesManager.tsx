@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { SECTION_TYPE_MAP, type SectionTypeId } from '@/lib/sectionTypes'
 
 type PageRow = {
@@ -55,6 +57,7 @@ const EMPTY_PAGE = {
 
 export function PagesManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [pages, setPages] = useState<PageRow[]>([])
   const [modal, setModal] = useState(false)
   const [builderModal, setBuilderModal] = useState(false)
@@ -184,33 +187,27 @@ export function PagesManager() {
       />
 
       <Card>
-        <Table headers={['Page', 'Slug', 'Layout', 'Status', 'Published', 'Updated', 'Actions']}>
-          {pages.map((p) => (
-            <TR key={p.id}>
-              <TD>
-                <div>
-                  <div className="font-medium text-white text-sm">{p.titleEn}</div>
-                  {p.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{p.titleFa}</div>}
-                </div>
-              </TD>
-              <TD><span className="text-xs text-brand font-mono">/{p.slug}</span></TD>
-              <TD><span className="text-xs text-text-secondary">{p.layout}</span></TD>
-              <TD><Badge color={STATUS_COLOR[p.status] || 'slate'}>{p.status}</Badge></TD>
-              <TD className="text-xs text-text-tertiary">{p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}</TD>
-              <TD className="text-xs text-text-tertiary">{new Date(p.updatedAt).toLocaleDateString()}</TD>
-              <TD>
-                <div className="flex gap-1 flex-wrap">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing(p); setModal(true) }}>{t('edit')}</Btn>
-                  <Btn size="sm" variant="ghost" onClick={() => openBuilder(p)}>🧩 Builder</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(p.id)}>{t('del')}</Btn>
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
-        {pages.length === 0 && (
-          <div className="text-center py-12 text-text-tertiary text-sm">No pages yet. Create your first page!</div>
-        )}
+        <DataTable
+          tableId="pages"
+          columns={[
+            { key: 'titleEn', labelEn: 'Page', labelFa: 'صفحه', render: p => <div><div className="font-medium text-white text-sm">{p.titleEn}</div>{p.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{p.titleFa}</div>}</div> },
+            { key: 'slug', labelEn: 'Slug', labelFa: 'اسلاگ', render: p => <span className="text-xs text-brand font-mono">/{p.slug}</span> },
+            { key: 'layout', labelEn: 'Layout', labelFa: 'چیدمان', type: 'enum', render: p => <span className="text-xs text-text-secondary">{p.layout}</span> },
+            { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', options: ['draft', 'published', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: p => <Badge color={STATUS_COLOR[p.status] || 'slate'}>{p.status}</Badge> },
+            { key: 'publishedAt', labelEn: 'Published', labelFa: 'انتشار', type: 'date', render: p => <span className="text-xs text-text-tertiary">{p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}</span> },
+            { key: 'updatedAt', labelEn: 'Updated', labelFa: 'به‌روزرسانی', type: 'date', render: p => <span className="text-xs text-text-tertiary">{new Date(p.updatedAt).toLocaleDateString()}</span> },
+          ] as Column<PageRow>[]}
+          rows={pages}
+          locale={locale}
+          rowKey={p => String(p.id)}
+          rowActions={[
+            { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => { setEditing(p); setModal(true) } },
+            { id: 'builder', labelEn: 'Builder', labelFa: 'سازنده', icon: '🧩', onClick: p => openBuilder(p) },
+            { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: p => del(p.id) },
+          ] as RowAction<PageRow>[]}
+          exportName="pages"
+          emptyLabel="No pages yet."
+        />
       </Card>
 
       {/* Page create/edit modal */}
