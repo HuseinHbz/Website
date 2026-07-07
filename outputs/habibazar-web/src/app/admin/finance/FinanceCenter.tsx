@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'dashboard' | 'accounts' | 'journal' | 'reports'
 type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
@@ -139,28 +141,19 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
     } catch (e) { toast(e instanceof Error ? e.message : t('fin_saveFail'), 'error') } finally { setSaving(false) }
   }
 
+  const bal = (a: Account) => { const net = (a.debit ?? 0) - (a.credit ?? 0); return (a.type === 'asset' || a.type === 'expense') ? net : -net }
+  const columns: Column<Account>[] = [
+    { key: 'code', labelEn: 'Code', labelFa: t('fin_cCode'), render: a => <span className="font-mono text-xs text-text-secondary">{a.code}</span> },
+    { key: 'nameEn', labelEn: 'Name', labelFa: t('fin_cName'), value: a => fa ? (a.nameFa || a.nameEn) : a.nameEn, render: a => <span className="text-text-primary">{fa ? (a.nameFa || a.nameEn) : a.nameEn}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('fin_cType'), type: 'enum', options: ATYPES.map(x => ({ value: x, labelEn: x, labelFa: t(`fin_at_${x}` as 'fin_at_asset') })), render: a => <Badge color={TYPE_COLOR[a.type]}>{t(`fin_at_${a.type}` as 'fin_at_asset')}</Badge> },
+    { key: 'balance', labelEn: 'Balance', labelFa: t('fin_cBalance'), type: 'number', numeric: true, value: bal, render: a => <span className="text-text-secondary text-xs">{money(bal(a))}</span> },
+  ]
+  const rowActions: RowAction<Account>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('fin_edit'), icon: '✎', onClick: a => { setEditing(a); setModal(true) } }]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing({ type: 'asset', active: 1 }); setModal(true) }}>{t('fin_newAccount')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('fin_loading')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('fin_cCode'), t('fin_cName'), t('fin_cType'), t('fin_cBalance'), t('fin_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{accounts.map(a => {
-              const net = (a.debit ?? 0) - (a.credit ?? 0)
-              const bal = (a.type === 'asset' || a.type === 'expense') ? net : -net
-              return (
-                <tr key={a.id} className="border-b border-subtle/50">
-                  <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{a.code}</td>
-                  <td className="px-4 py-2.5 text-text-primary">{fa ? (a.nameFa || a.nameEn) : a.nameEn}</td>
-                  <td className="px-4 py-2.5"><Badge color={TYPE_COLOR[a.type]}>{t(`fin_at_${a.type}` as 'fin_at_asset')}</Badge></td>
-                  <td className="px-4 py-2.5 text-text-secondary text-xs">{money(bal)}</td>
-                  <td className="px-4 py-2.5"><Btn size="sm" variant="secondary" onClick={() => { setEditing(a); setModal(true) }}>{t('fin_edit')}</Btn></td>
-                </tr>
-              )
-            })}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="finance-accounts" columns={columns} rows={accounts} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={a => String(a.id)} rowActions={rowActions} exportName="chart-of-accounts" />
       </Card>
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('fin_editAccount') : t('fin_newAccount')} size="md">
         <div className="space-y-4">
@@ -220,29 +213,22 @@ function Journal({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
   }
 
   const accOpts = accounts.map(a => ({ value: String(a.id), label: `${a.code} — ${fa ? (a.nameFa || a.nameEn) : a.nameEn}` }))
+  const journalColumns: Column<Entry>[] = [
+    { key: 'entryNo', labelEn: 'No.', labelFa: t('fin_cNo'), render: e => <span className="font-mono text-xs text-text-secondary">{e.entryNo}</span> },
+    { key: 'date', labelEn: 'Date', labelFa: t('fin_cDate'), type: 'date', render: e => <span className="text-text-tertiary text-xs">{e.date}</span> },
+    { key: 'memo', labelEn: 'Memo', labelFa: t('fin_cMemo'), render: e => <span className="text-text-secondary text-xs">{e.memo || '—'}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('fin_cStatus'), type: 'enum', options: ['draft', 'posted', 'void'].map(x => ({ value: x, labelEn: x, labelFa: t(`fin_st_${x}` as 'fin_st_posted') })), render: e => <Badge color={e.status === 'posted' ? 'green' : e.status === 'void' ? 'slate' : 'yellow'}>{t(`fin_st_${e.status}` as 'fin_st_posted')}</Badge> },
+    { key: 'total', labelEn: 'Total', labelFa: t('fin_cTotal'), type: 'number', numeric: true, render: e => <span className="text-text-secondary text-xs">{money(e.total)}</span> },
+  ]
+  const journalActions: RowAction<Entry>[] = [
+    { id: 'post', labelEn: 'Post', labelFa: t('fin_post'), icon: '✓', hidden: e => e.status !== 'draft', onClick: e => op(e.id, 'post') },
+    { id: 'void', labelEn: 'Void', labelFa: t('fin_void'), icon: '✕', danger: true, hidden: e => e.status !== 'posted', onClick: e => op(e.id, 'void') },
+  ]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { reset(); setModal(true) }}>{t('fin_newEntry')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('fin_loading')}</p>
-          : entries.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('fin_noEntries')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('fin_cNo'), t('fin_cDate'), t('fin_cMemo'), t('fin_cStatus'), t('fin_cTotal'), t('fin_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{entries.map(e => (
-              <tr key={e.id} className="border-b border-subtle/50">
-                <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{e.entryNo}</td>
-                <td className="px-4 py-2.5 text-text-tertiary text-xs">{e.date}</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{e.memo || '—'}</td>
-                <td className="px-4 py-2.5"><Badge color={e.status === 'posted' ? 'green' : e.status === 'void' ? 'slate' : 'yellow'}>{t(`fin_st_${e.status}` as 'fin_st_posted')}</Badge></td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{money(e.total)}</td>
-                <td className="px-4 py-2.5"><div className="flex gap-2">
-                  {e.status === 'draft' && <Btn size="sm" onClick={() => op(e.id, 'post')}>{t('fin_post')}</Btn>}
-                  {e.status === 'posted' && <Btn size="sm" variant="secondary" onClick={() => op(e.id, 'void')}>{t('fin_void')}</Btn>}
-                </div></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="finance-journal" columns={journalColumns} rows={entries} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={e => String(e.id)} rowActions={journalActions} exportName="journal-entries" emptyLabel={t('fin_noEntries')} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={t('fin_newEntry')} size="xl">

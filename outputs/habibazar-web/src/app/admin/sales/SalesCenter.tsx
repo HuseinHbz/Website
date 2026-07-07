@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'dashboard' | 'customers' | 'quote' | 'order' | 'invoice' | 'payments'
 type DocType = 'quote' | 'order' | 'invoice' | 'credit_note'
@@ -93,6 +95,7 @@ function Kpi({ label, value, icon, tone }: { label: string; value: string; icon:
 
 // ── Customers ────────────────────────────────────────────────────────────────
 function Customers({ t, toast }: { t: T; toast: Toast }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -107,25 +110,19 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
     try { const r = await fetch('/api/admin/erp/sales/customers', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...editing, active: !!editing.active }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'failed'); toast(t('sales_saved'), 'success'); setModal(false); load() }
     catch (e) { toast(e instanceof Error ? e.message : t('sales_saveFail'), 'error') } finally { setSaving(false) }
   }
+  const columns: Column<Customer>[] = [
+    { key: 'code', labelEn: 'Code', labelFa: t('sales_cCode'), render: c => <span className="font-mono text-xs text-text-secondary">{c.code}</span> },
+    { key: 'name', labelEn: 'Name', labelFa: t('sales_cName'), render: c => <div className="text-text-primary">{c.name}<div className="text-xs text-text-tertiary">{c.company || c.email || ''}</div></div> },
+    { key: 'creditLimit', labelEn: 'Limit', labelFa: t('sales_cLimit'), type: 'number', numeric: true, render: c => <span className="text-text-secondary text-xs">{money(c.creditLimit)}</span> },
+    { key: 'outstanding', labelEn: 'Outstanding', labelFa: t('sales_cOutstanding'), type: 'number', numeric: true, value: c => c.outstanding ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.outstanding)}{c.overLimit && <Badge color="red">{t('sales_overLimit')}</Badge>}</span> },
+    { key: 'available', labelEn: 'Available', labelFa: t('sales_cAvailable'), type: 'number', numeric: true, value: c => c.available ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.available)}</span> },
+  ]
+  const rowActions: RowAction<Customer>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('sales_edit'), icon: '✎', onClick: c => { setEditing({ ...c, active: !!c.active }); setModal(true) } }]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing({ code: '', name: '', email: '', phone: '', company: '', taxId: '', creditLimit: 0, address: '', notes: '', active: true }); setModal(true) }}>{t('sales_newCustomer')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('sales_loading')}</p> : rows.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('sales_noCustomers')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('sales_cCode'), t('sales_cName'), t('sales_cLimit'), t('sales_cOutstanding'), t('sales_cAvailable'), t('sales_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{rows.map(c => (
-              <tr key={c.id} className="border-b border-subtle/50">
-                <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{c.code}</td>
-                <td className="px-4 py-2.5 text-text-primary">{c.name}<div className="text-xs text-text-tertiary">{c.company || c.email || ''}</div></td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{money(c.creditLimit)}</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{money(c.outstanding)}{c.overLimit && <Badge color="red">{t('sales_overLimit')}</Badge>}</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{money(c.available)}</td>
-                <td className="px-4 py-2.5"><Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...c, active: !!c.active }); setModal(true) }}>{t('sales_edit')}</Btn></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="sales-customers" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={c => String(c.id)} rowActions={rowActions} exportName="customers" emptyLabel={t('sales_noCustomers')} />
       </Card>
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('sales_editCustomer') : t('sales_newCustomer')} size="lg">
         <div className="space-y-4">
@@ -143,6 +140,7 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
 
 // ── Documents (quote / order / invoice) ──────────────────────────────────────
 function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote' | 'order' | 'invoice' }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<DocRow[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -198,31 +196,25 @@ function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote'
     } catch { toast(t('sales_saveFail'), 'error') }
   }
 
+  const columns: Column<DocRow>[] = [
+    { key: 'docNo', labelEn: 'No.', labelFa: t('sales_cNo'), render: r => <span className="font-mono text-xs text-text-secondary">{r.docNo}</span> },
+    { key: 'customerName', labelEn: 'Customer', labelFa: t('sales_cCustomer'), render: r => <span className="text-text-secondary">{r.customerName}</span> },
+    { key: 'date', labelEn: 'Date', labelFa: t('sales_cDate'), type: 'date', render: r => <span className="text-text-tertiary text-xs">{r.date}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('sales_cStatus'), type: 'enum', options: ['draft', 'sent', 'confirmed', 'partial', 'paid', 'void'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: r => <Badge color={STATUS_COLOR[r.status]}>{t(`sales_st_${r.status}` as 'sales_st_draft')}</Badge> },
+    { key: 'total', labelEn: 'Total', labelFa: t('sales_cTotal'), type: 'number', numeric: true, render: r => <span className="text-text-secondary text-xs">{money(r.total)}{docType === 'invoice' && r.paid > 0 && <span className="text-text-tertiary"> ({money(r.paid)})</span>}</span> },
+  ]
+  const rowActions: RowAction<DocRow>[] = [
+    { id: 'send', labelEn: 'Send', labelFa: t('sales_send'), icon: '➤', hidden: r => r.status !== 'draft', onClick: r => op(r.id, 'send') },
+    { id: 'toOrder', labelEn: 'To Order', labelFa: t('sales_toOrder'), icon: '→', hidden: r => !(docType === 'quote' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'order') },
+    { id: 'toInvoice', labelEn: 'To Invoice', labelFa: t('sales_toInvoice'), icon: '→', hidden: r => !(docType === 'order' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'invoice') },
+    { id: 'pay', labelEn: 'Record Payment', labelFa: t('sales_recordPay'), icon: '💰', hidden: r => !(docType === 'invoice' && r.status !== 'paid' && r.status !== 'void'), onClick: r => { setPayFor(r); setPayAmount(r.total - r.paid) } },
+    { id: 'void', labelEn: 'Void', labelFa: t('sales_void'), icon: '✕', danger: true, hidden: r => r.status === 'void', onClick: r => op(r.id, 'void') },
+  ]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { reset(); setModal(true) }}>{t(`sales_new_${docType}` as 'sales_new_quote')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('sales_loading')}</p> : rows.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('sales_noDocs')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('sales_cNo'), t('sales_cCustomer'), t('sales_cDate'), t('sales_cStatus'), t('sales_cTotal'), t('sales_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{rows.map(r => (
-              <tr key={r.id} className="border-b border-subtle/50">
-                <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{r.docNo}</td>
-                <td className="px-4 py-2.5 text-text-secondary">{r.customerName}</td>
-                <td className="px-4 py-2.5 text-text-tertiary text-xs">{r.date}</td>
-                <td className="px-4 py-2.5"><Badge color={STATUS_COLOR[r.status]}>{t(`sales_st_${r.status}` as 'sales_st_draft')}</Badge></td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{money(r.total)}{docType === 'invoice' && r.paid > 0 && <span className="text-text-tertiary"> ({money(r.paid)})</span>}</td>
-                <td className="px-4 py-2.5"><div className="flex gap-2 flex-wrap">
-                  {r.status === 'draft' && <Btn size="sm" onClick={() => op(r.id, 'send')}>{t('sales_send')}</Btn>}
-                  {docType === 'quote' && r.status !== 'void' && <Btn size="sm" variant="secondary" onClick={() => op(r.id, 'convert', 'order')}>{t('sales_toOrder')}</Btn>}
-                  {docType === 'order' && r.status !== 'void' && <Btn size="sm" variant="secondary" onClick={() => op(r.id, 'convert', 'invoice')}>{t('sales_toInvoice')}</Btn>}
-                  {docType === 'invoice' && r.status !== 'paid' && r.status !== 'void' && <Btn size="sm" onClick={() => { setPayFor(r); setPayAmount(r.total - r.paid) }}>{t('sales_recordPay')}</Btn>}
-                  {r.status !== 'void' && <Btn size="sm" variant="danger" onClick={() => op(r.id, 'void')}>{t('sales_void')}</Btn>}
-                </div></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId={`sales-${docType}`} columns={columns} rows={rows} locale={locale} loading={loading} rowKey={r => String(r.id)} rowActions={rowActions} exportName={`sales-${docType}`} emptyLabel={t('sales_noDocs')} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={t(`sales_new_${docType}` as 'sales_new_quote')} size="xl">
@@ -277,26 +269,21 @@ function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote'
 
 // ── Payments ledger ──────────────────────────────────────────────────────────
 function Payments({ t, toast }: { t: T; toast: Toast }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/sales/payments'); if (r.ok) { const d = await r.json(); setRows(d.payments ?? []) } } catch { toast(t('sales_loadFail'), 'error') } finally { setLoading(false) } }, [toast, t])
   useEffect(() => { load() }, [load])
+  const columns: Column<Payment>[] = [
+    { key: 'date', labelEn: 'Date', labelFa: t('sales_cDate'), type: 'date', render: p => <span className="text-text-tertiary text-xs">{p.date}</span> },
+    { key: 'customer', labelEn: 'Customer', labelFa: t('sales_cCustomer'), render: p => <span className="text-text-secondary">{p.customer}</span> },
+    { key: 'docNo', labelEn: 'No.', labelFa: t('sales_cNo'), render: p => <span className="font-mono text-xs text-text-tertiary">{p.docNo || '—'}</span> },
+    { key: 'method', labelEn: 'Method', labelFa: t('sales_pMethod'), type: 'enum', render: p => <Badge color="slate">{t(`sales_pm_${p.method}` as 'sales_pm_cash')}</Badge> },
+    { key: 'amount', labelEn: 'Amount', labelFa: t('sales_amount'), type: 'number', numeric: true, render: p => <span className="text-success-text text-xs font-medium">{money(p.amount)}</span> },
+  ]
   return (
-    <Card className="p-0 overflow-hidden">
-      {loading ? <p className="text-sm text-text-tertiary p-5">{t('sales_loading')}</p> : rows.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('sales_noPayments')}</p> : (
-        <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('sales_cDate'), t('sales_cCustomer'), t('sales_cNo'), t('sales_pMethod'), t('sales_amount')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-          <tbody>{rows.map(p => (
-            <tr key={p.id} className="border-b border-subtle/50">
-              <td className="px-4 py-2.5 text-text-tertiary text-xs">{p.date}</td>
-              <td className="px-4 py-2.5 text-text-secondary">{p.customer}</td>
-              <td className="px-4 py-2.5 font-mono text-xs text-text-tertiary">{p.docNo || '—'}</td>
-              <td className="px-4 py-2.5"><Badge color="slate">{t(`sales_pm_${p.method}` as 'sales_pm_cash')}</Badge></td>
-              <td className="px-4 py-2.5 text-success-text text-xs font-medium">{money(p.amount)}</td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      )}
+    <Card className="p-4">
+      <DataTable tableId="sales-payments" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={p => String(p.id)} exportName="payments" emptyLabel={t('sales_noPayments')} />
     </Card>
   )
 }
