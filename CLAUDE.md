@@ -446,6 +446,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   after a successful search). Palette is `role=dialog`/`listbox`, hides
   unauthorized modules via `visibleWorkspaces`/`visibleGroups`. Report:
   `docs/governance/phase22-search-command-platform.md`.
+- **Design System** (Phase 22.5) — the unified design-language reference +
+  the platform's Enterprise DataTable. Pure table engine
+  `src/lib/admin/dataTable.ts` (`sortRows`/`filterRows`/`paginate`/`nextSort`;
+  6 unit tests) + `src/components/admin/DataTable.tsx` (one reusable accessible
+  table: click-to-sort `aria-sort` headers, global filter, density toggle,
+  column-visibility menu, pagination, loading/empty states, RTL/bilingual).
+  Reference page `/admin/design-system` (`DesignSystem`, System workspace):
+  color tokens · typography scale · buttons · badges · form controls · states ·
+  a live DataTable over the real 65-route registry. Tokens stay gate-enforced
+  (`audit:tokens` = 0 arbitrary colors); the existing `ui.tsx` primitives remain
+  the component library. Migrating the other ~33 hand-rolled tables onto
+  DataTable is staged. Report: `docs/governance/phase22-design-system.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

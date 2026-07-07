@@ -188,6 +188,7 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
         { labelEn: 'Feature Flags', labelFa: 'پرچم‌های ویژگی', href: '/admin/flags', icon: '🚩' },
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
+        { labelEn: 'Design System', labelFa: 'سیستم طراحی', href: '/admin/design-system', icon: '🎨' },
         { labelEn: 'SEO Control Center', labelFa: 'مرکز کنترل سئو', href: '/admin/seo', icon: '🔎' },
       ] },
       { en: 'Organization', fa: 'سازمان', items: [
