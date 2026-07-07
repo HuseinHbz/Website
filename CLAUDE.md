@@ -500,10 +500,32 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   column-visibility menu, pagination, loading/empty states, RTL/bilingual).
   Reference page `/admin/design-system` (`DesignSystem`, System workspace):
   color tokens · typography scale · buttons · badges · form controls · states ·
-  a live DataTable over the real 65-route registry. Tokens stay gate-enforced
-  (`audit:tokens` = 0 arbitrary colors); the existing `ui.tsx` primitives remain
-  the component library. Migrating the other ~33 hand-rolled tables onto
-  DataTable is staged. Report: `docs/governance/phase22-design-system.md`.
+  a live DataTable. Tokens stay gate-enforced (`audit:tokens` = 0 arbitrary
+  colors). Report: `docs/governance/phase22-design-system.md`.
+- **Enterprise DataTable Platform** (Phase 22.6) — **the** single reusable table
+  powering every admin module (Dynamics/Fiori/Lightning/ServiceNow-class). Pure
+  engine `src/lib/admin/dataTable.ts` (columns metadata + multi-sort
+  (`nextMultiSort`/`multiSortRows`) + per-column filters (text/number/date/
+  boolean/enum/tag, `applyColumnFilters`) + grouping/aggregation (`groupRows`) +
+  selection (`toggleSelect`/`rangeSelect`/`invertSelection`/`selectionState`) +
+  view resolution (`applyColumnView`)) and `src/lib/admin/dataTableExport.ts`
+  (CSV RFC-4180 / Excel SpreadsheetML / JSON export + `importCsv` parse-validate-
+  dedupe) — both fully unit-tested. `src/components/admin/DataTable.tsx` is the
+  one shell: toolbar (search/filters/column-picker+pin/density/group-by/export/
+  saved-views/refresh/quick-create), selection column (shift-range + tri-state),
+  multi-sort headers, column resize/reorder/pin with **per-user persistence** by
+  `tableId`, per-column filter row, grouping, virtualization, row + bulk actions,
+  all states (loading/empty/no-results/error+retry), RBAC (`can`), WCAG/ARIA, RTL.
+  Persistence: `table_prefs` (per-user column layout) + `table_views` (named,
+  RBAC-shared private/role/department/global; pure visibility `tableViews.ts`)
+  via `/api/admin/table-prefs` + `/api/admin/table-views` (zod/RBAC/audited).
+  **Every** hand-rolled module table (raw `<table>` and the `Table`/`TR`/`TD`
+  primitive) was migrated — CMS/CRM/ERP/AI/Security/Ops/Analytics/Backup/Users/
+  Reports/Numbering/etc. — no duplicate module table implementations remain. Only
+  the `ui.tsx` `Table` primitive (now unused), financial-statement layouts, the
+  Dashboard-Platform widget, and the live SSE log console are intentionally kept.
+  Verified live vs real PostgreSQL (prefs + shared views round-trip). Report:
+  `docs/governance/phase22-datatable-platform.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
