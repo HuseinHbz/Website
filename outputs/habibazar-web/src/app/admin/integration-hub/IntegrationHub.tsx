@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'connectors' | 'monitoring' | 'dlq'
 type CType = 'rest' | 'graphql' | 'webhook' | 'smtp' | 'kafka' | 'rabbitmq' | 'sftp'
@@ -38,6 +40,7 @@ type T = ReturnType<typeof useT>
 type Toast = ReturnType<typeof useToast>['toast']
 
 function Connectors({ t, toast }: { t: T; toast: Toast }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<Connector[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -64,29 +67,23 @@ function Connectors({ t, toast }: { t: T; toast: Toast }) {
 
   const http = editing.type === 'rest' || editing.type === 'graphql' || editing.type === 'webhook'
   const intent = editing.type === 'kafka' || editing.type === 'rabbitmq' || editing.type === 'sftp'
+  const columns: Column<Connector>[] = [
+    { key: 'name', labelEn: 'Name', labelFa: t('int_cName'), render: c => <div><div className="font-medium text-text-primary">{c.name}</div><div className="text-xs text-text-tertiary font-mono">{c.key}</div></div> },
+    { key: 'type', labelEn: 'Type', labelFa: t('int_cType'), type: 'enum', options: TYPES.map(x => ({ value: x, labelEn: x, labelFa: x })), render: c => <Badge color="indigo">{c.type}</Badge> },
+    { key: 'executable', labelEn: 'Mode', labelFa: t('int_cMode'), type: 'boolean', value: c => !!c.executable, render: c => <Badge color={c.executable ? 'green' : 'yellow'}>{c.executable ? t('int_executes') : t('int_intent')}</Badge> },
+    { key: 'dispatches', labelEn: 'Dispatches', labelFa: t('int_cDispatches'), type: 'number', numeric: true, value: c => c.dispatches ?? 0 },
+    { key: 'dlq', labelEn: 'DLQ', labelFa: t('int_cDlq'), type: 'number', numeric: true, value: c => c.dlq ?? 0, render: c => c.dlq ? <Badge color="red">{c.dlq}</Badge> : <span className="text-text-tertiary text-xs">0</span> },
+  ]
+  const rowActions: RowAction<Connector>[] = [
+    { id: 'test', labelEn: 'Test', labelFa: t('int_test'), icon: '⚡', onClick: c => test(c) },
+    { id: 'edit', labelEn: 'Edit', labelFa: t('int_edit'), icon: '✎', onClick: c => { setEditing({ ...c, active: !!c.active }); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('int_del'), icon: '🗑', danger: true, onClick: c => del(c.id!) },
+  ]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('int_new')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('int_loading')}</p> : rows.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('int_empty')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('int_cName'), t('int_cType'), t('int_cMode'), t('int_cDispatches'), t('int_cDlq'), t('int_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{rows.map(c => (
-              <tr key={c.id} className="border-b border-subtle/50">
-                <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{c.name}</div><div className="text-xs text-text-tertiary font-mono">{c.key}</div></td>
-                <td className="px-4 py-2.5"><Badge color="indigo">{c.type}</Badge></td>
-                <td className="px-4 py-2.5"><Badge color={c.executable ? 'green' : 'yellow'}>{c.executable ? t('int_executes') : t('int_intent')}</Badge></td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{c.dispatches ?? 0}</td>
-                <td className="px-4 py-2.5">{c.dlq ? <Badge color="red">{c.dlq}</Badge> : <span className="text-text-tertiary text-xs">0</span>}</td>
-                <td className="px-4 py-2.5"><div className="flex gap-2">
-                  <Btn size="sm" onClick={() => test(c)}>{t('int_test')}</Btn>
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...c, active: !!c.active }); setModal(true) }}>{t('int_edit')}</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(c.id!)}>{t('int_del')}</Btn>
-                </div></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="integrations-connectors" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={c => String(c.id)} rowActions={rowActions} exportName="connectors" emptyLabel={t('int_empty')} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('int_editConnector') : t('int_new')} size="lg">
@@ -134,12 +131,19 @@ function Connectors({ t, toast }: { t: T; toast: Toast }) {
 }
 
 function Monitoring({ t }: { t: T }) {
+  const locale = useAdminLocale()
   const [data, setData] = useState<{ dispatches: Dispatch[]; metrics: Metrics } | null>(null)
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/integrations/dispatch'); if (r.ok) setData(await r.json()) } finally { setLoading(false) } }, [])
   useEffect(() => { load() }, [load])
-  if (loading && !data) return <p className="text-sm text-text-tertiary">{t('int_loading')}</p>
   const m = data?.metrics
+  const columns: Column<Dispatch>[] = [
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('int_cDate'), type: 'date', render: d => <span className="text-text-tertiary text-xs font-mono">{d.createdAt}</span> },
+    { key: 'connectorKey', labelEn: 'Connector', labelFa: t('int_cConnector'), render: d => <span className="text-text-secondary text-xs">{d.connectorKey} <Badge color="slate">{d.type}</Badge></span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('int_cStatus'), type: 'enum', options: ['success', 'failed', 'dead', 'queued'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: d => <><Badge color={STATUS_COLOR[d.status] ?? 'slate'}>{t(`int_st_${d.status}` as 'int_st_success')}</Badge>{d.error && <span className="text-[11px] text-danger ml-1">{d.error.slice(0, 40)}</span>}</> },
+    { key: 'latencyMs', labelEn: 'Latency', labelFa: t('int_cLatency'), type: 'number', numeric: true, render: d => <span className="text-text-secondary text-xs">{d.latencyMs}ms</span> },
+    { key: 'attempts', labelEn: 'Attempts', labelFa: t('int_cAttempts'), type: 'number', numeric: true },
+  ]
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -149,21 +153,8 @@ function Monitoring({ t }: { t: T }) {
         <Kpi label={t('int_mDead')} value={String(m?.dead ?? 0)} tone={m?.dead ? 'bad' : undefined} />
         <Kpi label={t('int_mLatency')} value={`${m?.avgLatency ?? 0}ms`} />
       </div>
-      <Card className="p-0 overflow-hidden">
-        {!data || data.dispatches.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('int_noDispatches')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('int_cDate'), t('int_cConnector'), t('int_cStatus'), t('int_cLatency'), t('int_cAttempts')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{data.dispatches.map(d => (
-              <tr key={d.id} className="border-b border-subtle/50">
-                <td className="px-4 py-2.5 text-text-tertiary text-xs font-mono">{d.createdAt}</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{d.connectorKey} <Badge color="slate">{d.type}</Badge></td>
-                <td className="px-4 py-2.5"><Badge color={STATUS_COLOR[d.status] ?? 'slate'}>{t(`int_st_${d.status}` as 'int_st_success')}</Badge>{d.error && <span className="text-[11px] text-danger ml-1">{d.error.slice(0, 40)}</span>}</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{d.latencyMs}ms</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{d.attempts}</td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="integrations-dispatches" columns={columns} rows={data?.dispatches ?? []} locale={locale} loading={loading} rowKey={d => String(d.id)} exportName="dispatches" emptyLabel={t('int_noDispatches')} />
       </Card>
     </div>
   )
@@ -174,6 +165,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'ok'
 }
 
 function Dlq({ t, toast }: { t: T; toast: Toast }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<Dispatch[]>([])
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/integrations/dispatch?dlq=1'); if (r.ok) { const d = await r.json(); setRows(d.dispatches ?? []) } } finally { setLoading(false) } }, [])
@@ -183,22 +175,16 @@ function Dlq({ t, toast }: { t: T; toast: Toast }) {
     const d = await r.json().catch(() => ({}))
     if (r.ok) { toast(`${t('int_retry')}: ${d.result?.status}`, d.result?.status === 'success' ? 'success' : 'error'); load() } else toast(d.error || t('int_saveFail'), 'error')
   }
+  const columns: Column<Dispatch>[] = [
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('int_cDate'), type: 'date', render: d => <span className="text-text-tertiary text-xs font-mono">{d.createdAt}</span> },
+    { key: 'connectorKey', labelEn: 'Connector', labelFa: t('int_cConnector'), render: d => <span className="text-text-secondary text-xs">{d.connectorKey}</span> },
+    { key: 'attempts', labelEn: 'Attempts', labelFa: t('int_cAttempts'), type: 'number', numeric: true },
+    { key: 'error', labelEn: 'Error', labelFa: t('int_cError'), render: d => <span className="text-danger text-xs">{d.error?.slice(0, 60) || '—'}</span> },
+  ]
+  const rowActions: RowAction<Dispatch>[] = [{ id: 'retry', labelEn: 'Retry', labelFa: t('int_retry'), icon: '↻', onClick: d => retry(d.id) }]
   return (
-    <Card className="p-0 overflow-hidden">
-      {loading ? <p className="text-sm text-text-tertiary p-5">{t('int_loading')}</p> : rows.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('int_dlqEmpty')}</p> : (
-        <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('int_cDate'), t('int_cConnector'), t('int_cAttempts'), t('int_cError'), t('int_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-          <tbody>{rows.map(d => (
-            <tr key={d.id} className="border-b border-subtle/50">
-              <td className="px-4 py-2.5 text-text-tertiary text-xs font-mono">{d.createdAt}</td>
-              <td className="px-4 py-2.5 text-text-secondary text-xs">{d.connectorKey}</td>
-              <td className="px-4 py-2.5 text-text-secondary text-xs">{d.attempts}</td>
-              <td className="px-4 py-2.5 text-danger text-xs">{d.error?.slice(0, 60) || '—'}</td>
-              <td className="px-4 py-2.5"><Btn size="sm" onClick={() => retry(d.id)}>{t('int_retry')}</Btn></td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      )}
+    <Card className="p-4">
+      <DataTable tableId="integrations-dlq" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={d => String(d.id)} rowActions={rowActions} exportName="dead-letter-queue" emptyLabel={t('int_dlqEmpty')} />
     </Card>
   )
 }
