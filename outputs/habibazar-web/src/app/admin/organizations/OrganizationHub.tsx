@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Org = {
   id: number; slug: string; nameEn: string; type: string;
@@ -20,22 +22,21 @@ const TYPE_ICONS: Record<string, string> = {
 
 export function OrganizationHub() {
   const t = useT()
+  const locale = useAdminLocale()
   const [orgs, setOrgs] = useState<Org[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
   const [editing, setEditing] = useState<Partial<Org & { nameFa: string; descriptionEn: string; contactEmail: string; phone: string }> | null>(null)
   const [saving, setSaving] = useState(false)
   const { toast, ToastContainer } = useToast()
 
   async function load() {
     setLoading(true)
-    const url = filter !== 'all' ? `/api/admin/organizations?type=${filter}` : '/api/admin/organizations'
-    const r = await fetch(url)
+    const r = await fetch('/api/admin/organizations')
     setOrgs(await r.json())
     setLoading(false)
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reload on filter change only
-  useEffect(() => { load() }, [filter])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+  useEffect(() => { load() }, [])
 
   async function save() {
     if (!editing) return
@@ -51,6 +52,18 @@ export function OrganizationHub() {
     await fetch('/api/admin/organizations', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     toast(t('deleted'), 'success'); load()
   }
+
+  const columns: Column<Org>[] = [
+    { key: 'nameEn', labelEn: 'Organization', labelFa: t('organization'), render: org => <div><div className="font-medium text-white">{org.nameEn}</div><div className="text-xs text-text-tertiary">{org.country || org.slug}</div></div> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: org => <span className="text-text-secondary">{TYPE_ICONS[org.type]} {org.type}</span> },
+    { key: 'tier', labelEn: 'Tier', labelFa: t('tier'), type: 'enum', options: TIERS.map(tr => ({ value: tr, labelEn: tr, labelFa: tr })), render: org => org.tier ? <Badge color={TIER_COLORS[org.tier] || 'slate'}>{org.tier}</Badge> : <span className="text-text-disabled">—</span> },
+    { key: 'website', labelEn: 'Website', labelFa: t('website'), render: org => <span className="text-text-secondary text-xs">{org.website || '—'}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: org => org.active, render: org => <Badge color={org.active ? 'green' : 'slate'}>{org.active ? 'Active' : 'Inactive'}</Badge> },
+  ]
+  const rowActions: RowAction<Org>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: org => setEditing(org) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: org => del(org.id) },
+  ]
 
   return (
     <div>
@@ -97,51 +110,19 @@ export function OrganizationHub() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {['all', ...TYPES].map(t => (
-          <button key={t} onClick={() => setFilter(t)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === t ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>
-            {TYPE_ICONS[t] || '🏢'} {t}
-          </button>
-        ))}
-      </div>
-
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : orgs.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">🏢</div>
-            <div className="text-white font-medium mb-1">No organizations yet</div>
-            <div className="text-text-tertiary text-sm">Add clients, employers, partners, and vendors</div>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">
-              {[t('organization'), t('type'), t('tier'), t('website'), t('status'), t('actions')].map(h => (
-                <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>
-              ))}
-            </tr></thead>
-            <tbody>
-              {orgs.map(org => (
-                <tr key={org.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-white">{org.nameEn}</div>
-                    <div className="text-xs text-text-tertiary">{org.country || org.slug}</div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{TYPE_ICONS[org.type]} {org.type}</td>
-                  <td className="px-4 py-3">
-                    {org.tier ? <Badge color={TIER_COLORS[org.tier] || 'slate'}>{org.tier}</Badge> : <span className="text-text-disabled">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary text-xs">{org.website || '—'}</td>
-                  <td className="px-4 py-3"><Badge color={org.active ? 'green' : 'slate'}>{org.active ? 'Active' : 'Inactive'}</Badge></td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <Btn size="sm" variant="ghost" onClick={() => setEditing(org)}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => del(org.id)}>{t('del')}</Btn>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="organizations"
+          columns={columns}
+          rows={orgs}
+          locale={locale}
+          loading={loading}
+          rowKey={org => String(org.id)}
+          rowActions={rowActions}
+          exportName="organizations"
+          emptyLabel="No organizations yet"
+          quickCreate={{ labelEn: 'Add Organization', labelFa: t('addOrganization'), onClick: () => setEditing({ type: 'client', active: true, featured: false, sortOrder: orgs.length + 1 }) }}
+        />
       </Card>
     </div>
   )

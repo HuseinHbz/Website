@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type ContentItem = {
   id: number; slug: string; type: string; titleEn: string;
@@ -19,22 +21,21 @@ const STATUS_COLORS: Record<string, string> = { published: 'green', draft: 'yell
 
 export function ContentHub() {
   const t = useT()
+  const locale = useAdminLocale()
   const [items, setItems] = useState<ContentItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
   const [editing, setEditing] = useState<Partial<ContentItem & { titleFa: string; excerptEn: string; contentEn: string; seoTitle: string; version: string }> | null>(null)
   const [saving, setSaving] = useState(false)
   const { toast, ToastContainer } = useToast()
 
   async function load() {
     setLoading(true)
-    const url = filter !== 'all' ? `/api/admin/content?type=${filter}` : '/api/admin/content'
-    const r = await fetch(url)
+    const r = await fetch('/api/admin/content')
     setItems(await r.json())
     setLoading(false)
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reload on filter change only
-  useEffect(() => { load() }, [filter])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+  useEffect(() => { load() }, [])
 
   async function save() {
     if (!editing) return
@@ -56,6 +57,18 @@ export function ContentHub() {
     published: items.filter(i => i.status === 'published').length,
     views: items.reduce((s, i) => s + i.views, 0),
   }
+
+  const columns: Column<ContentItem>[] = [
+    { key: 'titleEn', labelEn: 'Content', labelFa: t('content'), render: item => <div><div className="font-medium text-white">{item.titleEn}</div><div className="text-xs text-text-tertiary">{item.slug}</div></div> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: item => <span className="text-text-secondary">{TYPE_ICONS[item.type]} {item.type}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: item => <Badge color={STATUS_COLORS[item.status] || 'slate'}>{item.status}</Badge> },
+    { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true, render: item => <span className="text-text-secondary">{item.views.toLocaleString()}</span> },
+    { key: 'publishedAt', labelEn: 'Published', labelFa: t('published'), type: 'date', render: item => <span className="text-text-tertiary text-xs">{item.publishedAt?.slice(0, 10) || '—'}</span> },
+  ]
+  const rowActions: RowAction<ContentItem>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: item => setEditing(item) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: item => del(item.id) },
+  ]
 
   return (
     <div>
@@ -103,49 +116,19 @@ export function ContentHub() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {['all', ...TYPES].map(t => (
-          <button key={t} onClick={() => setFilter(t)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === t ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>
-            {TYPE_ICONS[t] || '📚'} {t}
-          </button>
-        ))}
-      </div>
-
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : items.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">📝</div>
-            <div className="text-white font-medium mb-1">No content yet</div>
-            <div className="text-text-tertiary text-sm">Create your first article, doc, or announcement</div>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">
-              {[t('content'), t('type'), t('status'), t('views'), t('published'), t('actions')].map(h => (
-                <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>
-              ))}
-            </tr></thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-white">{item.titleEn}</div>
-                    <div className="text-xs text-text-tertiary">{item.slug}</div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{TYPE_ICONS[item.type]} {item.type}</td>
-                  <td className="px-4 py-3"><Badge color={STATUS_COLORS[item.status] || 'slate'}>{item.status}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary">{item.views.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-text-tertiary text-xs">{item.publishedAt?.slice(0, 10) || '—'}</td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <Btn size="sm" variant="ghost" onClick={() => setEditing(item)}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => del(item.id)}>{t('del')}</Btn>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="content"
+          columns={columns}
+          rows={items}
+          locale={locale}
+          loading={loading}
+          rowKey={item => String(item.id)}
+          rowActions={rowActions}
+          exportName="content"
+          emptyLabel="No content yet"
+          quickCreate={{ labelEn: 'Add Content', labelFa: t('addContent'), onClick: () => setEditing({ type: 'blog', status: 'draft', featured: false }) }}
+        />
       </Card>
     </div>
   )
