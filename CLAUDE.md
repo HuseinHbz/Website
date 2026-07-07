@@ -442,8 +442,15 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   persisted in the layout JSON; per-widget auto-refresh polling (SSE-ready seam).
   `resolveWidgets` gained a per-widget in-memory TTL cache (`widgetTtl`: ops 30s /
   others 5min; `?fresh=1` bypasses). Layout import/export (JSON) + audit logging
-  (`dashboard.layout.save`/`role_layout.save`/`layout.reset`). Report:
-  `docs/governance/phase22-dashboard-platform-patch.md`.
+  (`dashboard.layout.save`/`role_layout.save`/`layout.reset`).
+  **Completion:** `users.department` column (assignable in the Users form) +
+  `dashboard_dept_layouts` make `pickLayout` a 4-tier chain **User → Department →
+  Role → Default** (`scope=department` save needs `manage_users`). **Templates**
+  (`dashboard_templates` + `/api/admin/dashboards/templates`) — save/apply/clone/
+  delete via the engine's Templates menu. **Sharing** (`dashboard_shares`, target
+  user/role/department × view/edit/manage, self-contained layout snapshot +
+  `/api/admin/dashboards/shares`) — Share action + "Shared with you" strip.
+  Report: `docs/governance/phase22-dashboard-platform-patch.md`.
 - **Navigation Platform** (Phase 22.3) — RBAC-aware sidebar + breadcrumb + search
   + favorites/recent + quick actions, all driven by the workspace registry. Pure
   helpers in `src/lib/admin/workspaces.ts`: `roleCan` (client-safe RBAC mirror of

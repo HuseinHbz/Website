@@ -18,6 +18,7 @@ export async function GET() {
         name: users.name,
         email: users.email,
         role: users.role,
+        department: users.department,
         active: users.active,
         totpEnabled: users.totpEnabled,
         createdAt: users.createdAt,
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       if (me?.role !== 'super_admin' && me?.role !== 'administrator') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-      const { name, email, password, role } = await req.json()
+      const { name, email, password, role, department } = await req.json()
       if (!name || !email || !password) return NextResponse.json({ error: 'Name, email, password required' }, { status: 400 })
       const hash = await hashPassword(password)
       const db = getDb()
@@ -44,8 +45,9 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase(),
         passwordHash: hash,
         role: role || 'editor',
+        department: department || null,
       }).returning()
-      await logAction(me, 'CREATE', 'users', result[0]?.id, null, { name, email, role })
+      await logAction(me, 'CREATE', 'users', result[0]?.id, null, { name, email, role, department })
       return NextResponse.json({ id: result[0]?.id, email: result[0]?.email })
   } catch (e: unknown) {
     return apiError(e)

@@ -38,8 +38,12 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
   const [edit, setEdit] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [source, setSource] = useState<'user' | 'role' | 'default'>('default')
+  const [source, setSource] = useState<'user' | 'department' | 'role' | 'default'>('default')
   const [canSetRole, setCanSetRole] = useState(false)
+  const [department, setDepartment] = useState<string | null>(null)
+  const [templates, setTemplates] = useState<{ id: number; nameEn: string; nameFa: string | null; layout: LayoutEntry[] }[]>([])
+  const [shared, setShared] = useState<{ id: number; ownerName: string | null; permission: string; layout: LayoutEntry[] }[]>([])
+  const [tplMenu, setTplMenu] = useState(false)
   const dragId = useRef<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -59,11 +63,34 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
     try {
       const r = await fetch(`/api/admin/dashboards?workspace=${workspace}`)
       const d = await r.json()
-      setLayout(d.layout ?? []); setAvailable(d.available ?? []); setSource(d.source ?? 'default'); setCanSetRole(!!d.canSetRole)
+      setLayout(d.layout ?? []); setAvailable(d.available ?? []); setSource(d.source ?? 'default'); setCanSetRole(!!d.canSetRole); setDepartment(d.department ?? null)
       await loadData((d.layout ?? []).map((e: LayoutEntry) => e.id), true)
+      fetch(`/api/admin/dashboards/templates?workspace=${workspace}`).then(r => r.json()).then(x => setTemplates(x.templates ?? [])).catch(() => {})
+      fetch(`/api/admin/dashboards/shares?workspace=${workspace}`).then(r => r.json()).then(x => setShared(x.shares ?? [])).catch(() => {})
     } catch { toast(t('dash_loadFail'), 'error') } finally { setLoading(false) }
   }, [workspace, loadData, toast, t])
   useEffect(() => { load() }, [load])
+
+  async function saveTemplate() {
+    const name = window.prompt(t('dash_tplName')); if (!name?.trim()) return
+    const r = await fetch('/api/admin/dashboards/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nameEn: name.trim(), workspace, layout }) })
+    if (r.ok) { toast(t('dash_tplSaved'), 'success'); fetch(`/api/admin/dashboards/templates?workspace=${workspace}`).then(x => x.json()).then(x => setTemplates(x.templates ?? [])) }
+    else toast(t('dash_saveFail'), 'error')
+  }
+  function applyLayout(l: LayoutEntry[]) { setLayout(l); setDirty(true); setEdit(true); setTplMenu(false); loadData(l.map(e => e.id), true) }
+  async function deleteTemplate(id: number) {
+    if (!confirm(t('dash_confirmDelete'))) return
+    const r = await fetch(`/api/admin/dashboards/templates?id=${id}`, { method: 'DELETE' })
+    if (r.ok) setTemplates(ts => ts.filter(x => x.id !== id))
+  }
+  async function shareDashboard() {
+    const targetType = window.prompt(t('dash_shareTarget')) as 'user' | 'role' | 'department' | null
+    if (!targetType || !['user', 'role', 'department'].includes(targetType)) return
+    const targetKey = window.prompt(t('dash_shareKey')); if (!targetKey?.trim()) return
+    const permission = (window.prompt(t('dash_sharePerm'), 'view') || 'view').trim()
+    const r = await fetch('/api/admin/dashboards/shares', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace, targetType, targetKey: targetKey.trim(), permission, layout }) })
+    if (r.ok) toast(t('dash_shared'), 'success'); else toast(t('dash_saveFail'), 'error')
+  }
 
   // Per-widget auto-refresh: each widget with a refreshInterval polls fresh data.
   // A polling seam that a future SSE/WebSocket feed can replace without redesign.
@@ -100,7 +127,7 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
     setDirty(true)
   }
 
-  async function save(scope: 'user' | 'role' = 'user') {
+  async function save(scope: 'user' | 'role' | 'department' = 'user') {
     try {
       const r = await fetch('/api/admin/dashboards', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace, layout, scope }) })
       if (!r.ok) throw new Error()
@@ -142,11 +169,40 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
         <a href={`/api/admin/dashboards?workspace=${workspace}&export=1`} download className="inline-flex items-center gap-2 rounded-lg font-semibold h-9 px-4 py-2 text-sm bg-surface-2 hover:bg-surface text-text-primary border border-border hover:border-border-strong transition-all">{t('dash_export')}</a>
         <button onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg font-semibold h-9 px-4 py-2 text-sm bg-surface-2 hover:bg-surface text-text-primary border border-border hover:border-border-strong transition-all">{t('dash_import')}</button>
         <input ref={fileRef} type="file" accept="application/json,.json" onChange={onImport} className="hidden" />
+        <div className="relative">
+          <button onClick={() => setTplMenu(o => !o)} className="inline-flex items-center gap-2 rounded-lg font-semibold h-9 px-4 py-2 text-sm bg-surface-2 hover:bg-surface text-text-primary border border-border hover:border-border-strong transition-all">{t('dash_templates')} ▾</button>
+          {tplMenu && (
+            <div className="absolute z-30 mt-1 end-0 w-72 rounded-lg bg-surface border border-border shadow-2xl py-1 max-h-80 overflow-y-auto">
+              <button onClick={() => { setTplMenu(false); saveTemplate() }} className="w-full text-start px-3 py-2 text-sm text-brand hover:bg-white/5">+ {t('dash_saveTpl')}</button>
+              {templates.length === 0 ? <p className="px-3 py-2 text-xs text-text-tertiary">{t('dash_noTpl')}</p> : templates.map(tp => (
+                <div key={tp.id} className="flex items-center gap-1 px-3 py-2 hover:bg-white/5">
+                  <button onClick={() => applyLayout(tp.layout)} className="flex-1 text-start text-sm text-text-secondary truncate">{isRTL && tp.nameFa ? tp.nameFa : tp.nameEn}</button>
+                  <button onClick={() => deleteTemplate(tp.id)} className="text-xs text-danger-text px-1">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <Btn variant={edit ? 'primary' : 'secondary'} onClick={() => setEdit(e => !e)}>{edit ? t('dash_done') : t('dash_customize')}</Btn>
         {edit && dirty && <Btn onClick={() => save('user')}>{t('dash_save')}</Btn>}
         {edit && canSetRole && <Btn variant="secondary" onClick={() => save('role')}>{t('dash_saveRole')}</Btn>}
+        {edit && canSetRole && department && <Btn variant="secondary" onClick={() => save('department')}>{t('dash_saveDept')}</Btn>}
+        {edit && <Btn variant="secondary" onClick={shareDashboard}>{t('dash_share')}</Btn>}
         {edit && <Btn variant="danger" onClick={reset}>{t('dash_reset')}</Btn>}
       </div>
+
+      {shared.length > 0 && (
+        <Card className="p-3">
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            <span className="text-text-tertiary">{t('dash_sharedWithMe')}:</span>
+            {shared.map(s => (
+              <button key={s.id} onClick={() => applyLayout(s.layout)} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-brand/10 border border-brand/25 text-text-secondary hover:text-text-primary">
+                <span>{s.ownerName ?? '—'}</span><span className="text-text-tertiary">· {s.permission}</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {edit && (
         <Card className="p-3">

@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
-type User = { id: string; name: string; email: string; role: string; active: boolean; createdAt: string; lastLogin: string; totpEnabled?: boolean }
-const EMPTY = { name: '', email: '', password: '', role: 'editor' }
+type User = { id: string; name: string; email: string; role: string; department?: string | null; active: boolean; createdAt: string; lastLogin: string; totpEnabled?: boolean }
+const EMPTY = { name: '', email: '', password: '', role: 'editor', department: '' }
 const ROLE_COLOR: Record<string, string> = { super_admin: 'yellow', administrator: 'blue', editor: 'green' }
 
 type TwoFAPanel = { userId: string; email: string; secret: string; qrCode: string; enabled: boolean; phase: 'view' | 'setup' | 'confirm' }
@@ -127,7 +127,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
               <TD className="text-xs text-text-tertiary">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</TD>
               <TD>
                 <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...u, password: '' }); setModal(true) }}>Edit</Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...u, password: '', department: u.department ?? '' }); setModal(true) }}>Edit</Btn>
                   {u.id !== currentUserId && (
                     <>
                       <Btn size="sm" variant="ghost" onClick={() => toggleActive(u)}>{u.active ? 'Disable' : 'Enable'}</Btn>
@@ -167,6 +167,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
             onChange={(v) => setEditing({ ...editing, role: v })}
             options={[{ value: 'editor', label: 'Editor' }, { value: 'administrator', label: 'Administrator' }, { value: 'super_admin', label: 'Super Admin' }]}
           />
+          <Input label="Department / Team" value={editing.department ?? ''} onChange={(v) => setEditing({ ...editing, department: v })} />
           <div className="flex gap-3">
             <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : editing.id ? 'Update User' : 'Create User'}</Btn>
             <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>

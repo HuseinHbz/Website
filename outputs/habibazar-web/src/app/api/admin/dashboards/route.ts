@@ -21,11 +21,16 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   const workspace = req.nextUrl.searchParams.get('workspace') || 'executive'
   try {
-    const [userRow, roleRow] = await Promise.all([
+    const dept = auth.user.department ?? null
+    const [userRow, deptRow, roleRow] = await Promise.all([
       pgQuery<{ layout: string }>(`SELECT layout FROM dashboard_layouts WHERE user_id=$1 AND workspace=$2`, [auth.user.id, workspace]),
+      dept ? pgQuery<{ layout: string }>(`SELECT layout FROM dashboard_dept_layouts WHERE department=$1 AND workspace=$2`, [dept, workspace]) : Promise.resolve([]),
       pgQuery<{ layout: string }>(`SELECT layout FROM dashboard_role_layouts WHERE role=$1 AND workspace=$2`, [auth.user.role, workspace]),
     ])
-    const resolved = pickLayout(workspace, userRow[0] ? parseLayout(userRow[0].layout) : null, roleRow[0] ? parseLayout(roleRow[0].layout) : null)
+    const resolved = pickLayout(workspace,
+      userRow[0] ? parseLayout(userRow[0].layout) : null,
+      deptRow[0] ? parseLayout(deptRow[0].layout) : null,
+      roleRow[0] ? parseLayout(roleRow[0].layout) : null)
 
     const available = widgetsForWorkspace(workspace)
       .filter(w => !w.requires || canDo(auth.user.role, w.requires))
@@ -38,7 +43,7 @@ export async function GET(req: NextRequest) {
         headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="dashboard-${workspace}.json"` },
       })
     }
-    return NextResponse.json({ workspace, layout, available, source: resolved.source, canSetRole: canDo(auth.user.role, 'manage_users') })
+    return NextResponse.json({ workspace, layout, available, source: resolved.source, canSetRole: canDo(auth.user.role, 'manage_users'), department: auth.user.department ?? null })
   } catch (e) { return apiError(e, 'Failed to load dashboard') }
 }
 
@@ -49,11 +54,13 @@ const entry = z.object({
 const saveSchema = z.object({
   workspace: z.string().min(1).max(40),
   layout: z.array(entry).max(60),
-  scope: z.enum(['user', 'role']).default('user'),
+  scope: z.enum(['user', 'role', 'department']).default('user'),
+  department: z.string().max(60).optional(),
 })
 
 // PUT — save the layout. scope=user (default) → the caller's personal layout;
-// scope=role → the role's default layout (administrator/manage_users only).
+// scope=role → the role default; scope=department → a department default.
+// Role + department defaults require manage_users.
 export async function PUT(req: NextRequest) {
   const auth = await requireAdmin()
   if ('error' in auth) return auth.error
@@ -69,6 +76,15 @@ export async function PUT(req: NextRequest) {
          ON CONFLICT (role, workspace) DO UPDATE SET layout=EXCLUDED.layout, updated_at=${NOW}`,
         [auth.user.role, workspace, JSON.stringify(layout)])
       await logAction(auth.user, 'dashboard.role_layout.save', 'dashboard', `${auth.user.role}:${workspace}`, null, { widgets: layout.length })
+    } else if (scope === 'department') {
+      if (!canDo(auth.user.role, 'manage_users')) return badRequest('Not allowed to set department layouts')
+      const department = (parsed.data.department || auth.user.department || '').trim()
+      if (!department) return badRequest('No department to save for')
+      await pgQuery(
+        `INSERT INTO dashboard_dept_layouts (department, workspace, layout, updated_at) VALUES ($1,$2,$3,${NOW})
+         ON CONFLICT (department, workspace) DO UPDATE SET layout=EXCLUDED.layout, updated_at=${NOW}`,
+        [department, workspace, JSON.stringify(layout)])
+      await logAction(auth.user, 'dashboard.dept_layout.save', 'dashboard', `${department}:${workspace}`, null, { widgets: layout.length })
     } else {
       await pgQuery(
         `INSERT INTO dashboard_layouts (user_id, workspace, layout, updated_at) VALUES ($1,$2,$3,${NOW})
@@ -89,8 +105,12 @@ export async function DELETE(req: NextRequest) {
   try {
     await pgQuery(`DELETE FROM dashboard_layouts WHERE user_id=$1 AND workspace=$2`, [auth.user.id, workspace])
     await logAction(auth.user, 'dashboard.layout.reset', 'dashboard', workspace)
-    const roleRow = await pgQuery<{ layout: string }>(`SELECT layout FROM dashboard_role_layouts WHERE role=$1 AND workspace=$2`, [auth.user.role, workspace])
-    const resolved = pickLayout(workspace, null, roleRow[0] ? parseLayout(roleRow[0].layout) : null)
+    const dept = auth.user.department ?? null
+    const [deptRow, roleRow] = await Promise.all([
+      dept ? pgQuery<{ layout: string }>(`SELECT layout FROM dashboard_dept_layouts WHERE department=$1 AND workspace=$2`, [dept, workspace]) : Promise.resolve([]),
+      pgQuery<{ layout: string }>(`SELECT layout FROM dashboard_role_layouts WHERE role=$1 AND workspace=$2`, [auth.user.role, workspace]),
+    ])
+    const resolved = pickLayout(workspace, null, deptRow[0] ? parseLayout(deptRow[0].layout) : null, roleRow[0] ? parseLayout(roleRow[0].layout) : null)
     return NextResponse.json({ ok: true, layout: resolved.layout, source: resolved.source })
   } catch (e) { return apiError(e, 'Failed to reset layout') }
 }

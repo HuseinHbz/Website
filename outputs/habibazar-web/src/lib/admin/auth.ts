@@ -35,6 +35,7 @@ export interface AdminUser {
   name: string
   email: string
   role: 'super_admin' | 'administrator' | 'editor'
+  department?: string | null
   avatar?: string | null
 }
 
@@ -147,6 +148,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
       name: user.name,
       email: user.email,
       role: user.role as AdminUser['role'],
+      department: user.department ?? null,
       avatar: user.avatar,
     }
   } catch {

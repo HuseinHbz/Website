@@ -322,7 +322,7 @@ export async function runMigrations() {
     ALTER TABLE numbering_formats ADD COLUMN IF NOT EXISTS random_length INTEGER NOT NULL DEFAULT 4;
 
     -- Role default dashboard layouts (Phase 22.2 patch). Resolution priority:
-    -- user layout (dashboard_layouts) → role layout (here) → workspace default.
+    -- user → department → role → workspace default.
     CREATE TABLE IF NOT EXISTS dashboard_role_layouts (
       id SERIAL PRIMARY KEY,
       role TEXT NOT NULL,
@@ -331,6 +331,47 @@ export async function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (${NOW}),
       UNIQUE (role, workspace)
     );
+
+    -- Department/team assignment (Phase 22.2 completion). Added idempotently.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
+
+    -- Department default dashboard layouts.
+    CREATE TABLE IF NOT EXISTS dashboard_dept_layouts (
+      id SERIAL PRIMARY KEY,
+      department TEXT NOT NULL,
+      workspace TEXT NOT NULL,
+      layout TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (department, workspace)
+    );
+
+    -- Reusable dashboard templates (create / clone / apply).
+    CREATE TABLE IF NOT EXISTS dashboard_templates (
+      id SERIAL PRIMARY KEY,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      workspace TEXT NOT NULL,
+      layout TEXT NOT NULL DEFAULT '[]',
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_dashboard_templates_ws ON dashboard_templates(workspace);
+
+    -- Dashboard sharing: an owner publishes a layout snapshot to a target
+    -- (user/role/department) at a permission level. Self-contained (stores the
+    -- layout), so applying a share never entangles the resolver.
+    CREATE TABLE IF NOT EXISTS dashboard_shares (
+      id SERIAL PRIMARY KEY,
+      owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      workspace TEXT NOT NULL,
+      target_type TEXT NOT NULL CHECK(target_type IN ('user','role','department')),
+      target_key TEXT NOT NULL,
+      permission TEXT NOT NULL DEFAULT 'view' CHECK(permission IN ('view','edit','manage')),
+      layout TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (owner_id, workspace, target_type, target_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_dashboard_shares_target ON dashboard_shares(target_type, target_key);
 
     -- Per-user navigation preferences (Phase 22.3): pinned favorites + recent
     -- items (each a JSON array of hrefs / {href,ts}). One row per user.

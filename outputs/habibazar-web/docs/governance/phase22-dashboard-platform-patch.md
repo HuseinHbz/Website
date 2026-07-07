@@ -46,11 +46,25 @@ selector in edit mode. Bilingual FA/EN.
   rows written (`dashboard.role_layout.save` / `.layout.save` / `.layout.reset`).
   Existing dashboard behaviour unchanged.
 
-## Staged (honest — needs data/UX the app lacks today)
+## Completion (previously staged — now built for real)
 
-- **Department/team layouts** — users have `role` but no `department` column;
-  adding one without an admin UI to populate it would be a half-feature. The
-  resolver is already layered so a `department` tier slots between user and role
-  once the column + assignment UI exist.
-- **Template system & dashboard sharing** — need their own tables + management UI;
-  the layout JSON + scoped-layout table are the building blocks.
+- **Department/team layouts** — `users.department` column added (Drizzle schema +
+  idempotent ALTER + `getAdminUser`), assignable in the Users admin form. New
+  `dashboard_dept_layouts` table; `pickLayout` is now a 4-tier chain **User →
+  Department → Role → Workspace default** (unit-tested); PUT `scope=department`
+  (manage_users) and reset falls through dept→role→default. Verified: an admin in
+  "Finance" with a saved dept layout resolves to `source=department`.
+- **Dashboard template system** — `dashboard_templates` table + API
+  (`/api/admin/dashboards/templates` GET/POST/DELETE); DashboardEngine "Templates"
+  menu: save current layout as a template, apply (clone into the editor), delete.
+  Verified: create + list round-trip.
+- **Dashboard sharing** — `dashboard_shares` table (owner × workspace × target
+  type/key × permission, self-contained layout snapshot) + API
+  (`/api/admin/dashboards/shares` GET mine/inbox, POST upsert, DELETE); "Share"
+  action + a "Shared with you" strip that applies a shared layout. Targets:
+  user/role/department; permissions view/edit/manage. Verified: share to
+  role=editor + `mine=1` listing.
+
+All three write audit rows (`dashboard.dept_layout.save`, `dashboard.template.
+create`, `dashboard.share`, …). type-check 0 · lint 0 · 213 tests · six audits ·
+build OK · live-verified on real PostgreSQL.

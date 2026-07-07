@@ -67,16 +67,20 @@ export function widgetTtl(id: string): number {
   return WIDGET_TTL[id] ?? 300_000 // default 5 min (KPIs/charts/tables)
 }
 
+export type LayoutSource = 'user' | 'department' | 'role' | 'default'
 /**
- * Resolve the effective layout by priority: user → role → workspace default.
- * Pure — the route supplies the persisted user/role layouts.
+ * Resolve the effective layout by priority:
+ *   user → department → role → workspace default.
+ * Pure — the route supplies each persisted tier.
  */
 export function pickLayout(
   workspace: string,
   user: LayoutEntry[] | null,
+  dept: LayoutEntry[] | null,
   role: LayoutEntry[] | null,
-): { layout: LayoutEntry[]; source: 'user' | 'role' | 'default' } {
+): { layout: LayoutEntry[]; source: LayoutSource } {
   if (user && user.length) return { layout: sanitizeLayout(workspace, user), source: 'user' }
+  if (dept && dept.length) return { layout: sanitizeLayout(workspace, dept), source: 'department' }
   if (role && role.length) return { layout: sanitizeLayout(workspace, role), source: 'role' }
   return { layout: defaultLayout(workspace), source: 'default' }
 }

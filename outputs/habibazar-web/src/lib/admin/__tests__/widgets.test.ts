@@ -31,15 +31,17 @@ describe('widget registry', () => {
   })
 })
 
-describe('layout resolution (user → role → default)', () => {
-  it('prefers user, then role, then workspace default', () => {
+describe('layout resolution (user → department → role → default)', () => {
+  it('prefers user, then department, then role, then workspace default', () => {
     const u = [{ id: 'kpi_crm_pipeline', size: 'sm' as const }]
+    const d = [{ id: 'kpi_crm_leads', size: 'md' as const }]
     const r = [{ id: 'kpi_crm_leads', size: 'sm' as const }]
-    expect(pickLayout('crm', u, r).source).toBe('user')
-    expect(pickLayout('crm', null, r).source).toBe('role')
-    expect(pickLayout('crm', [], r).source).toBe('role')
-    expect(pickLayout('crm', null, null).source).toBe('default')
-    expect(pickLayout('crm', null, null).layout.length).toBeGreaterThan(0)
+    expect(pickLayout('crm', u, d, r).source).toBe('user')
+    expect(pickLayout('crm', null, d, r).source).toBe('department')
+    expect(pickLayout('crm', [], d, r).source).toBe('department')
+    expect(pickLayout('crm', null, null, r).source).toBe('role')
+    expect(pickLayout('crm', null, null, null).source).toBe('default')
+    expect(pickLayout('crm', null, null, null).layout.length).toBeGreaterThan(0)
   })
   it('widgetTtl: ops widgets short, others default 5min', () => {
     expect(widgetTtl('ops_system_health')).toBe(30_000)
