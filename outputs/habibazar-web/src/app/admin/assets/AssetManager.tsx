@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'dashboard' | 'assets'
 type WState = 'ok' | 'expiring' | 'expired' | 'none'
@@ -146,6 +148,7 @@ function Kpi({ label, value, icon, tone }: { label: string; value: string; icon:
 }
 
 function Assets({ t, toast }: { t: T; toast: Toast }) {
+  const locale = useAdminLocale()
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -177,37 +180,35 @@ function Assets({ t, toast }: { t: T; toast: Toast }) {
     catch { toast(t('am_saveFail'), 'error') }
   }
 
+  const columns: Column<Asset>[] = [
+    { key: 'name', labelEn: 'Name', labelFa: t('am_cName'), render: a => <div><div className="font-medium text-text-primary">{a.name}</div><div className="text-xs text-text-tertiary">{a.manufacturer || ''} {a.model || ''} {a.serial ? `· ${a.serial}` : ''}</div></div> },
+    { key: 'category', labelEn: 'Category', labelFa: t('am_cCategory'), render: a => <span className="text-text-secondary text-xs">{a.category || '—'}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('am_cStatus'), type: 'enum', options: STATUSES.map(x => ({ value: x, labelEn: x, labelFa: x })), render: a => <Badge color={a.status === 'active' ? 'green' : a.status === 'retired' ? 'slate' : 'yellow'}>{t(`am_s_${a.status}` as 'am_s_active')}</Badge> },
+    { key: 'bookValue', labelEn: 'Book', labelFa: t('am_cBook'), type: 'number', numeric: true, render: a => <span className="text-text-secondary text-xs">{money(a.bookValue)}</span> },
+    { key: 'warranty', labelEn: 'Warranty', labelFa: t('am_cWarranty'), sortable: false, value: a => a.warranty?.state ?? 'none', render: a => a.warranty && a.warranty.state !== 'none' ? <Badge color={WCOLOR[a.warranty.state]}>{t(`am_w_${a.warranty.state}` as 'am_w_ok')}</Badge> : <span className="text-text-tertiary text-xs">—</span> },
+    { key: 'employee', labelEn: 'Assigned', labelFa: t('am_cAssigned'), value: a => a.employee || a.assignedTo || '', render: a => <span className="text-text-secondary text-xs">{a.employee || a.assignedTo || '—'}</span> },
+  ]
+  const rowActions: RowAction<Asset>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('am_edit'), icon: '✎', onClick: a => { setEditing({ ...a }); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('am_del'), icon: '🗑', danger: true, onClick: a => del(a.id!) },
+  ]
+
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('am_new')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('am_loading')}</p>
-          : assets.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('am_noAssets')}</p>
-          : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('am_cName'), t('am_cCategory'), t('am_cStatus'), t('am_cBook'), t('am_cWarranty'), t('am_cAssigned'), t('am_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {assets.map(a => (
-                  <tr key={a.id} className="border-b border-subtle/50 hover:bg-surface-2 cursor-pointer" onClick={() => setDetailId(a.id!)}>
-                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{a.name}</div><div className="text-xs text-text-tertiary">{a.manufacturer || ''} {a.model || ''} {a.serial ? `· ${a.serial}` : ''}</div></td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{a.category || '—'}</td>
-                    <td className="px-4 py-2.5"><Badge color={a.status === 'active' ? 'green' : a.status === 'retired' ? 'slate' : 'yellow'}>{t(`am_s_${a.status}` as 'am_s_active')}</Badge></td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{money(a.bookValue)}</td>
-                    <td className="px-4 py-2.5">{a.warranty && a.warranty.state !== 'none' ? <Badge color={WCOLOR[a.warranty.state]}>{t(`am_w_${a.warranty.state}` as 'am_w_ok')}</Badge> : <span className="text-text-tertiary text-xs">—</span>}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{a.employee || a.assignedTo || '—'}</td>
-                    <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}><div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...a }); setModal(true) }}>{t('am_edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(a.id!)}>{t('am_del')}</Btn>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="erp-assets"
+          columns={columns}
+          rows={assets}
+          locale={locale}
+          loading={loading}
+          rowKey={a => String(a.id)}
+          onRowClick={a => setDetailId(a.id!)}
+          rowActions={rowActions}
+          exportName="assets"
+          emptyLabel={t('am_noAssets')}
+        />
       </Card>
 
       <AssetForm t={t} open={modal} editing={editing} set={set} onClose={() => setModal(false)} onSave={save} saving={saving} />

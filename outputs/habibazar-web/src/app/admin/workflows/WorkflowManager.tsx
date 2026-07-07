@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { WorkflowCanvas } from './WorkflowCanvas'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Status = 'draft' | 'active' | 'archived'
 interface Workflow {
@@ -36,6 +38,7 @@ function runColor(s: Run['status']) { return s === 'completed' ? 'green' : s ===
 
 export function WorkflowManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const { toast, ToastContainer } = useToast()
   const [items, setItems] = useState<Workflow[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,6 +105,20 @@ export function WorkflowManager() {
     } catch { toast(t('wf_loadRunsFail'), 'error') }
   }
 
+  const columns: Column<Workflow>[] = [
+    { key: 'nameEn', labelEn: 'Workflow', labelFa: t('wf_colWorkflow'), render: w => <div><div className="font-medium text-text-primary">{w.nameEn}</div><div className="text-xs text-text-tertiary">{w.nameFa || '—'}</div></div> },
+    { key: 'key', labelEn: 'Key', labelFa: t('wf_colKey'), render: w => <span className="text-text-tertiary text-xs font-mono">{w.key}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('wf_colStatus'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: s, labelFa: s })), render: w => <Badge color={statusColor(w.status)}>{w.status}</Badge> },
+    { key: 'version', labelEn: 'Version', labelFa: t('wf_colVersion'), type: 'number', numeric: true, render: w => <span className="text-text-secondary text-xs">v{w.version}</span> },
+    { key: 'runs', labelEn: 'Runs', labelFa: t('wf_colRuns'), type: 'number', numeric: true, value: w => w.runs ?? 0, render: w => <span className="text-text-secondary text-xs">{w.runs ?? 0}</span> },
+  ]
+  const rowActions: RowAction<Workflow>[] = [
+    { id: 'run', labelEn: 'Run', labelFa: t('wf_run'), icon: '▶', onClick: w => run(w) },
+    { id: 'history', labelEn: 'History', labelFa: t('wf_history'), icon: '🕓', onClick: w => openRuns(w) },
+    { id: 'edit', labelEn: 'Edit', labelFa: t('wf_edit'), icon: '✎', onClick: w => { setEditing({ ...w, nameFa: w.nameFa ?? '', description: w.description ?? '' }); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('wf_del'), icon: '🗑', danger: true, onClick: w => del(w.id!) },
+  ]
+
   return (
     <>
       <ToastContainer />
@@ -111,39 +128,19 @@ export function WorkflowManager() {
         action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('wf_newWorkflow')}</Btn>}
       />
 
-      <Card className="p-0 overflow-hidden">
-        {loading ? (
-          <p className="text-sm text-text-tertiary p-5">{t('wf_loading')}</p>
-        ) : items.length === 0 ? (
-          <p className="text-sm text-text-tertiary p-5">{t('wf_empty')}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('wf_colWorkflow'), t('wf_colKey'), t('wf_colStatus'), t('wf_colVersion'), t('wf_colRuns'), t('wf_colActions')].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {items.map((w) => (
-                  <tr key={w.id} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{w.nameEn}</div><div className="text-xs text-text-tertiary">{w.nameFa || '—'}</div></td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs font-mono">{w.key}</td>
-                    <td className="px-4 py-2.5"><Badge color={statusColor(w.status)}>{w.status}</Badge></td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">v{w.version}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{w.runs ?? 0}</td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex gap-2 flex-wrap">
-                        <Btn size="sm" onClick={() => run(w)}>{t('wf_run')}</Btn>
-                        <Btn size="sm" variant="secondary" onClick={() => openRuns(w)}>{t('wf_history')}</Btn>
-                        <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...w, nameFa: w.nameFa ?? '', description: w.description ?? '' }); setModal(true) }}>{t('wf_edit')}</Btn>
-                        <Btn size="sm" variant="danger" onClick={() => del(w.id!)}>{t('wf_del')}</Btn>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="workflows"
+          columns={columns}
+          rows={items}
+          locale={locale}
+          loading={loading}
+          rowKey={w => String(w.id)}
+          rowActions={rowActions}
+          exportName="workflows"
+          emptyLabel={t('wf_empty')}
+          quickCreate={{ labelEn: 'New Workflow', labelFa: t('wf_newWorkflow'), onClick: () => { setEditing(EMPTY); setModal(true) } }}
+        />
       </Card>
 
       {/* Editor */}

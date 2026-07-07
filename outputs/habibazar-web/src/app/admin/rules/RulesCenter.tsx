@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 interface Rule { id: number; key: string; nameEn: string; nameFa: string | null; category: string; description: string | null; currentVersion: number; activeVersion: number; status: string }
 interface Version { id: number; version: number; definition: string; note: string | null; createdAt: string }
@@ -121,27 +123,31 @@ export function RulesCenter() {
     )
   }
 
+  const columns: Column<Rule>[] = [
+    { key: 'nameEn', labelEn: 'Name', labelFa: t('rule_cName'), value: r => fa ? (r.nameFa || r.nameEn) : r.nameEn, render: r => <div><div className="font-medium text-text-primary">{fa ? (r.nameFa || r.nameEn) : r.nameEn}</div><div className="text-xs text-text-tertiary">{r.description || '—'}</div></div> },
+    { key: 'key', labelEn: 'Key', labelFa: t('rule_cKey'), render: r => <span className="font-mono text-xs text-text-tertiary">{r.key}</span> },
+    { key: 'category', labelEn: 'Category', labelFa: t('rule_cCategory'), type: 'enum', options: CATEGORIES.map(x => ({ value: x, labelEn: x, labelFa: x })), render: r => <Badge color="indigo">{t(`rule_cat_${r.category}` as 'rule_cat_general')}</Badge> },
+    { key: 'activeVersion', labelEn: 'Version', labelFa: t('rule_cVersion'), type: 'number', numeric: true, render: r => <span className="text-text-secondary text-xs">v{r.activeVersion}/v{r.currentVersion}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('rule_cStatus'), type: 'enum', options: ['draft', 'active', 'archived'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: r => <Badge color={statusColor(r.status)}>{r.status}</Badge> },
+  ]
+
   return (
     <>
       <ToastContainer />
       <PageHeader title={t('rule_title')} subtitle={t('rule_subtitle')} action={<Btn onClick={() => { setDraft({ ...EMPTY }); setCreateOpen(true) }}>{t('rule_new')}</Btn>} />
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('rule_loading')}</p>
-          : rules.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('rule_empty')}</p>
-          : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('rule_cName'), t('rule_cKey'), t('rule_cCategory'), t('rule_cVersion'), t('rule_cStatus')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{rules.map(r => (
-              <tr key={r.id} className="border-b border-subtle/50 cursor-pointer hover:bg-surface-2" onClick={() => openDetail(r)}>
-                <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{fa ? (r.nameFa || r.nameEn) : r.nameEn}</div><div className="text-xs text-text-tertiary">{r.description || '—'}</div></td>
-                <td className="px-4 py-2.5 font-mono text-xs text-text-tertiary">{r.key}</td>
-                <td className="px-4 py-2.5"><Badge color="indigo">{t(`rule_cat_${r.category}` as 'rule_cat_general')}</Badge></td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">v{r.activeVersion}/v{r.currentVersion}</td>
-                <td className="px-4 py-2.5"><Badge color={statusColor(r.status)}>{r.status}</Badge></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="erp-rules"
+          columns={columns}
+          rows={rules}
+          locale={fa ? 'fa' : 'en'}
+          loading={loading}
+          rowKey={r => String(r.id)}
+          onRowClick={openDetail}
+          exportName="business-rules"
+          emptyLabel={t('rule_empty')}
+          quickCreate={{ labelEn: 'New Rule', labelFa: t('rule_new'), onClick: () => { setDraft({ ...EMPTY }); setCreateOpen(true) } }}
+        />
       </Card>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('rule_new')} size="lg">
