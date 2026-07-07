@@ -327,8 +327,10 @@ export async function runMigrations() {
       user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       favorites TEXT NOT NULL DEFAULT '[]',
       recents TEXT NOT NULL DEFAULT '[]',
+      searches TEXT NOT NULL DEFAULT '[]',
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    ALTER TABLE nav_prefs ADD COLUMN IF NOT EXISTS searches TEXT NOT NULL DEFAULT '[]';
 
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.

@@ -6,9 +6,11 @@ import { usePathname } from 'next/navigation'
 interface NavPrefs {
   favorites: string[]
   recents: string[]
+  searches: string[]
   isFavorite: (href: string) => boolean
   toggleFavorite: (href: string) => void
   clearRecents: () => void
+  recordSearch: (term: string) => void
 }
 
 const Ctx = createContext<NavPrefs | null>(null)
@@ -17,11 +19,12 @@ export function NavPrefsProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [favorites, setFavorites] = useState<string[]>([])
   const [recents, setRecents] = useState<string[]>([])
+  const [searches, setSearches] = useState<string[]>([])
   const lastVisit = useRef<string>('')
 
   useEffect(() => {
     fetch('/api/admin/nav-prefs').then(r => r.json())
-      .then(d => { setFavorites(d.favorites ?? []); setRecents(d.recents ?? []) })
+      .then(d => { setFavorites(d.favorites ?? []); setRecents(d.recents ?? []); setSearches(d.searches ?? []) })
       .catch(() => {})
   }, [])
 
@@ -48,11 +51,19 @@ export function NavPrefsProvider({ children }: { children: React.ReactNode }) {
     fetch('/api/admin/nav-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clearRecents' }) }).catch(() => {})
   }, [])
 
+  const recordSearch = useCallback((term: string) => {
+    const t = term.trim()
+    if (t.length < 2) return
+    setSearches(prev => [t, ...prev.filter(s => s.toLowerCase() !== t.toLowerCase())].slice(0, 8)) // optimistic
+    fetch('/api/admin/nav-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'search', term: t }) })
+      .then(r => r.json()).then(d => { if (d.searches) setSearches(d.searches) }).catch(() => {})
+  }, [])
+
   const isFavorite = useCallback((href: string) => favorites.includes(href), [favorites])
 
-  return <Ctx.Provider value={{ favorites, recents, isFavorite, toggleFavorite, clearRecents }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ favorites, recents, searches, isFavorite, toggleFavorite, clearRecents, recordSearch }}>{children}</Ctx.Provider>
 }
 
 export function useNavPrefs(): NavPrefs {
-  return useContext(Ctx) ?? { favorites: [], recents: [], isFavorite: () => false, toggleFavorite: () => {}, clearRecents: () => {} }
+  return useContext(Ctx) ?? { favorites: [], recents: [], searches: [], isFavorite: () => false, toggleFavorite: () => {}, clearRecents: () => {}, recordSearch: () => {} }
 }

@@ -434,6 +434,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `Breadcrumb` shows Workspaces › Workspace › Module. Skip-to-content link +
   `aria-current`/`aria-label`s for WCAG. Report:
   `docs/governance/phase22-navigation-platform.md`.
+- **Search & Command Platform** (Phase 22.4) — a keyboard-first command palette
+  (Ctrl+K, `CommandPalette`) that fuses executable commands + workspace switches +
+  RBAC-filtered nav + live records + favorites + recent items + recent searches
+  into one ranked list. Executable **Command Registry** `src/lib/admin/commands.ts`
+  (pure, tested) — `execute` commands POST **real** endpoints only (Run Backup →
+  `/api/admin/backup/run`, Sync AI KB → `/api/admin/ai-kb/sync`, both
+  `manage_settings`-gated, confirm + inline status); `visibleCommands(role,query)`
+  RBAC/query-filters. Recent searches persist in `nav_prefs.searches` via
+  `/api/admin/nav-prefs` (`search`/`clearSearches`; ≥2 chars, deduped, recorded
+  after a successful search). Palette is `role=dialog`/`listbox`, hides
+  unauthorized modules via `visibleWorkspaces`/`visibleGroups`. Report:
+  `docs/governance/phase22-search-command-platform.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

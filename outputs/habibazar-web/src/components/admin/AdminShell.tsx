@@ -114,7 +114,7 @@ export function AdminShell({ user, title, children }: Props) {
         </main>
       </div>
 
-      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} locale={locale} />
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} locale={locale} role={user.role} />
     </div>
     </NavPrefsProvider>
   )
