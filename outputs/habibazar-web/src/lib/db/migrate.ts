@@ -383,6 +383,8 @@ export async function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
     ALTER TABLE nav_prefs ADD COLUMN IF NOT EXISTS searches TEXT NOT NULL DEFAULT '[]';
+    -- Persisted per-user nav UI state (collapsed sidebar groups). Phase 22.3 completion.
+    ALTER TABLE nav_prefs ADD COLUMN IF NOT EXISTS ui TEXT NOT NULL DEFAULT '{}';
 
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.

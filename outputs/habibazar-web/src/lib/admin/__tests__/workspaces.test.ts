@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WORKSPACES, workspaceForPath, workspaceById, workspaceHome, allNavItems, roleCan, visibleWorkspaces, visibleGroups, quickActionsFor, breadcrumbFor, findItem } from '../workspaces'
+import { WORKSPACES, workspaceForPath, workspaceById, workspaceHome, allNavItems, roleCan, visibleWorkspaces, visibleGroups, quickActionsFor, breadcrumbFor, findItem, roleDefaultFavorites } from '../workspaces'
 
 describe('workspace registry', () => {
   it('has 12 workspaces with unique ids', () => {
@@ -62,6 +62,14 @@ describe('navigation RBAC', () => {
     expect(quickActionsFor('editor', 'security')).toHaveLength(0)
     expect(quickActionsFor('super_admin', 'security').length).toBeGreaterThan(0)
     expect(quickActionsFor('editor', 'crm').length).toBeGreaterThan(0)
+  })
+  it('roleDefaultFavorites only returns hrefs the role may see', () => {
+    const sa = roleDefaultFavorites('super_admin')
+    expect(sa).toContain('/admin/users')      // super_admin sees Security
+    expect(sa.length).toBeGreaterThan(0)
+    const ed = roleDefaultFavorites('editor')
+    expect(ed).not.toContain('/admin/users')  // editor cannot see Security
+    expect(ed).toContain('/admin')            // dashboard always visible
   })
 })
 

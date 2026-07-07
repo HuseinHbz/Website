@@ -25,8 +25,19 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
   const ws = workspaceForPath(pathname)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [q, setQ] = useState('')
-  const { favorites, recents, isFavorite, toggleFavorite } = useNavPrefs()
+  const { favorites, recents, badges, isFavorite, toggleFavorite, isGroupCollapsed, toggleGroup } = useNavPrefs()
   const expanded = !collapsed || mobileOpen
+
+  // Roving keyboard navigation: ↑/↓ move focus between sidebar links.
+  function onNavKey(e: React.KeyboardEvent<HTMLElement>) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    const links = Array.from(e.currentTarget.querySelectorAll<HTMLAnchorElement>('a[href]'))
+    const idx = links.indexOf(document.activeElement as HTMLAnchorElement)
+    if (idx < 0) return
+    e.preventDefault()
+    const next = e.key === 'ArrowDown' ? Math.min(idx + 1, links.length - 1) : Math.max(idx - 1, 0)
+    links[next]?.focus()
+  }
 
   const groups = useMemo(() => visibleGroups(role, ws), [role, ws])
   const workspaces = useMemo(() => visibleWorkspaces(role), [role])
@@ -57,11 +68,16 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
         <Link
           href={item.href}
           aria-current={active ? 'page' : undefined}
-          className={`flex-1 flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all min-h-[40px] ${active ? 'bg-brand/20 text-brand font-medium' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'}`}
+          className={`relative flex-1 flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all min-h-[40px] ${active ? 'bg-brand/20 text-brand font-medium' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'}`}
           title={(collapsed && !mobileOpen) ? label : undefined}
         >
           <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
-          {expanded && <span className="truncate">{label}</span>}
+          {expanded && <span className="truncate flex-1">{label}</span>}
+          {(badges[item.href] ?? 0) > 0 && (
+            <span className={`shrink-0 text-[10px] font-bold rounded-full bg-danger text-white min-w-[16px] h-4 px-1 inline-flex items-center justify-center ${expanded ? '' : 'absolute top-1 end-1'}`} aria-label={`${badges[item.href]} new`}>
+              {badges[item.href] > 99 ? '99+' : badges[item.href]}
+            </span>
+          )}
         </Link>
         {expanded && star && (
           <button
@@ -74,12 +90,28 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
     )
   }
 
-  const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      {expanded && <p className="text-[10px] font-bold uppercase tracking-widest text-text-disabled px-2 mb-1">{label}</p>}
-      <ul className="space-y-0.5">{children}</ul>
-    </div>
-  )
+  const Section = ({ label, children, groupKey, badgeCount = 0 }: { label: string; children: React.ReactNode; groupKey?: string; badgeCount?: number }) => {
+    const collapsible = !!groupKey && expanded
+    const isCollapsed = collapsible && isGroupCollapsed(groupKey!)
+    return (
+      <div>
+        {expanded && (collapsible ? (
+          <button
+            onClick={() => toggleGroup(groupKey!)}
+            aria-expanded={!isCollapsed}
+            className="w-full flex items-center gap-1 px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-text-disabled hover:text-text-tertiary transition-colors"
+          >
+            <span className="text-[8px]">{isCollapsed ? '▸' : '▾'}</span>
+            <span className="flex-1 text-start">{label}</span>
+            {badgeCount > 0 && <span className="text-danger-text">●</span>}
+          </button>
+        ) : (
+          <p className="text-[10px] font-bold uppercase tracking-widest text-text-disabled px-2 mb-1">{label}</p>
+        ))}
+        {!isCollapsed && <ul className="space-y-0.5">{children}</ul>}
+      </div>
+    )
+  }
 
   return (
     <aside
@@ -146,7 +178,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
       )}
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-5">
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-5" onKeyDown={onNavKey}>
         {query ? (
           <Section label={isRTL ? 'نتایج جستجو' : 'Search results'}>
             {searchResults.length === 0
@@ -169,7 +201,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
               </Section>
             )}
             {groups.map(section => (
-              <Section key={section.en} label={locale === 'fa' ? section.fa : section.en}>
+              <Section key={section.en} label={locale === 'fa' ? section.fa : section.en} groupKey={`${ws.id}:${section.en}`} badgeCount={section.items.reduce((s, it) => s + (badges[it.href] ?? 0), 0)}>
                 {section.items.map(item => <li key={item.href}><NavLink item={item} /></li>)}
               </Section>
             ))}

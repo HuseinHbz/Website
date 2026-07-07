@@ -285,6 +285,19 @@ export function quickActionsFor(role: string, workspaceId: string): QuickAction[
   return (QUICK_ACTIONS[workspaceId] ?? []).filter(a => !a.requires || roleCan(role, a.requires))
 }
 
+// ── Role default favorites (seeded for a new user with no pins) ───────────────
+const ROLE_DEFAULT_FAVORITES: Record<string, string[]> = {
+  super_admin: ['/admin', '/admin/finance', '/admin/crm', '/admin/operations', '/admin/users'],
+  administrator: ['/admin', '/admin/finance', '/admin/crm', '/admin/reports'],
+  editor: ['/admin', '/admin/content', '/admin/projects', '/admin/media'],
+}
+/** Suggested starter favorites for a role — only hrefs the role may actually see. */
+export function roleDefaultFavorites(role: string): string[] {
+  const found = findItem
+  return (ROLE_DEFAULT_FAVORITES[role] ?? ROLE_DEFAULT_FAVORITES.editor)
+    .filter(href => { const f = found(href); return f ? canSeeItem(role, f.ws, f.item) : href === '/admin' })
+}
+
 // ── Breadcrumb engine ────────────────────────────────────────────────────────
 export interface Crumb { labelEn: string; labelFa: string; href: string }
 /** Find the nav item whose href best matches a path, with its workspace. */

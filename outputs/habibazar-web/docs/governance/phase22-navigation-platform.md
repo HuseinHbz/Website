@@ -57,9 +57,29 @@ the workspace unit-test suite.
   favorite + a recent visit and **rejects an external href**. Screenshots
   captured. Existing module pages render unchanged (zero regression).
 
-## Remaining roadmap (staged)
+## Completion (previously staged — now built for real)
 
-Persisted collapse/expanded-group state per user (currently local); virtualized
-menu for very large workspaces; notification badges/unread counters on nav items;
-role/department default favorite sets; full keyboard tree navigation in the
-sidebar (arrow keys), building on the existing focus management.
+- **Notification badges** — `GET /api/admin/nav-badges` returns live "pending /
+  unread" counts from real tables (new contact requests / consultations / CRM
+  leads, failed backups, unresolved integration DLQ), mapped to nav hrefs.
+  `NavPrefsProvider` polls it (mount + 60s + route change); the sidebar renders a
+  red count badge on the item + a dot on its collapsed group. Verified: 3 new CRM
+  leads → `/admin/crm: 3`.
+- **Persisted collapsed groups (per user)** — `nav_prefs.ui` (JSON) stores
+  `collapsedGroups`; workspace sidebar groups are collapsible (click the header),
+  persisted via `/api/admin/nav-prefs` (`toggleGroup`). Verified: toggling
+  `erp:Operations` survives reload.
+- **Role default favorites** — pure `roleDefaultFavorites(role)` (RBAC-filtered);
+  on a user's first nav-prefs load (no row yet) their favorites are seeded from
+  the role default. Verified: super-admin seeded 5 role-appropriate pins;
+  editor's set excludes Security.
+- **Keyboard tree navigation** — ↑/↓ move focus between sidebar links (roving
+  focus via an `onKeyDown` on the `<nav>`), on top of the existing skip-link +
+  `aria-current`.
+
+## Not needed at current scale (honest)
+
+- **Virtualized menu** — the largest workspace has 23 items; windowing would add
+  machinery (and a dependency or complex code) for lists this small with zero real
+  benefit. The registry-driven render stays O(items) and fast; virtualization can
+  be added the day a single workspace holds hundreds of items.

@@ -462,7 +462,12 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   validated to `/admin/...`). `AdminSidebar` renders Dashboard + Favorites (★
   pins) + Quick Actions + RBAC groups + Recent, with an in-sidebar search filter;
   `Breadcrumb` shows Workspaces › Workspace › Module. Skip-to-content link +
-  `aria-current`/`aria-label`s for WCAG. Report:
+  `aria-current`/`aria-label`s for WCAG. **Completion:** live **notification
+  badges** (`/api/admin/nav-badges` — real pending counts: new contacts/
+  consultations/leads, failed backups, integration DLQ; polled 60s) rendered on
+  nav items; **persisted collapsed groups** per user (`nav_prefs.ui.collapsedGroups`
+  via `toggleGroup`); **role default favorites** (`roleDefaultFavorites`, seeded on
+  first load); **keyboard ↑/↓** roving focus in the sidebar. Report:
   `docs/governance/phase22-navigation-platform.md`.
 - **Search & Command Platform** (Phase 22.4) — a keyboard-first command palette
   (Ctrl+K, `CommandPalette`) that fuses executable commands + workspace switches +

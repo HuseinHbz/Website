@@ -7,10 +7,14 @@ interface NavPrefs {
   favorites: string[]
   recents: string[]
   searches: string[]
+  badges: Record<string, number>
+  collapsedGroups: string[]
   isFavorite: (href: string) => boolean
   toggleFavorite: (href: string) => void
   clearRecents: () => void
   recordSearch: (term: string) => void
+  isGroupCollapsed: (group: string) => boolean
+  toggleGroup: (group: string) => void
 }
 
 const Ctx = createContext<NavPrefs | null>(null)
@@ -20,13 +24,25 @@ export function NavPrefsProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<string[]>([])
   const [recents, setRecents] = useState<string[]>([])
   const [searches, setSearches] = useState<string[]>([])
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
+  const [badges, setBadges] = useState<Record<string, number>>({})
   const lastVisit = useRef<string>('')
 
   useEffect(() => {
     fetch('/api/admin/nav-prefs').then(r => r.json())
-      .then(d => { setFavorites(d.favorites ?? []); setRecents(d.recents ?? []); setSearches(d.searches ?? []) })
+      .then(d => { setFavorites(d.favorites ?? []); setRecents(d.recents ?? []); setSearches(d.searches ?? []); setCollapsedGroups(d.ui?.collapsedGroups ?? []) })
       .catch(() => {})
   }, [])
+
+  // Live notification badges (new contacts/consultations/leads, failed backups,
+  // DLQ) — refreshed on mount + every 60s + on route change.
+  useEffect(() => {
+    let alive = true
+    const pull = () => fetch('/api/admin/nav-badges').then(r => r.json()).then(d => { if (alive) setBadges(d.badges ?? {}) }).catch(() => {})
+    pull()
+    const id = setInterval(pull, 60_000)
+    return () => { alive = false; clearInterval(id) }
+  }, [pathname])
 
   // Record a visit when the admin route changes (deduped, ignores the home grid).
   useEffect(() => {
@@ -59,11 +75,18 @@ export function NavPrefsProvider({ children }: { children: React.ReactNode }) {
       .then(r => r.json()).then(d => { if (d.searches) setSearches(d.searches) }).catch(() => {})
   }, [])
 
-  const isFavorite = useCallback((href: string) => favorites.includes(href), [favorites])
+  const toggleGroup = useCallback((group: string) => {
+    setCollapsedGroups(prev => prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]) // optimistic
+    fetch('/api/admin/nav-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggleGroup', group }) })
+      .then(r => r.json()).then(d => { if (d.ui?.collapsedGroups) setCollapsedGroups(d.ui.collapsedGroups) }).catch(() => {})
+  }, [])
 
-  return <Ctx.Provider value={{ favorites, recents, searches, isFavorite, toggleFavorite, clearRecents, recordSearch }}>{children}</Ctx.Provider>
+  const isFavorite = useCallback((href: string) => favorites.includes(href), [favorites])
+  const isGroupCollapsed = useCallback((group: string) => collapsedGroups.includes(group), [collapsedGroups])
+
+  return <Ctx.Provider value={{ favorites, recents, searches, badges, collapsedGroups, isFavorite, toggleFavorite, clearRecents, recordSearch, isGroupCollapsed, toggleGroup }}>{children}</Ctx.Provider>
 }
 
 export function useNavPrefs(): NavPrefs {
-  return useContext(Ctx) ?? { favorites: [], recents: [], searches: [], isFavorite: () => false, toggleFavorite: () => {}, clearRecents: () => {}, recordSearch: () => {} }
+  return useContext(Ctx) ?? { favorites: [], recents: [], searches: [], badges: {}, collapsedGroups: [], isFavorite: () => false, toggleFavorite: () => {}, clearRecents: () => {}, recordSearch: () => {}, isGroupCollapsed: () => false, toggleGroup: () => {} }
 }
