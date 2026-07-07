@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Doc = { id: number; slug: string; titleEn: string; type: string; version: string | null; status: string; featured: boolean; views: number; helpful: number; sortOrder: number }
 
@@ -11,11 +13,11 @@ const STATUSES = ['draft', 'published', 'archived']
 
 export function DocsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [docList, setDocList] = useState<Doc[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Doc & { contentEn: string; excerptEn: string }> | null>(null)
   const [saving, setSaving] = useState(false)
-  const [filter, setFilter] = useState('all')
   const { toast, ToastContainer } = useToast()
 
   async function load() { setLoading(true); const r = await fetch('/api/admin/docs'); setDocList(await r.json()); setLoading(false) }
@@ -29,9 +31,16 @@ export function DocsManager() {
     setSaving(false)
   }
 
-  const filtered = filter === 'all' ? docList : docList.filter(d => d.type === filter)
-
   const TYPE_ICONS: Record<string, string> = { docs: '📄', api: '⚡', runbook: '📋', tutorial: '📖', guide: '🏛️', release: '📦' }
+
+  const columns: Column<Doc>[] = [
+    { key: 'titleEn', labelEn: 'Document', labelFa: t('document'), render: d => <div><div className="font-medium text-white">{d.titleEn}</div><div className="text-xs text-text-tertiary">{d.slug}</div></div> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: d => <span className="text-text-secondary">{TYPE_ICONS[d.type]} {d.type}</span> },
+    { key: 'version', labelEn: 'Version', labelFa: t('version'), render: d => <span className="text-text-secondary font-mono text-xs">{d.version || '—'}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: s, labelFa: s })), render: d => <Badge color={d.status === 'published' ? 'green' : d.status === 'draft' ? 'yellow' : 'slate'}>{d.status}</Badge> },
+    { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true },
+  ]
+  const rowActions: RowAction<Doc>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: d => setEditing(d) }]
 
   return (
     <div>
@@ -66,33 +75,18 @@ export function DocsManager() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {['all', ...TYPES].map(tp => (
-          <button key={tp} onClick={() => setFilter(tp)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === tp ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>
-            {TYPE_ICONS[tp] || '📚'} {tp}
-          </button>
-        ))}
-      </div>
-
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">{[t('document'), t('type'), t('version'), t('status'), t('views'), t('actions')].map(h => <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>)}</tr></thead>
-            <tbody>
-              {filtered.map(d => (
-                <tr key={d.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3"><div className="font-medium text-white">{d.titleEn}</div><div className="text-xs text-text-tertiary">{d.slug}</div></td>
-                  <td className="px-4 py-3 text-text-secondary">{TYPE_ICONS[d.type]} {d.type}</td>
-                  <td className="px-4 py-3 text-text-secondary font-mono text-xs">{d.version || '—'}</td>
-                  <td className="px-4 py-3"><Badge color={d.status === 'published' ? 'green' : d.status === 'draft' ? 'yellow' : 'slate'}>{d.status}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary">{d.views}</td>
-                  <td className="px-4 py-3"><Btn size="sm" variant="ghost" onClick={() => setEditing(d)}>{t('edit')}</Btn></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="docs"
+          columns={columns}
+          rows={docList}
+          locale={locale}
+          loading={loading}
+          rowKey={d => String(d.id)}
+          rowActions={rowActions}
+          exportName="docs"
+          quickCreate={{ labelEn: 'Add Doc', labelFa: t('addDoc'), onClick: () => setEditing({ type: 'docs', status: 'draft', version: 'latest', sortOrder: docList.length + 1 }) }}
+        />
       </Card>
     </div>
   )

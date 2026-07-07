@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Template = {
   id: number
@@ -19,6 +21,7 @@ const CATEGORIES = ['general', 'solution', 'industry', 'blog', 'landing', 'servi
 
 export function TemplatesManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Template> | null>(null)
@@ -56,6 +59,16 @@ export function TemplatesManager() {
     toast(t('deleted'), 'success')
   }
 
+  const columns: Column<Template>[] = [
+    { key: 'nameEn', labelEn: 'Template', labelFa: t('template'), render: t2 => <div><div className="font-medium text-white">{t2.nameEn}</div><div className="text-xs text-text-tertiary">{t2.slug}</div></div> },
+    { key: 'category', labelEn: 'Category', labelFa: t('category'), type: 'enum', options: CATEGORIES.map(cat => ({ value: cat, labelEn: cat, labelFa: cat })), render: t2 => <span className="text-text-secondary">{t2.category}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: t2 => t2.active, render: t2 => <Badge color={t2.active ? 'green' : 'slate'}>{t2.active ? t('active') : t('draft')}</Badge> },
+  ]
+  const rowActions: RowAction<Template>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: t2 => setEditing(t2) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: t2 => del(t2.id) },
+  ]
+
   return (
     <div>
       <ToastContainer />
@@ -91,46 +104,18 @@ export function TemplatesManager() {
       )}
 
       <Card>
-        {loading ? (
-          <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div>
-        ) : templates.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-3xl mb-3">📄</div>
-            <div className="text-text-secondary font-medium mb-1">No templates yet</div>
-            <div className="text-text-disabled text-sm">Create your first page template to enable reusable layouts</div>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('template')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('category')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('status')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {templates.map(t2 => (
-                <tr key={t2.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-white">{t2.nameEn}</div>
-                    <div className="text-xs text-text-tertiary">{t2.slug}</div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{t2.category}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={t2.active ? 'green' : 'slate'}>{t2.active ? t('active') : t('draft')}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="ghost" onClick={() => setEditing(t2)}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(t2.id)}>{t('del')}</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="page-templates"
+          columns={columns}
+          rows={templates}
+          locale={locale}
+          loading={loading}
+          rowKey={t2 => String(t2.id)}
+          rowActions={rowActions}
+          exportName="page-templates"
+          emptyLabel="No templates yet"
+          quickCreate={{ labelEn: 'Add Template', labelFa: t('addTemplate'), onClick: () => setEditing({ active: true, category: 'general' }) }}
+        />
       </Card>
     </div>
   )

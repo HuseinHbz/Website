@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Site = {
   id: string
@@ -25,6 +27,7 @@ const STATUSES = ['active', 'staging', 'archived', 'maintenance']
 
 export function SitesManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Site> | null>(null)
@@ -59,6 +62,19 @@ export function SitesManager() {
   function clone(s: Site) {
     setEditing({ ...s, id: undefined, name: `${s.name} (copy)`, slug: `${s.slug}-copy`, domain: null, status: 'staging' })
   }
+
+  const columns: Column<Site>[] = [
+    { key: 'name', labelEn: 'Site', labelFa: t('site'), render: s => <div><div className="font-medium text-white">{s.name}</div><div className="text-xs text-text-tertiary">{s.slug}</div></div> },
+    { key: 'domain', labelEn: 'Domain', labelFa: t('domain'), render: s => <span className="text-text-secondary text-xs font-mono">{s.domain || '—'}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: SITE_TYPES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: s => <span className="text-text-secondary">{s.type}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(ss => ({ value: ss, labelEn: ss, labelFa: ss })), render: s => <Badge color={STATUS_COLORS[s.status] || 'slate'}>{s.status}</Badge> },
+    { key: 'sharing', labelEn: 'Sharing', labelFa: t('sharing'), sortable: false, value: s => [s.shareMedia, s.shareTemplates, s.shareKb, s.shareUsers].filter(Boolean).length, render: s => <span className="text-xs text-text-tertiary">{[s.shareMedia && 'Media', s.shareTemplates && 'Templates', s.shareKb && 'KB', s.shareUsers && 'Users'].filter(Boolean).join(' · ') || '—'}</span> },
+  ]
+  const rowActions: RowAction<Site>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: s => setEditing(s) },
+    { id: 'clone', labelEn: 'Clone', labelFa: t('clone'), icon: '⧉', onClick: s => clone(s) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: s => del(s.id) },
+  ]
 
   return (
     <div>
@@ -119,43 +135,17 @@ export function SitesManager() {
       </div>
 
       <Card>
-        {loading ? <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div> : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('site')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('domain')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('type')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('status')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('sharing')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sites.map(s => (
-                <tr key={s.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-white">{s.name}</div>
-                    <div className="text-xs text-text-tertiary">{s.slug}</div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary text-xs font-mono">{s.domain || '—'}</td>
-                  <td className="px-4 py-3 text-text-secondary">{s.type}</td>
-                  <td className="px-4 py-3"><Badge color={STATUS_COLORS[s.status] || 'slate'}>{s.status}</Badge></td>
-                  <td className="px-4 py-3 text-xs text-text-tertiary">
-                    {[s.shareMedia && 'Media', s.shareTemplates && 'Templates', s.shareKb && 'KB', s.shareUsers && 'Users'].filter(Boolean).join(' · ') || '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="ghost" onClick={() => setEditing(s)}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => clone(s)}>{t('clone')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(s.id)}>{t('del')}</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="sites"
+          columns={columns}
+          rows={sites}
+          locale={locale}
+          loading={loading}
+          rowKey={s => String(s.id)}
+          rowActions={rowActions}
+          exportName="sites"
+          quickCreate={{ labelEn: 'Add Site', labelFa: t('addSite'), onClick: () => setEditing({ type: 'corporate', status: 'staging', defaultLocale: 'en', shareMedia: true, shareTemplates: true, shareKb: false, shareUsers: false }) }}
+        />
       </Card>
     </div>
   )
