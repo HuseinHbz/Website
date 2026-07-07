@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Status = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 type Source = 'website' | 'referral' | 'consultation' | 'contact_form' | 'event' | 'social' | 'email' | 'other'
@@ -22,12 +24,12 @@ function money(n: number): string { return n ? `$${n.toLocaleString()}` : '—' 
 
 export function LeadsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const stLabel = useCallback((s: Status) => t(`lead_st_${s}`), [t])
   const { toast, ToastContainer } = useToast()
   const [leads, setLeads] = useState<Lead[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<Status | 'all'>('all')
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Lead>(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -69,7 +71,18 @@ export function LeadsManager() {
   }
   function set<K extends keyof Lead>(k: K, v: Lead[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
-  const filtered = useMemo(() => filter === 'all' ? leads : leads.filter((l) => l.status === filter), [leads, filter])
+  const columns: Column<Lead>[] = [
+    { key: 'name', labelEn: 'Lead', labelFa: t('lead_colLead'), render: l => <div><div className="font-medium text-text-primary">{l.name}</div><div className="text-xs text-text-tertiary">{l.email || l.phone || '—'}</div></div> },
+    { key: 'company', labelEn: 'Company', labelFa: t('lead_colCompany'), render: l => <span className="text-text-secondary text-xs">{l.company || '—'}</span> },
+    { key: 'source', labelEn: 'Source', labelFa: t('lead_colSource'), type: 'enum', options: SOURCES.map(s => ({ value: s, labelEn: s.replace('_', ' '), labelFa: s.replace('_', ' ') })), render: l => <span className="text-text-tertiary text-xs capitalize">{l.source.replace('_', ' ')}</span> },
+    { key: 'score', labelEn: 'Score', labelFa: t('lead_colScore'), type: 'number', numeric: true, render: l => <div className="flex items-center gap-1.5 justify-end"><div className="h-1.5 w-12 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${l.score}%` }} /></div><span className="text-xs text-text-secondary tabular-nums">{l.score}</span></div> },
+    { key: 'value', labelEn: 'Value', labelFa: t('lead_colValue'), type: 'number', numeric: true, render: l => <span className="text-text-secondary text-xs">{money(l.value)}</span> },
+    { key: 'status', labelEn: 'Stage', labelFa: t('lead_colStage'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: stLabel(s), labelFa: stLabel(s) })), render: l => <select value={l.status} onChange={(e) => move(l, e.target.value as Status)} className="form-input !py-1 !px-2 text-xs w-auto">{STATUSES.map((s) => <option key={s} value={s}>{stLabel(s)}</option>)}</select> },
+  ]
+  const rowActions: RowAction<Lead>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('lead_edit'), icon: '✎', onClick: l => { setEditing(l); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('lead_del'), icon: '🗑', danger: true, onClick: l => del(l.id!) },
+  ]
 
   return (
     <>
@@ -87,58 +100,19 @@ export function LeadsManager() {
         </div>
       )}
 
-      {/* Pipeline filter */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === 'all' ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>{t('lead_all')} ({leads.length})</button>
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${filter === s ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>
-            {stLabel(s)} ({stats?.byStatus[s] ?? 0})
-          </button>
-        ))}
-      </div>
-
-      <Card className="p-0 overflow-hidden">
-        {loading ? (
-          <p className="text-sm text-text-tertiary p-5">{t('lead_loading')}</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-text-tertiary p-5">{t('lead_empty')}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('lead_colLead'), t('lead_colCompany'), t('lead_colSource'), t('lead_colScore'), t('lead_colValue'), t('lead_colStage'), t('lead_colActions')].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {filtered.map((l) => (
-                  <tr key={l.id} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{l.name}</div><div className="text-xs text-text-tertiary">{l.email || l.phone || '—'}</div></td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{l.company || '—'}</td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs capitalize">{l.source.replace('_', ' ')}</td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-12 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${l.score}%` }} /></div>
-                        <span className="text-xs text-text-secondary">{l.score}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{money(l.value)}</td>
-                    <td className="px-4 py-2.5">
-                      <select value={l.status} onChange={(e) => move(l, e.target.value as Status)}
-                        className="form-input !py-1 !px-2 text-xs w-auto">
-                        {STATUSES.map((s) => <option key={s} value={s}>{stLabel(s)}</option>)}
-                      </select>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex gap-2">
-                        <Btn size="sm" variant="secondary" onClick={() => { setEditing(l); setModal(true) }}>{t('lead_edit')}</Btn>
-                        <Btn size="sm" variant="danger" onClick={() => del(l.id!)}>{t('lead_del')}</Btn>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="crm-leads"
+          columns={columns}
+          rows={leads}
+          locale={locale}
+          loading={loading}
+          rowKey={l => String(l.id)}
+          rowActions={rowActions}
+          exportName="crm-leads"
+          emptyLabel={t('lead_empty')}
+          quickCreate={{ labelEn: 'New Lead', labelFa: t('lead_newLead'), onClick: () => { setEditing(EMPTY); setModal(true) } }}
+        />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('lead_editLead') : t('lead_newLead')} size="lg">

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Credential = {
   id: number; type: string; nameEn: string; issuer: string | null;
@@ -22,22 +24,21 @@ const TYPE_COLORS: Record<string, string> = {
 
 export function CredentialsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [items, setItems] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
   const [editing, setEditing] = useState<Partial<Credential & { nameFa: string; descriptionEn: string; credentialId: string; badgeUrl: string; color: string }> | null>(null)
   const [saving, setSaving] = useState(false)
   const { toast, ToastContainer } = useToast()
 
   async function load() {
     setLoading(true)
-    const url = filter !== 'all' ? `/api/admin/credentials?type=${filter}` : '/api/admin/credentials'
-    const r = await fetch(url)
+    const r = await fetch('/api/admin/credentials')
     setItems(await r.json())
     setLoading(false)
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reload on filter change only
-  useEffect(() => { load() }, [filter])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+  useEffect(() => { load() }, [])
 
   async function save() {
     if (!editing) return
@@ -53,6 +54,19 @@ export function CredentialsManager() {
     await fetch('/api/admin/credentials', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     toast(t('deleted'), 'success'); load()
   }
+
+  const columns: Column<Credential>[] = [
+    { key: 'nameEn', labelEn: 'Credential', labelFa: t('colCredential'), render: item => <span className="font-medium text-white">{item.nameEn}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: item => <Badge color={TYPE_COLORS[item.type] || 'slate'}>{TYPE_ICONS[item.type]} {item.type}</Badge> },
+    { key: 'issuer', labelEn: 'Issuer', labelFa: t('colIssuer'), render: item => <span className="text-text-secondary">{item.issuer || '—'}</span> },
+    { key: 'issueDate', labelEn: 'Issued', labelFa: t('colIssueDate'), type: 'date', render: item => <span className="text-text-secondary text-xs">{item.issueDate || '—'}</span> },
+    { key: 'expiryDate', labelEn: 'Expiry', labelFa: t('colExpiry'), type: 'date', render: item => <span className="text-text-secondary text-xs">{item.expiryDate || '∞'}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: item => item.active, render: item => <Badge color={item.active ? 'green' : 'slate'}>{item.active ? t('active') : t('inactive')}</Badge> },
+  ]
+  const rowActions: RowAction<Credential>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: item => setEditing(item) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: item => del(item.id) },
+  ]
 
   return (
     <div>
@@ -100,47 +114,19 @@ export function CredentialsManager() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {['all', ...TYPES].map(t => (
-          <button key={t} onClick={() => setFilter(t)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === t ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>
-            {TYPE_ICONS[t] || '🏅'} {t}
-          </button>
-        ))}
-      </div>
-
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : items.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">🏅</div>
-            <div className="text-white font-medium mb-1">{t('noCredentials')}</div>
-            <div className="text-text-tertiary text-sm">{t('noCredentialsSub')}</div>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">
-              {[t('colCredential'), t('type'), t('colIssuer'), t('colIssueDate'), t('colExpiry'), t('status'), t('actions')].map(h => (
-                <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>
-              ))}
-            </tr></thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3 font-medium text-white">{item.nameEn}</td>
-                  <td className="px-4 py-3"><Badge color={TYPE_COLORS[item.type] || 'slate'}>{TYPE_ICONS[item.type]} {item.type}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary">{item.issuer || '—'}</td>
-                  <td className="px-4 py-3 text-text-secondary text-xs">{item.issueDate || '—'}</td>
-                  <td className="px-4 py-3 text-text-secondary text-xs">{item.expiryDate || '∞'}</td>
-                  <td className="px-4 py-3"><Badge color={item.active ? 'green' : 'slate'}>{item.active ? t('active') : t('inactive')}</Badge></td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <Btn size="sm" variant="ghost" onClick={() => setEditing(item)}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => del(item.id)}>{t('del')}</Btn>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="credentials"
+          columns={columns}
+          rows={items}
+          locale={locale}
+          loading={loading}
+          rowKey={item => String(item.id)}
+          rowActions={rowActions}
+          exportName="credentials"
+          emptyLabel={t('noCredentials')}
+          quickCreate={{ labelEn: 'Add Credential', labelFa: t('addCredential'), onClick: () => setEditing({ type: 'certification', active: true, featured: false, sortOrder: items.length + 1 }) }}
+        />
       </Card>
     </div>
   )
