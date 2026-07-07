@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useState, useEffect } from 'react'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Service = {
   id?: number; slug: string; titleEn: string; titleFa: string; categoryEn: string; categoryFa: string
@@ -13,21 +15,12 @@ const EMPTY: Service = { slug: '', titleEn: '', titleFa: '', categoryEn: '', cat
 
 export function ServicesManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [services, setServices] = useState<Service[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Service>(EMPTY)
   const [saving, setSaving] = useState(false)
-  const [search, setSearch] = useState('')
-  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'hidden'>('all')
   const { toast, ToastContainer } = useToast()
-
-  const filtered = useMemo(() => services.filter((s) => {
-    const q = search.toLowerCase()
-    if (q && !s.titleEn.toLowerCase().includes(q) && !s.titleFa.includes(q) && !s.categoryEn.toLowerCase().includes(q)) return false
-    if (filterActive === 'active' && !s.active) return false
-    if (filterActive === 'hidden' && s.active) return false
-    return true
-  }), [services, search, filterActive])
 
   async function load() {
     const r = await fetch('/api/admin/services')
@@ -55,41 +48,26 @@ export function ServicesManager() {
 
   function set<K extends keyof Service>(k: K, v: Service[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
+  const serviceColumns: Column<Service>[] = [
+    { key: 'titleEn', labelEn: 'Title', labelFa: t('title'), render: s => <div><div className="font-medium text-white">{s.titleEn}</div><div className="text-xs text-text-tertiary">{s.titleFa}</div></div> },
+    { key: 'categoryEn', labelEn: 'Category', labelFa: t('category'), type: 'enum', render: s => <span className="text-text-secondary">{s.categoryEn}</span> },
+    { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: s => <ColorDot color={s.color} /> },
+    { key: 'sortOrder', labelEn: 'Order', labelFa: t('sortOrder'), type: 'number', numeric: true, render: s => <span className="text-text-tertiary">{s.sortOrder}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: s => s.active, render: s => <Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('hidden')}</Badge> },
+  ]
+  const serviceActions: RowAction<Service>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: s => { setEditing(s); setModal(true) } },
+    { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: s => toggle(s) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: s => del(s.id!) },
+  ]
+
   return (
     <>
       <ToastContainer />
       <PageHeader title={t('servicesTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('addNew')} {t('servicesTitle')}</Btn>} />
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-text-disabled focus:outline-none focus:border-brand" />
-        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="hidden">Hidden</option>
-        </select>
-        {(search || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterActive('all') }} className="px-3 py-2 text-xs text-text-secondary hover:text-white border border-border rounded-lg">✕ Clear</button>}
-        <span className="px-3 py-2 text-xs text-text-tertiary">{filtered.length} / {services.length}</span>
-      </div>
-
       <Card>
-        <Table headers={[t('title'), t('category'), t('color'), t('sortOrder'), t('status'), t('actions')]}>
-          {filtered.map((s) => (
-            <TR key={s.id}>
-              <TD><div className="font-medium text-white">{s.titleEn}</div><div className="text-xs text-text-tertiary">{s.titleFa}</div></TD>
-              <TD className="text-text-secondary">{s.categoryEn}</TD>
-              <TD><ColorDot color={s.color} /></TD>
-              <TD className="text-text-tertiary">{s.sortOrder}</TD>
-              <TD><Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('hidden')}</Badge></TD>
-              <TD>
-                <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing(s); setModal(true) }}>{t('edit')}</Btn>
-                  <Btn size="sm" variant="secondary" onClick={() => toggle(s)}>{s.active ? '⏸' : '▶'}</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(s.id!)}>{t('delete')}</Btn>
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
+        <DataTable tableId="services" columns={serviceColumns} rows={services} locale={locale} rowKey={s => String(s.id)} rowActions={serviceActions} exportName="services" />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('serviceEdit') : t('serviceNew')} size="xl">

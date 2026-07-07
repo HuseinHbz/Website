@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, PageHeader, Table, TR, TD, Badge, Modal, Btn, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, PageHeader, Badge, Modal, Btn, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Consult = { id: number; name: string; email: string; phone: string; company: string; serviceInterest: string; projectDescription: string; budget: string; timeline: string; preferredDate: string; preferredTime: string; type: string; status: string; notes: string; createdAt: string }
 const STATUS_COLOR: Record<string, string> = { new: 'yellow', scheduled: 'blue', completed: 'green', cancelled: 'red' }
 
 export function ConsultationsView() {
   const t = useT()
+  const locale = useAdminLocale()
   const [items, setItems] = useState<Consult[]>([])
   const [selected, setSelected] = useState<Consult | null>(null)
   const { toast, ToastContainer } = useToast()
@@ -33,29 +36,24 @@ export function ConsultationsView() {
   const newCount = items.filter((i) => i.status === 'new').length
   const statusLabel: Record<string, string> = { new: t('statusNew'), scheduled: t('scheduled'), completed: t('completed'), cancelled: t('cancelled') }
 
+  const columns: Column<Consult>[] = [
+    { key: 'name', labelEn: 'Name', labelFa: t('name'), render: c => <span className="font-medium text-white">{c.name}</span> },
+    { key: 'email', labelEn: 'Email', labelFa: t('email'), render: c => <span className="text-text-secondary">{c.email}</span> },
+    { key: 'serviceInterest', labelEn: 'Service', labelFa: t('serviceInterest'), render: c => <span className="text-text-secondary">{c.serviceInterest || '—'}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', render: c => <Badge>{c.type}</Badge> },
+    { key: 'budget', labelEn: 'Budget', labelFa: t('budget'), render: c => <span className="text-text-tertiary">{c.budget || '—'}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['new', 'scheduled', 'completed', 'cancelled'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={STATUS_COLOR[c.status]}>{statusLabel[c.status] || c.status}</Badge> },
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</span> },
+  ]
+  const rowActions: RowAction<Consult>[] = [{ id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => del(c.id) }]
+
   return (
     <>
       <ToastContainer />
       <PageHeader title={`${t('consultTitle')}${newCount > 0 ? ` (${newCount} ${t('statusNew')})` : ''}`} />
 
       <Card>
-        <Table headers={[t('name'), t('email'), t('serviceInterest'), t('type'), t('budget'), t('status'), t('date'), t('actions')]}>
-          {items.map((c) => (
-            <TR key={c.id} onClick={() => setSelected(c)}>
-              <TD><span className="font-medium text-white">{c.name}</span></TD>
-              <TD className="text-text-secondary">{c.email}</TD>
-              <TD className="text-text-secondary max-w-28 truncate">{c.serviceInterest || '—'}</TD>
-              <TD><Badge>{c.type}</Badge></TD>
-              <TD className="text-text-tertiary">{c.budget || '—'}</TD>
-              <TD><Badge color={STATUS_COLOR[c.status]}>{statusLabel[c.status] || c.status}</Badge></TD>
-              <TD className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</TD>
-              <TD onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                <Btn size="sm" variant="danger" onClick={() => del(c.id)}>{t('delete')}</Btn>
-              </TD>
-            </TR>
-          ))}
-        </Table>
-        {items.length === 0 && <div className="text-center py-12 text-text-disabled">{t('noData')}</div>}
+        <DataTable tableId="consultations" columns={columns} rows={items} locale={locale} rowKey={c => String(c.id)} onRowClick={c => setSelected(c)} rowActions={rowActions} exportName="consultations" emptyLabel={t('noData')} />
       </Card>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={t('consultTitle')} size="lg">
