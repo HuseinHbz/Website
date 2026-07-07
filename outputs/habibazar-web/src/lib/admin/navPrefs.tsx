@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { workspaceForPath } from '@/lib/admin/workspaces'
 
 interface NavPrefs {
   favorites: string[]
@@ -9,12 +10,16 @@ interface NavPrefs {
   searches: string[]
   badges: Record<string, number>
   collapsedGroups: string[]
+  favWorkspaces: string[]
+  recentWorkspaces: string[]
   isFavorite: (href: string) => boolean
   toggleFavorite: (href: string) => void
   clearRecents: () => void
   recordSearch: (term: string) => void
   isGroupCollapsed: (group: string) => boolean
   toggleGroup: (group: string) => void
+  isFavWorkspace: (id: string) => boolean
+  toggleFavWorkspace: (id: string) => void
 }
 
 const Ctx = createContext<NavPrefs | null>(null)
@@ -25,14 +30,30 @@ export function NavPrefsProvider({ children }: { children: React.ReactNode }) {
   const [recents, setRecents] = useState<string[]>([])
   const [searches, setSearches] = useState<string[]>([])
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
+  const [favWorkspaces, setFavWorkspaces] = useState<string[]>([])
+  const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([])
   const [badges, setBadges] = useState<Record<string, number>>({})
   const lastVisit = useRef<string>('')
+  const lastWs = useRef<string>('')
 
   useEffect(() => {
     fetch('/api/admin/nav-prefs').then(r => r.json())
-      .then(d => { setFavorites(d.favorites ?? []); setRecents(d.recents ?? []); setSearches(d.searches ?? []); setCollapsedGroups(d.ui?.collapsedGroups ?? []) })
+      .then(d => { setFavorites(d.favorites ?? []); setRecents(d.recents ?? []); setSearches(d.searches ?? []); setCollapsedGroups(d.ui?.collapsedGroups ?? []); setFavWorkspaces(d.ui?.favWorkspaces ?? []); setRecentWorkspaces(d.ui?.recentWorkspaces ?? []) })
       .catch(() => {})
   }, [])
+
+  // Record the recently-used workspace when the active workspace changes.
+  useEffect(() => {
+    if (!pathname.startsWith('/admin') || pathname === '/admin/login') return
+    const wsId = workspaceForPath(pathname).id
+    if (lastWs.current === wsId) return
+    lastWs.current = wsId
+    const t = setTimeout(() => {
+      fetch('/api/admin/nav-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'visitWorkspace', workspace: wsId }) })
+        .then(r => r.json()).then(d => { if (d.ui?.recentWorkspaces) setRecentWorkspaces(d.ui.recentWorkspaces) }).catch(() => {})
+    }, 700)
+    return () => clearTimeout(t)
+  }, [pathname])
 
   // Live notification badges (new contacts/consultations/leads, failed backups,
   // DLQ) — refreshed on mount + every 60s + on route change.
@@ -81,12 +102,19 @@ export function NavPrefsProvider({ children }: { children: React.ReactNode }) {
       .then(r => r.json()).then(d => { if (d.ui?.collapsedGroups) setCollapsedGroups(d.ui.collapsedGroups) }).catch(() => {})
   }, [])
 
+  const toggleFavWorkspace = useCallback((id: string) => {
+    setFavWorkspaces(prev => prev.includes(id) ? prev.filter(x => x !== id) : [id, ...prev]) // optimistic
+    fetch('/api/admin/nav-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggleFavWorkspace', workspace: id }) })
+      .then(r => r.json()).then(d => { if (d.ui?.favWorkspaces) setFavWorkspaces(d.ui.favWorkspaces) }).catch(() => {})
+  }, [])
+
   const isFavorite = useCallback((href: string) => favorites.includes(href), [favorites])
   const isGroupCollapsed = useCallback((group: string) => collapsedGroups.includes(group), [collapsedGroups])
+  const isFavWorkspace = useCallback((id: string) => favWorkspaces.includes(id), [favWorkspaces])
 
-  return <Ctx.Provider value={{ favorites, recents, searches, badges, collapsedGroups, isFavorite, toggleFavorite, clearRecents, recordSearch, isGroupCollapsed, toggleGroup }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ favorites, recents, searches, badges, collapsedGroups, favWorkspaces, recentWorkspaces, isFavorite, toggleFavorite, clearRecents, recordSearch, isGroupCollapsed, toggleGroup, isFavWorkspace, toggleFavWorkspace }}>{children}</Ctx.Provider>
 }
 
 export function useNavPrefs(): NavPrefs {
-  return useContext(Ctx) ?? { favorites: [], recents: [], searches: [], badges: {}, collapsedGroups: [], isFavorite: () => false, toggleFavorite: () => {}, clearRecents: () => {}, recordSearch: () => {}, isGroupCollapsed: () => false, toggleGroup: () => {} }
+  return useContext(Ctx) ?? { favorites: [], recents: [], searches: [], badges: {}, collapsedGroups: [], favWorkspaces: [], recentWorkspaces: [], isFavorite: () => false, toggleFavorite: () => {}, clearRecents: () => {}, recordSearch: () => {}, isGroupCollapsed: () => false, toggleGroup: () => {}, isFavWorkspace: () => false, toggleFavWorkspace: () => {} }
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   visibleWorkspaces, visibleGroups, workspaceForPath, workspaceHome,
   quickActionsFor, allNavItems, type WsItem,
@@ -22,25 +22,61 @@ interface Props {
 
 export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenCmd, mobileOpen = false, onMobileClose }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const ws = workspaceForPath(pathname)
   const [switcherOpen, setSwitcherOpen] = useState(false)
+  const [wsQuery, setWsQuery] = useState('')
+  const [wsSel, setWsSel] = useState(0)
   const [q, setQ] = useState('')
-  const { favorites, recents, badges, isFavorite, toggleFavorite, isGroupCollapsed, toggleGroup } = useNavPrefs()
+  const wsSearchRef = useRef<HTMLInputElement>(null)
+  const { favorites, recents, badges, isFavorite, toggleFavorite, isGroupCollapsed, toggleGroup, favWorkspaces, recentWorkspaces, isFavWorkspace, toggleFavWorkspace } = useNavPrefs()
   const expanded = !collapsed || mobileOpen
 
-  // Roving keyboard navigation: ↑/↓ move focus between sidebar links.
+  // Tree keyboard navigation over the sidebar: ↑/↓ rove between links + group
+  // headers; ←/→ collapse/expand the focused group (direction is RTL-aware);
+  // Enter activates natively; Esc blurs.
   function onNavKey(e: React.KeyboardEvent<HTMLElement>) {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-    const links = Array.from(e.currentTarget.querySelectorAll<HTMLAnchorElement>('a[href]'))
-    const idx = links.indexOf(document.activeElement as HTMLAnchorElement)
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('a[href], button[data-group]'))
+    const el = document.activeElement as HTMLElement | null
+    const idx = el ? items.indexOf(el) : -1
+    if (e.key === 'Escape') { el?.blur(); return }
     if (idx < 0) return
-    e.preventDefault()
-    const next = e.key === 'ArrowDown' ? Math.min(idx + 1, links.length - 1) : Math.max(idx - 1, 0)
-    links[next]?.focus()
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(idx + 1, items.length - 1)]?.focus(); return }
+    if (e.key === 'ArrowUp') { e.preventDefault(); items[Math.max(idx - 1, 0)]?.focus(); return }
+    const g = el?.dataset.group
+    if (g) {
+      const collapseKey = isRTL ? 'ArrowRight' : 'ArrowLeft'
+      const expandKey = isRTL ? 'ArrowLeft' : 'ArrowRight'
+      if (e.key === collapseKey && !isGroupCollapsed(g)) { e.preventDefault(); toggleGroup(g) }
+      else if (e.key === expandKey && isGroupCollapsed(g)) { e.preventDefault(); toggleGroup(g) }
+    }
   }
 
   const groups = useMemo(() => visibleGroups(role, ws), [role, ws])
   const workspaces = useMemo(() => visibleWorkspaces(role), [role])
+
+  // Advanced switcher: search + favorites + recent + all (permission-filtered).
+  const switcher = useMemo(() => {
+    const qq = wsQuery.trim().toLowerCase()
+    const match = (w: (typeof workspaces)[number]) => !qq || w.nameEn.toLowerCase().includes(qq) || w.nameFa.includes(wsQuery.trim())
+    const byId = new Map(workspaces.map(w => [w.id, w]))
+    const favs = favWorkspaces.map(id => byId.get(id)).filter((w): w is (typeof workspaces)[number] => !!w).filter(match)
+    const favSet = new Set(favs.map(w => w.id))
+    const recent = recentWorkspaces.map(id => byId.get(id)).filter((w): w is (typeof workspaces)[number] => !!w && !favSet.has(w.id)).filter(match)
+    const usedSet = new Set([...favSet, ...recent.map(w => w.id)])
+    const rest = workspaces.filter(w => !usedSet.has(w.id)).filter(match)
+    return { favs, recent, rest, flat: [...favs, ...recent, ...rest] }
+  }, [workspaces, favWorkspaces, recentWorkspaces, wsQuery])
+
+  useEffect(() => { if (switcherOpen) { setWsQuery(''); setWsSel(0); setTimeout(() => wsSearchRef.current?.focus(), 30) } }, [switcherOpen])
+
+  function onSwitcherKey(e: React.KeyboardEvent) {
+    const flat = switcher.flat
+    if (e.key === 'ArrowDown') { e.preventDefault(); setWsSel(s => Math.min(s + 1, flat.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setWsSel(s => Math.max(s - 1, 0)) }
+    else if (e.key === 'Enter') { e.preventDefault(); const w = flat[wsSel]; if (w) { setSwitcherOpen(false); router.push(workspaceHome(w)) } }
+    else if (e.key === 'Escape') { e.preventDefault(); setSwitcherOpen(false) }
+  }
   const quickActions = useMemo(() => quickActionsFor(role, ws.id), [role, ws.id])
   const itemByHref = useMemo(() => new Map(allNavItems().map(i => [i.href, i as WsItem])), [])
 
@@ -99,6 +135,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
           <button
             onClick={() => toggleGroup(groupKey!)}
             aria-expanded={!isCollapsed}
+            data-group={groupKey}
             className="w-full flex items-center gap-1 px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-text-disabled hover:text-text-tertiary transition-colors"
           >
             <span className="text-[8px]">{isCollapsed ? '▸' : '▾'}</span>
@@ -146,12 +183,35 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
             <span className="text-text-tertiary text-xs">{switcherOpen ? '▲' : '▼'}</span>
           </button>
           {switcherOpen && (
-            <div role="listbox" className="absolute z-50 left-3 right-3 mt-1 max-h-[60vh] overflow-y-auto rounded-lg bg-surface border border-border shadow-2xl py-1">
-              {workspaces.map(w => (
-                <Link key={w.id} href={workspaceHome(w)} onClick={() => setSwitcherOpen(false)} role="option" aria-selected={w.id === ws.id}
-                  className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${w.id === ws.id ? 'bg-brand/15 text-brand' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'}`}>
-                  <span className="w-5 text-center">{w.icon}</span><span className="flex-1 truncate">{isRTL ? w.nameFa : w.nameEn}</span>
-                </Link>
+            <div role="listbox" aria-label={isRTL ? 'انتخاب فضای کاری' : 'Select workspace'} onKeyDown={onSwitcherKey}
+              className="absolute z-50 left-3 right-3 mt-1 max-h-[70vh] overflow-y-auto rounded-lg bg-surface border border-border shadow-2xl py-1">
+              <div className="px-2 py-1.5 sticky top-0 bg-surface">
+                <input ref={wsSearchRef} value={wsQuery} onChange={e => { setWsQuery(e.target.value); setWsSel(0) }}
+                  placeholder={isRTL ? 'جستجوی فضا...' : 'Search workspaces...'} aria-label={isRTL ? 'جستجوی فضای کاری' : 'Search workspaces'}
+                  className="w-full px-2.5 py-1.5 rounded-md text-xs bg-white/[0.04] border border-white/[0.08] text-text-primary placeholder:text-text-disabled outline-none focus:border-brand/40" />
+              </div>
+              {switcher.flat.length === 0 && <p className="px-3 py-3 text-xs text-text-tertiary text-center">{isRTL ? 'یافت نشد' : 'No workspaces'}</p>}
+              {([['fav', switcher.favs, isRTL ? 'دلخواه' : 'Favorites'], ['recent', switcher.recent, isRTL ? 'اخیر' : 'Recent'], ['all', switcher.rest, isRTL ? 'همه' : 'All']] as const).map(([key, list, label]) => (
+                list.length > 0 && (
+                  <div key={key}>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-text-disabled px-3 pt-2 pb-0.5">{label}</p>
+                    {list.map(w => {
+                      const flatIdx = switcher.flat.indexOf(w)
+                      const sel = flatIdx === wsSel
+                      return (
+                        <div key={w.id} className="group/wsw flex items-center">
+                          <button role="option" aria-selected={sel} onMouseEnter={() => setWsSel(flatIdx)}
+                            onClick={() => { setSwitcherOpen(false); router.push(workspaceHome(w)) }}
+                            className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm text-start transition-colors ${sel ? 'bg-brand/15 text-brand' : w.id === ws.id ? 'text-brand' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'}`}>
+                            <span className="w-5 text-center">{w.icon}</span><span className="flex-1 truncate">{isRTL ? w.nameFa : w.nameEn}</span>
+                          </button>
+                          <button onClick={() => toggleFavWorkspace(w.id)} aria-label={isFavWorkspace(w.id) ? 'Unpin workspace' : 'Pin workspace'}
+                            className={`px-2 text-sm shrink-0 ${isFavWorkspace(w.id) ? 'text-warning-text' : 'text-text-disabled opacity-0 group-hover/wsw:opacity-100 hover:text-warning-text'}`}>{isFavWorkspace(w.id) ? '★' : '☆'}</button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
               ))}
               <Link href="/admin/home" onClick={() => setSwitcherOpen(false)} className="flex items-center gap-2 px-3 py-2 text-xs text-text-tertiary hover:text-text-primary border-t border-border mt-1 pt-2">
                 <span className="w-5 text-center">▦</span>{isRTL ? 'همه فضاهای کاری' : 'All workspaces'}

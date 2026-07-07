@@ -467,8 +467,12 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   consultations/leads, failed backups, integration DLQ; polled 60s) rendered on
   nav items; **persisted collapsed groups** per user (`nav_prefs.ui.collapsedGroups`
   via `toggleGroup`); **role default favorites** (`roleDefaultFavorites`, seeded on
-  first load); **keyboard ↑/↓** roving focus in the sidebar. Report:
-  `docs/governance/phase22-navigation-platform.md`.
+  first load); **keyboard ↑/↓** roving focus in the sidebar. **Final closure:**
+  advanced workspace switcher (in-dropdown search + Favorites/Recent/All sections,
+  per-user `favWorkspaces`/`recentWorkspaces` in `nav_prefs.ui`, keyboard ↑/↓/
+  Enter/Esc) + full sidebar tree keyboard nav (↑/↓ rove links + group headers,
+  ←/→ collapse/expand focused group RTL-aware, `data-group`/`aria-expanded`).
+  Report: `docs/governance/phase22-navigation-platform.md`.
 - **Search & Command Platform** (Phase 22.4) — a keyboard-first command palette
   (Ctrl+K, `CommandPalette`) that fuses executable commands + workspace switches +
   RBAC-filtered nav + live records + favorites + recent items + recent searches

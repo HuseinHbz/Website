@@ -77,6 +77,22 @@ the workspace unit-test suite.
   focus via an `onKeyDown` on the `<nav>`), on top of the existing skip-link +
   `aria-current`.
 
+## Final closure — advanced switcher + full keyboard nav
+
+- **Advanced Workspace Switcher** — the sidebar switcher dropdown now has an
+  in-dropdown **search**, and three sections: **Favorites** (★ pinned), **Recent**
+  (auto-recorded), **All** — all RBAC-filtered. Star toggles a favorite workspace;
+  the active workspace is recorded as recent on navigation. Both persist per user
+  in `nav_prefs.ui` (`favWorkspaces` / `recentWorkspaces`) via
+  `toggleFavWorkspace` / `visitWorkspace`; workspace ids are server-validated.
+  Fully keyboard-driven: ↑/↓ move the highlight, Enter opens, Esc closes.
+  Verified: fav `erp`, recent `[ai, crm]` persist across reload; junk id rejected.
+- **Complete keyboard navigation** — the sidebar `<nav>` is a tree: ↑/↓ rove
+  between links **and group headers**; ←/→ collapse/expand the focused group
+  (RTL-aware direction); Enter activates natively; Esc blurs. Group headers carry
+  `data-group` and `aria-expanded`; roving focus + `aria-current` complete the
+  WCAG picture.
+
 ## Not needed at current scale (honest)
 
 - **Virtualized menu** — the largest workspace has 23 items; windowing would add

@@ -12,11 +12,23 @@ const MAX_SEARCHES = 8
 const isAdminHref = (h: string) => /^\/admin\/?[a-z0-9/_-]*$/i.test(h) && h.length <= 80
 
 interface Row { favorites: string; recents: string; searches: string; ui: string; seeded: boolean }
-interface UiState { collapsedGroups?: string[] }
+interface UiState { collapsedGroups?: string[]; favWorkspaces?: string[]; recentWorkspaces?: string[] }
 interface Prefs { favorites: string[]; recents: string[]; searches: string[]; ui: UiState }
+const MAX_RECENT_WS = 6
 
 const parseArr = (s: string | undefined): string[] => { try { const v = JSON.parse(s ?? '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : [] } catch { return [] } }
-const parseUi = (s: string | undefined): UiState => { try { const v = JSON.parse(s ?? '{}'); return v && typeof v === 'object' ? { collapsedGroups: parseArr(JSON.stringify(v.collapsedGroups ?? [])) } : {} } catch { return {} } }
+const parseUi = (s: string | undefined): UiState => {
+  try {
+    const v = JSON.parse(s ?? '{}')
+    if (!v || typeof v !== 'object') return {}
+    return {
+      collapsedGroups: parseArr(JSON.stringify(v.collapsedGroups ?? [])),
+      favWorkspaces: parseArr(JSON.stringify(v.favWorkspaces ?? [])),
+      recentWorkspaces: parseArr(JSON.stringify(v.recentWorkspaces ?? [])),
+    }
+  } catch { return {} }
+}
+const isWsId = (s: string) => /^[a-z]+$/.test(s) && s.length <= 40
 
 async function load(userId: string): Promise<Prefs & { seeded: boolean }> {
   const r = (await pgQuery<Row>(`SELECT favorites, recents, searches, ui, (favorites IS NOT NULL) AS seeded FROM nav_prefs WHERE user_id=$1`, [userId]))[0]
@@ -27,7 +39,8 @@ async function save(userId: string, p: Prefs) {
   await pgQuery(
     `INSERT INTO nav_prefs (user_id, favorites, recents, searches, ui, updated_at) VALUES ($1,$2,$3,$4,$5,${NOW})
      ON CONFLICT (user_id) DO UPDATE SET favorites=EXCLUDED.favorites, recents=EXCLUDED.recents, searches=EXCLUDED.searches, ui=EXCLUDED.ui, updated_at=${NOW}`,
-    [userId, JSON.stringify(p.favorites.slice(0, 40)), JSON.stringify(p.recents.slice(0, MAX_RECENTS)), JSON.stringify(p.searches.slice(0, MAX_SEARCHES)), JSON.stringify({ collapsedGroups: (p.ui.collapsedGroups ?? []).slice(0, 60) })])
+    [userId, JSON.stringify(p.favorites.slice(0, 40)), JSON.stringify(p.recents.slice(0, MAX_RECENTS)), JSON.stringify(p.searches.slice(0, MAX_SEARCHES)),
+     JSON.stringify({ collapsedGroups: (p.ui.collapsedGroups ?? []).slice(0, 60), favWorkspaces: (p.ui.favWorkspaces ?? []).slice(0, 20), recentWorkspaces: (p.ui.recentWorkspaces ?? []).slice(0, MAX_RECENT_WS) })])
 }
 
 // GET — favorites + recents + recent searches + persisted UI state. On the first
@@ -46,10 +59,11 @@ export async function GET() {
 }
 
 const schema = z.object({
-  action: z.enum(['toggleFavorite', 'visit', 'clearRecents', 'search', 'clearSearches', 'toggleGroup']),
+  action: z.enum(['toggleFavorite', 'visit', 'clearRecents', 'search', 'clearSearches', 'toggleGroup', 'toggleFavWorkspace', 'visitWorkspace']),
   href: z.string().max(80).optional(),
   term: z.string().max(80).optional(),
   group: z.string().max(80).optional(),
+  workspace: z.string().max(40).optional(),
 })
 
 // POST — mutate prefs: pin/unpin a favorite, record a visit, or clear recents.
@@ -78,6 +92,12 @@ export async function POST(req: NextRequest) {
       const g = d.group.slice(0, 80)
       const cg = ui.collapsedGroups ?? []
       ui.collapsedGroups = cg.includes(g) ? cg.filter(x => x !== g) : [...cg, g]
+    } else if (d.action === 'toggleFavWorkspace' && d.workspace && isWsId(d.workspace)) {
+      const fw = ui.favWorkspaces ?? []
+      ui.favWorkspaces = fw.includes(d.workspace) ? fw.filter(x => x !== d.workspace) : [d.workspace, ...fw]
+    } else if (d.action === 'visitWorkspace' && d.workspace && isWsId(d.workspace)) {
+      const rw = ui.recentWorkspaces ?? []
+      ui.recentWorkspaces = [d.workspace, ...rw.filter(x => x !== d.workspace)].slice(0, MAX_RECENT_WS)
     }
     await save(auth.user.id, { favorites, recents, searches, ui })
     return NextResponse.json({ favorites, recents, searches, ui })
