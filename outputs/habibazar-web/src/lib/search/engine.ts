@@ -40,11 +40,52 @@ export function scoreField(field: string | null | undefined, terms: string[], fu
   for (const t of terms) {
     if (new RegExp(`\\b${escapeRe(t)}`).test(f)) s += 3
     else if (f.includes(t)) s += 1
+    else s += fuzzyTermScore(t, f) // typo-tolerant fallback (0 if nothing close)
   }
   return s
 }
 
 function escapeRe(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+/** Is `t` an in-order subsequence of `f`? (e.g. "invc" ⊂ "invoice"). */
+function isSubsequence(t: string, f: string): boolean {
+  let i = 0
+  for (let j = 0; j < f.length && i < t.length; j++) if (f[j] === t[i]) i++
+  return i === t.length
+}
+
+/** Bounded Levenshtein — returns a distance capped at `max + 1` (early exit). */
+export function editDistance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]
+    let best = i
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
+      best = Math.min(best, cur[j])
+    }
+    if (best > max) return max + 1
+    prev = cur
+  }
+  return prev[b.length]
+}
+
+/**
+ * Typo-tolerant score for a term that didn't match exactly: a subsequence match
+ * or a small edit distance against any word of the field. Small weights so fuzzy
+ * hits never outrank real substring/boundary matches.
+ */
+export function fuzzyTermScore(t: string, f: string): number {
+  if (t.length < 3) return 0
+  const max = t.length >= 5 ? 2 : 1
+  for (const w of f.split(/[\s\-_/]+/)) {
+    if (!w) continue
+    if (editDistance(t, w, max) <= max) return 0.75
+  }
+  return isSubsequence(t, f) ? 0.4 : 0
+}
 
 /** Score a candidate: title weighted highest, then subtitle, then keywords. */
 export function scoreCandidate(c: SearchCandidate, terms: string[], fullQuery: string): number {

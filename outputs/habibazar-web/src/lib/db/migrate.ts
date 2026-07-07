@@ -385,6 +385,16 @@ export async function runMigrations() {
     ALTER TABLE nav_prefs ADD COLUMN IF NOT EXISTS searches TEXT NOT NULL DEFAULT '[]';
     -- Persisted per-user nav UI state (collapsed sidebar groups). Phase 22.3 completion.
     ALTER TABLE nav_prefs ADD COLUMN IF NOT EXISTS ui TEXT NOT NULL DEFAULT '{}';
+    -- Executed-command history (Phase 22.4): recent command ids run from the palette.
+    ALTER TABLE nav_prefs ADD COLUMN IF NOT EXISTS commands TEXT NOT NULL DEFAULT '[]';
+
+    -- Popular searches aggregate (Phase 22.4). Cross-user term frequency powering
+    -- the palette's "Popular" suggestions; incremented atomically on each search.
+    CREATE TABLE IF NOT EXISTS search_stats (
+      term TEXT PRIMARY KEY,
+      hits INTEGER NOT NULL DEFAULT 0,
+      last_at TEXT NOT NULL DEFAULT (${NOW})
+    );
 
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.

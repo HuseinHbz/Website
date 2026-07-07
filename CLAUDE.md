@@ -483,7 +483,14 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   RBAC/query-filters. Recent searches persist in `nav_prefs.searches` via
   `/api/admin/nav-prefs` (`search`/`clearSearches`; ≥2 chars, deduped, recorded
   after a successful search). Palette is `role=dialog`/`listbox`, hides
-  unauthorized modules via `visibleWorkspaces`/`visibleGroups`. Report:
+  unauthorized modules via `visibleWorkspaces`/`visibleGroups`. **Completion:**
+  typo-tolerant **fuzzy ranking** (`engine.ts` `editDistance`/`fuzzyTermScore` —
+  bounded Levenshtein + subsequence fallback, small weights so exact/substring
+  still win); **popular searches** cross-user aggregate (`search_stats` table,
+  atomic increment per search → 🔥 group); **executed-command history**
+  (`nav_prefs.commands`, capped 8, RBAC-filtered Recent-commands group); and
+  **entity-scoped quick actions** (pure `entityActions(module,url)` → Open / Copy
+  link / View-all chips under a selected record). Report:
   `docs/governance/phase22-search-command-platform.md`.
 - **Design System** (Phase 22.5) — the unified design-language reference +
   the platform's Enterprise DataTable. Pure table engine

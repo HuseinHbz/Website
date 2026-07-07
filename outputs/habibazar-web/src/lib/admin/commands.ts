@@ -44,6 +44,38 @@ export const COMMANDS: Command[] = [
   { id: 'open_docs', titleEn: 'Documentation', titleFa: 'مستندات', icon: '📖', category: 'navigate', keywords: 'docs documentation guide api', kind: 'navigate', href: '/admin/docs' },
 ]
 
+/**
+ * Entity-scoped quick actions (Phase 22.4). Given a record hit's module, return
+ * contextual follow-ups: open it, copy its deep link, and jump to the module's
+ * list. All map to real routes / a client-side copy — no fake handlers.
+ */
+export interface EntityAction { id: string; labelEn: string; labelFa: string; icon: string; kind: 'open' | 'copy' | 'navigate'; href?: string }
+
+/** Module → its list page (for "View all in …"). Only real admin routes. */
+const MODULE_LIST: Record<string, { href: string; en: string; fa: string }> = {
+  crm: { href: '/admin/crm', en: 'CRM', fa: 'CRM' },
+  sales: { href: '/admin/sales', en: 'Sales', fa: 'فروش' },
+  finance: { href: '/admin/finance', en: 'Finance', fa: 'مالی' },
+  gl: { href: '/admin/finance', en: 'Finance', fa: 'مالی' },
+  inventory: { href: '/admin/inventory', en: 'Inventory', fa: 'انبار' },
+  assets: { href: '/admin/assets', en: 'Assets', fa: 'دارایی‌ها' },
+  projects: { href: '/admin/project-management', en: 'Projects', fa: 'پروژه‌ها' },
+  documents: { href: '/admin/documents', en: 'Documents', fa: 'اسناد' },
+  workflows: { href: '/admin/workflows', en: 'Workflows', fa: 'گردش‌کار' },
+  rules: { href: '/admin/rules', en: 'Rules', fa: 'قوانین' },
+  integrations: { href: '/admin/integration-hub', en: 'Integrations', fa: 'یکپارچه‌سازی' },
+}
+
+export function entityActions(module: string, url: string): EntityAction[] {
+  const out: EntityAction[] = [
+    { id: 'open', labelEn: 'Open', labelFa: 'باز کردن', icon: '↗', kind: 'open', href: url },
+    { id: 'copy', labelEn: 'Copy link', labelFa: 'کپی پیوند', icon: '⧉', kind: 'copy', href: url },
+  ]
+  const m = MODULE_LIST[module]
+  if (m) out.push({ id: 'list', labelEn: `View all in ${m.en}`, labelFa: `مشاهده همه در ${m.fa}`, icon: '≡', kind: 'navigate', href: m.href })
+  return out
+}
+
 /** Commands a role may run/see (RBAC), optionally filtered by a query. */
 export function visibleCommands(role: string, query = ''): Command[] {
   const q = query.trim().toLowerCase()

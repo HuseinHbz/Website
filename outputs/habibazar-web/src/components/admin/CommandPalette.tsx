@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   visibleWorkspaces, visibleGroups, workspaceHome, workspaceById, type WsItem,
 } from '@/lib/admin/workspaces'
-import { visibleCommands, type Command } from '@/lib/admin/commands'
+import { visibleCommands, entityActions, COMMANDS, type Command, type EntityAction } from '@/lib/admin/commands'
 import { useNavPrefs } from '@/lib/admin/navPrefs'
 
 interface Row {
@@ -14,6 +14,7 @@ interface Row {
   icon: string
   label: string; labelFa: string
   sub?: string
+  entity?: EntityAction[]
   run: () => void | Promise<void>
 }
 interface RecordHit { module: string; type: string; id: number | string; title: string; subtitle?: string; url: string }
@@ -28,7 +29,7 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const isRTL = locale === 'fa'
-  const { favorites, recents, searches, recordSearch } = useNavPrefs()
+  const { favorites, recents, searches, commands, popular, recordSearch, recordCommand } = useNavPrefs()
 
   const go = useCallback((href: string, external?: boolean) => {
     onClose()
@@ -36,7 +37,18 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
     else router.push(href)
   }, [onClose, router])
 
+  const runEntity = useCallback((a: EntityAction) => {
+    if (a.kind === 'copy' && a.href) {
+      const url = a.href.startsWith('http') ? a.href : `${window.location.origin}${a.href}`
+      navigator.clipboard?.writeText(url).catch(() => {})
+      setStatus({ msg: isRTL ? 'کپی شد' : 'Copied', ok: true }); setTimeout(() => setStatus(null), 900)
+      return
+    }
+    if (a.href) go(a.href)
+  }, [go, isRTL])
+
   const execCommand = useCallback(async (c: Command) => {
+    recordCommand(c.id)
     if (c.kind === 'navigate' && c.href) { go(c.href); return }
     if (c.kind === 'execute' && c.endpoint) {
       const confirmMsg = isRTL ? c.confirmFa : c.confirmEn
@@ -49,7 +61,7 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
         if (ok) setTimeout(onClose, 900)
       } catch { setStatus({ msg: isRTL ? 'ناموفق' : 'Failed', ok: false }) }
     }
-  }, [go, isRTL, onClose])
+  }, [go, isRTL, onClose, recordCommand])
 
   // RBAC-filtered navigation items (workspace groups) + workspace switches.
   const navItems = useMemo(() => {
@@ -72,7 +84,10 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
       // Empty state: favorites, recents, recent searches, top actions.
       for (const h of favorites) { const n = itemByHref.get(h); if (n) out.push({ id: `fav-${h}`, group: 'Favorites', groupFa: 'موارد دلخواه', icon: '★', label: n.item.labelEn, labelFa: n.item.labelFa, run: () => go(h) }) }
       for (const h of recents.slice(0, 6)) { const n = itemByHref.get(h); if (n) out.push({ id: `rec-${h}`, group: 'Recent', groupFa: 'اخیر', icon: '🕓', label: n.item.labelEn, labelFa: n.item.labelFa, run: () => go(h) }) }
+      const allowed = new Set(visibleCommands(role).map(c => c.id))
+      for (const id of commands) { const c = COMMANDS.find(x => x.id === id); if (c && allowed.has(id)) out.push({ id: `rcmd-${id}`, group: 'Recent commands', groupFa: 'دستورات اخیر', icon: c.icon, label: c.titleEn, labelFa: c.titleFa, run: () => execCommand(c) }) }
       for (const s of searches) out.push({ id: `srch-${s}`, group: 'Recent searches', groupFa: 'جستجوهای اخیر', icon: '🔎', label: s, labelFa: s, run: () => { setQuery(s); setSelected(0) } })
+      for (const s of popular.filter(p => !searches.some(x => x.toLowerCase() === p.toLowerCase())).slice(0, 5)) out.push({ id: `pop-${s}`, group: 'Popular searches', groupFa: 'جستجوهای پرطرفدار', icon: '🔥', label: s, labelFa: s, run: () => { setQuery(s); setSelected(0) } })
       for (const c of visibleCommands(role)) out.push({ id: `cmd-${c.id}`, group: 'Commands', groupFa: 'دستورات', icon: c.icon, label: c.titleEn, labelFa: c.titleFa, run: () => execCommand(c) })
       return out
     }
@@ -81,9 +96,9 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
       out.push({ id: `ws-${ws.id}`, group: 'Workspaces', groupFa: 'فضاهای کاری', icon: ws.icon, label: `Switch to ${ws.nameEn}`, labelFa: `رفتن به ${ws.nameFa}`, run: () => go(workspaceHome(ws)) })
     for (const n of navItems) if (n.item.labelEn.toLowerCase().includes(q) || n.item.labelFa.includes(query.trim()))
       out.push({ id: `nav-${n.item.href}`, group: isRTL ? n.wsNameFa : n.wsName, groupFa: n.wsNameFa, icon: n.item.icon, label: n.item.labelEn, labelFa: n.item.labelFa, run: () => go(n.item.href) })
-    for (const r of records) out.push({ id: `rec-${r.type}-${r.id}`, group: 'Records', groupFa: 'رکوردها', icon: '◦', label: r.title, labelFa: r.title, sub: r.subtitle, run: () => go(r.url) })
+    for (const r of records) out.push({ id: `rec-${r.type}-${r.id}`, group: 'Records', groupFa: 'رکوردها', icon: '◦', label: r.title, labelFa: r.title, sub: r.subtitle, entity: entityActions(r.module, r.url), run: () => go(r.url) })
     return out
-  }, [q, query, role, favorites, recents, searches, records, navItems, itemByHref, go, execCommand, isRTL])
+  }, [q, query, role, favorites, recents, searches, commands, popular, records, navItems, itemByHref, go, execCommand, isRTL])
 
   // Live records search (Module 13) + record the search term.
   useEffect(() => {
@@ -142,12 +157,24 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
               {g.rows.map(({ row, idx }) => {
                 const isSel = idx === selected
                 return (
-                  <button key={row.id} onClick={() => row.run()} onMouseEnter={() => setSelected(idx)} role="option" aria-selected={isSel}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-start transition-all ${isSel ? 'bg-brand/15 text-brand' : 'text-text-secondary'}`}>
-                    <span className={`text-base w-5 text-center shrink-0 ${isSel ? 'text-brand' : 'text-text-tertiary'}`}>{row.icon}</span>
-                    <span className="flex-1 text-start truncate">{isRTL ? row.labelFa : row.label}{row.sub ? <span className="text-text-tertiary"> — {row.sub}</span> : null}</span>
-                    {isSel && <kbd className="text-[10px] px-1.5 py-0.5 rounded text-text-tertiary bg-white/5 border border-white/10 shrink-0">↵</kbd>}
-                  </button>
+                  <div key={row.id}>
+                    <button onClick={() => row.run()} onMouseEnter={() => setSelected(idx)} role="option" aria-selected={isSel}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-start transition-all ${isSel ? 'bg-brand/15 text-brand' : 'text-text-secondary'}`}>
+                      <span className={`text-base w-5 text-center shrink-0 ${isSel ? 'text-brand' : 'text-text-tertiary'}`}>{row.icon}</span>
+                      <span className="flex-1 text-start truncate">{isRTL ? row.labelFa : row.label}{row.sub ? <span className="text-text-tertiary"> — {row.sub}</span> : null}</span>
+                      {isSel && <kbd className="text-[10px] px-1.5 py-0.5 rounded text-text-tertiary bg-white/5 border border-white/10 shrink-0">↵</kbd>}
+                    </button>
+                    {isSel && row.entity && (
+                      <div className="flex items-center gap-2 px-12 pb-2 flex-wrap">
+                        {row.entity.map(a => (
+                          <button key={a.id} onClick={() => runEntity(a)}
+                            className="text-[11px] px-2 py-1 rounded-md text-text-secondary bg-white/5 border border-white/10 hover:border-brand/40 hover:text-brand transition-colors">
+                            <span className="me-1">{a.icon}</span>{isRTL ? a.labelFa : a.labelEn}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>

@@ -9,11 +9,13 @@ export const runtime = 'nodejs'
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 const MAX_RECENTS = 12
 const MAX_SEARCHES = 8
+const MAX_COMMANDS = 8
+const isCmdId = (s: string) => /^[a-z0-9_]+$/.test(s) && s.length <= 40
 const isAdminHref = (h: string) => /^\/admin\/?[a-z0-9/_-]*$/i.test(h) && h.length <= 80
 
-interface Row { favorites: string; recents: string; searches: string; ui: string; seeded: boolean }
+interface Row { favorites: string; recents: string; searches: string; commands: string; ui: string; seeded: boolean }
 interface UiState { collapsedGroups?: string[]; favWorkspaces?: string[]; recentWorkspaces?: string[] }
-interface Prefs { favorites: string[]; recents: string[]; searches: string[]; ui: UiState }
+interface Prefs { favorites: string[]; recents: string[]; searches: string[]; commands: string[]; ui: UiState }
 const MAX_RECENT_WS = 6
 
 const parseArr = (s: string | undefined): string[] => { try { const v = JSON.parse(s ?? '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : [] } catch { return [] } }
@@ -31,16 +33,28 @@ const parseUi = (s: string | undefined): UiState => {
 const isWsId = (s: string) => /^[a-z]+$/.test(s) && s.length <= 40
 
 async function load(userId: string): Promise<Prefs & { seeded: boolean }> {
-  const r = (await pgQuery<Row>(`SELECT favorites, recents, searches, ui, (favorites IS NOT NULL) AS seeded FROM nav_prefs WHERE user_id=$1`, [userId]))[0]
-  return { favorites: parseArr(r?.favorites), recents: parseArr(r?.recents), searches: parseArr(r?.searches), ui: parseUi(r?.ui), seeded: !!r }
+  const r = (await pgQuery<Row>(`SELECT favorites, recents, searches, commands, ui, (favorites IS NOT NULL) AS seeded FROM nav_prefs WHERE user_id=$1`, [userId]))[0]
+  return { favorites: parseArr(r?.favorites), recents: parseArr(r?.recents), searches: parseArr(r?.searches), commands: parseArr(r?.commands), ui: parseUi(r?.ui), seeded: !!r }
 }
 
 async function save(userId: string, p: Prefs) {
   await pgQuery(
-    `INSERT INTO nav_prefs (user_id, favorites, recents, searches, ui, updated_at) VALUES ($1,$2,$3,$4,$5,${NOW})
-     ON CONFLICT (user_id) DO UPDATE SET favorites=EXCLUDED.favorites, recents=EXCLUDED.recents, searches=EXCLUDED.searches, ui=EXCLUDED.ui, updated_at=${NOW}`,
-    [userId, JSON.stringify(p.favorites.slice(0, 40)), JSON.stringify(p.recents.slice(0, MAX_RECENTS)), JSON.stringify(p.searches.slice(0, MAX_SEARCHES)),
+    `INSERT INTO nav_prefs (user_id, favorites, recents, searches, commands, ui, updated_at) VALUES ($1,$2,$3,$4,$5,$6,${NOW})
+     ON CONFLICT (user_id) DO UPDATE SET favorites=EXCLUDED.favorites, recents=EXCLUDED.recents, searches=EXCLUDED.searches, commands=EXCLUDED.commands, ui=EXCLUDED.ui, updated_at=${NOW}`,
+    [userId, JSON.stringify(p.favorites.slice(0, 40)), JSON.stringify(p.recents.slice(0, MAX_RECENTS)), JSON.stringify(p.searches.slice(0, MAX_SEARCHES)), JSON.stringify(p.commands.slice(0, MAX_COMMANDS)),
      JSON.stringify({ collapsedGroups: (p.ui.collapsedGroups ?? []).slice(0, 60), favWorkspaces: (p.ui.favWorkspaces ?? []).slice(0, 20), recentWorkspaces: (p.ui.recentWorkspaces ?? []).slice(0, MAX_RECENT_WS) })])
+}
+
+// Cross-user popular-search aggregate — atomic increment, best-effort.
+async function bumpPopular(term: string) {
+  await pgQuery(
+    `INSERT INTO search_stats (term, hits, last_at) VALUES ($1,1,${NOW})
+     ON CONFLICT (term) DO UPDATE SET hits=search_stats.hits+1, last_at=${NOW}`,
+    [term.toLowerCase()])
+}
+async function topPopular(limit = 6): Promise<string[]> {
+  const rows = await pgQuery<{ term: string }>(`SELECT term FROM search_stats ORDER BY hits DESC, last_at DESC LIMIT $1`, [limit])
+  return rows.map(r => r.term)
 }
 
 // GET — favorites + recents + recent searches + persisted UI state. On the first
@@ -54,16 +68,18 @@ export async function GET() {
       cur.favorites = roleDefaultFavorites(auth.user.role)
       await save(auth.user.id, cur)
     }
-    return NextResponse.json({ favorites: cur.favorites, recents: cur.recents, searches: cur.searches, ui: cur.ui })
+    const popular = await topPopular().catch(() => [])
+    return NextResponse.json({ favorites: cur.favorites, recents: cur.recents, searches: cur.searches, commands: cur.commands, popular, ui: cur.ui })
   } catch (e) { return apiError(e, 'Failed to load nav prefs') }
 }
 
 const schema = z.object({
-  action: z.enum(['toggleFavorite', 'visit', 'clearRecents', 'search', 'clearSearches', 'toggleGroup', 'toggleFavWorkspace', 'visitWorkspace']),
+  action: z.enum(['toggleFavorite', 'visit', 'clearRecents', 'search', 'clearSearches', 'toggleGroup', 'toggleFavWorkspace', 'visitWorkspace', 'runCommand']),
   href: z.string().max(80).optional(),
   term: z.string().max(80).optional(),
   group: z.string().max(80).optional(),
   workspace: z.string().max(40).optional(),
+  command: z.string().max(40).optional(),
 })
 
 // POST — mutate prefs: pin/unpin a favorite, record a visit, or clear recents.
@@ -75,7 +91,7 @@ export async function POST(req: NextRequest) {
   const d = parsed.data
   try {
     const cur = await load(auth.user.id)
-    let { favorites, recents, searches } = cur
+    let { favorites, recents, searches, commands } = cur
     const ui: UiState = cur.ui
     if (d.action === 'toggleFavorite' && d.href && isAdminHref(d.href)) {
       favorites = favorites.includes(d.href) ? favorites.filter(h => h !== d.href) : [d.href, ...favorites]
@@ -86,6 +102,9 @@ export async function POST(req: NextRequest) {
     } else if (d.action === 'search' && d.term && d.term.trim().length >= 2) {
       const term = d.term.trim().slice(0, 80)
       searches = [term, ...searches.filter(s => s.toLowerCase() !== term.toLowerCase())].slice(0, MAX_SEARCHES)
+      await bumpPopular(term).catch(() => {}) // cross-user aggregate, best-effort
+    } else if (d.action === 'runCommand' && d.command && isCmdId(d.command)) {
+      commands = [d.command, ...commands.filter(c => c !== d.command)].slice(0, MAX_COMMANDS)
     } else if (d.action === 'clearSearches') {
       searches = []
     } else if (d.action === 'toggleGroup' && d.group) {
@@ -99,7 +118,7 @@ export async function POST(req: NextRequest) {
       const rw = ui.recentWorkspaces ?? []
       ui.recentWorkspaces = [d.workspace, ...rw.filter(x => x !== d.workspace)].slice(0, MAX_RECENT_WS)
     }
-    await save(auth.user.id, { favorites, recents, searches, ui })
-    return NextResponse.json({ favorites, recents, searches, ui })
+    await save(auth.user.id, { favorites, recents, searches, commands, ui })
+    return NextResponse.json({ favorites, recents, searches, commands, ui })
   } catch (e) { return apiError(e, 'Failed to update nav prefs') }
 }

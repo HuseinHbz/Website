@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tokenize, scoreField, scoreCandidate, rankHits, groupByModule, type SearchCandidate } from '../engine'
+import { tokenize, scoreField, scoreCandidate, rankHits, groupByModule, editDistance, type SearchCandidate } from '../engine'
 
 describe('tokenize', () => {
   it('lowercases, splits and de-duplicates', () => {
@@ -17,6 +17,22 @@ describe('scoreField', () => {
     expect(scoreField('the acme', ['acme'], 'acme')).toBe(3)      // word boundary only
     expect(scoreField('teacment', ['acme'], 'acme')).toBe(1)      // substring only
     expect(scoreField(null, ['acme'], 'acme')).toBe(0)
+  })
+})
+
+describe('fuzzy / typo tolerance', () => {
+  it('matches a small typo via edit distance', () => {
+    // "invioce" (transposed) should still score against "invoice"
+    expect(scoreField('Invoice register', ['invioce'], 'invioce')).toBeGreaterThan(0)
+    // exact/substring still beats fuzzy
+    expect(scoreField('invoice', ['invoice'], 'invoice')).toBe(10)
+  })
+  it('does not fuzzy-match unrelated words', () => {
+    expect(scoreField('dashboard', ['xyzzy'], 'xyzzy')).toBe(0)
+  })
+  it('editDistance is bounded + correct', () => {
+    expect(editDistance('invoice', 'invioce', 2)).toBe(2)
+    expect(editDistance('abc', 'xyzuvw', 1)).toBe(2) // early-exit cap (max+1)
   })
 })
 

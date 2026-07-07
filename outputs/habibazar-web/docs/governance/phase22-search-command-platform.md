@@ -69,8 +69,40 @@ CLAUDE.md.
   Run Backup Now + Switch to Backup Center + Backup & Recovery. Screenshots
   captured. Existing pages unchanged.
 
-## Remaining roadmap (staged)
+## Completion (previously staged — now built for real)
 
-Executed-command history in Recent; popular-searches aggregate; typo-tolerant
-fuzzy ranking in the search engine; virtualized result list for very large result
-sets; entity-scoped quick actions (act on the currently open record).
+- **Typo-tolerant fuzzy ranking** — `src/lib/search/engine.ts` now falls back to a
+  bounded-Levenshtein / subsequence match (`editDistance`, `fuzzyTermScore`) for
+  any term that doesn't match exactly, so a small typo (e.g. `invioce`) still
+  ranks against `invoice`. Fuzzy weights are deliberately small (≤0.75) so they
+  never outrank a real substring/boundary hit; exact/prefix behaviour is
+  unchanged. Pure + unit-tested (edit-distance bounds + non-match cases).
+- **Popular searches (cross-user aggregate)** — a `search_stats` table
+  (`term`/`hits`/`last_at`) is atomically incremented on each recorded search
+  (`nav-prefs` `search` action, best-effort). `GET /api/admin/nav-prefs` returns
+  the top terms; the empty-state palette shows a **Popular searches** (🔥) group
+  (de-duplicated against the user's own recent searches).
+- **Executed-command history in Recent** — `nav_prefs.commands` (JSON, capped 8)
+  records the id of every command run from the palette (`runCommand` action,
+  `isCmdId`-validated). The empty-state palette surfaces a **Recent commands**
+  group (RBAC-filtered against `visibleCommands`), so frequent actions are one
+  keystroke away.
+- **Entity-scoped quick actions** — pure `entityActions(module, url)`
+  (`commands.ts`, unit-tested) returns contextual follow-ups for a record hit:
+  **Open**, **Copy link** (client-side clipboard), and **View all in <module>**
+  (only for known real module routes). The palette renders these as inline chips
+  under the selected record row.
+
+## Not needed at current scale (honest)
+
+- **Virtualized result list** — the palette caps records at 8 and nav/commands are
+  small bounded sets; windowing would add machinery for lists this short with no
+  real benefit. Can be added the day a single result set holds hundreds of rows.
+
+## Completion validation
+
+- type-check 0 · lint 0 · **219 unit tests** (+fuzzy/entity-action tests) · six
+  governance audits green · production build OK.
+- **Live on real PostgreSQL**: `search_stats` aggregates correctly (invoice ×3 >
+  lead ×2, ordered by hits); executed-command history round-trips in
+  `nav_prefs.commands`. Migration applies idempotently on a fresh DB.
