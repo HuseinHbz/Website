@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, PageHeader, Badge } from '@/components/admin/ui'
+import { useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 interface Health {
   path: string; driver: string
@@ -36,6 +39,7 @@ function Tile({ label, value, sub, tone }: { label: string; value: string; sub?:
 }
 
 export function DatabaseHealth() {
+  const locale = useAdminLocale()
   const [data, setData] = useState<Health | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -111,28 +115,23 @@ export function DatabaseHealth() {
 
           <Card className="p-0 overflow-hidden">
             <h3 className="text-sm font-semibold text-text-primary p-5 pb-3">تعداد رکورد هر جدول</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                  <th className="px-5 py-2">جدول</th><th className="px-3 py-2">رکوردها</th><th className="px-3 py-2 w-1/2">نسبت</th>
-                </tr></thead>
-                <tbody>
-                  {data.rowCounts.filter((r) => r.rows !== 0).map((r) => {
-                    const max = data.rowCounts[0]?.rows || 1
-                    return (
-                      <tr key={r.table} className="border-b border-subtle/50">
-                        <td className="px-5 py-1.5 font-mono text-text-secondary">{r.table}</td>
-                        <td className="px-3 py-1.5 text-text-primary">{r.rows < 0 ? '—' : r.rows.toLocaleString()}</td>
-                        <td className="px-3 py-1.5">
-                          <div className="h-1.5 rounded-full bg-sunken overflow-hidden max-w-xs">
-                            <div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(2, (Math.max(r.rows, 0) / max) * 100)}%` }} />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div className="p-4 pt-0">
+              <DataTable
+                tableId="db-row-counts"
+                columns={[
+                  { key: 'table', labelEn: 'Table', labelFa: 'جدول', render: r => <span className="font-mono text-text-secondary">{r.table}</span> },
+                  { key: 'rows', labelEn: 'Records', labelFa: 'رکوردها', type: 'number', numeric: true, render: r => <span className="text-text-primary">{r.rows < 0 ? '—' : r.rows.toLocaleString()}</span> },
+                  {
+                    key: 'ratio', labelEn: 'Ratio', labelFa: 'نسبت', sortable: false, value: r => r.rows,
+                    render: r => { const max = data.rowCounts[0]?.rows || 1; return <div className="h-1.5 rounded-full bg-sunken overflow-hidden max-w-xs"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(2, (Math.max(r.rows, 0) / max) * 100)}%` }} /></div> },
+                  },
+                ] as Column<{ table: string; rows: number }>[]}
+                rows={data.rowCounts.filter((r) => r.rows !== 0)}
+                locale={locale}
+                pageSize={25}
+                rowKey={r => r.table}
+                exportName="db-row-counts"
+              />
             </div>
             <p className="text-[11px] text-text-tertiary px-5 py-3 border-t border-subtle">
               فقط جداول دارای رکورد نمایش داده می‌شوند · restore sandbox و تأیید بکاپ در «Backup & Recovery».

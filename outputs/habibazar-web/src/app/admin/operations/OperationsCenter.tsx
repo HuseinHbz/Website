@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { PageHeader, Badge } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Health = 'healthy' | 'warning' | 'critical' | 'offline'
 interface Subsystem { name: string; status: Health; detail: string }
@@ -43,8 +45,11 @@ function Bar({ pct, tone }: { pct: number; tone: 'ok' | 'warn' | 'bad' }) {
 }
 const tone = (p: number | null, warn: number, bad: number): 'ok' | 'warn' | 'bad' => p == null ? 'warn' : p >= bad ? 'bad' : p >= warn ? 'warn' : 'ok'
 
+type ErrRow = { ts: string; source: string; service: string; message: string }
+
 export function OperationsCenter() {
   const t = useT()
+  const opsLocale = useAdminLocale()
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [updated, setUpdated] = useState<Date>(new Date())
@@ -157,24 +162,20 @@ export function OperationsCenter() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden border border-subtle">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-subtle text-left">{['Time', 'Source', 'Service', 'Message'].map((h) => <th key={h} className="px-4 py-3 text-text-tertiary font-medium text-xs">{h}</th>)}</tr></thead>
-              <tbody>
-                {data.recentErrors.map((e, i) => (
-                  <tr key={i} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5 text-text-tertiary font-mono text-xs whitespace-nowrap">{new Date(e.ts).toLocaleTimeString()}</td>
-                    <td className="px-4 py-2.5"><Badge color="red">{e.source}</Badge></td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs">{e.service}</td>
-                    <td className="px-4 py-2.5 text-text-primary font-mono text-xs break-all">{e.message}</td>
-                  </tr>
-                ))}
-                {data.recentErrors.length === 0 && <tr><td colSpan={4} className="px-4 py-10 text-center text-text-tertiary">No errors logged — {m.successRatePct}% success rate over 24h.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          tableId="ops-recent-errors"
+          columns={[
+            { key: 'ts', labelEn: 'Time', labelFa: 'زمان', type: 'date', render: e => <span className="text-text-tertiary font-mono text-xs whitespace-nowrap">{new Date(e.ts).toLocaleTimeString()}</span> },
+            { key: 'source', labelEn: 'Source', labelFa: 'منبع', type: 'enum', render: e => <Badge color="red">{e.source}</Badge> },
+            { key: 'service', labelEn: 'Service', labelFa: 'سرویس', type: 'enum', render: e => <span className="text-text-tertiary text-xs">{e.service}</span> },
+            { key: 'message', labelEn: 'Message', labelFa: 'پیام', render: e => <span className="text-text-primary font-mono text-xs break-all">{e.message}</span> },
+          ] as Column<ErrRow>[]}
+          rows={data.recentErrors}
+          locale={opsLocale}
+          rowKey={e => `${e.ts}-${e.message}`}
+          exportName="recent-errors"
+          emptyLabel={`No errors logged — ${m.successRatePct}% success rate over 24h.`}
+        />
       )}
     </div>
   )

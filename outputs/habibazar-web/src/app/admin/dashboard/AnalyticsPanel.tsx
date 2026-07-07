@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 
 interface DashData {
@@ -74,8 +76,11 @@ const RESOURCE_FA: Record<string, string> = {
 
 const PIE_COLORS = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#818cf8', '#c03030', '#e57000']
 
+type ActivityRow = { id: number; userEmail: string; action: string; resource: string; resourceId: string; createdAt: string }
+
 export function AnalyticsPanel() {
   const t = useT()
+  const locale = useAdminLocale()
   const [data, setData] = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState<'7' | '14' | '30'>('7')
@@ -234,43 +239,21 @@ export function AnalyticsPanel() {
       {/* Full Activity Log */}
       <Card className="p-5">
         <h3 className="text-sm font-semibold text-white mb-4">گزارش کامل فعالیت‌ها</h3>
-        {data?.recentActivity && data.recentActivity.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-right pb-2 font-medium text-text-tertiary">عملیات</th>
-                  <th className="text-right pb-2 font-medium text-text-tertiary">منبع</th>
-                  <th className="text-right pb-2 font-medium text-text-tertiary">شناسه</th>
-                  <th className="text-right pb-2 font-medium text-text-tertiary">کاربر</th>
-                  <th className="text-right pb-2 font-medium text-text-tertiary">زمان</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentActivity.map(log => (
-                  <tr key={log.id} className="border-b border-border hover:bg-surface transition-colors">
-                    <td className="py-2 pr-0">
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
-                        style={{ background: `${ACTION_COLORS[log.action] || '#4a4a6a'}20`, color: ACTION_COLORS[log.action] || '#9090b0' }}
-                      >
-                        {ACTION_FA[log.action] || log.action}
-                      </span>
-                    </td>
-                    <td className="py-2 text-text-secondary">{RESOURCE_FA[log.resource] || log.resource}</td>
-                    <td className="py-2 font-mono text-text-disabled">{log.resourceId || '—'}</td>
-                    <td className="py-2 text-text-tertiary max-w-[120px] truncate">{log.userEmail}</td>
-                    <td className="py-2 text-text-disabled whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleString('fa-IR')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-text-disabled text-center py-8">هنوز فعالیتی ثبت نشده</p>
-        )}
+        <DataTable
+          tableId="analytics-activity"
+          columns={[
+            { key: 'action', labelEn: 'Action', labelFa: 'عملیات', type: 'enum', render: log => <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style={{ background: `${ACTION_COLORS[log.action] || '#4a4a6a'}20`, color: ACTION_COLORS[log.action] || '#9090b0' }}>{ACTION_FA[log.action] || log.action}</span> },
+            { key: 'resource', labelEn: 'Resource', labelFa: 'منبع', type: 'enum', render: log => <span className="text-text-secondary">{RESOURCE_FA[log.resource] || log.resource}</span> },
+            { key: 'resourceId', labelEn: 'ID', labelFa: 'شناسه', render: log => <span className="font-mono text-text-disabled">{log.resourceId || '—'}</span> },
+            { key: 'userEmail', labelEn: 'User', labelFa: 'کاربر', render: log => <span className="text-text-tertiary">{log.userEmail}</span> },
+            { key: 'createdAt', labelEn: 'Time', labelFa: 'زمان', type: 'date', render: log => <span className="text-text-disabled whitespace-nowrap">{new Date(log.createdAt).toLocaleString('fa-IR')}</span> },
+          ] as Column<ActivityRow>[]}
+          rows={data?.recentActivity ?? []}
+          locale={locale}
+          rowKey={log => String(log.id)}
+          exportName="activity-log"
+          emptyLabel="هنوز فعالیتی ثبت نشده"
+        />
       </Card>
 
       {/* Content stats */}

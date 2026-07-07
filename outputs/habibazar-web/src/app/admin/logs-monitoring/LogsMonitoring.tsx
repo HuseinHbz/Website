@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card, Btn, Badge, PageHeader, useToast } from '@/components/admin/ui'
+import { useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type Level = 'debug' | 'info' | 'warn' | 'error'
@@ -42,6 +45,7 @@ function fmtBytes(n: number): string {
 }
 
 export function LogsMonitoring() {
+  const logsLocale = useAdminLocale()
   const { toast, ToastContainer } = useToast()
   const [mode, setMode] = useState<'live' | 'history'>('live')
   const [entries, setEntries] = useState<LogEntry[]>([])
@@ -264,26 +268,22 @@ export function LogsMonitoring() {
 
       {/* ── Console / grouped view ───────────────────────────────────────── */}
       {mode === 'history' && grouped ? (
-        <Card className="p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                <th className="px-4 py-2">Count</th><th className="px-4 py-2">Level</th><th className="px-4 py-2">Source</th><th className="px-4 py-2">Message</th><th className="px-4 py-2">Last seen</th>
-              </tr></thead>
-              <tbody>
-                {groups.map((g) => (
-                  <tr key={g.fingerprint} className="border-b border-subtle/50">
-                    <td className="px-4 py-2 font-bold text-text-primary">{g.count}</td>
-                    <td className="px-4 py-2"><Badge color={levelBadge[g.level]}>{g.level}</Badge></td>
-                    <td className="px-4 py-2 text-text-tertiary">{g.source}</td>
-                    <td className={`px-4 py-2 font-mono ${levelClass[g.level]}`}>{g.message}</td>
-                    <td className="px-4 py-2 text-text-tertiary">{fmtTime(g.lastTs)}</td>
-                  </tr>
-                ))}
-                {groups.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-text-tertiary">No matching log groups.</td></tr>}
-              </tbody>
-            </table>
-          </div>
+        <Card className="p-4">
+          <DataTable
+            tableId="logs-groups"
+            columns={[
+              { key: 'count', labelEn: 'Count', labelFa: 'تعداد', type: 'number', numeric: true, render: g => <span className="font-bold text-text-primary">{g.count}</span> },
+              { key: 'level', labelEn: 'Level', labelFa: 'سطح', type: 'enum', render: g => <Badge color={levelBadge[g.level]}>{g.level}</Badge> },
+              { key: 'source', labelEn: 'Source', labelFa: 'منبع', type: 'enum', render: g => <span className="text-text-tertiary">{g.source}</span> },
+              { key: 'message', labelEn: 'Message', labelFa: 'پیام', render: g => <span className={`font-mono ${levelClass[g.level]}`}>{g.message}</span> },
+              { key: 'lastTs', labelEn: 'Last seen', labelFa: 'آخرین', type: 'date', render: g => <span className="text-text-tertiary">{fmtTime(g.lastTs)}</span> },
+            ] as Column<Group>[]}
+            rows={groups}
+            locale={logsLocale}
+            rowKey={g => g.fingerprint}
+            exportName="log-groups"
+            emptyLabel="No matching log groups."
+          />
         </Card>
       ) : (
         <Card className="p-0 overflow-hidden">

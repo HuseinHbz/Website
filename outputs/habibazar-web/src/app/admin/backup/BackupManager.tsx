@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Btn, PageHeader, Badge, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 /* ── Types (mirror /api/admin/backup/engine) ─────────────────────────────── */
 interface CatalogRow {
@@ -58,6 +60,7 @@ function Tile({ label, value, sub, tone }: { label: string; value: string; sub?:
 
 export function BackupManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [engine, setEngine] = useState<EngineData | null>(null)
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
@@ -165,36 +168,26 @@ export function BackupManager() {
           {/* Catalog */}
           <Card className="p-0 overflow-hidden">
             <h3 className="text-sm font-semibold text-text-primary p-5 pb-3">تاریخچه بکاپ‌ها</h3>
-            {engine.catalog.length === 0 ? (
-              <p className="text-sm text-text-tertiary px-5 pb-5">هنوز بکاپی ثبت نشده. زمان‌بند به‌زودی اولین بکاپ را می‌سازد یا «بکاپ فوری» را بزنید.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                    <th className="px-5 py-2">نسخه</th><th className="px-3 py-2">منبع</th><th className="px-3 py-2">دوره</th>
-                    <th className="px-3 py-2">وضعیت</th><th className="px-3 py-2">تأیید</th><th className="px-3 py-2">حجم</th>
-                    <th className="px-3 py-2">نسخه‌ها</th><th className="px-3 py-2">زمان</th>
-                  </tr></thead>
-                  <tbody>
-                    {engine.catalog.map((b) => {
-                      const copies = b.copies ? (JSON.parse(b.copies) as unknown[]).length : 0
-                      return (
-                        <tr key={b.id} className="border-b border-subtle/50">
-                          <td className="px-5 py-2 font-mono text-text-secondary truncate max-w-[160px]" title={b.version}>{b.version}</td>
-                          <td className="px-3 py-2 text-text-tertiary">{b.trigger}</td>
-                          <td className="px-3 py-2 text-text-tertiary">{b.bucket ?? '—'}</td>
-                          <td className="px-3 py-2"><Badge color={statusColor[b.status] ?? 'slate'}>{b.status}</Badge></td>
-                          <td className="px-3 py-2">{b.verified ? <span className="text-success">✓</span> : <span className="text-text-disabled">—</span>}</td>
-                          <td className="px-3 py-2 text-text-secondary">{fmtSize(b.size)}</td>
-                          <td className="px-3 py-2 text-text-tertiary">{copies}×</td>
-                          <td className="px-3 py-2 text-text-tertiary">{timeAgo(b.started_at)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="p-4 pt-0">
+              <DataTable
+                tableId="backup-catalog"
+                columns={[
+                  { key: 'version', labelEn: 'Version', labelFa: 'نسخه', render: b => <span className="font-mono text-text-secondary truncate max-w-[160px] inline-block" title={b.version}>{b.version}</span> },
+                  { key: 'trigger', labelEn: 'Source', labelFa: 'منبع', type: 'enum', render: b => <span className="text-text-tertiary">{b.trigger}</span> },
+                  { key: 'bucket', labelEn: 'Period', labelFa: 'دوره', type: 'enum', render: b => <span className="text-text-tertiary">{b.bucket ?? '—'}</span> },
+                  { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: b => <Badge color={statusColor[b.status] ?? 'slate'}>{b.status}</Badge> },
+                  { key: 'verified', labelEn: 'Verified', labelFa: 'تأیید', type: 'boolean', value: b => !!b.verified, render: b => b.verified ? <span className="text-success">✓</span> : <span className="text-text-disabled">—</span> },
+                  { key: 'size', labelEn: 'Size', labelFa: 'حجم', type: 'number', numeric: true, render: b => <span className="text-text-secondary">{fmtSize(b.size)}</span> },
+                  { key: 'copies', labelEn: 'Copies', labelFa: 'نسخه‌ها', type: 'number', numeric: true, value: b => b.copies ? (JSON.parse(b.copies) as unknown[]).length : 0, render: b => <span className="text-text-tertiary">{b.copies ? (JSON.parse(b.copies) as unknown[]).length : 0}×</span> },
+                  { key: 'started_at', labelEn: 'Time', labelFa: 'زمان', type: 'date', render: b => <span className="text-text-tertiary">{timeAgo(b.started_at)}</span> },
+                ] as Column<CatalogRow>[]}
+                rows={engine.catalog}
+                locale={locale}
+                rowKey={b => b.id}
+                exportName="backup-catalog"
+                emptyLabel="هنوز بکاپی ثبت نشده."
+              />
+            </div>
             <p className="text-[11px] text-text-tertiary px-5 py-3 border-t border-subtle">
               محل ذخیره: <span className="font-mono">{engine.root}</span> · محیط: {engine.env} · پایش زنده رخدادها در «لاگ‌ها و پایش زنده».
             </p>
