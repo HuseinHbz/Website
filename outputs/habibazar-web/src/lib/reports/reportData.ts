@@ -1,0 +1,112 @@
+/**
+ * Reporting Platform — report catalog + server data layer (Phase 21.9).
+ *
+ * A fixed catalog of reports (no arbitrary SQL → no injection surface), each
+ * backed by an existing module's data layer. `runReport` returns flat rows +
+ * typed columns + a summary; the pure pivot/CSV helpers do the rest. Reports span
+ * the modules that have data (Financial / Sales / Inventory / Assets / Projects);
+ * Purchasing awaits its module.
+ */
+import { pgQuery } from '@/lib/db'
+import { financeReports } from '@/lib/erp/ledgerData'
+import { loadCustomers } from '@/lib/erp/salesData'
+import { loadProductLevels } from '@/lib/erp/inventoryData'
+import { loadAssets } from '@/lib/erp/assetData'
+import { costingPortfolio } from '@/lib/erp/costingData'
+import type { Row, Column } from './pivot'
+
+export interface ReportDef {
+  id: string
+  module: 'financial' | 'sales' | 'inventory' | 'assets' | 'projects'
+  nameEn: string; nameFa: string
+  /** sensible defaults for the pivot/chart UI */
+  groupField?: string
+  measureField?: string
+}
+
+export const REPORTS: ReportDef[] = [
+  { id: 'fin_trial_balance', module: 'financial', nameEn: 'Trial Balance', nameFa: 'تراز آزمایشی', groupField: 'type', measureField: 'debit' },
+  { id: 'fin_income', module: 'financial', nameEn: 'Income Statement', nameFa: 'صورت سود و زیان', groupField: 'kind', measureField: 'amount' },
+  { id: 'sales_by_customer', module: 'sales', nameEn: 'Sales by Customer', nameFa: 'فروش به تفکیک مشتری', groupField: 'name', measureField: 'invoiced' },
+  { id: 'sales_invoices', module: 'sales', nameEn: 'Invoice Register', nameFa: 'دفتر فاکتورها', groupField: 'status', measureField: 'total' },
+  { id: 'inv_valuation', module: 'inventory', nameEn: 'Inventory Valuation', nameFa: 'ارزش‌گذاری انبار', groupField: 'category', measureField: 'value' },
+  { id: 'assets_register', module: 'assets', nameEn: 'Asset Register', nameFa: 'دفتر دارایی‌ها', groupField: 'category', measureField: 'bookValue' },
+  { id: 'projects_costing', module: 'projects', nameEn: 'Project Costing', nameFa: 'هزینه‌یابی پروژه', groupField: 'name', measureField: 'profit' },
+]
+
+export interface ReportOutput { columns: Column[]; rows: Row[]; summary: { label: string; value: number }[] }
+
+const money = (n: number) => Math.round(n * 100) / 100
+
+export async function runReport(id: string): Promise<ReportOutput | null> {
+  switch (id) {
+    case 'fin_trial_balance': {
+      const r = await financeReports()
+      const rows: Row[] = r.trialBalance.rows.map(x => ({ code: x.code, name: x.nameEn, type: x.type, debit: x.debit, credit: x.credit }))
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Account' }, { key: 'type', label: 'Type' }, { key: 'debit', label: 'Debit' }, { key: 'credit', label: 'Credit' }],
+        rows,
+        summary: [{ label: 'Total debit', value: r.trialBalance.totalDebit }, { label: 'Total credit', value: r.trialBalance.totalCredit }],
+      }
+    }
+    case 'fin_income': {
+      const r = await financeReports()
+      const rows: Row[] = [
+        ...r.incomeStatement.revenue.map(l => ({ code: l.code, name: l.nameEn, kind: 'Revenue', amount: l.amount })),
+        ...r.incomeStatement.expenses.map(l => ({ code: l.code, name: l.nameEn, kind: 'Expense', amount: l.amount })),
+      ]
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Account' }, { key: 'kind', label: 'Kind' }, { key: 'amount', label: 'Amount' }],
+        rows,
+        summary: [{ label: 'Revenue', value: r.incomeStatement.totalRevenue }, { label: 'Expenses', value: r.incomeStatement.totalExpenses }, { label: 'Net income', value: r.incomeStatement.netIncome }],
+      }
+    }
+    case 'sales_by_customer': {
+      const c = await loadCustomers()
+      const rows: Row[] = c.map(x => ({ code: x.code, name: x.name, invoiced: x.invoiced, paid: x.paid, outstanding: x.outstanding }))
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Customer' }, { key: 'invoiced', label: 'Invoiced' }, { key: 'paid', label: 'Paid' }, { key: 'outstanding', label: 'Outstanding' }],
+        rows,
+        summary: [{ label: 'Invoiced', value: money(c.reduce((s, x) => s + x.invoiced, 0)) }, { label: 'Outstanding', value: money(c.reduce((s, x) => s + x.outstanding, 0)) }],
+      }
+    }
+    case 'sales_invoices': {
+      const rows = (await pgQuery(
+        `SELECT d.doc_no AS "docNo", c.name AS customer, d.date, d.status, d.total::float AS total
+         FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.doc_type='invoice' ORDER BY d.date DESC`, [])) as Row[]
+      return {
+        columns: [{ key: 'docNo', label: 'No.' }, { key: 'customer', label: 'Customer' }, { key: 'date', label: 'Date' }, { key: 'status', label: 'Status' }, { key: 'total', label: 'Total' }],
+        rows,
+        summary: [{ label: 'Invoices', value: rows.length }, { label: 'Total', value: money(rows.reduce((s, r) => s + Number(r.total), 0)) }],
+      }
+    }
+    case 'inv_valuation': {
+      const p = await loadProductLevels()
+      const rows: Row[] = p.map(x => ({ sku: x.sku, name: x.nameEn, category: x.category, onHand: x.onHand, avgCost: x.avgCost, value: x.value, status: x.status }))
+      return {
+        columns: [{ key: 'sku', label: 'SKU' }, { key: 'name', label: 'Product' }, { key: 'category', label: 'Category' }, { key: 'onHand', label: 'On hand' }, { key: 'avgCost', label: 'Avg cost' }, { key: 'value', label: 'Value' }, { key: 'status', label: 'Status' }],
+        rows,
+        summary: [{ label: 'Products', value: p.length }, { label: 'Total value', value: money(p.reduce((s, x) => s + x.value, 0)) }],
+      }
+    }
+    case 'assets_register': {
+      const a = await loadAssets()
+      const rows: Row[] = a.map(x => ({ name: x.name, category: x.category ?? '—', status: x.status, purchasePrice: x.purchasePrice, bookValue: x.bookValue, warranty: x.warranty.state }))
+      return {
+        columns: [{ key: 'name', label: 'Asset' }, { key: 'category', label: 'Category' }, { key: 'status', label: 'Status' }, { key: 'purchasePrice', label: 'Cost' }, { key: 'bookValue', label: 'Book value' }, { key: 'warranty', label: 'Warranty' }],
+        rows,
+        summary: [{ label: 'Assets', value: a.length }, { label: 'Cost', value: money(a.reduce((s, x) => s + x.purchasePrice, 0)) }, { label: 'Book value', value: money(a.reduce((s, x) => s + x.bookValue, 0)) }],
+      }
+    }
+    case 'projects_costing': {
+      const p = await costingPortfolio()
+      const rows: Row[] = p.rows.map(x => ({ code: x.code, name: x.name, budget: x.budget, cost: x.cost, revenue: x.revenue, profit: x.profit }))
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Project' }, { key: 'budget', label: 'Budget' }, { key: 'cost', label: 'Cost' }, { key: 'revenue', label: 'Revenue' }, { key: 'profit', label: 'Profit' }],
+        rows,
+        summary: [{ label: 'Budget', value: p.kpis.budget }, { label: 'Cost', value: p.kpis.cost }, { label: 'Profit', value: p.kpis.profit }],
+      }
+    }
+    default: return null
+  }
+}

@@ -2012,6 +2012,26 @@ const T: Record<string, { fa: string; en: string }> = {
   soc_timeline: { fa: 'خط زمانی تهدید', en: 'Threat timeline' },
   soc_noEvents: { fa: 'رویداد امنیتی‌ای ثبت نشده است.', en: 'No security events recorded.' },
   soc_footnote: { fa: 'مبتنی بر سیگنال واقعی از باس لاگ و ردگیری حسابرسی. جریان‌های تفصیلی در لاگ‌ها و پایش؛ ورود دومرحله‌ای/نشست‌های کاربر در امنیت و ۲FA.', en: 'Built on real signal from the log bus + audit trail. Detailed streams in Logs & Monitoring; user 2FA/sessions in Security & 2FA.' },
+
+  // ── Reporting Center (Phase 21.9) ──
+  rep_title: { fa: 'مرکز گزارش‌ها', en: 'Reporting Center' },
+  rep_subtitle: { fa: 'گزارش‌های سازمانی از دادهٔ واقعی ماژول‌ها: مالی، فروش، انبار، دارایی و پروژه.', en: 'Enterprise reports built on real module data: financial, sales, inventory, assets and projects.' },
+  rep_pickReport: { fa: 'انتخاب گزارش', en: 'Select report' },
+  rep_refresh: { fa: 'به‌روزرسانی', en: 'Refresh' },
+  rep_running: { fa: 'در حال اجرا…', en: 'Running…' },
+  rep_exportCsv: { fa: 'خروجی CSV', en: 'Export CSV' },
+  rep_viewTable: { fa: 'جدول', en: 'Table' },
+  rep_viewSummary: { fa: 'خلاصه', en: 'Summary' },
+  rep_summaryBy: { fa: 'گروه‌بندی بر اساس', en: 'Grouped by' },
+  rep_noData: { fa: 'داده‌ای برای این گزارش وجود ندارد.', en: 'No data for this report.' },
+  rep_loadFail: { fa: 'بارگذاری فهرست گزارش‌ها ناموفق بود.', en: 'Failed to load the report catalog.' },
+  rep_runFail: { fa: 'اجرای گزارش ناموفق بود.', en: 'Failed to run the report.' },
+  rep_footnote: { fa: 'هر گزارش مستقیماً از لایهٔ دادهٔ همان ماژول خوانده می‌شود؛ گزارش خرید پس از افزودن ماژول خرید اضافه می‌شود.', en: 'Each report reads live from its module data layer; the purchasing report arrives once the purchasing module ships.' },
+  rep_mod_financial: { fa: 'مالی', en: 'Financial' },
+  rep_mod_sales: { fa: 'فروش', en: 'Sales' },
+  rep_mod_inventory: { fa: 'انبار', en: 'Inventory' },
+  rep_mod_assets: { fa: 'دارایی', en: 'Assets' },
+  rep_mod_projects: { fa: 'پروژه', en: 'Projects' },
 }
 
 export function useT() {

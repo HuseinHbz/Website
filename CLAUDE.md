@@ -180,6 +180,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `/api/admin/erp/documents` (list/generate/void) + `/documents/render` (HTML).
   Public verification page `/[locale]/verify/[code]` (the QR target) confirms a
   document is issued. Verified vs real PostgreSQL (generate→render→verify).
+- **Reporting Center** (`/admin/reports`, `ReportingCenter`) — Phase 21.9 Reporting
+  Platform. A fixed report catalog reads live from each module's already-verified
+  data layer (no arbitrary SQL, no duplicated aggregation). Pure core
+  `src/lib/reports/pivot.ts` (`groupBy`/`aggregate`/`summarize`/`pivot`/`toCsv`
+  RFC-4180; 5 unit tests). Catalog + `runReport(id)` → `{columns,rows,summary}`
+  in `src/lib/reports/reportData.ts`, reusing `ledgerData`/`salesData`/
+  `inventoryData`/`assetData`/`costingData`. 7 reports: trial balance, income
+  statement, sales-by-customer, invoice register, inventory valuation, asset
+  register, project costing. API `GET /api/admin/erp/reports` (catalog / run /
+  `format=csv`), RBAC-gated. Bilingual UI: module-grouped picker, summary cards,
+  Table + group-by Summary views, CSV export. Purchasing report deferred until
+  its module ships. Verified vs real PostgreSQL (all 7 reports aggregate correctly).
 - **Executive Dashboard** (`/admin`, `ExecutiveDashboard`) — the redesigned admin
   home. Aggregates KPIs from every module via `GET /api/admin/overview`
   (`lib/admin/executiveOverview.ts`, each module guarded so one failure never
