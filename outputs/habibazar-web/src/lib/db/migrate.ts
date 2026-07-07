@@ -396,6 +396,33 @@ export async function runMigrations() {
       last_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- Enterprise DataTable Platform: per-user column layout per table (column
+    -- order/width/visibility/pin + density/pageSize), one row per (user, table).
+    CREATE TABLE IF NOT EXISTS table_prefs (
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      table_id TEXT NOT NULL,
+      prefs TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      PRIMARY KEY (user_id, table_id)
+    );
+    -- Named saved views (full view state JSON). Owner-scoped; optionally shared to
+    -- a role or department (RBAC visibility) or globally. is_default marks the
+    -- owner's auto-applied view for that table.
+    CREATE TABLE IF NOT EXISTS table_views (
+      id SERIAL PRIMARY KEY,
+      owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      table_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT '{}',
+      shared_scope TEXT NOT NULL DEFAULT 'private',
+      shared_key TEXT,
+      is_default BOOLEAN NOT NULL DEFAULT false,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_table_views_table ON table_views(table_id);
+    CREATE INDEX IF NOT EXISTS idx_table_views_owner ON table_views(owner_id, table_id);
+
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.
     CREATE TABLE IF NOT EXISTS dashboard_layouts (
