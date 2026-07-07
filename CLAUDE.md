@@ -17,6 +17,20 @@
    automatically after it resets and keep going until the requested work is
    fully finished and pushed — don't leave the project half-done.
    (هر وقت به لیمیت خوردی، بعد از اتمامش پروژه رو ادامه بده و تمومش کن.)
+4. **Execute the WHOLE prompt, in order, completely.** When a prompt (or master
+   prompt) is given, implement every item it lists, in the order given — do not
+   split it into pieces, do not deliver a partial subset and defer the rest, do
+   not silently "stage" items. Finish the entire prompt in one pass, then verify
+   and push. This overrides any instinct to scope down. The only hard limit is the
+   no-fake rule (see below): if an item genuinely cannot be built for real (e.g. it
+   needs a DB column/UI/data that does not exist yet, or a heavy dependency the
+   audits forbid), then BUILD what it truly needs — add the missing column, the
+   missing table, the missing UI, the light-weight dependency-free implementation —
+   rather than skipping it. If after that it is still genuinely impossible, STOP
+   and say so explicitly and ask; never quietly leave a listed item undone.
+   (هر پرامپ به‌صورت کامل و به ترتیب اجرا شود؛ تیکه‌تیکه یا ناقص اجرا نشود — کل
+   پرامپ یک‌جا تمام شود. اگر موردی واقعاً بدون جعل قابل ساخت نیست، همان زیرساخت
+   لازمش را بساز؛ اگر واقعاً غیرممکن بود، صریح بگو و بپرس، نه اینکه بی‌صدا رهایش کنی.)
 
 ---
 
