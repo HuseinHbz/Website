@@ -259,6 +259,66 @@ export async function runMigrations() {
       UNIQUE (rule_id, version)
     );
 
+    -- Enterprise Numbering Engine (Phase 21.11). The single source of truth for
+    -- document numbers across every module. A reusable *format* per document type
+    -- (pattern with placeholders + reset policy + counter rules), an atomic
+    -- *counter* per (format, scope, period) — scope keys give multi-company/
+    -- branch/warehouse independence, period keys drive automatic resets — and an
+    -- append-only *audit* of every generated/reserved number. Generation is
+    -- concurrency-safe via a transactional INSERT … ON CONFLICT … RETURNING on the
+    -- counter (backed by a per-scope advisory lock). No module numbers on its own.
+    CREATE TABLE IF NOT EXISTS numbering_formats (
+      id SERIAL PRIMARY KEY,
+      doc_type TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      pattern TEXT NOT NULL DEFAULT '{PREFIX}-{YEAR}-{COUNTER}',
+      prefix TEXT NOT NULL DEFAULT '',
+      suffix TEXT NOT NULL DEFAULT '',
+      reset_policy TEXT NOT NULL DEFAULT 'yearly' CHECK(reset_policy IN ('never','daily','weekly','monthly','quarterly','yearly','fiscal')),
+      padding INTEGER NOT NULL DEFAULT 6,
+      increment INTEGER NOT NULL DEFAULT 1,
+      start_number INTEGER NOT NULL DEFAULT 1,
+      min_number INTEGER NOT NULL DEFAULT 1,
+      max_number BIGINT,
+      alphabet TEXT NOT NULL DEFAULT 'numeric' CHECK(alphabet IN ('numeric','hex')),
+      fiscal_start_month INTEGER NOT NULL DEFAULT 1,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS numbering_counters (
+      id SERIAL PRIMARY KEY,
+      format_id INTEGER NOT NULL REFERENCES numbering_formats(id) ON DELETE CASCADE,
+      scope_key TEXT NOT NULL DEFAULT '',
+      period_key TEXT NOT NULL DEFAULT '',
+      current_value BIGINT NOT NULL DEFAULT 0,
+      last_number TEXT,
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (format_id, scope_key, period_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS numbering_audit (
+      id SERIAL PRIMARY KEY,
+      format_id INTEGER REFERENCES numbering_formats(id) ON DELETE SET NULL,
+      doc_type TEXT NOT NULL,
+      number TEXT NOT NULL,
+      scope_key TEXT NOT NULL DEFAULT '',
+      period_key TEXT NOT NULL DEFAULT '',
+      counter_value BIGINT,
+      module TEXT,
+      source TEXT NOT NULL DEFAULT 'api',
+      status TEXT NOT NULL DEFAULT 'generated' CHECK(status IN ('generated','reserved','released','failed')),
+      user_id TEXT REFERENCES users(id),
+      ip TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_numbering_audit_type ON numbering_audit(doc_type, created_at);
+    CREATE INDEX IF NOT EXISTS idx_numbering_audit_number ON numbering_audit(number);
+    CREATE INDEX IF NOT EXISTS idx_numbering_counters_fmt ON numbering_counters(format_id);
+
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
     -- documents (invoice/quotation/PO/contract/…); payload holds lines + meta +
     -- body; verify_code backs public QR verification.

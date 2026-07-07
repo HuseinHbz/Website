@@ -192,6 +192,28 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `format=csv`), RBAC-gated. Bilingual UI: module-grouped picker, summary cards,
   Table + group-by Summary views, CSV export. Purchasing report deferred until
   its module ships. Verified vs real PostgreSQL (all 7 reports aggregate correctly).
+- **Enterprise Numbering Engine** (`/admin/numbering`, `NumberingCenter`) — Phase
+  21.11. The single source of truth for document numbers across every module (a
+  platform service, not a per-module helper). Tables `numbering_formats` (pattern
+  + reset policy + counter rules per doc_type), `numbering_counters` (atomic
+  counter per format×scope×period — scope keys give multi-company/branch/warehouse
+  independence, period keys drive resets), `numbering_audit` (append-only log of
+  every mint/reserve/release/failure). Pure core `src/lib/numbering/format.ts`
+  (`periodKey`/`renderNumber` 14 placeholders/`padCounter` numeric|hex/
+  `validateFormat`/`formatRegex`; 9 unit tests). Service `src/lib/numbering/
+  service.ts` — `generateDocumentNumber`/`previewDocumentNumber`(=`getNextNumber`)/
+  `validateDocumentNumber`/`reserveNumber`/`releaseReservedNumber`/`resetCounter`;
+  **every ERP module must call this — never number on its own**. Concurrency-safe:
+  a transaction takes `pg_advisory_xact_lock` then does an atomic `INSERT … ON
+  CONFLICT (format,scope,period) DO UPDATE … RETURNING current_value` (unique index
+  serialises increments) → zero duplicates. APIs `/api/admin/erp/numbering` (CRUD +
+  `?view=dashboard|formats|counters|audit`) + `/numbering/generate` (generate/
+  preview/validate/reserve/release/reset), RBAC/zod/audited. Admin console
+  (System group): Dashboard · Formats (visual builder: click-to-insert placeholder
+  chips + live client-side preview) · Counters (reset) · History & Audit (search).
+  Verified vs real PostgreSQL: 500 concurrent generations → 500 unique / 0
+  duplicates / perfect 1..N sequence; yearly reset + scope independence confirmed.
+  Existing module callers are migrated onto it in a follow-up phase.
 - **Global Search** (`/admin/search`, `GlobalSearch`) — Module 13. One admin-side
   search layer over live business data (distinct from the public CMS `/api/search`).
   Pure engine `src/lib/search/engine.ts` (`tokenize`/`scoreField` exact>prefix>
