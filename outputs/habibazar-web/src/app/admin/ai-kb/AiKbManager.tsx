@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Item = { id?: number; title: string; type: 'document' | 'faq' | 'snippet' | 'url'; content: string; fileUrl: string; sourceUrl: string; tags: string; locale: string; active: boolean; priority: number }
 const EMPTY: Item = { title: '', type: 'snippet', content: '', fileUrl: '', sourceUrl: '', tags: '', locale: 'both', active: true, priority: 0 }
@@ -13,6 +15,7 @@ export function AiKbManager() {
   const [editing, setEditing] = useState<Item>(EMPTY)
   const [saving, setSaving] = useState(false)
   const t = useT()
+  const locale = useAdminLocale()
   const { toast, ToastContainer } = useToast()
 
   async function load() { const r = await fetch('/api/admin/ai-kb'); const d = await r.json(); setItems(Array.isArray(d) ? d : []) }
@@ -44,27 +47,25 @@ export function AiKbManager() {
       />
 
       <Card>
-        <Table headers={['Title', 'Type', 'Locale', 'Priority', 'Status', 'Actions']}>
-          {items.map((item) => (
-            <TR key={item.id}>
-              <TD>
-                <div className="font-medium text-white">{item.title}</div>
-                {item.tags && <div className="text-xs text-text-disabled mt-0.5">{item.tags}</div>}
-              </TD>
-              <TD><Badge color={typeColor[item.type]}>{item.type}</Badge></TD>
-              <TD className="text-text-tertiary">{item.locale}</TD>
-              <TD className="text-text-tertiary">{item.priority}</TD>
-              <TD><Badge color={item.active ? 'green' : 'slate'}>{item.active ? 'Active' : 'Disabled'}</Badge></TD>
-              <TD>
-                <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing(item); setModal(true) }}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(item.id!)}>Del</Btn>
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
-        {items.length === 0 && <div className="text-center py-12 text-text-disabled text-sm">No knowledge items yet. Add your first one to power the AI chatbot.</div>}
+        <DataTable
+          tableId="ai-kb"
+          columns={[
+            { key: 'title', labelEn: 'Title', labelFa: 'عنوان', render: item => <div><div className="font-medium text-white">{item.title}</div>{item.tags && <div className="text-xs text-text-disabled mt-0.5">{item.tags}</div>}</div> },
+            { key: 'type', labelEn: 'Type', labelFa: 'نوع', type: 'enum', options: ['document', 'faq', 'snippet', 'url'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: item => <Badge color={typeColor[item.type]}>{item.type}</Badge> },
+            { key: 'locale', labelEn: 'Locale', labelFa: 'زبان', type: 'enum', render: item => <span className="text-text-tertiary">{item.locale}</span> },
+            { key: 'priority', labelEn: 'Priority', labelFa: 'اولویت', type: 'number', numeric: true, render: item => <span className="text-text-tertiary">{item.priority}</span> },
+            { key: 'active', labelEn: 'Status', labelFa: 'وضعیت', type: 'boolean', value: item => item.active, render: item => <Badge color={item.active ? 'green' : 'slate'}>{item.active ? 'Active' : 'Disabled'}</Badge> },
+          ] as Column<Item>[]}
+          rows={items}
+          locale={locale}
+          rowKey={item => String(item.id)}
+          rowActions={[
+            { id: 'edit', labelEn: 'Edit', labelFa: 'ویرایش', icon: '✎', onClick: item => { setEditing(item); setModal(true) } },
+            { id: 'del', labelEn: 'Delete', labelFa: 'حذف', icon: '🗑', danger: true, onClick: item => del(item.id!) },
+          ] as RowAction<Item>[]}
+          exportName="ai-knowledge-base"
+          emptyLabel="No knowledge items yet."
+        />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Knowledge Item' : 'New Knowledge Item'} size="lg">

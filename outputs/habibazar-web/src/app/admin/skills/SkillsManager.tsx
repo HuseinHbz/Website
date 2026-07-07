@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useState } from 'react'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { crud, useResource } from '@/lib/admin/crud'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Skill = { id?: number; nameEn: string; nameFa: string; categoryEn: string; categoryFa: string; level: number; color: string; sortOrder: number; active: boolean }
 type Cert = { id?: number; nameEn: string; nameFa: string; issuer: string; issueDate: string; credentialUrl: string; color: string; sortOrder: number; active: boolean }
@@ -13,6 +15,7 @@ const EMPTY_CERT: Cert = { nameEn: '', nameFa: '', issuer: '', issueDate: '', cr
 
 export function SkillsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const { data: skills, reload: loadSkills } = useResource<Skill>('/api/admin/skills')
   const { data: certs, reload: loadCerts } = useResource<Cert>('/api/admin/certifications')
   const [tab, setTab] = useState<'skills' | 'certs'>('skills')
@@ -20,25 +23,7 @@ export function SkillsManager() {
   const [editS, setEditS] = useState<Skill>(EMPTY_SKILL)
   const [editC, setEditC] = useState<Cert>(EMPTY_CERT)
   const [saving, setSaving] = useState(false)
-  const [search, setSearch] = useState('')
-  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'hidden'>('all')
   const { toast, ToastContainer } = useToast()
-
-  const filteredSkills = useMemo(() => skills.filter((s) => {
-    const q = search.toLowerCase()
-    if (q && !s.nameEn.toLowerCase().includes(q) && !s.nameFa.includes(q) && !s.categoryEn.toLowerCase().includes(q)) return false
-    if (filterActive === 'active' && !s.active) return false
-    if (filterActive === 'hidden' && s.active) return false
-    return true
-  }), [skills, search, filterActive])
-
-  const filteredCerts = useMemo(() => certs.filter((c) => {
-    const q = search.toLowerCase()
-    if (q && !c.nameEn.toLowerCase().includes(q) && !c.nameFa.includes(q) && !c.issuer.toLowerCase().includes(q)) return false
-    if (filterActive === 'active' && !c.active) return false
-    if (filterActive === 'hidden' && c.active) return false
-    return true
-  }), [certs, search, filterActive])
 
   async function saveSkill() {
     setSaving(true)
@@ -92,64 +77,48 @@ export function SkillsManager() {
         }
       />
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-text-disabled focus:outline-none focus:border-brand" />
-        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="hidden">Hidden</option>
-        </select>
-        {(search || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterActive('all') }} className="px-3 py-2 text-xs text-text-secondary hover:text-white border border-border rounded-lg">✕ Clear</button>}
-        <span className="px-3 py-2 text-xs text-text-tertiary">{tab === 'skills' ? filteredSkills.length : filteredCerts.length} / {tab === 'skills' ? skills.length : certs.length}</span>
-      </div>
-
       {tab === 'skills' ? (
         <Card>
-          <Table headers={[t('name'), t('category'), t('level'), t('color'), t('status'), t('actions')]}>
-            {filteredSkills.map((s) => (
-              <TR key={s.id}>
-                <TD><div className="font-medium text-white">{s.nameEn}</div><div className="text-xs text-text-tertiary">{s.nameFa}</div></TD>
-                <TD className="text-text-secondary">{s.categoryEn}</TD>
-                <TD>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-surface-2 rounded-full max-w-20">
-                      <div className="h-full rounded-full bg-brand" style={{ width: `${s.level}%` }} />
-                    </div>
-                    <span className="text-xs text-text-secondary">{s.level}%</span>
-                  </div>
-                </TD>
-                <TD><ColorDot color={s.color} /></TD>
-                <TD><Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('hidden')}</Badge></TD>
-                <TD>
-                  <div className="flex gap-2">
-                    <Btn size="sm" variant="secondary" onClick={() => { setEditS(s); setModal(true) }}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="secondary" onClick={() => toggleSkill(s)}>{s.active ? '⏸' : '▶'}</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => delSkill(s.id!)}>{t('delete')}</Btn>
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </Table>
+          <DataTable
+            tableId="skills"
+            columns={[
+              { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: s => <div><div className="font-medium text-white">{s.nameEn}</div><div className="text-xs text-text-tertiary">{s.nameFa}</div></div> },
+              { key: 'categoryEn', labelEn: 'Category', labelFa: t('category'), type: 'enum', render: s => <span className="text-text-secondary">{s.categoryEn}</span> },
+              { key: 'level', labelEn: 'Level', labelFa: t('level'), type: 'number', numeric: true, render: s => <div className="flex items-center gap-2"><div className="flex-1 h-1.5 bg-surface-2 rounded-full max-w-20"><div className="h-full rounded-full bg-brand" style={{ width: `${s.level}%` }} /></div><span className="text-xs text-text-secondary">{s.level}%</span></div> },
+              { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: s => <ColorDot color={s.color} /> },
+              { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: s => s.active, render: s => <Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('hidden')}</Badge> },
+            ] as Column<Skill>[]}
+            rows={skills}
+            locale={locale}
+            rowKey={s => String(s.id)}
+            rowActions={[
+              { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: s => { setEditS(s); setModal(true) } },
+              { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: s => toggleSkill(s) },
+              { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: s => delSkill(s.id!) },
+            ] as RowAction<Skill>[]}
+            exportName="skills"
+          />
         </Card>
       ) : (
         <Card>
-          <Table headers={[t('name'), t('issuer'), t('date'), t('color'), t('actions')]}>
-            {filteredCerts.map((c) => (
-              <TR key={c.id}>
-                <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></TD>
-                <TD className="text-text-secondary">{c.issuer}</TD>
-                <TD className="text-text-tertiary text-xs">{c.issueDate}</TD>
-                <TD><ColorDot color={c.color} /></TD>
-                <TD>
-                  <div className="flex gap-2">
-                    <Btn size="sm" variant="secondary" onClick={() => { setEditC(c); setModal(true) }}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="secondary" onClick={() => toggleCert(c)}>{c.active ? '⏸' : '▶'}</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => delCert(c.id!)}>{t('delete')}</Btn>
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </Table>
+          <DataTable
+            tableId="skills-certs"
+            columns={[
+              { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: c => <div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
+              { key: 'issuer', labelEn: 'Issuer', labelFa: t('issuer'), type: 'enum', render: c => <span className="text-text-secondary">{c.issuer}</span> },
+              { key: 'issueDate', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-text-tertiary text-xs">{c.issueDate}</span> },
+              { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: c => <ColorDot color={c.color} /> },
+            ] as Column<Cert>[]}
+            rows={certs}
+            locale={locale}
+            rowKey={c => String(c.id)}
+            rowActions={[
+              { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: c => { setEditC(c); setModal(true) } },
+              { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: c => toggleCert(c) },
+              { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => delCert(c.id!) },
+            ] as RowAction<Cert>[]}
+            exportName="certifications"
+          />
         </Card>
       )}
 

@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { crud, useResource } from '@/lib/admin/crud'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast, ColorDot } from '@/components/admin/ui'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { MediaPicker, GalleryPicker } from '@/components/admin/MediaPicker'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 
@@ -133,41 +135,25 @@ export function ProjectsManager() {
       />
 
       <Card>
-        <Table headers={[t('name'), t('industry'), t('status'), t('featured'), t('cover'), t('actions')]}>
-          {projects.map((p) => (
-            <TR key={p.id}>
-              <TD>
-                <div className="flex items-center gap-2">
-                  <ColorDot color={p.color} />
-                  <div>
-                    <div className="font-medium text-white">{isFa ? p.nameFa : p.nameEn}</div>
-                    <div className="text-xs text-text-tertiary">{isFa ? p.nameEn : p.nameFa} · {p.year}</div>
-                    <div className="text-[10px] text-text-disabled">{p.slug}</div>
-                  </div>
-                </div>
-              </TD>
-              <TD className="text-text-secondary text-xs">{isFa ? p.industryFa : p.industryEn}</TD>
-              <TD>
-                <Badge color={p.projectStatus === 'completed' ? 'green' : p.projectStatus === 'ongoing' ? 'indigo' : 'slate'}>
-                  {t(p.projectStatus || 'completed')}
-                </Badge>
-              </TD>
-              <TD><Badge color={p.featured ? 'indigo' : 'slate'}>{p.featured ? `★ ${t('featured')}` : t('regular')}</Badge></TD>
-              <TD>
-                {p.coverImage
-                  ? <img src={p.coverImage} alt="" className="w-10 h-10 object-cover rounded-lg border border-border" />
-                  : <span className="text-text-disabled text-xs">—</span>}
-              </TD>
-              <TD>
-                <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => openEdit(p)}>{t('edit')}</Btn>
-                  <Btn size="sm" variant="secondary" onClick={() => toggle(p)}>{p.active ? '⏸' : '▶'}</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(p.id!)}>{t('delete')}</Btn>
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
+        <DataTable
+          tableId="cms-projects"
+          columns={[
+            { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), value: p => isFa ? p.nameFa : p.nameEn, render: p => <div className="flex items-center gap-2"><ColorDot color={p.color} /><div><div className="font-medium text-white">{isFa ? p.nameFa : p.nameEn}</div><div className="text-xs text-text-tertiary">{isFa ? p.nameEn : p.nameFa} · {p.year}</div><div className="text-[10px] text-text-disabled">{p.slug}</div></div></div> },
+            { key: 'industryEn', labelEn: 'Industry', labelFa: t('industry'), type: 'enum', value: p => isFa ? p.industryFa : p.industryEn, render: p => <span className="text-text-secondary text-xs">{isFa ? p.industryFa : p.industryEn}</span> },
+            { key: 'projectStatus', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['completed', 'ongoing', 'planned'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: p => <Badge color={p.projectStatus === 'completed' ? 'green' : p.projectStatus === 'ongoing' ? 'indigo' : 'slate'}>{t(p.projectStatus || 'completed')}</Badge> },
+            { key: 'featured', labelEn: 'Featured', labelFa: t('featured'), type: 'boolean', value: p => !!p.featured, render: p => <Badge color={p.featured ? 'indigo' : 'slate'}>{p.featured ? `★ ${t('featured')}` : t('regular')}</Badge> },
+            { key: 'coverImage', labelEn: 'Cover', labelFa: t('cover'), sortable: false, render: p => p.coverImage ? <img src={p.coverImage} alt="" className="w-10 h-10 object-cover rounded-lg border border-border" /> : <span className="text-text-disabled text-xs">—</span> },
+          ] as Column<Project>[]}
+          rows={projects}
+          locale={locale}
+          rowKey={p => String(p.id)}
+          rowActions={[
+            { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => openEdit(p) },
+            { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: p => toggle(p) },
+            { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: p => del(p.id!) },
+          ] as RowAction<Project>[]}
+          exportName="case-studies"
+        />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('editCaseStudy') : t('newCaseStudyModal')} size="xl">
