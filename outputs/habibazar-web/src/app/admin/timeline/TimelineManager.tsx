@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast, EmptyState, ColorDot } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast, EmptyState, ColorDot } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Item = {
   id?: number; year: string; titleEn: string; titleFa: string
@@ -13,6 +15,7 @@ const EMPTY: Item = { year: '', titleEn: '', titleFa: '', companyEn: '', company
 
 export function TimelineManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [items, setItems] = useState<Item[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Item>(EMPTY)
@@ -58,25 +61,26 @@ export function TimelineManager() {
         {items.length === 0 ? (
           <EmptyState icon="◎" title={t('timelineEmpty')} description={t('timelineEmptySub')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('timelineAddFirst')}</Btn>} />
         ) : (
-          <Table headers={[t('year'), t('titleEn'), t('companyEn'), t('color'), t('sortOrder'), t('status'), t('actions')]}>
-            {items.map((item) => (
-              <TR key={item.id}>
-                <TD><span className="font-mono text-brand">{item.year}</span></TD>
-                <TD>{item.titleEn}</TD>
-                <TD className="text-text-tertiary">{item.companyEn}</TD>
-                <TD><ColorDot color={item.color} /></TD>
-                <TD className="text-text-tertiary">{item.sortOrder}</TD>
-                <TD><Badge color={item.active ? 'green' : 'slate'}>{item.active ? t('active') : t('hidden')}</Badge></TD>
-                <TD>
-                  <div className="flex gap-2">
-                    <Btn size="sm" variant="secondary" onClick={() => { setEditing(item); setModal(true) }}>{t('edit')}</Btn>
-                    <Btn size="sm" variant="secondary" onClick={() => toggle(item)}>{item.active ? '⏸' : '▶'}</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => del(item.id!)}>{t('delete')}</Btn>
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </Table>
+          <DataTable
+            tableId="timeline"
+            columns={[
+              { key: 'year', labelEn: 'Year', labelFa: t('year'), type: 'number', numeric: true, render: item => <span className="font-mono text-brand">{item.year}</span> },
+              { key: 'titleEn', labelEn: 'Title', labelFa: t('titleEn'), render: item => <span>{item.titleEn}</span> },
+              { key: 'companyEn', labelEn: 'Company', labelFa: t('companyEn'), type: 'enum', render: item => <span className="text-text-tertiary">{item.companyEn}</span> },
+              { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: item => <ColorDot color={item.color} /> },
+              { key: 'sortOrder', labelEn: 'Order', labelFa: t('sortOrder'), type: 'number', numeric: true, render: item => <span className="text-text-tertiary">{item.sortOrder}</span> },
+              { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: item => item.active, render: item => <Badge color={item.active ? 'green' : 'slate'}>{item.active ? t('active') : t('hidden')}</Badge> },
+            ] as Column<Item>[]}
+            rows={items}
+            locale={locale}
+            rowKey={item => String(item.id)}
+            rowActions={[
+              { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: item => { setEditing(item); setModal(true) } },
+              { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: item => toggle(item) },
+              { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: item => del(item.id!) },
+            ] as RowAction<Item>[]}
+            exportName="timeline"
+          />
         )}
       </Card>
 
