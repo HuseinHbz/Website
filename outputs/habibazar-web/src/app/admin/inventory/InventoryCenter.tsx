@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'dashboard' | 'products' | 'warehouses' | 'moves'
 type StockStatus = 'out' | 'below_safety' | 'reorder' | 'ok' | 'overstock'
@@ -189,38 +191,25 @@ function Products({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
     catch { toast(t('inv_saveFail'), 'error') }
   }
 
+  const productColumns: Column<Product>[] = [
+    { key: 'nameEn', labelEn: 'Product', labelFa: t('inv_colProduct'), value: p => fa ? (p.nameFa || p.nameEn) : p.nameEn, render: p => <div><div className="font-medium text-text-primary">{fa ? (p.nameFa || p.nameEn) : p.nameEn}</div><div className="text-xs text-text-tertiary">{p.barcode || '—'}</div></div> },
+    { key: 'sku', labelEn: 'SKU', labelFa: t('inv_colSku'), render: p => <span className="text-text-tertiary text-xs font-mono">{p.sku}</span> },
+    { key: 'category', labelEn: 'Category', labelFa: t('inv_colCategory'), type: 'enum', render: p => <span className="text-text-secondary text-xs">{p.category}</span> },
+    { key: 'onHand', labelEn: 'On Hand', labelFa: t('inv_colOnHand'), type: 'number', numeric: true, value: p => p.onHand ?? 0, render: p => <span className="text-text-secondary text-xs">{p.onHand} {p.unit}</span> },
+    { key: 'avgCost', labelEn: 'Avg Cost', labelFa: t('inv_colAvgCost'), type: 'number', numeric: true, value: p => p.avgCost ?? 0, render: p => <span className="text-text-secondary text-xs">{money(p.avgCost)}</span> },
+    { key: 'value', labelEn: 'Value', labelFa: t('inv_colValue'), type: 'number', numeric: true, value: p => p.value ?? 0, render: p => <span className="text-text-secondary text-xs">{money(p.value)}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('inv_colStatus'), type: 'enum', value: p => p.status ?? 'ok', render: p => <Badge color={STATUS_COLOR[p.status ?? 'ok']}>{t(`inv_st_${p.status}` as 'inv_st_ok')}</Badge> },
+  ]
+  const productActions: RowAction<Product>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('inv_edit'), icon: '✎', onClick: p => { setEditing({ ...p, trackLot: !!p.trackLot, trackSerial: !!p.trackSerial, active: !!p.active }); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('inv_del'), icon: '🗑', danger: true, onClick: p => del(p.id!) },
+  ]
+
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY_PRODUCT); setModal(true) }}>{t('inv_newProduct')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('inv_loading')}</p>
-          : products.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('inv_noProducts')}</p>
-          : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('inv_colProduct'), t('inv_colSku'), t('inv_colCategory'), t('inv_colOnHand'), t('inv_colAvgCost'), t('inv_colValue'), t('inv_colStatus'), t('inv_colActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {products.map(p => (
-                  <tr key={p.id} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{fa ? (p.nameFa || p.nameEn) : p.nameEn}</div><div className="text-xs text-text-tertiary">{p.barcode || '—'}</div></td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs font-mono">{p.sku}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{p.category}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{p.onHand} {p.unit}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{money(p.avgCost)}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{money(p.value)}</td>
-                    <td className="px-4 py-2.5"><Badge color={STATUS_COLOR[p.status ?? 'ok']}>{t(`inv_st_${p.status}` as 'inv_st_ok')}</Badge></td>
-                    <td className="px-4 py-2.5"><div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...p, trackLot: !!p.trackLot, trackSerial: !!p.trackSerial, active: !!p.active }); setModal(true) }}>{t('inv_edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(p.id!)}>{t('inv_del')}</Btn>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="inventory-products" columns={productColumns} rows={products} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={p => String(p.id)} rowActions={productActions} exportName="products" emptyLabel={t('inv_noProducts')} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('inv_editProduct') : t('inv_newProduct')} size="xl">
@@ -293,36 +282,23 @@ function Warehouses({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
     catch (e) { toast(e instanceof Error ? e.message : t('inv_saveFail'), 'error') }
   }
 
+  const whColumns: Column<Warehouse>[] = [
+    { key: 'code', labelEn: 'Code', labelFa: t('inv_colWhCode'), render: w => <span className="font-mono text-text-primary text-xs">{w.code}</span> },
+    { key: 'nameEn', labelEn: 'Name', labelFa: t('inv_colWhName'), value: w => fa ? (w.nameFa || w.nameEn) : w.nameEn, render: w => <span className="text-text-secondary">{fa ? (w.nameFa || w.nameEn) : w.nameEn}</span> },
+    { key: 'branch', labelEn: 'Branch', labelFa: t('inv_colBranch'), render: w => <span className="text-text-tertiary text-xs">{w.branch || '—'}</span> },
+    { key: 'locationCount', labelEn: 'Locations', labelFa: t('inv_colLocations'), type: 'number', numeric: true, value: w => w.locationCount ?? 0 },
+    { key: 'active', labelEn: 'Status', labelFa: t('inv_colStatus'), type: 'boolean', value: w => !!w.active, render: w => <Badge color={w.active ? 'green' : 'slate'}>{w.active ? t('inv_active') : t('inv_inactive')}</Badge> },
+  ]
+  const whActions: RowAction<Warehouse>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('inv_edit'), icon: '✎', onClick: w => { setEditing({ ...w, active: !!w.active }); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('inv_del'), icon: '🗑', danger: true, onClick: w => del(w.id!) },
+  ]
+
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY_WH); setModal(true) }}>{t('inv_newWarehouse')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('inv_loading')}</p>
-          : items.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('inv_noWarehouses')}</p>
-          : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('inv_colWhCode'), t('inv_colWhName'), t('inv_colBranch'), t('inv_colLocations'), t('inv_colStatus'), t('inv_colActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {items.map(w => (
-                  <tr key={w.id} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5 font-mono text-text-primary text-xs">{w.code}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{fa ? (w.nameFa || w.nameEn) : w.nameEn}</td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs">{w.branch || '—'}</td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs">{w.locationCount ?? 0}</td>
-                    <td className="px-4 py-2.5"><Badge color={w.active ? 'green' : 'slate'}>{w.active ? t('inv_active') : t('inv_inactive')}</Badge></td>
-                    <td className="px-4 py-2.5"><div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...w, active: !!w.active }); setModal(true) }}>{t('inv_edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(w.id!)}>{t('inv_del')}</Btn>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="inventory-warehouses" columns={whColumns} rows={items} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={w => String(w.id)} rowActions={whActions} exportName="warehouses" emptyLabel={t('inv_noWarehouses')} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('inv_editWarehouse') : t('inv_newWarehouse')} size="lg">
@@ -385,6 +361,15 @@ function Moves({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
 
   const pOpts = products.map(p => ({ value: String(p.id), label: `${p.sku} — ${fa ? (p.nameFa || p.nameEn) : p.nameEn}` }))
   const wOpts = warehouses.map(w => ({ value: String(w.id), label: `${w.code} — ${fa ? (w.nameFa || w.nameEn) : w.nameEn}` }))
+  const moveColumns: Column<Move>[] = [
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('inv_colDate'), type: 'date', render: m => <span className="text-text-tertiary text-xs font-mono">{m.createdAt}</span> },
+    { key: 'productEn', labelEn: 'Product', labelFa: t('inv_colProduct'), value: m => fa ? (m.productFa || m.productEn) : m.productEn, render: m => <span className="text-text-secondary text-xs">{fa ? (m.productFa || m.productEn) : m.productEn}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('inv_colType'), type: 'enum', options: MOVE_TYPES.map(mt => ({ value: mt, labelEn: mt, labelFa: t(`inv_mt_${mt}` as 'inv_mt_receipt') })), render: m => <Badge color="slate">{t(`inv_mt_${m.type}` as 'inv_mt_receipt')}</Badge> },
+    { key: 'warehouse', labelEn: 'Warehouse', labelFa: t('inv_colWarehouse'), type: 'enum', render: m => <span className="text-text-tertiary text-xs">{m.warehouse}</span> },
+    { key: 'qty', labelEn: 'Qty', labelFa: t('inv_colQty'), type: 'number', numeric: true, render: m => <span className={`text-xs font-medium ${m.qty < 0 ? 'text-danger' : 'text-success'}`}>{m.qty > 0 ? '+' : ''}{m.qty}</span> },
+    { key: 'unitCost', labelEn: 'Unit Cost', labelFa: t('inv_colUnitCost'), type: 'number', numeric: true, render: m => <span className="text-text-tertiary text-xs">{money(m.unitCost)}</span> },
+    { key: 'ref', labelEn: 'Ref', labelFa: t('inv_colRef'), render: m => <span className="text-text-tertiary text-xs">{m.ref || '—'}</span> },
+  ]
 
   return (
     <div className="grid lg:grid-cols-3 gap-4">
@@ -409,31 +394,8 @@ function Moves({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden lg:col-span-2">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('inv_loading')}</p>
-          : moves.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('inv_noMoves')}</p>
-          : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('inv_colDate'), t('inv_colProduct'), t('inv_colType'), t('inv_colWarehouse'), t('inv_colQty'), t('inv_colUnitCost'), t('inv_colRef')].map(h => <th key={h} className="px-3 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {moves.map(m => (
-                  <tr key={m.id} className="border-b border-subtle/50">
-                    <td className="px-3 py-2 text-text-tertiary text-xs font-mono">{m.createdAt}</td>
-                    <td className="px-3 py-2 text-text-secondary text-xs">{fa ? (m.productFa || m.productEn) : m.productEn}</td>
-                    <td className="px-3 py-2"><Badge color="slate">{t(`inv_mt_${m.type}` as 'inv_mt_receipt')}</Badge></td>
-                    <td className="px-3 py-2 text-text-tertiary text-xs">{m.warehouse}</td>
-                    <td className={`px-3 py-2 text-xs font-medium ${m.qty < 0 ? 'text-danger' : 'text-success'}`}>{m.qty > 0 ? '+' : ''}{m.qty}</td>
-                    <td className="px-3 py-2 text-text-tertiary text-xs">{money(m.unitCost)}</td>
-                    <td className="px-3 py-2 text-text-tertiary text-xs">{m.ref || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4 lg:col-span-2">
+        <DataTable tableId="inventory-moves" columns={moveColumns} rows={moves} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={m => String(m.id)} exportName="stock-moves" emptyLabel={t('inv_noMoves')} />
       </Card>
     </div>
   )
