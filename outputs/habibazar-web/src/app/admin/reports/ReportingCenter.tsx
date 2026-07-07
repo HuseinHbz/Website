@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, Btn, Select, PageHeader, Badge, StatCard, Table, TR, TD, useToast } from '@/components/admin/ui'
+import { Card, Btn, Select, PageHeader, Badge, StatCard, useToast } from '@/components/admin/ui'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column as DTColumn, Row as DTRow } from '@/lib/admin/dataTable'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { summarize, type Row, type Column } from '@/lib/reports/pivot'
 
@@ -114,18 +116,15 @@ export function ReportingCenter() {
           )}
 
           {view === 'table' ? (
-            <Card className="p-0 overflow-hidden">
-              {result.rows.length === 0 ? (
-                <p className="p-8 text-center text-text-tertiary text-sm">{t('rep_noData')}</p>
-              ) : (
-                <Table headers={result.columns.map(c => c.label)}>
-                  {result.rows.map((row, i) => (
-                    <TR key={i}>
-                      {result.columns.map(c => <TD key={c.key}>{fmt(row[c.key])}</TD>)}
-                    </TR>
-                  ))}
-                </Table>
-              )}
+            <Card className="p-4">
+              <DataTable
+                tableId={`report-${result.def.id ?? 'result'}`}
+                columns={result.columns.map(c => ({ key: c.key, labelEn: c.label, labelFa: c.label, numeric: typeof result.rows[0]?.[c.key] === 'number', render: (row: DTRow) => fmt(row[c.key]) })) as DTColumn<DTRow>[]}
+                rows={result.rows as DTRow[]}
+                locale={locale}
+                exportName={`report-${result.def.id ?? 'result'}`}
+                emptyLabel={t('rep_noData')}
+              />
             </Card>
           ) : (
             <Card className="p-5 space-y-3">

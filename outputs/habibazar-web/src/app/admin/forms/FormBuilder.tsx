@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { useT } from '@/lib/admin/locale'
 
 type FieldType = 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'number' | 'date' | 'hidden'
@@ -58,6 +61,7 @@ function parseFields(json: string): FormField[] {
 
 export function FormBuilder() {
   const t = useT()
+  const locale = useAdminLocale()
   const [formsList, setFormsList] = useState<FormEntry[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<FormEntry>(EMPTY)
@@ -150,27 +154,25 @@ export function FormBuilder() {
       <PageHeader title={t('formBuilderTitle')} action={<Btn onClick={openNew}>{t('addForm')}</Btn>} />
 
       <Card>
-        <Table headers={['Form', 'Type', 'Fields', 'Email To', 'Status', 'Actions']}>
-          {formsList.map(f => (
-            <TR key={f.id}>
-              <TD>
-                <div className="font-medium text-white">{f.name}</div>
-                <div className="text-xs text-text-tertiary">/{f.slug}</div>
-              </TD>
-              <TD><Badge color={TYPE_COLOR[f.type]}>{f.type}</Badge></TD>
-              <TD className="text-text-secondary">{parseFields(f.fieldsJson).length} fields</TD>
-              <TD className="text-text-tertiary text-xs truncate max-w-[120px]">{f.emailTo || '—'}</TD>
-              <TD><Badge color={f.active ? 'green' : 'slate'}>{f.active ? 'Active' : 'Inactive'}</Badge></TD>
-              <TD>
-                <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => openEdit(f)}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(f.id!)}>Del</Btn>
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
-        {formsList.length === 0 && <div className="text-center py-12 text-text-disabled text-sm">No forms yet. Create your first form.</div>}
+        <DataTable
+          tableId="forms"
+          columns={[
+            { key: 'name', labelEn: 'Form', labelFa: 'فرم', render: f => <div><div className="font-medium text-white">{f.name}</div><div className="text-xs text-text-tertiary">/{f.slug}</div></div> },
+            { key: 'type', labelEn: 'Type', labelFa: 'نوع', type: 'enum', options: ['contact', 'consultation', 'newsletter', 'custom'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: f => <Badge color={TYPE_COLOR[f.type]}>{f.type}</Badge> },
+            { key: 'fields', labelEn: 'Fields', labelFa: 'فیلدها', type: 'number', numeric: true, value: f => parseFields(f.fieldsJson).length, render: f => <span className="text-text-secondary">{parseFields(f.fieldsJson).length} fields</span> },
+            { key: 'emailTo', labelEn: 'Email To', labelFa: 'ایمیل', render: f => <span className="text-text-tertiary text-xs">{f.emailTo || '—'}</span> },
+            { key: 'active', labelEn: 'Status', labelFa: 'وضعیت', type: 'boolean', value: f => f.active, render: f => <Badge color={f.active ? 'green' : 'slate'}>{f.active ? 'Active' : 'Inactive'}</Badge> },
+          ] as Column<FormEntry>[]}
+          rows={formsList}
+          locale={locale}
+          rowKey={f => String(f.id)}
+          rowActions={[
+            { id: 'edit', labelEn: 'Edit', labelFa: 'ویرایش', icon: '✎', onClick: f => openEdit(f) },
+            { id: 'del', labelEn: 'Delete', labelFa: 'حذف', icon: '🗑', danger: true, onClick: f => del(f.id!) },
+          ] as RowAction<FormEntry>[]}
+          exportName="forms"
+          emptyLabel="No forms yet."
+        />
       </Card>
 
       {/* Form editor modal */}
