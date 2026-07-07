@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 const DOC_TYPES = ['invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty', 'delivery_note', 'service_report', 'completion_certificate', 'financial_report'] as const
 type DocType = (typeof DOC_TYPES)[number]
@@ -14,6 +16,7 @@ interface SalesDoc { id: number; docNo: string; customerName: string; total: num
 
 export function DocumentCenter() {
   const t = useT()
+  const locale = useAdminLocale()
   const { toast, ToastContainer } = useToast()
   const [docs, setDocs] = useState<GenDoc[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +70,18 @@ export function DocumentCenter() {
     setLines([{ description: '', qty: 1, unitPrice: 0 }]); setModal(true)
   }
 
+  const columns: Column<GenDoc>[] = [
+    { key: 'number', labelEn: 'No.', labelFa: t('doc_cNo'), render: d => <span className="font-mono text-xs text-text-secondary">{d.number}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('doc_cType'), type: 'enum', options: DOC_TYPES.map(x => ({ value: x, labelEn: x, labelFa: t(`doc_t_${x}` as 'doc_t_invoice') })), render: d => <span className="text-text-secondary text-xs">{t(`doc_t_${d.type}` as 'doc_t_invoice')}</span> },
+    { key: 'partyName', labelEn: 'Party', labelFa: t('doc_cParty'), render: d => <span className="text-text-secondary">{d.partyName || '—'}</span> },
+    { key: 'date', labelEn: 'Date', labelFa: t('doc_cDate'), type: 'date', render: d => <span className="text-text-tertiary text-xs">{d.date}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('doc_cStatus'), type: 'enum', options: ['issued', 'void'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: d => <Badge color={d.status === 'issued' ? 'green' : 'red'}>{t(`doc_st_${d.status}` as 'doc_st_issued')}</Badge> },
+  ]
+  const rowActions: RowAction<GenDoc>[] = [
+    { id: 'print', labelEn: 'Print', labelFa: t('doc_print'), icon: '🖨', onClick: d => window.open(`/api/admin/erp/documents/render?id=${d.id}`, '_blank') },
+    { id: 'void', labelEn: 'Void', labelFa: t('doc_void'), icon: '✕', danger: true, hidden: d => d.status !== 'issued', onClick: d => void_(d.id) },
+  ]
+
   return (
     <>
       <ToastContainer />
@@ -83,27 +98,18 @@ export function DocumentCenter() {
         ))}
       </div>
 
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('doc_loading')}</p>
-          : docs.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('doc_empty')}</p>
-          : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('doc_cNo'), t('doc_cType'), t('doc_cParty'), t('doc_cDate'), t('doc_cStatus'), t('doc_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{docs.map(d => (
-              <tr key={d.id} className="border-b border-subtle/50">
-                <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{d.number}</td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{t(`doc_t_${d.type}` as 'doc_t_invoice')}</td>
-                <td className="px-4 py-2.5 text-text-secondary">{d.partyName || '—'}</td>
-                <td className="px-4 py-2.5 text-text-tertiary text-xs">{d.date}</td>
-                <td className="px-4 py-2.5"><Badge color={d.status === 'issued' ? 'green' : 'red'}>{t(`doc_st_${d.status}` as 'doc_st_issued')}</Badge></td>
-                <td className="px-4 py-2.5"><div className="flex gap-2">
-                  <Btn size="sm" onClick={() => window.open(`/api/admin/erp/documents/render?id=${d.id}`, '_blank')}>{t('doc_print')}</Btn>
-                  {d.status === 'issued' && <Btn size="sm" variant="danger" onClick={() => void_(d.id)}>{t('doc_void')}</Btn>}
-                </div></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="erp-documents"
+          columns={columns}
+          rows={docs}
+          locale={locale}
+          loading={loading}
+          rowKey={d => String(d.id)}
+          rowActions={rowActions}
+          exportName="documents"
+          emptyLabel={t('doc_empty')}
+        />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={t('doc_new')} size="lg">

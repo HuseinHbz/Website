@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Btn, Input, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { extractVariables, renderPrompt } from '@/lib/ai/prompts'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 interface Prompt {
   id: number; key: string; nameEn: string; nameFa: string | null; category: string
@@ -152,34 +154,32 @@ export function PromptCenter() {
     )
   }
 
+  const promptColumns: Column<Prompt>[] = [
+    { key: 'nameEn', labelEn: 'Name', labelFa: t('apr_colName'), value: p => fa ? (p.nameFa || p.nameEn) : p.nameEn, render: p => <div><div className="font-medium text-text-primary">{fa ? (p.nameFa || p.nameEn) : p.nameEn}</div><div className="text-xs text-text-tertiary">{p.description || '—'}</div></div> },
+    { key: 'key', labelEn: 'Key', labelFa: t('apr_colKey'), render: p => <span className="text-text-tertiary text-xs font-mono">{p.key}</span> },
+    { key: 'category', labelEn: 'Category', labelFa: t('apr_colCategory'), type: 'enum', render: p => <span className="text-text-secondary text-xs">{p.category}</span> },
+    { key: 'activeVersion', labelEn: 'Version', labelFa: t('apr_colVersion'), type: 'number', numeric: true, render: p => <span className="text-text-secondary text-xs">v{p.activeVersion}/v{p.currentVersion}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('apr_colStatus'), type: 'enum', options: ['draft', 'approved', 'archived'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: p => <Badge color={statusColor(p.status)}>{p.status}</Badge> },
+  ]
+
   return (
     <>
       <ToastContainer />
       <PageHeader title={t('apr_title')} subtitle={t('apr_subtitle')} action={<Btn onClick={() => { setDraft({ ...EMPTY }); setCreateOpen(true) }}>{t('apr_new')}</Btn>} />
 
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('apr_loading')}</p>
-          : prompts.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('apr_empty')}</p>
-          : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('apr_colName'), t('apr_colKey'), t('apr_colCategory'), t('apr_colVersion'), t('apr_colStatus')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {prompts.map(p => (
-                  <tr key={p.id} className="border-b border-subtle/50 cursor-pointer hover:bg-surface-2" onClick={() => openDetail(p)}>
-                    <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{fa ? (p.nameFa || p.nameEn) : p.nameEn}</div><div className="text-xs text-text-tertiary">{p.description || '—'}</div></td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs font-mono">{p.key}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">{p.category}</td>
-                    <td className="px-4 py-2.5 text-text-secondary text-xs">v{p.activeVersion}/v{p.currentVersion}</td>
-                    <td className="px-4 py-2.5"><Badge color={statusColor(p.status)}>{p.status}</Badge></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="ai-prompts"
+          columns={promptColumns}
+          rows={prompts}
+          locale={fa ? 'fa' : 'en'}
+          loading={loading}
+          rowKey={p => String(p.id)}
+          onRowClick={openDetail}
+          exportName="ai-prompts"
+          emptyLabel={t('apr_empty')}
+          quickCreate={{ labelEn: 'New Prompt', labelFa: t('apr_new'), onClick: () => { setDraft({ ...EMPTY }); setCreateOpen(true) } }}
+        />
       </Card>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('apr_new')} size="lg">
