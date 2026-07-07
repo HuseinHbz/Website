@@ -192,6 +192,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `format=csv`), RBAC-gated. Bilingual UI: module-grouped picker, summary cards,
   Table + group-by Summary views, CSV export. Purchasing report deferred until
   its module ships. Verified vs real PostgreSQL (all 7 reports aggregate correctly).
+- **Global Search** (`/admin/search`, `GlobalSearch`) — Module 13. One admin-side
+  search layer over live business data (distinct from the public CMS `/api/search`).
+  Pure engine `src/lib/search/engine.ts` (`tokenize`/`scoreField` exact>prefix>
+  word-boundary>substring/`scoreCandidate` title×3>subtitle×2>keywords/`rankHits`/
+  `groupByModule`; 8 unit tests). Server layer `src/lib/search/globalSearch.ts` — a
+  closed registry of 13 parametrised-ILIKE sources across 10 modules (CRM leads,
+  sales customers/documents, GL accounts/journals, inventory products, assets,
+  projects/tasks, generated documents, workflows, rules, integrations); the search
+  pattern is the ONLY bound param (no arbitrary SQL), sources run concurrently, a
+  missing table never breaks search. API `GET /api/admin/search` (`?q=` ≥2 chars,
+  `?modules=` filter), RBAC-gated. Debounced bilingual UI: module filter chips +
+  grouped result cards linking into each module. Verified vs real PostgreSQL.
 - **Executive Dashboard** (`/admin`, `ExecutiveDashboard`) — the redesigned admin
   home. Aggregates KPIs from every module via `GET /api/admin/overview`
   (`lib/admin/executiveOverview.ts`, each module guarded so one failure never

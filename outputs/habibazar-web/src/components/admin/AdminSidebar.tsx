@@ -8,6 +8,7 @@ const NAV = [
     group: { en: 'Overview', fa: 'خلاصه' },
     items: [
       { labelEn: 'Dashboard', labelFa: 'داشبورد', href: '/admin', icon: '◈' },
+      { labelEn: 'Global Search', labelFa: 'جستجوی سراسری', href: '/admin/search', icon: '🔍' },
       { labelEn: 'Analytics', labelFa: 'آنالیتیکس', href: '/admin/dashboard', icon: '◉' },
     ],
   },
