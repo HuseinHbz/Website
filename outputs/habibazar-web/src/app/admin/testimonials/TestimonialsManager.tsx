@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Testimonial = {
   id: number
@@ -20,6 +22,7 @@ type Testimonial = {
 
 export function TestimonialsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Testimonial> | null>(null)
@@ -54,6 +57,17 @@ export function TestimonialsManager() {
     await fetch('/api/admin/testimonials', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: t.id, active: !t.active }) })
     load()
   }
+
+  const columns: Column<Testimonial>[] = [
+    { key: 'clientName', labelEn: 'Client', labelFa: t('client'), render: t2 => <div><div className="font-medium text-white">{t2.clientName}</div><div className="text-xs text-text-tertiary">{t2.clientTitle} · {t2.clientCompany}</div></div> },
+    { key: 'quoteEn', labelEn: 'Quote', labelFa: t('quote'), render: t2 => <span className="text-text-secondary">{t2.quoteEn}</span> },
+    { key: 'rating', labelEn: 'Rating', labelFa: t('rating'), type: 'number', numeric: true, render: t2 => <span className="text-yellow-400">{'★'.repeat(t2.rating)}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: t2 => t2.active, render: t2 => <><Badge color={t2.active ? 'green' : 'slate'}>{t2.active ? t('active') : t('inactive')}</Badge>{t2.featured && <> <Badge color="yellow">{t('featuredLabel')}</Badge></>}</> },
+  ]
+  const rowActions: RowAction<Testimonial>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: t2 => setEditing(t2) },
+    { id: 'toggle', labelEn: 'Toggle', labelFa: t('disable'), icon: '⇄', onClick: t2 => toggle(t2) },
+  ]
 
   return (
     <div>
@@ -104,43 +118,17 @@ export function TestimonialsManager() {
       )}
 
       <Card>
-        {loading ? (
-          <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('client')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('quote')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('rating')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('status')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {testimonials.map(t2 => (
-                <tr key={t2.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-white">{t2.clientName}</div>
-                    <div className="text-xs text-text-tertiary">{t2.clientTitle} · {t2.clientCompany}</div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary max-w-xs truncate">{t2.quoteEn}</td>
-                  <td className="px-4 py-3 text-yellow-400">{'★'.repeat(t2.rating)}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={t2.active ? 'green' : 'slate'}>{t2.active ? t('active') : t('inactive')}</Badge>
-                    {t2.featured && <> <Badge color="yellow">{t('featuredLabel')}</Badge></>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="ghost" onClick={() => setEditing(t2)}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => toggle(t2)}>{t2.active ? t('disable') : t('enable')}</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="testimonials"
+          columns={columns}
+          rows={testimonials}
+          locale={locale}
+          loading={loading}
+          rowKey={t2 => String(t2.id)}
+          rowActions={rowActions}
+          exportName="testimonials"
+          quickCreate={{ labelEn: 'Add Testimonial', labelFa: t('addTestimonial'), onClick: () => setEditing({ rating: 5, active: true, featured: false, sortOrder: testimonials.length + 1 }) }}
+        />
       </Card>
     </div>
   )

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Partner = { id: number; slug: string; nameEn: string; type: string; tier: string; website: string | null; active: boolean; featured: boolean; sortOrder: number }
 
@@ -12,6 +14,7 @@ const TIER_COLORS: Record<string, string> = { platinum: 'blue', gold: 'yellow', 
 
 export function PartnersManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Partner & { descriptionEn: string }> | null>(null)
@@ -28,6 +31,17 @@ export function PartnersManager() {
     if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(t('failed'), 'error')
     setSaving(false)
   }
+
+  const columns: Column<Partner>[] = [
+    { key: 'nameEn', labelEn: 'Partner', labelFa: t('partner'), render: p => <span className="font-medium text-white">{p.nameEn}</span> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })) },
+    { key: 'tier', labelEn: 'Tier', labelFa: t('tier'), type: 'enum', options: TIERS.map(tr => ({ value: tr, labelEn: tr, labelFa: tr })), render: p => <Badge color={TIER_COLORS[p.tier] || 'slate'}>{p.tier}</Badge> },
+    { key: 'website', labelEn: 'Website', labelFa: t('website'), render: p => <span className="text-text-secondary text-xs">{p.website || '—'}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: p => p.active, render: p => <Badge color={p.active ? 'green' : 'slate'}>{p.active ? t('active') : t('inactive')}</Badge> },
+  ]
+  const rowActions: RowAction<Partner>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => setEditing(p) },
+  ]
 
   return (
     <div>
@@ -56,23 +70,17 @@ export function PartnersManager() {
       )}
 
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">{[t('partner'), t('type'), t('tier'), t('website'), t('status'), t('actions')].map(h => <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>)}</tr></thead>
-            <tbody>
-              {partners.map(p => (
-                <tr key={p.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3 font-medium text-white">{p.nameEn}</td>
-                  <td className="px-4 py-3 text-text-secondary">{p.type}</td>
-                  <td className="px-4 py-3"><Badge color={TIER_COLORS[p.tier] || 'slate'}>{p.tier}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary text-xs">{p.website || '—'}</td>
-                  <td className="px-4 py-3"><Badge color={p.active ? 'green' : 'slate'}>{p.active ? t('active') : t('inactive')}</Badge></td>
-                  <td className="px-4 py-3"><Btn size="sm" variant="ghost" onClick={() => setEditing(p)}>{t('edit')}</Btn></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="partners"
+          columns={columns}
+          rows={partners}
+          locale={locale}
+          loading={loading}
+          rowKey={p => String(p.id)}
+          rowActions={rowActions}
+          exportName="partners"
+          quickCreate={{ labelEn: 'Add Partner', labelFa: t('addPartner'), onClick: () => setEditing({ type: 'technology', tier: 'silver', active: true, featured: false, sortOrder: partners.length + 1 }) }}
+        />
       </Card>
     </div>
   )

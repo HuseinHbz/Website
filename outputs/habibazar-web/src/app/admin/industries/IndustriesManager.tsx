@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Industry = {
   id: number
@@ -18,6 +20,7 @@ type Industry = {
 
 export function IndustriesManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [industries, setIndustries] = useState<Industry[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Industry> | null>(null)
@@ -47,6 +50,21 @@ export function IndustriesManager() {
     }
     setSaving(false)
   }
+
+  const columns: Column<Industry>[] = [
+    {
+      key: 'nameEn', labelEn: 'Industry', labelFa: t('colIndustry'),
+      render: ind => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base" style={{ background: `${ind.color}20`, border: `1px solid ${ind.color}30` }}>{ind.icon}</div>
+          <div><div className="font-medium text-white">{ind.nameEn}</div><div className="text-xs text-text-tertiary">{ind.nameFa}</div></div>
+        </div>
+      ),
+    },
+    { key: 'taglineEn', labelEn: 'Tagline', labelFa: t('colTagline'), render: ind => <span className="text-text-secondary">{ind.taglineEn}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: ind => ind.active, render: ind => <Badge color={ind.active ? 'green' : 'slate'}>{ind.active ? t('active') : t('inactive')}</Badge> },
+  ]
+  const rowActions: RowAction<Industry>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: ind => setEditing(ind) }]
 
   return (
     <div>
@@ -85,45 +103,17 @@ export function IndustriesManager() {
       )}
 
       <Card>
-        {loading ? (
-          <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('colIndustry')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('colTagline')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('status')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {industries.map(ind => (
-                <tr key={ind.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
-                        style={{ background: `${ind.color}20`, border: `1px solid ${ind.color}30` }}>
-                        {ind.icon}
-                      </div>
-                      <div>
-                        <div className="font-medium text-white">{ind.nameEn}</div>
-                        <div className="text-xs text-text-tertiary">{ind.nameFa}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary max-w-xs truncate">{ind.taglineEn}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={ind.active ? 'green' : 'slate'}>{ind.active ? t('active') : t('inactive')}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Btn size="sm" variant="ghost" onClick={() => setEditing(ind)}>{t('edit')}</Btn>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="industries"
+          columns={columns}
+          rows={industries}
+          locale={locale}
+          loading={loading}
+          rowKey={ind => String(ind.id)}
+          rowActions={rowActions}
+          exportName="industries"
+          quickCreate={{ labelEn: 'Add Industry', labelFa: t('addIndustry'), onClick: () => setEditing({ icon: '🏢', color: '#6366f1', active: true, sortOrder: industries.length + 1 }) }}
+        />
       </Card>
     </div>
   )

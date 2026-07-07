@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Technology = {
   id: number
@@ -24,11 +26,11 @@ const TIERS = ['core', 'advanced', 'specialized']
 
 export function TechnologiesManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [techs, setTechs] = useState<Technology[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Technology> | null>(null)
   const [saving, setSaving] = useState(false)
-  const [filter, setFilter] = useState('all')
   const { toast, ToastContainer } = useToast()
 
   async function load() {
@@ -55,7 +57,21 @@ export function TechnologiesManager() {
     setSaving(false)
   }
 
-  const filtered = filter === 'all' ? techs : techs.filter(tech => tech.category === filter)
+  const columns: Column<Technology>[] = [
+    {
+      key: 'nameEn', labelEn: 'Technology', labelFa: t('technology'),
+      render: tech => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base" style={{ background: `${tech.color}20`, border: `1px solid ${tech.color}30` }}>{tech.icon}</div>
+          <div><div className="font-medium text-white">{tech.nameEn}</div><div className="text-xs text-text-tertiary">{tech.nameFa}</div></div>
+        </div>
+      ),
+    },
+    { key: 'category', labelEn: 'Category', labelFa: t('category'), type: 'enum', options: CATEGORIES.map(c => ({ value: c, labelEn: c, labelFa: c })), render: tech => <span className="text-text-secondary">{tech.category}</span> },
+    { key: 'tier', labelEn: 'Tier', labelFa: t('tier'), type: 'enum', options: TIERS.map(tr => ({ value: tr, labelEn: tr, labelFa: tr })), render: tech => <Badge color={tech.tier === 'core' ? 'green' : tech.tier === 'advanced' ? 'blue' : 'yellow'}>{tech.tier}</Badge> },
+    { key: 'vendor', labelEn: 'Vendor', labelFa: t('vendor'), render: tech => <span className="text-text-secondary">{tech.vendor}</span> },
+  ]
+  const rowActions: RowAction<Technology>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: tech => setEditing(tech) }]
 
   return (
     <div>
@@ -95,58 +111,18 @@ export function TechnologiesManager() {
         </div>
       )}
 
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {['all', ...CATEGORIES].map(cat => (
-          <button key={cat} onClick={() => setFilter(cat)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === cat ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>
-            {cat}
-          </button>
-        ))}
-      </div>
-
       <Card>
-        {loading ? (
-          <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('technology')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('category')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('tier')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('vendor')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(tech => (
-                <tr key={tech.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
-                        style={{ background: `${tech.color}20`, border: `1px solid ${tech.color}30` }}>
-                        {tech.icon}
-                      </div>
-                      <div>
-                        <div className="font-medium text-white">{tech.nameEn}</div>
-                        <div className="text-xs text-text-tertiary">{tech.nameFa}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{tech.category}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={tech.tier === 'core' ? 'green' : tech.tier === 'advanced' ? 'blue' : 'yellow'}>{tech.tier}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{tech.vendor}</td>
-                  <td className="px-4 py-3">
-                    <Btn size="sm" variant="ghost" onClick={() => setEditing(tech)}>{t('edit')}</Btn>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="technologies"
+          columns={columns}
+          rows={techs}
+          locale={locale}
+          loading={loading}
+          rowKey={tech => String(tech.id)}
+          rowActions={rowActions}
+          exportName="technologies"
+          quickCreate={{ labelEn: 'Add Technology', labelFa: t('addTech'), onClick: () => setEditing({ icon: '⚙️', color: '#6366f1', active: true, category: 'networking', tier: 'core', sortOrder: techs.length + 1 }) }}
+        />
       </Card>
     </div>
   )
