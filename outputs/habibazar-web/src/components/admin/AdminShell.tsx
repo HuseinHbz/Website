@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
 import { CommandPalette } from './CommandPalette'
+import { Breadcrumb } from './Breadcrumb'
 import { AdminLocaleProvider } from '@/lib/admin/locale'
+import { NavPrefsProvider } from '@/lib/admin/navPrefs'
 import type { AdminUser } from '@/lib/admin/auth'
 
 interface Props {
@@ -63,7 +65,12 @@ export function AdminShell({ user, title, children }: Props) {
   const isRTL = locale === 'fa'
 
   return (
+    <NavPrefsProvider>
     <div className="min-h-screen bg-background text-text-primary flex" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Skip navigation link (WCAG) */}
+      <a href="#admin-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:start-2 focus:bg-brand focus:text-white focus:px-3 focus:py-2 focus:rounded-lg">
+        {isRTL ? 'پرش به محتوا' : 'Skip to content'}
+      </a>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -78,6 +85,7 @@ export function AdminShell({ user, title, children }: Props) {
         onToggle={() => setCollapsed((c) => !c)}
         locale={locale}
         isRTL={isRTL}
+        role={user.role}
         onOpenCmd={() => setCmdOpen(true)}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
@@ -98,8 +106,9 @@ export function AdminShell({ user, title, children }: Props) {
           onOpenCmd={() => setCmdOpen(true)}
           onMobileOpen={() => setMobileOpen(true)}
         />
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
+        <main id="admin-main" className="flex-1 overflow-auto p-4 lg:p-6">
           <AdminLocaleProvider locale={locale}>
+            <Breadcrumb locale={locale} />
             {children}
           </AdminLocaleProvider>
         </main>
@@ -107,5 +116,6 @@ export function AdminShell({ user, title, children }: Props) {
 
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} locale={locale} />
     </div>
+    </NavPrefsProvider>
   )
 }

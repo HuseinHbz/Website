@@ -16,15 +16,17 @@
  * one by longest-matching href.
  */
 
-export interface WsItem { labelEn: string; labelFa: string; href: string; icon: string }
+export interface WsItem { labelEn: string; labelFa: string; href: string; icon: string; requires?: WorkspaceRequire }
 export interface WsGroup { en: string; fa: string; items: WsItem[] }
+export type WorkspaceRequire = 'edit' | 'manage_settings' | 'manage_users'
+export type AdminRole = 'super_admin' | 'administrator' | 'editor'
 export interface Workspace {
   id: string
   nameEn: string; nameFa: string
   icon: string
   descEn: string; descFa: string
   /** RBAC hint — the minimum action required; undefined = any admin. */
-  requires?: 'edit' | 'manage_settings' | 'manage_users'
+  requires?: WorkspaceRequire
   groups: WsGroup[]
 }
 
@@ -225,6 +227,90 @@ export function workspaceById(id: string): Workspace | undefined {
 /** The landing route of a workspace (its first item). */
 export function workspaceHome(ws: Workspace): string {
   return ws.groups[0]?.items[0]?.href ?? '/admin'
+}
+
+// ── RBAC (client-safe mirror of lib/admin/auth.canDo) ────────────────────────
+const ROLE_PERMS: Record<AdminRole, WorkspaceRequire[]> = {
+  super_admin: ['edit', 'manage_settings', 'manage_users'],
+  administrator: ['edit', 'manage_settings'],
+  editor: ['edit'],
+}
+/** Pure permission check usable on the client (server routes still enforce RBAC). */
+export function roleCan(role: string, action: WorkspaceRequire): boolean {
+  return (ROLE_PERMS[role as AdminRole] ?? []).includes(action)
+}
+export function canSeeWorkspace(role: string, ws: Workspace): boolean {
+  return !ws.requires || roleCan(role, ws.requires)
+}
+export function canSeeItem(role: string, ws: Workspace, item: WsItem): boolean {
+  if (!canSeeWorkspace(role, ws)) return false
+  return !item.requires || roleCan(role, item.requires)
+}
+/** Workspaces a role may see. */
+export function visibleWorkspaces(role: string): Workspace[] {
+  return WORKSPACES.filter(w => canSeeWorkspace(role, w))
+}
+/** A workspace's groups with items filtered by role (empty groups dropped). */
+export function visibleGroups(role: string, ws: Workspace): WsGroup[] {
+  return ws.groups
+    .map(g => ({ ...g, items: g.items.filter(it => canSeeItem(role, ws, it)) }))
+    .filter(g => g.items.length > 0)
+}
+
+// ── Quick actions (contextual, permission-aware; real navigations) ───────────
+export interface QuickAction { labelEn: string; labelFa: string; href: string; icon: string; requires?: WorkspaceRequire }
+export const QUICK_ACTIONS: Record<string, QuickAction[]> = {
+  executive: [{ labelEn: 'Global Search', labelFa: 'جستجوی سراسری', href: '/admin/search', icon: '🔍' }],
+  brand: [
+    { labelEn: 'New Case Study', labelFa: 'مطالعهٔ موردی جدید', href: '/admin/projects', icon: '＋' },
+    { labelEn: 'New Content', labelFa: 'محتوای جدید', href: '/admin/content', icon: '✍️' },
+  ],
+  content: [{ labelEn: 'New Article', labelFa: 'مقالهٔ جدید', href: '/admin/blog', icon: '＋' }],
+  crm: [{ labelEn: 'New Lead', labelFa: 'سرنخ جدید', href: '/admin/crm', icon: '＋' }],
+  erp: [
+    { labelEn: 'New Invoice', labelFa: 'فاکتور جدید', href: '/admin/sales', icon: '🧾', requires: 'edit' },
+    { labelEn: 'New Product', labelFa: 'کالای جدید', href: '/admin/inventory', icon: '📦', requires: 'edit' },
+    { labelEn: 'New Journal Entry', labelFa: 'سند حسابداری جدید', href: '/admin/finance', icon: '💰', requires: 'edit' },
+  ],
+  ai: [
+    { labelEn: 'New Prompt', labelFa: 'پرامپت جدید', href: '/admin/ai-prompts', icon: '＋' },
+    { labelEn: 'New Agent', labelFa: 'دستیار جدید', href: '/admin/ai-agents', icon: '✨' },
+  ],
+  operations: [{ labelEn: 'Open Ops Center', labelFa: 'مرکز عملیات', href: '/admin/operations', icon: '🖥️' }],
+  security: [{ labelEn: 'New User', labelFa: 'کاربر جدید', href: '/admin/users', icon: '＋', requires: 'manage_users' }],
+  system: [{ labelEn: 'Numbering Format', labelFa: 'قالب شماره‌گذاری', href: '/admin/numbering', icon: '🔢', requires: 'manage_settings' }],
+}
+export function quickActionsFor(role: string, workspaceId: string): QuickAction[] {
+  return (QUICK_ACTIONS[workspaceId] ?? []).filter(a => !a.requires || roleCan(role, a.requires))
+}
+
+// ── Breadcrumb engine ────────────────────────────────────────────────────────
+export interface Crumb { labelEn: string; labelFa: string; href: string }
+/** Find the nav item whose href best matches a path, with its workspace. */
+export function findItem(pathname: string): { ws: Workspace; item: WsItem } | null {
+  let best: { ws: Workspace; item: WsItem } | null = null
+  let bestLen = -1
+  for (const ws of WORKSPACES) for (const g of ws.groups) for (const it of g.items) {
+    const h = it.href
+    const match = pathname === h || (h !== '/admin' && pathname.startsWith(h))
+    if (match && h.length > bestLen) { best = { ws, item: it }; bestLen = h.length }
+  }
+  return best
+}
+/** Build the breadcrumb trail for a path: Workspaces › Workspace › Module. */
+export function breadcrumbFor(pathname: string): Crumb[] {
+  const home: Crumb = { labelEn: 'Workspaces', labelFa: 'فضاهای کاری', href: '/admin/home' }
+  const dash = pathname.match(/^\/admin\/dashboards\/([a-z]+)/)
+  if (dash) {
+    const ws = workspaceById(dash[1])
+    if (ws) return [home, { labelEn: ws.nameEn, labelFa: ws.nameFa, href: workspaceHome(ws) }, { labelEn: 'Dashboard', labelFa: 'داشبورد', href: pathname }]
+  }
+  const found = findItem(pathname)
+  if (!found) { const ws = workspaceForPath(pathname); return [home, { labelEn: ws.nameEn, labelFa: ws.nameFa, href: workspaceHome(ws) }] }
+  const { ws, item } = found
+  const crumbs: Crumb[] = [home, { labelEn: ws.nameEn, labelFa: ws.nameFa, href: workspaceHome(ws) }]
+  if (item.href !== workspaceHome(ws)) crumbs.push({ labelEn: item.labelEn, labelFa: item.labelFa, href: item.href })
+  return crumbs
 }
 
 /** Every nav item across all workspaces, de-duplicated by href (for the palette). */

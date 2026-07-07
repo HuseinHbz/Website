@@ -321,6 +321,15 @@ export async function runMigrations() {
     -- {RANDOM} auto-fill length (0 = off); added idempotently for existing DBs.
     ALTER TABLE numbering_formats ADD COLUMN IF NOT EXISTS random_length INTEGER NOT NULL DEFAULT 4;
 
+    -- Per-user navigation preferences (Phase 22.3): pinned favorites + recent
+    -- items (each a JSON array of hrefs / {href,ts}). One row per user.
+    CREATE TABLE IF NOT EXISTS nav_prefs (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      favorites TEXT NOT NULL DEFAULT '[]',
+      recents TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.
     CREATE TABLE IF NOT EXISTS dashboard_layouts (

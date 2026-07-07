@@ -421,6 +421,19 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   reorder, Customize edit mode, Save/Reset, lazy recharts, loading/empty/error/
   denied states. 15 widgets (KPI/chart/table/list/ops). Verified vs real
   PostgreSQL. Report: `docs/governance/phase22-dashboard-platform.md`.
+- **Navigation Platform** (Phase 22.3) — RBAC-aware sidebar + breadcrumb + search
+  + favorites/recent + quick actions, all driven by the workspace registry. Pure
+  helpers in `src/lib/admin/workspaces.ts`: `roleCan` (client-safe RBAC mirror of
+  `canDo`) / `visibleWorkspaces` / `visibleGroups` (hide unauthorized nav),
+  `quickActionsFor`, `breadcrumbFor`/`findItem`. `NavPrefsProvider`
+  (`src/lib/admin/navPrefs.tsx`) loads per-user favorites + recents and records a
+  visit on each admin route change; persisted in `nav_prefs` via
+  `/api/admin/nav-prefs` (toggleFavorite/visit/clearRecents, hrefs server-
+  validated to `/admin/...`). `AdminSidebar` renders Dashboard + Favorites (★
+  pins) + Quick Actions + RBAC groups + Recent, with an in-sidebar search filter;
+  `Breadcrumb` shows Workspaces › Workspace › Module. Skip-to-content link +
+  `aria-current`/`aria-label`s for WCAG. Report:
+  `docs/governance/phase22-navigation-platform.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
