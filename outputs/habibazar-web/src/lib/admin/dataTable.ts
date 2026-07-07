@@ -11,7 +11,7 @@ export type SortDir = 'asc' | 'desc'
 export type Row = Record<string, unknown>
 export type ColumnType = 'text' | 'number' | 'date' | 'boolean' | 'enum' | 'tag'
 
-export interface Column<T extends Row = Row> {
+export interface Column<T extends object = Row> {
   key: string
   labelEn: string
   labelFa: string
@@ -44,9 +44,12 @@ export interface Column<T extends Row = Row> {
   render?: (row: T) => unknown
 }
 
+/** Index an arbitrary row object by string key without requiring an index signature. */
+const ix = (r: object, k: string): unknown => (r as Record<string, unknown>)[k]
+
 /** Extract the raw comparable/filterable/exportable value of a cell. */
-export function cellValue<T extends Row>(col: Column<T>, row: T): unknown {
-  return col.value ? col.value(row) : row[col.key]
+export function cellValue<T extends object>(col: Column<T>, row: T): unknown {
+  return col.value ? col.value(row) : ix(row, col.key)
 }
 
 function cmp(a: unknown, b: unknown, numeric?: boolean): number {
@@ -55,21 +58,21 @@ function cmp(a: unknown, b: unknown, numeric?: boolean): number {
 }
 
 /** Sort rows by a column key + direction (stable, non-mutating). */
-export function sortRows<T extends Row>(rows: T[], key: string | null, dir: SortDir, numeric = false): T[] {
+export function sortRows<T extends object>(rows: T[], key: string | null, dir: SortDir, numeric = false): T[] {
   if (!key) return rows
   return rows.map((r, i) => [r, i] as const)
     .sort(([a, ia], [b, ib]) => {
-      const c = cmp(a[key], b[key], numeric)
+      const c = cmp(ix(a, key), ix(b, key), numeric)
       return (dir === 'asc' ? c : -c) || ia - ib
     })
     .map(([r]) => r)
 }
 
 /** Filter rows: keep any row where a searched column contains the query (case-insensitive). */
-export function filterRows<T extends Row>(rows: T[], query: string, keys: string[]): T[] {
+export function filterRows<T extends object>(rows: T[], query: string, keys: string[]): T[] {
   const q = query.trim().toLowerCase()
   if (!q) return rows
-  return rows.filter(r => keys.some(k => String(r[k] ?? '').toLowerCase().includes(q)))
+  return rows.filter(r => keys.some(k => String(ix(r, k) ?? "").toLowerCase().includes(q)))
 }
 
 export interface Page<T> { rows: T[]; page: number; pageCount: number; total: number; from: number; to: number }
@@ -112,12 +115,12 @@ export function nextMultiSort(specs: SortSpec[], key: string, additive: boolean)
 }
 
 /** Sort by multiple columns in priority order (stable). `numericKeys` marks numeric cols. */
-export function multiSortRows<T extends Row>(rows: T[], specs: SortSpec[], numericKeys: Set<string> = new Set()): T[] {
+export function multiSortRows<T extends object>(rows: T[], specs: SortSpec[], numericKeys: Set<string> = new Set()): T[] {
   if (specs.length === 0) return rows
   return rows.map((r, i) => [r, i] as const)
     .sort(([a, ia], [b, ib]) => {
       for (const s of specs) {
-        const c = cmp(a[s.key], b[s.key], numericKeys.has(s.key))
+        const c = cmp(ix(a, s.key), ix(b, s.key), numericKeys.has(s.key))
         if (c !== 0) return s.dir === 'asc' ? c : -c
       }
       return ia - ib
@@ -169,8 +172,8 @@ function matchesFilter(raw: unknown, f: ColumnFilter): boolean {
  * Apply a map of per-column filters. `valueOf` resolves the raw cell value for a
  * column key (so custom-rendered columns still filter on their true value).
  */
-export function applyColumnFilters<T extends Row>(
-  rows: T[], filters: Record<string, ColumnFilter>, valueOf: (row: T, key: string) => unknown = (r, k) => r[k],
+export function applyColumnFilters<T extends object>(
+  rows: T[], filters: Record<string, ColumnFilter>, valueOf: (row: T, key: string) => unknown = (r, k) => ix(r, k),
 ): T[] {
   const entries = Object.entries(filters)
   if (entries.length === 0) return rows
@@ -181,8 +184,8 @@ export function applyColumnFilters<T extends Row>(
 export interface RowGroup<T> { key: string; rows: T[]; count: number; aggregates: Record<string, number> }
 
 /** Group rows by a column value; compute count + sum/avg for the given numeric keys. */
-export function groupRows<T extends Row>(
-  rows: T[], groupKey: string, aggregateKeys: string[] = [], valueOf: (row: T, key: string) => unknown = (r, k) => r[k],
+export function groupRows<T extends object>(
+  rows: T[], groupKey: string, aggregateKeys: string[] = [], valueOf: (row: T, key: string) => unknown = (r, k) => ix(r, k),
 ): RowGroup<T>[] {
   const map = new Map<string, T[]>()
   for (const r of rows) {
@@ -239,7 +242,7 @@ export interface TableView {
 }
 
 /** Order + filter columns for rendering per a saved view (pure). Unknown keys ignored. */
-export function applyColumnView<T extends Row>(columns: Column<T>[], view: TableView): Column<T>[] {
+export function applyColumnView<T extends object>(columns: Column<T>[], view: TableView): Column<T>[] {
   const byKey = new Map(columns.map(c => [c.key, c]))
   const ordered: Column<T>[] = []
   const seen = new Set<string>()

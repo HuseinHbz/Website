@@ -18,7 +18,7 @@ export function exportCell(v: unknown): string {
 }
 
 /** Columns eligible for export (exclude actions / noExport). */
-export function exportColumns<T extends Row>(columns: Column<T>[]): Column<T>[] {
+export function exportColumns<T extends object>(columns: Column<T>[]): Column<T>[] {
   return columns.filter(c => !c.noExport && c.key !== '__actions')
 }
 
@@ -27,7 +27,7 @@ function csvEscape(s: string): string {
 }
 
 /** RFC-4180 CSV (with header row of EN labels). */
-export function toCsv<T extends Row>(columns: Column<T>[], rows: T[], locale: 'fa' | 'en' = 'en'): string {
+export function toCsv<T extends object>(columns: Column<T>[], rows: T[], locale: 'fa' | 'en' = 'en'): string {
   const cols = exportColumns(columns)
   const header = cols.map(c => csvEscape(locale === 'fa' ? c.labelFa : c.labelEn)).join(',')
   const body = rows.map(r => cols.map(c => csvEscape(exportCell(cellValue(c, r)))).join(',')).join('\r\n')
@@ -35,7 +35,7 @@ export function toCsv<T extends Row>(columns: Column<T>[], rows: T[], locale: 'f
 }
 
 /** JSON array keyed by column key. */
-export function toJson<T extends Row>(columns: Column<T>[], rows: T[]): string {
+export function toJson<T extends object>(columns: Column<T>[], rows: T[]): string {
   const cols = exportColumns(columns)
   return JSON.stringify(rows.map(r => Object.fromEntries(cols.map(c => [c.key, cellValue(c, r)]))), null, 2)
 }
@@ -48,7 +48,7 @@ function xmlEscape(s: string): string {
  * SpreadsheetML 2003 (.xls) — opens natively in Excel/LibreOffice with no
  * dependency. Numbers are typed as Number cells, everything else as String.
  */
-export function toExcelXml<T extends Row>(columns: Column<T>[], rows: T[], sheet = 'Sheet1', locale: 'fa' | 'en' = 'en'): string {
+export function toExcelXml<T extends object>(columns: Column<T>[], rows: T[], sheet = 'Sheet1', locale: 'fa' | 'en' = 'en'): string {
   const cols = exportColumns(columns)
   const cell = (v: unknown, numeric?: boolean) => {
     const s = exportCell(v)
@@ -85,7 +85,7 @@ export function parseCsv(text: string): string[][] {
 }
 
 export interface ImportError { row: number; message: string }
-export interface ImportResult<T extends Row> { rows: T[]; errors: ImportError[]; duplicates: number[]; headers: string[] }
+export interface ImportResult<T extends object> { rows: T[]; errors: ImportError[]; duplicates: number[]; headers: string[] }
 
 /**
  * Parse CSV against the column schema. Maps header cells to column keys by EN or
@@ -93,7 +93,7 @@ export interface ImportResult<T extends Row> { rows: T[]; errors: ImportError[];
  * per-row validation errors; flags duplicate rows by `dedupeKey`. The caller
  * decides to commit (only when `errors` is empty) or roll back.
  */
-export function importCsv<T extends Row>(
+export function importCsv<T extends object>(
   text: string, columns: Column<T>[],
   opts: { required?: string[]; dedupeKey?: string } = {},
 ): ImportResult<T> {

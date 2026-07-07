@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
+import type { RowAction } from '@/components/admin/DataTable'
 
 interface Flag {
   id?: number; key: string; description: string | null; enabled: boolean; rolloutPercent: number
@@ -12,6 +15,7 @@ const EMPTY: Flag = { key: '', description: '', enabled: false, rolloutPercent: 
 
 export function FlagsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const { toast, ToastContainer } = useToast()
   const [flags, setFlags] = useState<Flag[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,6 +56,33 @@ export function FlagsManager() {
   }
   function set<K extends keyof Flag>(k: K, v: Flag[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
+  const columns: Column<Flag>[] = [
+    { key: 'key', labelEn: 'Key', labelFa: t('flag_colKey'), render: (f) => <span className="font-mono text-text-primary">{f.key}</span> },
+    { key: 'description', labelEn: 'Description', labelFa: t('flag_colDescription'), render: (f) => <span className="text-text-tertiary text-xs">{f.description || '—'}</span> },
+    {
+      key: 'rolloutPercent', labelEn: 'Rollout', labelFa: t('flag_colRollout'), type: 'number', numeric: true,
+      render: (f) => (
+        <div className="flex items-center gap-2 justify-end">
+          <div className="h-1.5 w-16 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${f.rolloutPercent}%` }} /></div>
+          <span className="text-xs text-text-secondary tabular-nums">{f.rolloutPercent}%</span>
+        </div>
+      ),
+    },
+    {
+      key: 'enabled', labelEn: 'State', labelFa: t('flag_colState'), type: 'boolean', value: (f) => f.enabled,
+      render: (f) => (
+        <button onClick={() => toggle(f)} className={`relative w-9 h-5 rounded-full transition-colors ${f.enabled ? 'bg-success' : 'bg-surface-2'}`} aria-pressed={f.enabled}>
+          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${f.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+        </button>
+      ),
+    },
+    { key: 'evaluatedForMe', labelEn: 'For you', labelFa: t('flag_colForYou'), type: 'boolean', value: (f) => !!f.evaluatedForMe, render: (f) => <Badge color={f.evaluatedForMe ? 'green' : 'slate'}>{f.evaluatedForMe ? t('flag_on') : t('flag_off')}</Badge> },
+  ]
+  const rowActions: RowAction<Flag>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('flag_edit'), icon: '✎', onClick: (f) => { setEditing(f); setModal(true) } },
+    { id: 'del', labelEn: 'Delete', labelFa: t('flag_del'), icon: '🗑', danger: true, onClick: (f) => del(f.id!) },
+  ]
+
   return (
     <>
       <ToastContainer />
@@ -61,42 +92,19 @@ export function FlagsManager() {
         action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('flag_newFlag')}</Btn>}
       />
 
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('flag_loading')}</p>
-          : flags.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('flag_empty')}</p>
-          : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">
-                {[t('flag_colKey'), t('flag_colDescription'), t('flag_colRollout'), t('flag_colState'), t('flag_colForYou'), t('flag_colActions')].map((h) => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {flags.map((f) => (
-                  <tr key={f.id} className="border-b border-subtle/50">
-                    <td className="px-4 py-2.5 font-mono text-text-primary">{f.key}</td>
-                    <td className="px-4 py-2.5 text-text-tertiary text-xs max-w-xs truncate">{f.description || '—'}</td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-16 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${f.rolloutPercent}%` }} /></div>
-                        <span className="text-xs text-text-secondary">{f.rolloutPercent}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <button onClick={() => toggle(f)} className={`relative w-9 h-5 rounded-full transition-colors ${f.enabled ? 'bg-success' : 'bg-surface-2'}`}>
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${f.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                      </button>
-                    </td>
-                    <td className="px-4 py-2.5"><Badge color={f.evaluatedForMe ? 'green' : 'slate'}>{f.evaluatedForMe ? t('flag_on') : t('flag_off')}</Badge></td>
-                    <td className="px-4 py-2.5"><div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditing(f); setModal(true) }}>{t('flag_edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(f.id!)}>{t('flag_del')}</Btn>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Card className="p-4">
+        <DataTable
+          tableId="flags"
+          columns={columns}
+          rows={flags}
+          locale={locale}
+          loading={loading}
+          rowKey={(f) => String(f.id)}
+          rowActions={rowActions}
+          exportName="feature-flags"
+          emptyLabel={t('flag_empty')}
+          quickCreate={{ labelEn: 'New Flag', labelFa: t('flag_newFlag'), onClick: () => { setEditing(EMPTY); setModal(true) } }}
+        />
       </Card>
       <p className="text-[11px] text-text-tertiary mt-3">{t('flag_footnote')} <span className="font-mono">isEnabled(flag, subjectId)</span>.</p>
 

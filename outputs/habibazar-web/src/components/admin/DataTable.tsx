@@ -9,7 +9,7 @@ import {
 import { toCsv, toJson, toExcelXml, exportColumns } from '@/lib/admin/dataTableExport'
 
 // ── Public action contracts ─────────────────────────────────────────────────
-export interface RowAction<T extends Row> {
+export interface RowAction<T extends object> {
   id: string
   labelEn: string; labelFa: string
   icon?: string
@@ -19,7 +19,7 @@ export interface RowAction<T extends Row> {
   onClick: (row: T) => void
   hidden?: (row: T) => boolean
 }
-export interface BulkAction<T extends Row> {
+export interface BulkAction<T extends object> {
   id: string
   labelEn: string; labelFa: string
   icon?: string
@@ -30,7 +30,7 @@ export interface BulkAction<T extends Row> {
 }
 export type ExportScope = 'page' | 'filtered' | 'selected' | 'all'
 
-interface Props<T extends Row> {
+interface Props<T extends object> {
   columns: Column<T>[]
   rows: T[]
   locale: 'fa' | 'en'
@@ -70,7 +70,7 @@ const lc = (isRTL: boolean, en: string, fa: string) => (isRTL ? fa : en)
  * multi-sort, column filters/resize/reorder/pin, per-user saved views, export,
  * row + bulk actions, virtualization, all states, RBAC, WCAG a11y and RTL.
  */
-export function DataTable<T extends Row>({
+export function DataTable<T extends object>({
   columns, rows, locale, loading, error, onRetry, onRefresh, pageSize: pageSizeProp = 10,
   searchKeys, rowKey, emptyLabel, onRowClick, title, tableId, role, can,
   selectable, rowActions, bulkActions, quickCreate, canExport = true, exportName = 'export',
@@ -98,8 +98,8 @@ export function DataTable<T extends Row>({
   const [busy, setBusy] = useState<string | null>(null)
   const loadedPrefs = useRef(false)
 
-  const rid = useCallback((r: T, i = 0) => (rowKey ? rowKey(r) : String(r.id ?? i)), [rowKey])
-  const valueOf = useCallback((r: T, key: string) => { const c = columns.find(x => x.key === key); return c ? cellValue(c, r) : r[key] }, [columns])
+  const rid = useCallback((r: T, i = 0) => (rowKey ? rowKey(r) : String((r as Record<string, unknown>).id ?? i)), [rowKey])
+  const valueOf = useCallback((r: T, key: string) => { const c = columns.find(x => x.key === key); return c ? cellValue(c, r) : (r as Record<string, unknown>)[key] }, [columns])
   const numericKeys = useMemo(() => new Set(columns.filter(c => c.numeric || c.type === 'number').map(c => c.key)), [columns])
 
   // ── Load persisted prefs + saved views ──
@@ -502,7 +502,7 @@ export function DataTable<T extends Row>({
         )}
         {viewedCols.map(c => (
           <td key={c.key} style={colStyle(c)} className={`${pad} text-text-secondary text-${align(c)} ${c.numeric || c.type === 'number' ? 'tabular-nums' : ''} ${c.pinned ? 'sticky bg-surface z-[2]' : ''}`}>
-            {(c.render ? c.render(row) : (row[c.key] as React.ReactNode)) as React.ReactNode}
+            {(c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)) as React.ReactNode}
           </td>
         ))}
         {rowActions?.length ? (
@@ -522,7 +522,7 @@ function sanitizeForApi(v: TableView): TableView {
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
-function ColumnFilterInput<T extends Row>({ col, value, onChange, isRTL }: { col: Column<T>; value?: ColumnFilter; onChange: (f: ColumnFilter | null) => void; isRTL: boolean }) {
+function ColumnFilterInput<T extends object>({ col, value, onChange, isRTL }: { col: Column<T>; value?: ColumnFilter; onChange: (f: ColumnFilter | null) => void; isRTL: boolean }) {
   const cls = 'w-full px-1.5 py-1 rounded border border-border bg-transparent text-xs text-text-secondary outline-none focus:border-brand/40'
   if (col.type === 'number') {
     const v = value?.type === 'number' ? value : { type: 'number' as const }
@@ -557,7 +557,7 @@ function ColumnFilterInput<T extends Row>({ col, value, onChange, isRTL }: { col
   return <input className={cls} placeholder={lc(isRTL, 'Filter…', 'فیلتر…')} defaultValue={v} onChange={e => onChange(e.target.value === '' ? null : { type: 'text', value: e.target.value })} />
 }
 
-function RowActionsMenu<T extends Row>({ row, actions, isRTL }: { row: T; actions: RowAction<T>[]; isRTL: boolean }) {
+function RowActionsMenu<T extends object>({ row, actions, isRTL }: { row: T; actions: RowAction<T>[]; isRTL: boolean }) {
   const [open, setOpen] = useState(false)
   if (actions.length === 0) return null
   return (
