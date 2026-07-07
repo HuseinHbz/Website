@@ -393,6 +393,23 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `GET/POST/PUT/DELETE /api/admin/flags`: zod-validated, RBAC-gated, audit-logged;
   GET previews each flag's evaluation for the current admin.
 
+## Admin navigation (Phase 22 — Enterprise Workspace Platform)
+- The admin is organized into **12 workspaces** (Executive/Brand/Content/CRM/ERP/
+  AI/Security/Operations/Backup/Analytics/Documentation/System) defined in
+  `src/lib/admin/workspaces.ts` — the single source of truth for admin nav. Each
+  workspace owns its own bilingual sidebar (groups → items). Pure helpers
+  `workspaceForPath` (active workspace by longest-href match) / `workspaceById` /
+  `workspaceHome` / `allNavItems` (unit-tested). **Every href must be a real admin
+  page** — `audit:links` fails on broken internal links. Add a module here and it
+  shows up in the sidebar, workspace switcher, `/admin/home` selector grid, and
+  command palette automatically (no separate lists to maintain).
+- `AdminSidebar` renders only the active workspace's groups + a workspace switcher
+  dropdown. `/admin/home` (`WorkspaceHome`) is the enterprise workspace selector.
+- `CommandPalette` (Ctrl+K, mounted by `AdminShell`) derives its commands from the
+  workspace registry (switch-workspace + every module) and adds a live **Records**
+  group from the Module 13 search API (`/api/admin/search`) when typing ≥2 chars.
+  Keyboard-first. Full report: `docs/governance/phase22-workspace-platform.md`.
+
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
   (jose, 8h) in an httpOnly cookie `admin_token`; a DB session row is created.
