@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Event = { id: number; slug: string; titleEn: string; type: string; status: string; format: string; startDate: string; registrationsCount: number; isFree: boolean; featured: boolean }
 
@@ -13,6 +15,7 @@ const STATUS_COLORS: Record<string, string> = { upcoming: 'blue', live: 'green',
 
 export function EventsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [eventList, setEventList] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Event & { descriptionEn: string; meetingUrl: string }> | null>(null)
@@ -29,6 +32,16 @@ export function EventsManager() {
     if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(t('failed'), 'error')
     setSaving(false)
   }
+
+  const columns: Column<Event>[] = [
+    { key: 'titleEn', labelEn: 'Event', labelFa: t('colEvent'), render: e => <div><div className="font-medium text-white">{e.titleEn}</div><div className="text-xs text-text-tertiary">{e.slug}</div></div> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: e => <span className="text-text-secondary">{e.type}</span> },
+    { key: 'startDate', labelEn: 'Date', labelFa: t('date'), type: 'date', render: e => <span className="text-text-secondary text-xs">{e.startDate}</span> },
+    { key: 'format', labelEn: 'Format', labelFa: t('format'), type: 'enum', options: FORMATS.map(fm => ({ value: fm, labelEn: fm, labelFa: fm })), render: e => <span className="text-text-secondary">{e.format}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: e => <Badge color={STATUS_COLORS[e.status] || 'slate'}>{e.status}</Badge> },
+    { key: 'registrationsCount', labelEn: 'Registrations', labelFa: t('colRegistrations'), type: 'number', numeric: true },
+  ]
+  const rowActions: RowAction<Event>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: e => setEditing(e) }]
 
   return (
     <div>
@@ -64,26 +77,18 @@ export function EventsManager() {
       )}
 
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : eventList.length === 0 ? (
-          <div className="text-center py-12"><div className="text-4xl mb-3">🗓️</div><div className="text-white font-medium mb-1">No events yet</div><div className="text-text-tertiary text-sm">Create your first webinar or conference</div></div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">{[t('colEvent'), t('type'), t('date'), t('format'), t('status'), t('colRegistrations'), t('actions')].map(h => <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>)}</tr></thead>
-            <tbody>
-              {eventList.map(e => (
-                <tr key={e.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3"><div className="font-medium text-white">{e.titleEn}</div><div className="text-xs text-text-tertiary">{e.slug}</div></td>
-                  <td className="px-4 py-3 text-text-secondary">{e.type}</td>
-                  <td className="px-4 py-3 text-text-secondary text-xs">{e.startDate}</td>
-                  <td className="px-4 py-3 text-text-secondary">{e.format}</td>
-                  <td className="px-4 py-3"><Badge color={STATUS_COLORS[e.status] || 'slate'}>{e.status}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary">{e.registrationsCount}</td>
-                  <td className="px-4 py-3"><Btn size="sm" variant="ghost" onClick={() => setEditing(e)}>{t('edit')}</Btn></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="events"
+          columns={columns}
+          rows={eventList}
+          locale={locale}
+          loading={loading}
+          rowKey={e => String(e.id)}
+          rowActions={rowActions}
+          exportName="events"
+          emptyLabel="No events yet"
+          quickCreate={{ labelEn: 'Add Event', labelFa: t('addEvent'), onClick: () => setEditing({ type: 'webinar', status: 'upcoming', format: 'online', isFree: true, startDate: new Date().toISOString().slice(0, 10), registrationsCount: 0 }) }}
+        />
       </Card>
     </div>
   )

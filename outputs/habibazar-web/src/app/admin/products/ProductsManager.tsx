@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Product = { id: number; slug: string; nameEn: string; nameFa: string; type: string; icon: string; color: string; currentVersion: string | null; status: string; featured: boolean; active: boolean; sortOrder: number; taglineEn: string | null }
 
@@ -12,6 +14,7 @@ const STATUS_COLORS: Record<string, string> = { active: 'green', beta: 'blue', c
 
 export function ProductsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Product> | null>(null)
@@ -28,6 +31,14 @@ export function ProductsManager() {
     if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(t('failed'), 'error')
     setSaving(false)
   }
+
+  const columns: Column<Product>[] = [
+    { key: 'nameEn', labelEn: 'Product', labelFa: t('product'), render: p => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${p.color}20`, border: `1px solid ${p.color}30` }}>{p.icon}</div><div><div className="font-medium text-white">{p.nameEn}</div><div className="text-xs text-text-tertiary">{p.taglineEn}</div></div></div> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: p => <span className="text-text-secondary">{p.type}</span> },
+    { key: 'currentVersion', labelEn: 'Version', labelFa: t('version'), render: p => <span className="text-text-secondary font-mono text-xs">{p.currentVersion || '—'}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: p => <Badge color={STATUS_COLORS[p.status] || 'slate'}>{p.status}</Badge> },
+  ]
+  const rowActions: RowAction<Product>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => setEditing(p) }]
 
   return (
     <div>
@@ -61,27 +72,17 @@ export function ProductsManager() {
       )}
 
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">{[t('product'), t('type'), t('version'), t('status'), t('actions')].map(h => <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>)}</tr></thead>
-            <tbody>
-              {products.map(p => (
-                <tr key={p.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${p.color}20`, border: `1px solid ${p.color}30` }}>{p.icon}</div>
-                      <div><div className="font-medium text-white">{p.nameEn}</div><div className="text-xs text-text-tertiary">{p.taglineEn}</div></div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{p.type}</td>
-                  <td className="px-4 py-3 text-text-secondary font-mono text-xs">{p.currentVersion || '—'}</td>
-                  <td className="px-4 py-3"><Badge color={STATUS_COLORS[p.status] || 'slate'}>{p.status}</Badge></td>
-                  <td className="px-4 py-3"><Btn size="sm" variant="ghost" onClick={() => setEditing(p)}>{t('edit')}</Btn></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="products"
+          columns={columns}
+          rows={products}
+          locale={locale}
+          loading={loading}
+          rowKey={p => String(p.id)}
+          rowActions={rowActions}
+          exportName="products"
+          quickCreate={{ labelEn: 'Add Product', labelFa: t('addProduct'), onClick: () => setEditing({ type: 'service', icon: '📦', color: '#6366f1', status: 'active', active: true, featured: false, sortOrder: products.length + 1 }) }}
+        />
       </Card>
     </div>
   )

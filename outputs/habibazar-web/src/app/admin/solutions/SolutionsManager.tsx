@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Solution = {
   id: number
@@ -19,6 +21,7 @@ type Solution = {
 
 export function SolutionsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [solutions, setSolutions] = useState<Solution[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Solution> | null>(null)
@@ -53,6 +56,16 @@ export function SolutionsManager() {
     await fetch('/api/admin/solutions', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, active: !s.active }) })
     load()
   }
+
+  const columns: Column<Solution>[] = [
+    { key: 'nameEn', labelEn: 'Solution', labelFa: t('solution'), render: s => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg flex items-center justify-center text-base" style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>{s.icon}</div><div><div className="font-medium text-white">{s.nameEn}</div><div className="text-xs text-text-tertiary">{s.nameFa}</div></div></div> },
+    { key: 'taglineEn', labelEn: 'Tagline', labelFa: t('taglineEn'), render: s => <span className="text-text-secondary">{s.taglineEn}</span> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: s => s.active, render: s => <><Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('inactive')}</Badge>{s.featured && <> <Badge color="yellow">{t('featuredLabel')}</Badge></>}</> },
+  ]
+  const rowActions: RowAction<Solution>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: s => setEditing(s) },
+    { id: 'toggle', labelEn: 'Toggle', labelFa: t('disable'), icon: '⇄', onClick: s => toggle(s) },
+  ]
 
   return (
     <div>
@@ -96,49 +109,17 @@ export function SolutionsManager() {
       )}
 
       <Card>
-        {loading ? (
-          <div className="text-text-tertiary text-sm text-center py-8">{t('loading')}</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('solution')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('taglineEn')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('status')}</th>
-                <th className="px-4 py-3 text-text-tertiary font-medium">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {solutions.map(s => (
-                <tr key={s.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
-                        style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
-                        {s.icon}
-                      </div>
-                      <div>
-                        <div className="font-medium text-white">{s.nameEn}</div>
-                        <div className="text-xs text-text-tertiary">{s.nameFa}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary max-w-xs truncate">{s.taglineEn}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={s.active ? 'green' : 'slate'}>{s.active ? t('active') : t('inactive')}</Badge>
-                    {s.featured && <> <Badge color="yellow">{t('featuredLabel')}</Badge></>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="ghost" onClick={() => setEditing(s)}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => toggle(s)}>{s.active ? t('disable') : t('enable')}</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="solutions"
+          columns={columns}
+          rows={solutions}
+          locale={locale}
+          loading={loading}
+          rowKey={s => String(s.id)}
+          rowActions={rowActions}
+          exportName="solutions"
+          quickCreate={{ labelEn: 'Add Solution', labelFa: t('addSolution'), onClick: () => setEditing({ icon: '🔧', color: '#6366f1', active: true, featured: false, sortOrder: solutions.length + 1 }) }}
+        />
       </Card>
     </div>
   )

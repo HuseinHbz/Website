@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Course = { id: number; slug: string; titleEn: string; level: string; type: string; durationHours: number | null; lessonsCount: number; enrollmentsCount: number; status: string; featured: boolean; isFree: boolean; price: number; rating: number }
 
@@ -13,6 +15,7 @@ const LEVEL_COLORS: Record<string, string> = { beginner: 'green', intermediate: 
 
 export function AcademyManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Course & { descriptionEn: string }> | null>(null)
@@ -31,6 +34,15 @@ export function AcademyManager() {
   }
 
   const stats = { total: courses.length, published: courses.filter(c => c.status === 'published').length, enrolled: courses.reduce((s, c) => s + c.enrollmentsCount, 0) }
+
+  const columns: Column<Course>[] = [
+    { key: 'titleEn', labelEn: 'Course', labelFa: t('course'), render: c => <div><div className="font-medium text-white">{c.titleEn}</div><div className="text-xs text-text-tertiary">{c.durationHours}h · {c.lessonsCount} lessons</div></div> },
+    { key: 'level', labelEn: 'Level', labelFa: t('level'), type: 'enum', options: LEVELS.map(l => ({ value: l, labelEn: l, labelFa: l })), render: c => <Badge color={LEVEL_COLORS[c.level] || 'slate'}>{c.level}</Badge> },
+    { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: c => <span className="text-text-secondary">{c.type}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Badge> },
+    { key: 'enrollmentsCount', labelEn: 'Enrolled', labelFa: t('enrolled'), type: 'number', numeric: true },
+  ]
+  const rowActions: RowAction<Course>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: c => setEditing(c) }]
 
   return (
     <div>
@@ -74,25 +86,18 @@ export function AcademyManager() {
       )}
 
       <Card>
-        {loading ? <div className="text-center py-8 text-text-tertiary">{t('loading')}</div> : courses.length === 0 ? (
-          <div className="text-center py-12"><div className="text-4xl mb-3">🎓</div><div className="text-white font-medium mb-1">No courses yet</div><div className="text-text-tertiary text-sm">Create your first course to launch the academy</div></div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left">{[t('course'), t('level'), t('type'), t('status'), t('enrolled'), t('actions')].map(h => <th key={h} className="px-4 py-3 text-text-tertiary font-medium">{h}</th>)}</tr></thead>
-            <tbody>
-              {courses.map(c => (
-                <tr key={c.id} className="border-b border-border/50 hover:bg-white/[0.02]">
-                  <td className="px-4 py-3"><div className="font-medium text-white">{c.titleEn}</div><div className="text-xs text-text-tertiary">{c.durationHours}h · {c.lessonsCount} lessons</div></td>
-                  <td className="px-4 py-3"><Badge color={LEVEL_COLORS[c.level] || 'slate'}>{c.level}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary">{c.type}</td>
-                  <td className="px-4 py-3"><Badge color={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Badge></td>
-                  <td className="px-4 py-3 text-text-secondary">{c.enrollmentsCount}</td>
-                  <td className="px-4 py-3"><Btn size="sm" variant="ghost" onClick={() => setEditing(c)}>{t('edit')}</Btn></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          tableId="courses"
+          columns={columns}
+          rows={courses}
+          locale={locale}
+          loading={loading}
+          rowKey={c => String(c.id)}
+          rowActions={rowActions}
+          exportName="courses"
+          emptyLabel="No courses yet"
+          quickCreate={{ labelEn: 'Add Course', labelFa: t('addCourse'), onClick: () => setEditing({ level: 'intermediate', type: 'course', status: 'draft', isFree: true, price: 0, lessonsCount: 0, enrollmentsCount: 0, rating: 0 }) }}
+        />
       </Card>
     </div>
   )
