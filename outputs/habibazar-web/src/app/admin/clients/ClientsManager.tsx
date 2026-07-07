@@ -1,33 +1,23 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useState } from 'react'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { crud, useResource } from '@/lib/admin/crud'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Client = { id?: number; nameEn: string; nameFa: string; typeEn: string; typeFa: string; logoUrl: string; website: string; isTechPartner: boolean; sortOrder: number; active: boolean }
 const EMPTY: Client = { nameEn: '', nameFa: '', typeEn: '', typeFa: '', logoUrl: '', website: '', isTechPartner: false, sortOrder: 0, active: true }
 
 export function ClientsManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const { data: clients, reload: load } = useResource<Client>('/api/admin/clients')
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Client>(EMPTY)
   const [saving, setSaving] = useState(false)
-  const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'partner' | 'client'>('all')
-  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'hidden'>('all')
   const { toast, ToastContainer } = useToast()
-
-  const filtered = useMemo(() => clients.filter((c) => {
-    const q = search.toLowerCase()
-    if (q && !c.nameEn.toLowerCase().includes(q) && !c.nameFa.includes(q) && !c.typeEn.toLowerCase().includes(q)) return false
-    if (filterType === 'partner' && !c.isTechPartner) return false
-    if (filterType === 'client' && c.isTechPartner) return false
-    if (filterActive === 'active' && !c.active) return false
-    if (filterActive === 'hidden' && c.active) return false
-    return true
-  }), [clients, search, filterType, filterActive])
 
   async function save() {
     setSaving(true)
@@ -49,45 +39,25 @@ export function ClientsManager() {
 
   function set<K extends keyof Client>(k: K, v: Client[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
+  const columns: Column<Client>[] = [
+    { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: c => <div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
+    { key: 'typeEn', labelEn: 'Type', labelFa: t('type'), type: 'enum', render: c => <span className="text-text-secondary">{c.typeEn}</span> },
+    { key: 'isTechPartner', labelEn: 'Tech Partner', labelFa: t('isTechPartner'), type: 'boolean', value: c => c.isTechPartner, render: c => <Badge color={c.isTechPartner ? 'blue' : 'slate'}>{c.isTechPartner ? t('isTechPartner') : t('isClient')}</Badge> },
+    { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: c => c.active, render: c => <Badge color={c.active ? 'green' : 'slate'}>{c.active ? t('active') : t('hidden')}</Badge> },
+  ]
+  const rowActions: RowAction<Client>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: c => { setEditing(c); setModal(true) } },
+    { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: c => toggle(c) },
+    { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => del(c.id!) },
+  ]
+
   return (
     <>
       <ToastContainer />
       <PageHeader title={t('clientsTitle')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('clientNew')}</Btn>} />
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search clients..." className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-text-disabled focus:outline-none focus:border-brand" />
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
-          <option value="all">All Types</option>
-          <option value="partner">Tech Partners</option>
-          <option value="client">Clients</option>
-        </select>
-        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as typeof filterActive)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="hidden">Hidden</option>
-        </select>
-        {(search || filterType !== 'all' || filterActive !== 'all') && <button onClick={() => { setSearch(''); setFilterType('all'); setFilterActive('all') }} className="px-3 py-2 text-xs text-text-secondary hover:text-white border border-border rounded-lg">✕ Clear</button>}
-        <span className="px-3 py-2 text-xs text-text-tertiary">{filtered.length} / {clients.length}</span>
-      </div>
-
       <Card>
-        <Table headers={[t('name'), t('type'), t('isTechPartner'), t('status'), t('actions')]}>
-          {filtered.map((c) => (
-            <TR key={c.id}>
-              <TD><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></TD>
-              <TD className="text-text-secondary">{c.typeEn}</TD>
-              <TD><Badge color={c.isTechPartner ? 'blue' : 'slate'}>{c.isTechPartner ? t('isTechPartner') : t('isClient')}</Badge></TD>
-              <TD><Badge color={c.active ? 'green' : 'slate'}>{c.active ? t('active') : t('hidden')}</Badge></TD>
-              <TD>
-                <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing(c); setModal(true) }}>{t('edit')}</Btn>
-                  <Btn size="sm" variant="secondary" onClick={() => toggle(c)}>{c.active ? '⏸' : '▶'}</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => del(c.id!)}>{t('delete')}</Btn>
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
+        <DataTable tableId="clients" columns={columns} rows={clients} locale={locale} rowKey={c => String(c.id)} rowActions={rowActions} exportName="clients" />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('clientEdit') : t('clientNew')}>

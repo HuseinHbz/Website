@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, PageHeader, Table, TR, TD, Badge, Modal, Btn, Select, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, PageHeader, Badge, Modal, Btn, Select, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Contact = { id: number; name: string; email: string; phone: string; company: string; subject: string; message: string; status: string; locale: string; createdAt: string }
 const STATUS_COLOR: Record<string, string> = { new: 'yellow', read: 'blue', replied: 'green', archived: 'slate' }
 
 export function ContactsView() {
   const t = useT()
+  const locale = useAdminLocale()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [selected, setSelected] = useState<Contact | null>(null)
   const [filter, setFilter] = useState('all')
@@ -36,6 +39,18 @@ export function ContactsView() {
   const filtered = filter === 'all' ? contacts : contacts.filter((c) => c.status === filter)
   const newCount = contacts.filter((c) => c.status === 'new').length
 
+  const columns: Column<Contact>[] = [
+    { key: 'name', labelEn: 'Name', labelFa: t('name'), render: c => <span className="font-medium text-white">{c.name}</span> },
+    { key: 'email', labelEn: 'Email', labelFa: t('email'), render: c => <span className="text-text-secondary">{c.email}</span> },
+    { key: 'company', labelEn: 'Company', labelFa: t('company'), render: c => <span className="text-text-tertiary">{c.company || '—'}</span> },
+    { key: 'subject', labelEn: 'Subject', labelFa: t('subject'), render: c => <span className="text-text-secondary">{c.subject || '—'}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['new', 'read', 'replied', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={STATUS_COLOR[c.status]}>{t(`status${c.status.charAt(0).toUpperCase() + c.status.slice(1)}`) || c.status}</Badge> },
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</span> },
+  ]
+  const rowActions: RowAction<Contact>[] = [
+    { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => del(c.id) },
+  ]
+
   return (
     <>
       <ToastContainer />
@@ -53,22 +68,7 @@ export function ContactsView() {
       />
 
       <Card>
-        <Table headers={[t('name'), t('email'), t('company'), t('subject'), t('status'), t('date'), t('actions')]}>
-          {filtered.map((c) => (
-            <TR key={c.id} onClick={() => setSelected(c)}>
-              <TD><span className="font-medium text-white">{c.name}</span></TD>
-              <TD className="text-text-secondary">{c.email}</TD>
-              <TD className="text-text-tertiary">{c.company || '—'}</TD>
-              <TD className="text-text-secondary max-w-32 truncate">{c.subject || '—'}</TD>
-              <TD><Badge color={STATUS_COLOR[c.status]}>{t(`status${c.status.charAt(0).toUpperCase() + c.status.slice(1)}`) || c.status}</Badge></TD>
-              <TD className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</TD>
-              <TD onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                <Btn size="sm" variant="danger" onClick={() => del(c.id)}>{t('delete')}</Btn>
-              </TD>
-            </TR>
-          ))}
-        </Table>
-        {filtered.length === 0 && <div className="text-center py-12 text-text-disabled">{t('noContacts')}</div>}
+        <DataTable tableId="contacts" columns={columns} rows={filtered} locale={locale} rowKey={c => String(c.id)} onRowClick={c => setSelected(c)} rowActions={rowActions} exportName="contacts" emptyLabel={t('noContacts')} />
       </Card>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={t('contactsTitle')} size="md">

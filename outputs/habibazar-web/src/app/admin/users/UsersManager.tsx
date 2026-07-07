@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type User = { id: string; name: string; email: string; role: string; department?: string | null; active: boolean; createdAt: string; lastLogin: string; totpEnabled?: boolean }
 const EMPTY = { name: '', email: '', password: '', role: 'editor', department: '' }
@@ -11,6 +13,7 @@ const ROLE_COLOR: Record<string, string> = { super_admin: 'yellow', administrato
 type TwoFAPanel = { userId: string; email: string; secret: string; qrCode: string; enabled: boolean; phase: 'view' | 'setup' | 'confirm' }
 
 export function UsersManager({ currentUserId }: { currentUserId: string }) {
+  const locale = useAdminLocale()
   const [users, setUsers] = useState<User[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<typeof EMPTY & { id?: string }>(EMPTY)
@@ -97,48 +100,35 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
     else toast('Failed', 'error')
   }
 
+  const userColumns: Column<User>[] = [
+    { key: 'name', labelEn: 'User', labelFa: 'کاربر', render: u => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold">{u.name.charAt(0)}</div><div><div className="font-medium text-white">{u.name}{u.id === currentUserId && <span className="text-xs text-text-tertiary ml-2">(you)</span>}</div><div className="text-xs text-text-tertiary">{u.email}</div></div></div> },
+    { key: 'role', labelEn: 'Role', labelFa: 'نقش', type: 'enum', options: ['super_admin', 'administrator', 'editor'].map(r => ({ value: r, labelEn: r, labelFa: r })), render: u => <Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge> },
+    { key: 'totpEnabled', labelEn: '2FA', labelFa: '2FA', type: 'boolean', value: u => !!u.totpEnabled, render: u => <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-surface-2/50 text-text-tertiary hover:bg-surface-2'}`}>{u.totpEnabled ? '🔐 On' : '○ Off'}</button> },
+    { key: 'active', labelEn: 'Status', labelFa: 'وضعیت', type: 'boolean', value: u => u.active, render: u => <Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Active' : 'Inactive'}</Badge> },
+    { key: 'lastLogin', labelEn: 'Last Login', labelFa: 'آخرین ورود', type: 'date', render: u => <span className="text-xs text-text-tertiary">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</span> },
+  ]
+  const userActions: RowAction<User>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: 'ویرایش', icon: '✎', onClick: u => { setEditing({ ...u, password: '', department: u.department ?? '' }); setModal(true) } },
+    { id: 'toggle', labelEn: 'Enable/Disable', labelFa: 'فعال/غیرفعال', icon: '⇄', hidden: u => u.id === currentUserId, onClick: u => toggleActive(u) },
+    { id: 'del', labelEn: 'Delete', labelFa: 'حذف', icon: '🗑', danger: true, hidden: u => u.id === currentUserId, onClick: u => del(u.id) },
+  ]
+
   return (
     <>
       <ToastContainer />
       <PageHeader title="Users & Role Management" subtitle="Manage admin panel access and permissions" action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>+ Invite User</Btn>} />
 
       <Card>
-        <Table headers={['User', 'Role', '2FA', 'Status', 'Last Login', 'Actions']}>
-          {users.map((u) => (
-            <TR key={u.id}>
-              <TD>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold">
-                    {u.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-medium text-white">{u.name}{u.id === currentUserId && <span className="text-xs text-text-tertiary ml-2">(you)</span>}</div>
-                    <div className="text-xs text-text-tertiary">{u.email}</div>
-                  </div>
-                </div>
-              </TD>
-              <TD><Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge></TD>
-              <TD>
-                <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-surface-2/50 text-text-tertiary hover:bg-surface-2'}`}>
-                  {u.totpEnabled ? '🔐 On' : '○ Off'}
-                </button>
-              </TD>
-              <TD><Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Active' : 'Inactive'}</Badge></TD>
-              <TD className="text-xs text-text-tertiary">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</TD>
-              <TD>
-                <div className="flex gap-2">
-                  <Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...u, password: '', department: u.department ?? '' }); setModal(true) }}>Edit</Btn>
-                  {u.id !== currentUserId && (
-                    <>
-                      <Btn size="sm" variant="ghost" onClick={() => toggleActive(u)}>{u.active ? 'Disable' : 'Enable'}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(u.id)}>Del</Btn>
-                    </>
-                  )}
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </Table>
+        <DataTable
+          tableId="users"
+          columns={userColumns}
+          rows={users}
+          locale={locale}
+          rowKey={u => u.id}
+          rowActions={userActions}
+          exportName="users"
+          quickCreate={{ labelEn: 'Invite User', labelFa: 'دعوت کاربر', onClick: () => { setEditing(EMPTY); setModal(true) } }}
+        />
       </Card>
 
       {/* Role Guide */}
