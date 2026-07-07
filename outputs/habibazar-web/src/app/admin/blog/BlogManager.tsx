@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Table, TR, TD, Badge, Modal, useToast } from '@/components/admin/ui'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 
 type Category = { id: number; slug: string; nameEn: string; nameFa: string; color: string; icon: string; sortOrder: number; active: boolean }
@@ -238,45 +240,25 @@ export function BlogManager() {
           </div>
 
           <Card>
-            <Table headers={[t('title'), t('category'), t('status'), t('views'), t('date'), t('actions')]}>
-              {filteredPosts.map((p) => (
-                <TR key={p.id}>
-                  <TD>
-                    <div className="font-medium text-white flex items-center gap-1">
-                      {p.featured && <span className="text-yellow-400 text-xs">★</span>}
-                      {p.titleEn}
-                    </div>
-                    <div className="text-xs text-text-tertiary truncate max-w-48">{p.titleFa}</div>
-                  </TD>
-                  <TD>
-                    {(() => {
-                      const cat = categories.find((c) => c.id === p.categoryId)
-                      return cat ? (
-                        <span className="flex items-center gap-1 text-sm">
-                          <span className="w-2 h-2 rounded-full inline-block" style={{ background: cat.color }} />
-                          <span className="text-text-primary">{cat.nameEn}</span>
-                        </span>
-                      ) : <span className="text-text-disabled">—</span>
-                    })()}
-                  </TD>
-                  <TD><Badge color={statusColor[p.status]}>{statusLabel[p.status] || p.status}</Badge></TD>
-                  <TD className="text-text-tertiary">{p.views}</TD>
-                  <TD className="text-xs text-text-tertiary">{p.publishedAtEn}</TD>
-                  <TD>
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => openEditPost(p)}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="secondary" onClick={() => togglePostStatus(p)}>
-                        {p.status === 'published' ? '⏸' : '▶'}
-                      </Btn>
-                      <Btn size="sm" variant="danger" onClick={() => delPost(p.id!)}>{t('delete')}</Btn>
-                    </div>
-                  </TD>
-                </TR>
-              ))}
-              {filteredPosts.length === 0 && (
-                <TR><TD colSpan={6} className="text-center text-text-tertiary py-8">نتیجه‌ای یافت نشد</TD></TR>
-              )}
-            </Table>
+            <DataTable
+              tableId="blog-posts"
+              columns={[
+                { key: 'titleEn', labelEn: 'Title', labelFa: t('title'), render: p => <div><div className="font-medium text-white flex items-center gap-1">{p.featured && <span className="text-yellow-400 text-xs">★</span>}{p.titleEn}</div><div className="text-xs text-text-tertiary truncate max-w-48">{p.titleFa}</div></div> },
+                { key: 'categoryId', labelEn: 'Category', labelFa: t('category'), type: 'enum', value: p => categories.find(c => c.id === p.categoryId)?.nameEn ?? '', render: p => { const cat = categories.find((c) => c.id === p.categoryId); return cat ? <span className="flex items-center gap-1 text-sm"><span className="w-2 h-2 rounded-full inline-block" style={{ background: cat.color }} /><span className="text-text-primary">{cat.nameEn}</span></span> : <span className="text-text-disabled">—</span> } },
+                { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['draft', 'published', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: p => <Badge color={statusColor[p.status]}>{statusLabel[p.status] || p.status}</Badge> },
+                { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true, render: p => <span className="text-text-tertiary">{p.views}</span> },
+                { key: 'publishedAtEn', labelEn: 'Date', labelFa: t('date'), type: 'date', render: p => <span className="text-xs text-text-tertiary">{p.publishedAtEn}</span> },
+              ] as Column<Post>[]}
+              rows={filteredPosts}
+              locale={isFA ? 'fa' : 'en'}
+              rowKey={p => String(p.id)}
+              rowActions={[
+                { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => openEditPost(p) },
+                { id: 'toggle', labelEn: 'Toggle', labelFa: t('status'), icon: '⇄', onClick: p => togglePostStatus(p) },
+                { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: p => delPost(p.id!) },
+              ] as RowAction<Post>[]}
+              exportName="blog-posts"
+            />
           </Card>
         </>
       ) : (
@@ -325,43 +307,27 @@ export function BlogManager() {
           </div>
 
           <Card>
-            <Table headers={[t('category'), t('slug'), t('icon'), t('color'), t('sortOrder'), 'پست‌ها', 'وضعیت', t('actions')]}>
-              {filteredCats.map((c) => (
-                <TR key={c.id}>
-                  <TD>
-                    <div className="font-medium text-white">{c.nameEn}</div>
-                    <div className="text-xs text-text-tertiary">{c.nameFa}</div>
-                  </TD>
-                  <TD className="text-text-tertiary font-mono text-xs">{c.slug}</TD>
-                  <TD>{c.icon}</TD>
-                  <TD>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
-                      <span className="text-xs text-text-tertiary font-mono">{c.color}</span>
-                    </span>
-                  </TD>
-                  <TD className="text-text-tertiary">{c.sortOrder}</TD>
-                  <TD className="text-text-secondary text-sm">{posts.filter((p) => p.categoryId === c.id).length}</TD>
-                  <TD>
-                    <Badge color={c.active ? 'green' : 'slate'}>{c.active ? 'فعال' : 'غیرفعال'}</Badge>
-                  </TD>
-                  <TD>
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditCat(c); setCatModal(true) }}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="secondary" onClick={() => toggleCat(c)}>
-                        {c.active ? '⏸' : '▶'}
-                      </Btn>
-                      <Btn size="sm" variant="danger" onClick={() => delCat(c.id)}>
-                        {t('delete')}
-                      </Btn>
-                    </div>
-                  </TD>
-                </TR>
-              ))}
-              {filteredCats.length === 0 && (
-                <TR><TD colSpan={8} className="text-center text-text-tertiary py-8">نتیجه‌ای یافت نشد</TD></TR>
-              )}
-            </Table>
+            <DataTable
+              tableId="blog-categories"
+              columns={[
+                { key: 'nameEn', labelEn: 'Category', labelFa: t('category'), render: c => <div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
+                { key: 'slug', labelEn: 'Slug', labelFa: t('slug'), render: c => <span className="text-text-tertiary font-mono text-xs">{c.slug}</span> },
+                { key: 'icon', labelEn: 'Icon', labelFa: t('icon'), sortable: false, render: c => <span>{c.icon}</span> },
+                { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: c => <span className="inline-flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} /><span className="text-xs text-text-tertiary font-mono">{c.color}</span></span> },
+                { key: 'sortOrder', labelEn: 'Order', labelFa: t('sortOrder'), type: 'number', numeric: true, render: c => <span className="text-text-tertiary">{c.sortOrder}</span> },
+                { key: 'postCount', labelEn: 'Posts', labelFa: 'پست‌ها', type: 'number', numeric: true, value: c => posts.filter(p => p.categoryId === c.id).length, render: c => <span className="text-text-secondary text-sm">{posts.filter((p) => p.categoryId === c.id).length}</span> },
+                { key: 'active', labelEn: 'Status', labelFa: 'وضعیت', type: 'boolean', value: c => c.active, render: c => <Badge color={c.active ? 'green' : 'slate'}>{c.active ? 'فعال' : 'غیرفعال'}</Badge> },
+              ] as Column<Category>[]}
+              rows={filteredCats}
+              locale={isFA ? 'fa' : 'en'}
+              rowKey={c => String(c.id)}
+              rowActions={[
+                { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: c => { setEditCat(c); setCatModal(true) } },
+                { id: 'toggle', labelEn: 'Toggle', labelFa: 'وضعیت', icon: '⇄', onClick: c => toggleCat(c) },
+                { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => delCat(c.id) },
+              ] as RowAction<Category>[]}
+              exportName="blog-categories"
+            />
           </Card>
         </>
       )}

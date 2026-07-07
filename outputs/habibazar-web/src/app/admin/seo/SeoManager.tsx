@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, Btn, Input, Select, PageHeader, SectionDivider, useToast, Badge, Table, TR, TD, Modal } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { Card, Btn, Input, Select, PageHeader, SectionDivider, useToast, Badge, Modal } from '@/components/admin/ui'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 const PAGES = ['home', 'about', 'services', 'case-studies', 'blog', 'consultation', 'contact']
 type Tab = 'meta' | 'redirects' | 'robots' | 'sitemap'
@@ -15,6 +17,7 @@ const EMPTY_REDIRECT: Redirect = { fromPath: '', toPath: '', statusCode: 301, ac
 
 export function SeoManager() {
   const t = useT()
+  const seoLocale = useAdminLocale()
   const [tab, setTab] = useState<Tab>('meta')
   const [page, setPage] = useState('home')
   const [locale, setLocale] = useState<'en' | 'fa'>('en')
@@ -143,24 +146,25 @@ export function SeoManager() {
             <Btn onClick={() => { setEditingRedirect(EMPTY_REDIRECT); setRedirectModal(true) }}>{t('addRedirect')}</Btn>
           </div>
           <Card>
-            <Table headers={[t('fromPath'), t('toPath'), t('statusCode2'), t('hits'), t('status'), t('actions')]}>
-              {redirects.map(r => (
-                <TR key={r.id}>
-                  <TD className="font-mono text-text-primary text-xs">{r.fromPath}</TD>
-                  <TD className="font-mono text-brand text-xs">{r.toPath}</TD>
-                  <TD><Badge color={r.statusCode === 301 ? 'indigo' : 'yellow'}>{r.statusCode}</Badge></TD>
-                  <TD className="text-text-tertiary text-xs">{r.hits ?? 0}</TD>
-                  <TD><Badge color={r.active ? 'green' : 'slate'}>{r.active ? t('active') : t('off')}</Badge></TD>
-                  <TD>
-                    <div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => { setEditingRedirect(r); setRedirectModal(true) }}>{t('edit')}</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => deleteRedirect(r.id!)}>{t('del')}</Btn>
-                    </div>
-                  </TD>
-                </TR>
-              ))}
-            </Table>
-            {redirects.length === 0 && <div className="text-center py-12 text-text-disabled text-sm">No redirects configured yet</div>}
+            <DataTable
+              tableId="seo-redirects"
+              columns={[
+                { key: 'fromPath', labelEn: 'From', labelFa: t('fromPath'), render: r => <span className="font-mono text-text-primary text-xs">{r.fromPath}</span> },
+                { key: 'toPath', labelEn: 'To', labelFa: t('toPath'), render: r => <span className="font-mono text-brand text-xs">{r.toPath}</span> },
+                { key: 'statusCode', labelEn: 'Code', labelFa: t('statusCode2'), type: 'enum', options: [301, 302].map(x => ({ value: String(x), labelEn: String(x), labelFa: String(x) })), render: r => <Badge color={r.statusCode === 301 ? 'indigo' : 'yellow'}>{r.statusCode}</Badge> },
+                { key: 'hits', labelEn: 'Hits', labelFa: t('hits'), type: 'number', numeric: true, value: r => r.hits ?? 0, render: r => <span className="text-text-tertiary text-xs">{r.hits ?? 0}</span> },
+                { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: r => r.active, render: r => <Badge color={r.active ? 'green' : 'slate'}>{r.active ? t('active') : t('off')}</Badge> },
+              ] as Column<Redirect>[]}
+              rows={redirects}
+              locale={seoLocale}
+              rowKey={r => String(r.id)}
+              rowActions={[
+                { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: r => { setEditingRedirect(r); setRedirectModal(true) } },
+                { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: r => deleteRedirect(r.id!) },
+              ] as RowAction<Redirect>[]}
+              exportName="seo-redirects"
+              emptyLabel="No redirects configured yet"
+            />
           </Card>
           <Modal open={redirectModal} onClose={() => setRedirectModal(false)} title={editingRedirect.id ? t('editRedirect') : t('addRedirect')} size="md">
             <div className="space-y-4">
