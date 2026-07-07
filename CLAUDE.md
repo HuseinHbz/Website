@@ -421,6 +421,15 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   reorder, Customize edit mode, Save/Reset, lazy recharts, loading/empty/error/
   denied states. 15 widgets (KPI/chart/table/list/ops). Verified vs real
   PostgreSQL. Report: `docs/governance/phase22-dashboard-platform.md`.
+  **Patch (enterprise hardening):** role-based layouts via `dashboard_role_layouts`
+  (role×workspace) with pure `pickLayout` resolution **User → Role → Workspace
+  default** (GET returns `source`; role save needs `manage_users`; reset falls
+  back to role). Widget `config` (`refreshInterval`/`warn`/`critical`) sanitised +
+  persisted in the layout JSON; per-widget auto-refresh polling (SSE-ready seam).
+  `resolveWidgets` gained a per-widget in-memory TTL cache (`widgetTtl`: ops 30s /
+  others 5min; `?fresh=1` bypasses). Layout import/export (JSON) + audit logging
+  (`dashboard.layout.save`/`role_layout.save`/`layout.reset`). Report:
+  `docs/governance/phase22-dashboard-platform-patch.md`.
 - **Navigation Platform** (Phase 22.3) — RBAC-aware sidebar + breadcrumb + search
   + favorites/recent + quick actions, all driven by the workspace registry. Pure
   helpers in `src/lib/admin/workspaces.ts`: `roleCan` (client-safe RBAC mirror of

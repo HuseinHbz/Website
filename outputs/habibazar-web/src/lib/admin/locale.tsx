@@ -2196,6 +2196,17 @@ const T: Record<string, { fa: string; en: string }> = {
   dash_error: { fa: 'خطا در بارگذاری.', en: 'Failed to load.' },
   dash_denied: { fa: 'دسترسی لازم را ندارید.', en: 'You lack permission for this widget.' },
   dash_footnote: { fa: 'چیدمان برای هر کاربر و هر فضای کاری جداگانه ذخیره می‌شود؛ همهٔ داده‌ها واقعی و از سرویس‌های موجود هستند.', en: 'Layout is saved per user + workspace; all data is real, from existing services.' },
+  dash_src_user: { fa: 'چیدمان شما', en: 'Your layout' },
+  dash_src_role: { fa: 'چیدمان نقش', en: 'Role layout' },
+  dash_src_default: { fa: 'پیش‌فرض', en: 'Default' },
+  dash_export: { fa: 'خروجی', en: 'Export' },
+  dash_import: { fa: 'ورود', en: 'Import' },
+  dash_imported: { fa: 'چیدمان وارد شد (ذخیره نشده)', en: 'Layout imported (unsaved)' },
+  dash_importFail: { fa: 'ورود ناموفق بود.', en: 'Import failed.' },
+  dash_saveRole: { fa: 'ذخیره به‌عنوان پیش‌فرض نقش', en: 'Save as role default' },
+  dash_roleSaved: { fa: 'پیش‌فرض نقش ذخیره شد.', en: 'Role default saved.' },
+  dash_refreshEvery: { fa: 'به‌روزرسانی خودکار', en: 'Auto-refresh' },
+  dash_refreshOff: { fa: 'خاموش', en: 'Off' },
 }
 
 export function useT() {

@@ -321,6 +321,17 @@ export async function runMigrations() {
     -- {RANDOM} auto-fill length (0 = off); added idempotently for existing DBs.
     ALTER TABLE numbering_formats ADD COLUMN IF NOT EXISTS random_length INTEGER NOT NULL DEFAULT 4;
 
+    -- Role default dashboard layouts (Phase 22.2 patch). Resolution priority:
+    -- user layout (dashboard_layouts) → role layout (here) → workspace default.
+    CREATE TABLE IF NOT EXISTS dashboard_role_layouts (
+      id SERIAL PRIMARY KEY,
+      role TEXT NOT NULL,
+      workspace TEXT NOT NULL,
+      layout TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (role, workspace)
+    );
+
     -- Per-user navigation preferences (Phase 22.3): pinned favorites + recent
     -- items (each a JSON array of hrefs / {href,ts}). One row per user.
     CREATE TABLE IF NOT EXISTS nav_prefs (

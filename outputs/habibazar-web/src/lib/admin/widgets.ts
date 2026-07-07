@@ -56,7 +56,30 @@ export function widgetsForWorkspace(workspace: string): WidgetDef[] {
   return WIDGETS.filter(w => w.workspace === workspace)
 }
 
-export interface LayoutEntry { id: string; size: WidgetSize }
+export interface WidgetConfig { refreshInterval?: number; warn?: number; critical?: number }
+export interface LayoutEntry { id: string; size: WidgetSize; config?: WidgetConfig }
+
+/** Per-widget cache TTL (ms) — how long resolved data may be reused. */
+export const WIDGET_TTL: Record<string, number> = {
+  ops_system_health: 30_000, ops_subsystems: 30_000, ops_backup: 60_000,
+}
+export function widgetTtl(id: string): number {
+  return WIDGET_TTL[id] ?? 300_000 // default 5 min (KPIs/charts/tables)
+}
+
+/**
+ * Resolve the effective layout by priority: user → role → workspace default.
+ * Pure — the route supplies the persisted user/role layouts.
+ */
+export function pickLayout(
+  workspace: string,
+  user: LayoutEntry[] | null,
+  role: LayoutEntry[] | null,
+): { layout: LayoutEntry[]; source: 'user' | 'role' | 'default' } {
+  if (user && user.length) return { layout: sanitizeLayout(workspace, user), source: 'user' }
+  if (role && role.length) return { layout: sanitizeLayout(workspace, role), source: 'role' }
+  return { layout: defaultLayout(workspace), source: 'default' }
+}
 
 /** The system default layout for a workspace (ordered). */
 export function defaultLayout(workspace: string): LayoutEntry[] {
@@ -80,5 +103,15 @@ export function sanitizeLayout(workspace: string, layout: LayoutEntry[]): Layout
     if (!allowed.has(e.id) || seen.has(e.id)) return false
     seen.add(e.id)
     return true
-  }).map(e => ({ id: e.id, size: (['sm', 'md', 'lg'] as const).includes(e.size) ? e.size : 'sm' }))
+  }).map(e => {
+    const out: LayoutEntry = { id: e.id, size: (['sm', 'md', 'lg'] as const).includes(e.size) ? e.size : 'sm' }
+    if (e.config) {
+      const c: WidgetConfig = {}
+      if (Number.isFinite(e.config.refreshInterval)) c.refreshInterval = Math.max(0, Math.min(3600, Number(e.config.refreshInterval)))
+      if (Number.isFinite(e.config.warn)) c.warn = Number(e.config.warn)
+      if (Number.isFinite(e.config.critical)) c.critical = Number(e.config.critical)
+      if (Object.keys(c).length) out.config = c
+    }
+    return out
+  })
 }

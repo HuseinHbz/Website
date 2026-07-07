@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const auth = await requireAdmin()
   if ('error' in auth) return auth.error
   const ids = (req.nextUrl.searchParams.get('ids') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 60)
+  const fresh = req.nextUrl.searchParams.get('fresh') === '1'
   try {
     const allowed: string[] = []
     const denied: Record<string, { kind: 'denied' }> = {}
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
       if (w && w.requires && !canDo(auth.user.role, w.requires)) denied[id] = { kind: 'denied' }
       else allowed.push(id)
     }
-    const data = await resolveWidgets(allowed)
+    const data = await resolveWidgets(allowed, fresh)
     return NextResponse.json({ data: { ...data, ...denied } })
   } catch (e) { return apiError(e, 'Failed to load widget data') }
 }

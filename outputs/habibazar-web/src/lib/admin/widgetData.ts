@@ -10,7 +10,7 @@
 import { pgQuery } from '@/lib/db'
 import { executiveOverview } from '@/lib/admin/executiveOverview'
 import { opsSnapshot } from '@/lib/ops/snapshot'
-import { widgetById } from '@/lib/admin/widgets'
+import { widgetById, widgetTtl } from '@/lib/admin/widgets'
 
 export type WidgetPayload =
   | { kind: 'kpi'; value: number; unit?: string; sub?: string }
@@ -27,18 +27,37 @@ type Ops = Awaited<ReturnType<typeof opsSnapshot>>
 const EXEC_WIDGETS = new Set(['kpi_net_income', 'kpi_cash', 'kpi_revenue', 'kpi_inventory_value', 'kpi_active_assets', 'kpi_crm_pipeline', 'kpi_crm_leads', 'kpi_ai_calls', 'chart_ai_daily', 'table_activity', 'list_alerts'])
 const OPS_WIDGETS = new Set(['ops_system_health', 'ops_subsystems'])
 
-/** Resolve a batch of widget ids → { id: payload }. Shared snapshots computed once. */
-export async function resolveWidgets(ids: string[]): Promise<Record<string, WidgetPayload>> {
-  const needExec = ids.some(id => EXEC_WIDGETS.has(id))
-  const needOps = ids.some(id => OPS_WIDGETS.has(id))
+// Per-widget in-memory cache (TTL from widgetTtl). Manual refresh passes fresh=true.
+const cache = new Map<string, { at: number; payload: WidgetPayload }>()
+
+/**
+ * Resolve a batch of widget ids → { id: payload }. Shared snapshots are computed
+ * once per request, and only for widgets whose cache is stale (widget-level TTL,
+ * e.g. system-health 30s vs KPIs 5min). `fresh` bypasses the cache.
+ */
+export async function resolveWidgets(ids: string[], fresh = false): Promise<Record<string, WidgetPayload>> {
+  const now = Date.now()
+  const out: Record<string, WidgetPayload> = {}
+  const stale: string[] = []
+  for (const id of ids) {
+    const hit = cache.get(id)
+    if (!fresh && hit && now - hit.at < widgetTtl(id)) out[id] = hit.payload
+    else stale.push(id)
+  }
+  if (stale.length === 0) return out
+
+  const needExec = stale.some(id => EXEC_WIDGETS.has(id))
+  const needOps = stale.some(id => OPS_WIDGETS.has(id))
   const [exec, ops] = await Promise.all([
     needExec ? executiveOverview().catch(() => null) : Promise.resolve(null),
     needOps ? opsSnapshot().catch(() => null) : Promise.resolve(null),
   ])
-  const out: Record<string, WidgetPayload> = {}
-  for (const id of ids) {
-    try { out[id] = await onePayload(id, exec, ops) }
-    catch (e) { out[id] = { kind: 'error', message: e instanceof Error ? e.message : 'failed' } }
+  for (const id of stale) {
+    try {
+      const payload = await onePayload(id, exec, ops)
+      out[id] = payload
+      if (payload.kind !== 'error') cache.set(id, { at: now, payload })
+    } catch (e) { out[id] = { kind: 'error', message: e instanceof Error ? e.message : 'failed' } }
   }
   return out
 }
