@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, Btn, Input, Select, Badge, StatCard, Table, TR, TD, Modal, PageHeader, useToast } from '@/components/admin/ui'
+import { Card, Btn, Input, Select, Badge, StatCard, Modal, PageHeader, useToast } from '@/components/admin/ui'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { renderNumber, PLACEHOLDERS, type NumberFormat } from '@/lib/numbering/format'
 import { NUMBERING_TEMPLATES } from '@/lib/numbering/templates'
@@ -62,6 +64,7 @@ export function NumberingCenter() {
 }
 
 function Dashboard({ t }: { t: (k: string) => string }) {
+  const locale = useAdminLocale()
   const [d, setD] = useState<Dash | null>(null)
   useEffect(() => { fetch('/api/admin/erp/numbering?view=dashboard').then(r => r.json()).then(setD).catch(() => {}) }, [])
   if (!d) return <p className="text-sm text-text-tertiary">{t('num_loading')}</p>
@@ -109,25 +112,30 @@ function Dashboard({ t }: { t: (k: string) => string }) {
       </div>
       <Card className="p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-border"><h3 className="text-sm font-semibold text-text-primary">{t('num_recent')}</h3></div>
-        {d.recent.length === 0 ? <p className="p-6 text-center text-sm text-text-tertiary">{t('num_none')}</p> : (
-          <Table headers={[t('num_col_number'), t('num_col_type'), t('num_col_module'), t('num_col_status'), t('num_col_time')]}>
-            {d.recent.map(a => (
-              <TR key={a.id}>
-                <TD className="font-mono text-text-primary">{a.number || '—'}</TD>
-                <TD>{a.docType}</TD>
-                <TD>{a.module ?? '—'}</TD>
-                <TD><Badge color={STATUS_COLOR[a.status] ?? 'slate'}>{t(`num_st_${a.status}`)}</Badge></TD>
-                <TD className="text-text-tertiary text-xs">{a.createdAt}</TD>
-              </TR>
-            ))}
-          </Table>
-        )}
+        <div className="p-4">
+          <DataTable
+            tableId="numbering-recent"
+            columns={[
+              { key: 'number', labelEn: 'Number', labelFa: t('num_col_number'), render: a => <span className="font-mono text-text-primary">{a.number || '—'}</span> },
+              { key: 'docType', labelEn: 'Type', labelFa: t('num_col_type'), type: 'enum', render: a => <span>{a.docType}</span> },
+              { key: 'module', labelEn: 'Module', labelFa: t('num_col_module'), type: 'enum', render: a => <span>{a.module ?? '—'}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: t('num_col_status'), type: 'enum', render: a => <Badge color={STATUS_COLOR[a.status] ?? 'slate'}>{t(`num_st_${a.status}`)}</Badge> },
+              { key: 'createdAt', labelEn: 'Time', labelFa: t('num_col_time'), type: 'date', render: a => <span className="text-text-tertiary text-xs">{a.createdAt}</span> },
+            ] as Column<AuditRow>[]}
+            rows={d.recent}
+            locale={locale}
+            rowKey={a => String(a.id)}
+            exportName="numbering-recent"
+            emptyLabel={t('num_none')}
+          />
+        </div>
       </Card>
     </div>
   )
 }
 
 function Formats({ t, toast }: { t: (k: string) => string; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<FormatRow[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -211,25 +219,26 @@ function Formats({ t, toast }: { t: (k: string) => string; toast: (m: string, k?
       {loading ? <p className="text-sm text-text-tertiary">{t('num_loading')}</p> : rows.length === 0 ? (
         <Card className="p-8 text-center"><p className="text-sm text-text-tertiary">{t('num_noFormats')}</p></Card>
       ) : (
-        <Card className="p-0 overflow-hidden">
-          <Table headers={[t('num_col_type'), t('num_col_pattern'), t('num_col_reset'), t('num_col_next'), t('num_col_active'), '']}>
-            {rows.map(r => (
-              <TR key={r.id}>
-                <TD className="text-text-primary font-medium">{r.docType}<span className="block text-xs text-text-tertiary">{r.nameEn}</span></TD>
-                <TD className="font-mono text-xs">{r.pattern}</TD>
-                <TD>{t(`num_reset_${r.resetPolicy}`)}</TD>
-                <TD className="font-mono text-text-primary">{r.nextNumber ?? '—'}</TD>
-                <TD>{r.active ? <Badge color="green">{t('num_on')}</Badge> : <Badge color="slate">{t('num_off')}</Badge>}</TD>
-                <TD>
-                  <div className="flex gap-1 justify-end">
-                    <Btn size="sm" variant="ghost" onClick={() => generate(r.docType)}>{t('num_generate')}</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => openEdit(r)}>{t('num_edit')}</Btn>
-                    <Btn size="sm" variant="danger" onClick={() => remove(r.id)}>{t('num_delete')}</Btn>
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </Table>
+        <Card className="p-4">
+          <DataTable
+            tableId="numbering-formats"
+            columns={[
+              { key: 'docType', labelEn: 'Type', labelFa: t('num_col_type'), render: r => <span className="text-text-primary font-medium">{r.docType}<span className="block text-xs text-text-tertiary">{r.nameEn}</span></span> },
+              { key: 'pattern', labelEn: 'Pattern', labelFa: t('num_col_pattern'), render: r => <span className="font-mono text-xs">{r.pattern}</span> },
+              { key: 'resetPolicy', labelEn: 'Reset', labelFa: t('num_col_reset'), type: 'enum', render: r => <span>{t(`num_reset_${r.resetPolicy}`)}</span> },
+              { key: 'nextNumber', labelEn: 'Next', labelFa: t('num_col_next'), render: r => <span className="font-mono text-text-primary">{r.nextNumber ?? '—'}</span> },
+              { key: 'active', labelEn: 'Active', labelFa: t('num_col_active'), type: 'boolean', value: r => !!r.active, render: r => r.active ? <Badge color="green">{t('num_on')}</Badge> : <Badge color="slate">{t('num_off')}</Badge> },
+            ] as Column<FormatRow>[]}
+            rows={rows}
+            locale={locale}
+            rowKey={r => String(r.id)}
+            rowActions={[
+              { id: 'generate', labelEn: 'Generate', labelFa: t('num_generate'), icon: '＋', onClick: r => generate(r.docType) },
+              { id: 'edit', labelEn: 'Edit', labelFa: t('num_edit'), icon: '✎', onClick: r => openEdit(r) },
+              { id: 'del', labelEn: 'Delete', labelFa: t('num_delete'), icon: '🗑', danger: true, onClick: r => remove(r.id) },
+            ] as RowAction<FormatRow>[]}
+            exportName="numbering-formats"
+          />
         </Card>
       )}
 
@@ -277,6 +286,7 @@ function Formats({ t, toast }: { t: (k: string) => string; toast: (m: string, k?
 }
 
 function Counters({ t, toast }: { t: (k: string) => string; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<CounterRow[]>([])
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => {
@@ -295,25 +305,29 @@ function Counters({ t, toast }: { t: (k: string) => string; toast: (m: string, k
   if (loading) return <p className="text-sm text-text-tertiary">{t('num_loading')}</p>
   if (rows.length === 0) return <Card className="p-8 text-center"><p className="text-sm text-text-tertiary">{t('num_noCounters')}</p></Card>
   return (
-    <Card className="p-0 overflow-hidden">
-      <Table headers={[t('num_col_type'), t('num_col_scope'), t('num_col_period'), t('num_col_current'), t('num_col_last'), '']}>
-        {rows.map(r => (
-          <TR key={r.id}>
-            <TD className="text-text-primary">{r.docType}</TD>
-            <TD className="text-xs">{r.scopeKey || '—'}</TD>
-            <TD className="text-xs">{r.periodKey || '—'}</TD>
-            <TD className="font-mono text-text-primary tabular-nums">{r.currentValue}</TD>
-            <TD className="font-mono text-xs">{r.lastNumber ?? '—'}</TD>
-            <TD><div className="flex justify-end"><Btn size="sm" variant="danger" onClick={() => reset(r)}>{t('num_reset')}</Btn></div></TD>
-          </TR>
-        ))}
-      </Table>
+    <Card className="p-4">
+      <DataTable
+        tableId="numbering-counters"
+        columns={[
+          { key: 'docType', labelEn: 'Type', labelFa: t('num_col_type'), type: 'enum', render: r => <span className="text-text-primary">{r.docType}</span> },
+          { key: 'scopeKey', labelEn: 'Scope', labelFa: t('num_col_scope'), type: 'enum', render: r => <span className="text-xs">{r.scopeKey || '—'}</span> },
+          { key: 'periodKey', labelEn: 'Period', labelFa: t('num_col_period'), type: 'enum', render: r => <span className="text-xs">{r.periodKey || '—'}</span> },
+          { key: 'currentValue', labelEn: 'Current', labelFa: t('num_col_current'), type: 'number', numeric: true, render: r => <span className="font-mono text-text-primary tabular-nums">{r.currentValue}</span> },
+          { key: 'lastNumber', labelEn: 'Last', labelFa: t('num_col_last'), render: r => <span className="font-mono text-xs">{r.lastNumber ?? '—'}</span> },
+        ] as Column<CounterRow>[]}
+        rows={rows}
+        locale={locale}
+        rowKey={r => String(r.id)}
+        rowActions={[{ id: 'reset', labelEn: 'Reset', labelFa: t('num_reset'), icon: '↺', danger: true, onClick: r => reset(r) }] as RowAction<CounterRow>[]}
+        exportName="numbering-counters"
+      />
     </Card>
   )
 }
 
 interface ScopeRow { id: number; kind: string; code: string; nameEn: string; nameFa: string | null; active: number }
 function Scopes({ t, toast }: { t: (k: string) => string; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<ScopeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -346,21 +360,24 @@ function Scopes({ t, toast }: { t: (k: string) => string; toast: (m: string, k?:
       {loading ? <p className="text-sm text-text-tertiary">{t('num_loading')}</p> : rows.length === 0 ? (
         <Card className="p-8 text-center"><p className="text-sm text-text-tertiary">{t('num_noScopes')}</p></Card>
       ) : (
-        <Card className="p-0 overflow-hidden">
-          <Table headers={[t('num_col_kind'), t('num_col_code'), t('num_col_name'), t('num_col_active'), '']}>
-            {rows.map(r => (
-              <TR key={r.id}>
-                <TD><Badge color="indigo">{t(`num_kind_${r.kind}`)}</Badge></TD>
-                <TD className="font-mono text-text-primary">{r.code}</TD>
-                <TD>{r.nameEn}{r.nameFa ? <span className="block text-xs text-text-tertiary">{r.nameFa}</span> : null}</TD>
-                <TD>{r.active ? <Badge color="green">{t('num_on')}</Badge> : <Badge color="slate">{t('num_off')}</Badge>}</TD>
-                <TD><div className="flex gap-1 justify-end">
-                  <Btn size="sm" variant="ghost" onClick={() => { setForm({ id: r.id, kind: r.kind, code: r.code, nameEn: r.nameEn, nameFa: r.nameFa ?? '', active: r.active }); setModal(true) }}>{t('num_edit')}</Btn>
-                  <Btn size="sm" variant="danger" onClick={() => remove(r.id)}>{t('num_delete')}</Btn>
-                </div></TD>
-              </TR>
-            ))}
-          </Table>
+        <Card className="p-4">
+          <DataTable
+            tableId="numbering-scopes"
+            columns={[
+              { key: 'kind', labelEn: 'Kind', labelFa: t('num_col_kind'), type: 'enum', render: r => <Badge color="indigo">{t(`num_kind_${r.kind}`)}</Badge> },
+              { key: 'code', labelEn: 'Code', labelFa: t('num_col_code'), render: r => <span className="font-mono text-text-primary">{r.code}</span> },
+              { key: 'nameEn', labelEn: 'Name', labelFa: t('num_col_name'), render: r => <span>{r.nameEn}{r.nameFa ? <span className="block text-xs text-text-tertiary">{r.nameFa}</span> : null}</span> },
+              { key: 'active', labelEn: 'Active', labelFa: t('num_col_active'), type: 'boolean', value: r => !!r.active, render: r => r.active ? <Badge color="green">{t('num_on')}</Badge> : <Badge color="slate">{t('num_off')}</Badge> },
+            ] as Column<ScopeRow>[]}
+            rows={rows}
+            locale={locale}
+            rowKey={r => String(r.id)}
+            rowActions={[
+              { id: 'edit', labelEn: 'Edit', labelFa: t('num_edit'), icon: '✎', onClick: r => { setForm({ id: r.id, kind: r.kind, code: r.code, nameEn: r.nameEn, nameFa: r.nameFa ?? '', active: r.active }); setModal(true) } },
+              { id: 'del', labelEn: 'Delete', labelFa: t('num_delete'), icon: '🗑', danger: true, onClick: r => remove(r.id) },
+            ] as RowAction<ScopeRow>[]}
+            exportName="numbering-scopes"
+          />
         </Card>
       )}
       <Modal open={modal} onClose={() => setModal(false)} title={form.id ? t('num_editScope') : t('num_addScope')} size="md">
@@ -398,6 +415,7 @@ function Templates({ t }: { t: (k: string) => string }) {
 }
 
 function Settings({ t }: { t: (k: string) => string }) {
+  const locale = useAdminLocale()
   const [formats, setFormats] = useState<FormatRow[]>([])
   useEffect(() => { fetch('/api/admin/erp/numbering?view=formats').then(r => r.json()).then(d => setFormats(d.formats ?? [])).catch(() => {}) }, [])
   return (
@@ -405,15 +423,18 @@ function Settings({ t }: { t: (k: string) => string }) {
       <Card className="p-5">
         <h3 className="text-sm font-semibold text-text-primary mb-1">{t('num_resetSchedule')}</h3>
         <p className="text-xs text-text-tertiary mb-3">{t('num_resetScheduleHint')}</p>
-        <Table headers={[t('num_col_type'), t('num_col_reset'), t('num_col_next')]}>
-          {formats.map(f => (
-            <TR key={f.id}>
-              <TD className="text-text-primary">{f.docType}</TD>
-              <TD><Badge color="indigo">{t(`num_reset_${f.resetPolicy}`)}</Badge></TD>
-              <TD className="font-mono">{f.nextNumber ?? '—'}</TD>
-            </TR>
-          ))}
-        </Table>
+        <DataTable
+          tableId="numbering-schedule"
+          columns={[
+            { key: 'docType', labelEn: 'Type', labelFa: t('num_col_type'), type: 'enum', render: f => <span className="text-text-primary">{f.docType}</span> },
+            { key: 'resetPolicy', labelEn: 'Reset', labelFa: t('num_col_reset'), type: 'enum', render: f => <Badge color="indigo">{t(`num_reset_${f.resetPolicy}`)}</Badge> },
+            { key: 'nextNumber', labelEn: 'Next', labelFa: t('num_col_next'), render: f => <span className="font-mono">{f.nextNumber ?? '—'}</span> },
+          ] as Column<FormatRow>[]}
+          rows={formats}
+          locale={locale}
+          rowKey={f => String(f.id)}
+          exportName="numbering-schedule"
+        />
       </Card>
       <Card className="p-5 space-y-2 text-sm text-text-secondary">
         <h3 className="text-sm font-semibold text-text-primary">{t('num_engineInfo')}</h3>
@@ -424,6 +445,7 @@ function Settings({ t }: { t: (k: string) => string }) {
 }
 
 function History({ t }: { t: (k: string) => string }) {
+  const locale = useAdminLocale()
   const [q, setQ] = useState('')
   const [rows, setRows] = useState<AuditRow[]>([])
   useEffect(() => {
@@ -436,21 +458,25 @@ function History({ t }: { t: (k: string) => string }) {
     <div className="space-y-4">
       <Input value={q} onChange={setQ} placeholder={t('num_searchPlaceholder')} />
       <Card className="p-0 overflow-hidden">
-        {rows.length === 0 ? <p className="p-8 text-center text-sm text-text-tertiary">{t('num_none')}</p> : (
-          <Table headers={[t('num_col_number'), t('num_col_type'), t('num_col_scope'), t('num_col_module'), t('num_col_source'), t('num_col_status'), t('num_col_time')]}>
-            {rows.map(a => (
-              <TR key={a.id}>
-                <TD className="font-mono text-text-primary">{a.number || '—'}</TD>
-                <TD>{a.docType}</TD>
-                <TD className="text-xs">{a.scopeKey || '—'}</TD>
-                <TD>{a.module ?? '—'}</TD>
-                <TD className="text-xs">{a.source}</TD>
-                <TD><Badge color={STATUS_COLOR[a.status] ?? 'slate'}>{t(`num_st_${a.status}`)}</Badge></TD>
-                <TD className="text-text-tertiary text-xs">{a.createdAt}</TD>
-              </TR>
-            ))}
-          </Table>
-        )}
+        <div className="p-4">
+          <DataTable
+            tableId="numbering-audit"
+            columns={[
+              { key: 'number', labelEn: 'Number', labelFa: t('num_col_number'), render: a => <span className="font-mono text-text-primary">{a.number || '—'}</span> },
+              { key: 'docType', labelEn: 'Type', labelFa: t('num_col_type'), type: 'enum', render: a => <span>{a.docType}</span> },
+              { key: 'scopeKey', labelEn: 'Scope', labelFa: t('num_col_scope'), type: 'enum', render: a => <span className="text-xs">{a.scopeKey || '—'}</span> },
+              { key: 'module', labelEn: 'Module', labelFa: t('num_col_module'), type: 'enum', render: a => <span>{a.module ?? '—'}</span> },
+              { key: 'source', labelEn: 'Source', labelFa: t('num_col_source'), type: 'enum', render: a => <span className="text-xs">{a.source}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: t('num_col_status'), type: 'enum', render: a => <Badge color={STATUS_COLOR[a.status] ?? 'slate'}>{t(`num_st_${a.status}`)}</Badge> },
+              { key: 'createdAt', labelEn: 'Time', labelFa: t('num_col_time'), type: 'date', render: a => <span className="text-text-tertiary text-xs">{a.createdAt}</span> },
+            ] as Column<AuditRow>[]}
+            rows={rows}
+            locale={locale}
+            rowKey={a => String(a.id)}
+            exportName="numbering-audit"
+            emptyLabel={t('num_none')}
+          />
+        </div>
       </Card>
     </div>
   )
