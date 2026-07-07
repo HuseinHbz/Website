@@ -41,6 +41,7 @@ const formatSchema = z.object({
   maxNumber: z.number().int().positive().nullable().optional(),
   alphabet: z.enum(['numeric', 'hex']).default('numeric'),
   fiscalStartMonth: z.number().int().min(1).max(12).default(1),
+  randomLength: z.number().int().min(0).max(32).default(4),
   active: z.number().int().min(0).max(1).default(1),
 })
 
@@ -58,10 +59,10 @@ export async function POST(req: NextRequest) {
     if (exists.length) return badRequest('A format for this document type already exists')
     const row = (await pgQuery(
       `INSERT INTO numbering_formats (doc_type, name_en, name_fa, pattern, prefix, suffix, reset_policy,
-         padding, increment, start_number, min_number, max_number, alphabet, fiscal_start_month, active, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+         padding, increment, start_number, min_number, max_number, alphabet, fiscal_start_month, random_length, active, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
       [d.docType, d.nameEn, d.nameFa ?? null, d.pattern, d.prefix, d.suffix, d.resetPolicy,
-       d.padding, d.increment, d.startNumber, d.minNumber, d.maxNumber ?? null, d.alphabet, d.fiscalStartMonth, d.active, auth.user.id]))[0] as { id: number }
+       d.padding, d.increment, d.startNumber, d.minNumber, d.maxNumber ?? null, d.alphabet, d.fiscalStartMonth, d.randomLength, d.active, auth.user.id]))[0] as { id: number }
     await logAction(auth.user, 'create', 'numbering_format', d.docType, null, d)
     return NextResponse.json({ id: row.id })
   } catch (e) { return apiError(e, 'Failed to create format') }
@@ -79,7 +80,8 @@ export async function PUT(req: NextRequest) {
   const map: Record<string, string> = {
     nameEn: 'name_en', nameFa: 'name_fa', pattern: 'pattern', prefix: 'prefix', suffix: 'suffix',
     resetPolicy: 'reset_policy', padding: 'padding', increment: 'increment', startNumber: 'start_number',
-    minNumber: 'min_number', maxNumber: 'max_number', alphabet: 'alphabet', fiscalStartMonth: 'fiscal_start_month', active: 'active',
+    minNumber: 'min_number', maxNumber: 'max_number', alphabet: 'alphabet', fiscalStartMonth: 'fiscal_start_month',
+    randomLength: 'random_length', active: 'active',
   }
   const sets: string[] = []
   const params: unknown[] = []

@@ -38,8 +38,13 @@ export async function POST(req: NextRequest) {
   const parsed0 = await readJson(req, schema)
   if ('error' in parsed0) return parsed0.error
   const d = parsed0.data
-  const mutates = d.action === 'generate' || d.action === 'reserve' || d.action === 'reset' || d.action === 'release'
-  const auth = await requireAdmin(mutates ? 'edit' : undefined)
+  // Granular permissions mapped onto RBAC roles: resetting a counter is
+  // destructive → administrator only (manage_settings); generate/reserve/release
+  // are edit-level; preview/validate are read-only.
+  const required = d.action === 'reset'
+    ? 'manage_settings' as const
+    : (d.action === 'generate' || d.action === 'reserve' || d.action === 'release') ? 'edit' as const : undefined
+  const auth = await requireAdmin(required)
   if ('error' in auth) return auth.error
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
   try {

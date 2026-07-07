@@ -11,7 +11,7 @@ export interface FormatRecord {
   id: number; docType: string; nameEn: string; nameFa: string | null
   pattern: string; prefix: string; suffix: string; resetPolicy: string
   padding: number; increment: number; startNumber: number; minNumber: number
-  maxNumber: number | null; alphabet: string; fiscalStartMonth: number; active: number
+  maxNumber: number | null; alphabet: string; fiscalStartMonth: number; randomLength: number; active: number
   createdAt: string; updatedAt: string
   nextNumber?: string | null
 }
@@ -20,7 +20,7 @@ const FORMAT_COLS = `id, doc_type AS "docType", name_en AS "nameEn", name_fa AS 
   pattern, prefix, suffix, reset_policy AS "resetPolicy", padding, increment,
   start_number AS "startNumber", min_number AS "minNumber",
   CASE WHEN max_number IS NULL THEN NULL ELSE max_number::int END AS "maxNumber",
-  alphabet, fiscal_start_month AS "fiscalStartMonth", active,
+  alphabet, fiscal_start_month AS "fiscalStartMonth", random_length AS "randomLength", active,
   created_at AS "createdAt", updated_at AS "updatedAt"`
 
 export async function listFormats(withPreview = false): Promise<FormatRecord[]> {

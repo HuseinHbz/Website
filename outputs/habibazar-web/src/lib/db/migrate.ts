@@ -318,6 +318,43 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_numbering_audit_type ON numbering_audit(doc_type, created_at);
     CREATE INDEX IF NOT EXISTS idx_numbering_audit_number ON numbering_audit(number);
     CREATE INDEX IF NOT EXISTS idx_numbering_counters_fmt ON numbering_counters(format_id);
+    -- {RANDOM} auto-fill length (0 = off); added idempotently for existing DBs.
+    ALTER TABLE numbering_formats ADD COLUMN IF NOT EXISTS random_length INTEGER NOT NULL DEFAULT 4;
+
+    -- Numbering scopes: the registry of companies/branches/warehouses/departments
+    -- whose codes feed a counter's scope_key (multi-company/branch/warehouse
+    -- independence). Managed in the numbering console; picked when generating.
+    CREATE TABLE IF NOT EXISTS numbering_scopes (
+      id SERIAL PRIMARY KEY,
+      kind TEXT NOT NULL CHECK(kind IN ('company','branch','warehouse','department')),
+      code TEXT NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (kind, code)
+    );
+
+    -- Default numbering formats for the built-in document types so every module
+    -- has a series out of the box (idempotent; admins can edit these). Sales use
+    -- their own keys; generated documents are namespaced doc_* to stay independent.
+    INSERT INTO numbering_formats (doc_type, name_en, name_fa, pattern, prefix, reset_policy, padding, start_number) VALUES
+      ('invoice','Sales Invoice','فاکتور فروش','{PREFIX}-{YEAR}-{COUNTER}','INV','yearly',6,1),
+      ('quote','Quotation','پیش‌فاکتور','{PREFIX}-{YEAR}-{COUNTER}','QT','yearly',6,1),
+      ('order','Sales Order','سفارش فروش','{PREFIX}-{YEAR}-{COUNTER}','SO','yearly',6,1),
+      ('credit_note','Credit Note','برگ بستانکار','{PREFIX}-{YEAR}-{COUNTER}','CN','yearly',6,1),
+      ('project','Project','پروژه','{PREFIX}-{YEAR}-{COUNTER}','PRJ','yearly',4,1),
+      ('doc_invoice','Document · Invoice','سند · فاکتور','{PREFIX}-{YEAR}-{COUNTER}','INV','yearly',6,1),
+      ('doc_quotation','Document · Quotation','سند · پیش‌فاکتور','{PREFIX}-{YEAR}-{COUNTER}','QT','yearly',6,1),
+      ('doc_purchase_order','Document · Purchase Order','سند · سفارش خرید','{PREFIX}-{YEAR}-{COUNTER}','PO','yearly',6,1),
+      ('doc_contract','Document · Contract','سند · قرارداد','{PREFIX}-{YEAR}-{COUNTER}','CT','yearly',6,1),
+      ('doc_proposal','Document · Proposal','سند · پروپوزال','{PREFIX}-{YEAR}-{COUNTER}','PR','yearly',6,1),
+      ('doc_warranty','Document · Warranty','سند · گارانتی','{PREFIX}-{YEAR}-{COUNTER}','WR','yearly',6,1),
+      ('doc_delivery_note','Document · Delivery Note','سند · حواله تحویل','{PREFIX}-{YEAR}-{COUNTER}','DN','yearly',6,1),
+      ('doc_service_report','Document · Service Report','سند · گزارش خدمات','{PREFIX}-{YEAR}-{COUNTER}','SR','yearly',6,1),
+      ('doc_completion_certificate','Document · Completion Certificate','سند · گواهی تکمیل','{PREFIX}-{YEAR}-{COUNTER}','CC','yearly',6,1),
+      ('doc_financial_report','Document · Financial Report','سند · گزارش مالی','{PREFIX}-{YEAR}-{COUNTER}','FR','yearly',6,1)
+    ON CONFLICT (doc_type) DO NOTHING;
 
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
     -- documents (invoice/quotation/PO/contract/…); payload holds lines + meta +

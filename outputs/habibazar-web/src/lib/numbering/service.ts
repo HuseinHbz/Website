@@ -8,11 +8,29 @@
  * Result: zero duplicate numbers even under hundreds of simultaneous callers.
  * Every module MUST call `generateDocumentNumber` — never number on its own.
  */
+import { randomBytes, randomUUID } from 'crypto'
 import { getPool, pgQuery } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import {
-  renderNumber, periodKey, formatRegex, type NumberFormat, type NumberContext,
+  renderNumber, periodKey, formatRegex, parsePlaceholders, type NumberFormat, type NumberContext,
 } from './format'
+
+/** Crypto-random base36 token of a given length (for the {RANDOM} placeholder). */
+function randomToken(len: number): string {
+  if (len <= 0) return ''
+  let out = ''
+  while (out.length < len) out += randomBytes(8).readUInt32BE(0).toString(36)
+  return out.slice(0, len).toUpperCase()
+}
+
+/** Auto-fill {RANDOM}/{UUID} in the context when the pattern uses them. */
+function withGenerated(fmt: NumberFormat, ctx: NumberContext): NumberContext {
+  const used = parsePlaceholders(fmt.pattern)
+  const out: NumberContext = { ...ctx }
+  if (used.includes('RANDOM') && out.random == null) out.random = randomToken(fmt.randomLength ?? 4)
+  if (used.includes('UUID') && out.uuid == null) out.uuid = randomUUID()
+  return out
+}
 
 export interface GenerateScope { company?: string; branch?: string; warehouse?: string; department?: string }
 export interface GenerateOptions {
@@ -34,7 +52,7 @@ interface FormatRow {
   id: number; doc_type: string; pattern: string; prefix: string; suffix: string
   reset_policy: NumberFormat['resetPolicy']; padding: number; increment: number
   start_number: number; min_number: number; max_number: string | number | null
-  alphabet: NumberFormat['alphabet']; fiscal_start_month: number; active: number
+  alphabet: NumberFormat['alphabet']; fiscal_start_month: number; random_length: number | null; active: number
 }
 
 function toFormat(r: FormatRow): NumberFormat {
@@ -43,7 +61,7 @@ function toFormat(r: FormatRow): NumberFormat {
     resetPolicy: r.reset_policy, padding: r.padding, increment: r.increment,
     startNumber: r.start_number, minNumber: r.min_number,
     maxNumber: r.max_number == null ? null : Number(r.max_number),
-    alphabet: r.alphabet, fiscalStartMonth: r.fiscal_start_month,
+    alphabet: r.alphabet, fiscalStartMonth: r.fiscal_start_month, randomLength: r.random_length ?? 4,
   }
 }
 
@@ -92,7 +110,7 @@ export async function generateDocumentNumber(opts: GenerateOptions): Promise<Gen
     if (fmt.maxNumber != null && counter > fmt.maxNumber) {
       throw new Error(`Counter overflow for "${docType}" (${counter} > ${fmt.maxNumber})`)
     }
-    const number = renderNumber(fmt, counter, date, context)
+    const number = renderNumber(fmt, counter, date, withGenerated(fmt, context ?? {}))
 
     await client.query(
       `UPDATE numbering_counters SET last_number=$1 WHERE format_id=$2 AND scope_key=$3 AND period_key=$4`,
@@ -149,7 +167,7 @@ export async function previewDocumentNumber(docType: string, opts: { scope?: Gen
     [fr.id, skey, pkey],
   )
   const next = cur.length ? Number(cur[0].current_value) + fmt.increment : fmt.startNumber
-  return renderNumber(fmt, next, date, opts.context)
+  return renderNumber(fmt, next, date, withGenerated(fmt, opts.context ?? {}))
 }
 
 /** Alias — the next number that WOULD be generated. */

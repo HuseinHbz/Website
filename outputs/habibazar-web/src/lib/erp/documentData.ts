@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto'
 import QRCode from 'qrcode'
 import { pgQuery } from '@/lib/db'
 import { SITE } from '@/lib/site'
+import { nextNumber } from '@/lib/numbering/integrate'
 import {
   buildSalesPayload, renderDocumentHtml, defaultTitle,
   type DocPayload, type DocModel, type GenDocType, type DocMeta,
@@ -63,7 +64,7 @@ export async function createDocument(input: CreateInput, userId: string): Promis
     sourceType = null; sourceId = null
   }
 
-  const number = `${PREFIX[input.type] ?? 'DOC'}-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
+  const number = await nextNumber(`doc_${input.type}`, { module: 'documents', userId, legacyPrefix: PREFIX[input.type] })
   const verifyCode = randomBytes(6).toString('hex').toUpperCase()
   const title = input.title || defaultTitle(input.type)
   const date = input.date || new Date().toISOString().slice(0, 10)

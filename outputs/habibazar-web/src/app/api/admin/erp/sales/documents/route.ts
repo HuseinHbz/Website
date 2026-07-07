@@ -4,6 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
+import { nextNumber } from '@/lib/numbering/integrate'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
         [docId, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total])
       await pgQuery(`DELETE FROM sales_document_lines WHERE document_id=$1`, [docId])
     } else {
-      const docNo = `${PREFIX[d.docType]}-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
+      const docNo = await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
       const row = (await pgQuery(
         `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, updated_at)
          VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,${NOW}) RETURNING id`,
@@ -108,7 +109,7 @@ export async function PUT(req: NextRequest) {
     if (!src) return badRequest('Not found')
     if (op === 'convert') {
       if (!toType) return badRequest('toType required')
-      const docNo = `${PREFIX[toType]}-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
+      const docNo = await nextNumber(toType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[toType] })
       const newDoc = (await pgQuery(
         `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, updated_at)
          VALUES ($1,$2,$3,to_char(now(),'YYYY-MM-DD'),$4,'draft',$5,$6,$7,$8,$9,$10,$11,${NOW}) RETURNING id`,

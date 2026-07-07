@@ -5,6 +5,7 @@ import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { PROJECT_STATUSES } from '@/lib/erp/projects'
 import { loadProjects, loadProjectDetail, projectOverview } from '@/lib/erp/projectData'
+import { nextNumber } from '@/lib/numbering/integrate'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 const schema = z.object({
   id: z.number().int().positive().optional(),
-  code: z.string().min(1).max(40),
+  code: z.string().max(40).optional(),
   name: z.string().min(1).max(200),
   customer: z.string().max(200).optional().nullable(),
   manager: z.string().max(120).optional().nullable(),
@@ -48,15 +49,18 @@ export async function POST(req: NextRequest) {
   const d = parsed.data
   try {
     if (!d.id) {
-      const dup = (await pgQuery(`SELECT id FROM pm_projects WHERE code=$1`, [d.code]))[0]
+      // Auto-number via the Enterprise Numbering Engine when no code is supplied.
+      const code = d.code?.trim() || await nextNumber('project', { module: 'projects', userId: auth.user.id, legacyPrefix: 'PRJ' })
+      const dup = (await pgQuery(`SELECT id FROM pm_projects WHERE code=$1`, [code]))[0]
       if (dup) return badRequest('A project with this code already exists')
       const row = (await pgQuery(
         `INSERT INTO pm_projects (code, name, customer, manager, status, start_date, end_date, budget, hourly_rate, notes, created_by, updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${NOW}) RETURNING id`,
-        [d.code, d.name, d.customer ?? null, d.manager ?? null, d.status, d.startDate ?? null, d.endDate ?? null, d.budget, d.hourlyRate, d.notes ?? null, auth.user.id]))[0] as { id: number }
+        [code, d.name, d.customer ?? null, d.manager ?? null, d.status, d.startDate ?? null, d.endDate ?? null, d.budget, d.hourlyRate, d.notes ?? null, auth.user.id]))[0] as { id: number }
       await logAction(auth.user, 'pm.project.create', 'pm_project', row.id)
-      return NextResponse.json({ id: row.id })
+      return NextResponse.json({ id: row.id, code })
     }
+    if (!d.code) return badRequest('code is required when updating a project')
     await pgQuery(
       `UPDATE pm_projects SET code=$2, name=$3, customer=$4, manager=$5, status=$6, start_date=$7, end_date=$8, budget=$9, hourly_rate=$10, notes=$11, updated_at=${NOW} WHERE id=$1`,
       [d.id, d.code, d.name, d.customer ?? null, d.manager ?? null, d.status, d.startDate ?? null, d.endDate ?? null, d.budget, d.hourlyRate, d.notes ?? null])

@@ -213,7 +213,20 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   chips + live client-side preview) · Counters (reset) · History & Audit (search).
   Verified vs real PostgreSQL: 500 concurrent generations → 500 unique / 0
   duplicates / perfect 1..N sequence; yearly reset + scope independence confirmed.
-  Existing module callers are migrated onto it in a follow-up phase.
+  **Module wiring**: Sales documents (`sales/documents`), generated documents
+  (`documentData`, namespaced `doc_*`) and Projects (auto-code when blank) mint
+  through `nextNumber()` (`src/lib/numbering/integrate.ts`) instead of the old
+  timestamp scheme; 15 default formats seeded idempotently in migrate.ts.
+  **`{RANDOM}`/`{UUID}`** are auto-filled server-side (crypto; `random_length`
+  configurable). **Import/Export** of format configs (JSON/CSV, upsert-by-doc_type,
+  each row `validateFormat`-checked) via `/api/admin/erp/numbering/io` +
+  `src/lib/numbering/io.ts`. **Scopes** registry (`numbering_scopes`,
+  company/branch/warehouse/department) via `/numbering/scopes`; curated
+  **Templates** (`src/lib/numbering/templates.ts`). Console tabs: Dashboard ·
+  Formats · Companies&Branches · Templates · Counters · History&Audit · Settings.
+  **Granular perms** on RBAC: reset counter + import config = administrator
+  (`manage_settings`); manage/generate = `edit`; view/export/audit = any admin.
+  Full report: `docs/governance/phase21-numbering-engine.md`.
 - **Global Search** (`/admin/search`, `GlobalSearch`) — Module 13. One admin-side
   search layer over live business data (distinct from the public CMS `/api/search`).
   Pure engine `src/lib/search/engine.ts` (`tokenize`/`scoreField` exact>prefix>

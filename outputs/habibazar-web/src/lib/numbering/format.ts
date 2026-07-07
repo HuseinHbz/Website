@@ -26,6 +26,7 @@ export interface NumberFormat {
   maxNumber?: number | null
   alphabet: Alphabet
   fiscalStartMonth?: number
+  randomLength?: number
 }
 
 export interface NumberContext {
@@ -36,11 +37,12 @@ export interface NumberContext {
   project?: string
   customField?: string
   random?: string
+  uuid?: string
 }
 
 export const PLACEHOLDERS = [
   'PREFIX', 'SUFFIX', 'YEAR', 'MONTH', 'DAY', 'COMPANY', 'BRANCH', 'WAREHOUSE',
-  'DEPARTMENT', 'DOCUMENT_TYPE', 'PROJECT', 'COUNTER', 'RANDOM', 'CUSTOM_FIELD',
+  'DEPARTMENT', 'DOCUMENT_TYPE', 'PROJECT', 'COUNTER', 'RANDOM', 'UUID', 'CUSTOM_FIELD',
 ] as const
 export type Placeholder = (typeof PLACEHOLDERS)[number]
 
@@ -107,6 +109,7 @@ export function renderNumber(fmt: NumberFormat, counter: number, date: Date, ctx
     PROJECT: ctx.project ?? '',
     COUNTER: padCounter(counter, fmt.padding, fmt.alphabet),
     RANDOM: ctx.random ?? '',
+    UUID: ctx.uuid ?? '',
     CUSTOM_FIELD: ctx.customField ?? '',
   }
   const raw = fmt.pattern.replace(/\{([A-Z_]+)\}/g, (m, key: string) =>
@@ -153,6 +156,8 @@ export function formatRegex(fmt: NumberFormat): RegExp {
       case 'YEAR': src += '[0-9]{4}'; break
       case 'MONTH': case 'DAY': src += '[0-9]{2}'; break
       case 'COUNTER': src += counterClass; break
+      case 'UUID': src += '[0-9a-fA-F-]{36}'; break
+      case 'RANDOM': src += '[A-Za-z0-9]+'; break
       default: src += '[A-Za-z0-9]*'
     }
   }
