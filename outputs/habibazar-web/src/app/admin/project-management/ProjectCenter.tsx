@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import type { Column } from '@/lib/admin/dataTable'
 
 type Health = 'on_track' | 'at_risk' | 'overdue' | 'done'
 type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done'
@@ -99,6 +101,7 @@ function CostKpi({ label, value, sub, tone }: { label: string; value: string; su
 }
 
 function Projects({ t, toast, onOpen }: { t: T; toast: Toast; onOpen: (id: number) => void }) {
+  const locale = useAdminLocale()
   const [rows, setRows] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -113,25 +116,19 @@ function Projects({ t, toast, onOpen }: { t: T; toast: Toast; onOpen: (id: numbe
     try { const r = await fetch('/api/admin/erp/projects', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'failed'); toast(t('pm_saved'), 'success'); setModal(false); load() }
     catch (e) { toast(e instanceof Error ? e.message : t('pm_saveFail'), 'error') } finally { setSaving(false) }
   }
+  const columns: Column<Project>[] = [
+    { key: 'name', labelEn: 'Name', labelFa: t('pm_cName'), render: p => <div><div className="font-medium text-text-primary">{p.name}</div><div className="text-xs text-text-tertiary">{p.code}{p.customer ? ` · ${p.customer}` : ''}</div></div> },
+    { key: 'status', labelEn: 'Status', labelFa: t('pm_cStatus'), type: 'enum', options: P_STATUSES.map(x => ({ value: x, labelEn: x, labelFa: t(`pm_s_${x}` as 'pm_s_planning') })), render: p => <Badge color="slate">{t(`pm_s_${p.status}` as 'pm_s_planning')}</Badge> },
+    { key: 'progress', labelEn: 'Progress', labelFa: t('pm_cProgress'), type: 'number', numeric: true, value: p => p.progress ?? 0, render: p => <div className="flex items-center gap-2 w-40"><ProgressBar pct={p.progress ?? 0} /><span className="text-xs text-text-tertiary">{p.progress ?? 0}%</span></div> },
+    { key: 'health', labelEn: 'Health', labelFa: t('pm_cHealth'), type: 'enum', value: p => p.health ?? 'on_track', render: p => <Badge color={HEALTH_COLOR[p.health ?? 'on_track']}>{t(`pm_h_${p.health}` as 'pm_h_on_track')}</Badge> },
+    { key: 'loggedHours', labelEn: 'Hours', labelFa: t('pm_cHours'), type: 'number', numeric: true, value: p => p.loggedHours ?? 0, render: p => <span className="text-text-secondary text-xs">{p.loggedHours ?? 0}h</span> },
+  ]
+  const rowActions: RowAction<Project>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('pm_edit'), icon: '✎', onClick: p => { setEditing({ ...p }); setModal(true) } }]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{t('pm_newProject')}</Btn></div>
-      <Card className="p-0 overflow-hidden">
-        {loading ? <p className="text-sm text-text-tertiary p-5">{t('pm_loading')}</p> : rows.length === 0 ? <p className="text-sm text-text-tertiary p-5">{t('pm_noProjects')}</p> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('pm_cName'), t('pm_cStatus'), t('pm_cProgress'), t('pm_cHealth'), t('pm_cHours'), t('pm_cActions')].map(h => <th key={h} className="px-4 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-            <tbody>{rows.map(p => (
-              <tr key={p.id} className="border-b border-subtle/50 hover:bg-surface-2 cursor-pointer" onClick={() => onOpen(p.id!)}>
-                <td className="px-4 py-2.5"><div className="font-medium text-text-primary">{p.name}</div><div className="text-xs text-text-tertiary">{p.code}{p.customer ? ` · ${p.customer}` : ''}</div></td>
-                <td className="px-4 py-2.5"><Badge color="slate">{t(`pm_s_${p.status}` as 'pm_s_planning')}</Badge></td>
-                <td className="px-4 py-2.5 w-40"><div className="flex items-center gap-2"><ProgressBar pct={p.progress ?? 0} /><span className="text-xs text-text-tertiary">{p.progress ?? 0}%</span></div></td>
-                <td className="px-4 py-2.5"><Badge color={HEALTH_COLOR[p.health ?? 'on_track']}>{t(`pm_h_${p.health}` as 'pm_h_on_track')}</Badge></td>
-                <td className="px-4 py-2.5 text-text-secondary text-xs">{p.loggedHours ?? 0}h</td>
-                <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}><Btn size="sm" variant="secondary" onClick={() => { setEditing({ ...p }); setModal(true) }}>{t('pm_edit')}</Btn></td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+      <Card className="p-4">
+        <DataTable tableId="pm-projects" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={p => String(p.id)} onRowClick={p => onOpen(p.id!)} rowActions={rowActions} exportName="projects" emptyLabel={t('pm_noProjects')} />
       </Card>
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('pm_editProject') : t('pm_newProject')} size="lg">
         <div className="space-y-4">
@@ -152,6 +149,7 @@ const COST_CATS = ['labor', 'equipment', 'purchase', 'travel', 'expense', 'other
 const REV_CATS = ['sales', 'service', 'milestone', 'other']
 
 function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () => void; toast: Toast }) {
+  const pdLocale = useAdminLocale()
   const [d, setD] = useState<Detail | null>(null)
   const [view, setView] = useState<'kanban' | 'gantt' | 'milestones' | 'timesheet' | 'costing'>('kanban')
   const [costing, setCosting] = useState<Costing | null>(null)
@@ -279,14 +277,20 @@ function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () 
             <Input label={t('pm_fHours')} type="number" value={String(tsForm.hours)} onChange={v => setTsForm(f => ({ ...f, hours: Number(v) || 0 }))} />
             <Btn size="sm" onClick={addTimesheet}>{t('pm_logTime')}</Btn>
           </div>
-          {d.timesheets.length === 0 ? <p className="text-xs text-text-tertiary">{t('pm_noTime')}</p> : (
-            <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead><tr className="text-text-tertiary text-left border-b border-subtle">{[t('pm_fDate'), t('pm_fPerson'), t('pm_cTask'), t('pm_fHours')].map(h => <th key={h} className="px-3 py-2 text-xs font-medium">{h}</th>)}</tr></thead>
-              <tbody>{d.timesheets.map(ts => (
-                <tr key={ts.id} className="border-b border-subtle/50"><td className="px-3 py-2 text-text-tertiary text-xs">{ts.date}</td><td className="px-3 py-2 text-text-secondary">{ts.person}</td><td className="px-3 py-2 text-text-tertiary text-xs">{ts.taskTitle || '—'}</td><td className="px-3 py-2 text-text-secondary text-xs">{ts.hours}h</td></tr>
-              ))}</tbody>
-            </table></div>
-          )}
+          <DataTable
+            tableId="pm-timesheets"
+            columns={[
+              { key: 'date', labelEn: 'Date', labelFa: t('pm_fDate'), type: 'date', render: ts => <span className="text-text-tertiary text-xs">{ts.date}</span> },
+              { key: 'person', labelEn: 'Person', labelFa: t('pm_fPerson'), render: ts => <span className="text-text-secondary">{ts.person}</span> },
+              { key: 'taskTitle', labelEn: 'Task', labelFa: t('pm_cTask'), render: ts => <span className="text-text-tertiary text-xs">{ts.taskTitle || '—'}</span> },
+              { key: 'hours', labelEn: 'Hours', labelFa: t('pm_fHours'), type: 'number', numeric: true, render: ts => <span className="text-text-secondary text-xs">{ts.hours}h</span> },
+            ] as Column<Timesheet>[]}
+            rows={d.timesheets}
+            locale={pdLocale}
+            rowKey={ts => String(ts.id)}
+            exportName="timesheets"
+            emptyLabel={t('pm_noTime')}
+          />
         </Card>
       )}
 
