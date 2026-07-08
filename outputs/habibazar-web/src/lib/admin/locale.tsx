@@ -1493,6 +1493,7 @@ const T: Record<string, { fa: string; en: string }> = {
   fin_tab_accounts: { fa: 'دفتر حساب‌ها', en: 'Chart of Accounts' },
   fin_tab_journal:  { fa: 'اسناد روزنامه', en: 'Journal Entries' },
   fin_tab_reports:  { fa: 'گزارش‌ها', en: 'Reports' },
+  fin_tab_currency: { fa: 'ارز و نرخ', en: 'Currency' },
   fin_loading:      { fa: 'در حال بارگذاری…', en: 'Loading…' },
   fin_empty:        { fa: 'داده‌ای برای نمایش نیست.', en: 'Nothing to show yet.' },
   fin_loadFail:     { fa: 'بارگذاری ناموفق بود', en: 'Failed to load' },

@@ -312,6 +312,19 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   overview}`: zod/RBAC/audited; journal POST is server-side balanced-validated
   (debits=credits) before accepting; post/void lifecycle. UI journal editor shows
   a live balance check. Verified vs real PostgreSQL (books tie out; drafts excluded).
+  **Multi-Currency (Phase 26)**: base = **Iranian Rial (IRR)**, **Toman (IRT)** a
+  first-class display unit (exact 10:1). Pure engine `src/lib/erp/currency.ts`
+  (`convert` via the Rial base, `toBase`, `rialToToman`/`tomanToRial`,
+  `exchangeDifference`, `formatMoney` Persian-digit/Rial-Toman, `dualRialToman`;
+  built-ins IRR/IRT/USD/EUR/AED) + **Tax engine** `src/lib/erp/tax.ts`
+  (`computeTaxes` VAT/custom add + withholding subtract, tax groups/exemptions,
+  Iran VAT 9%; `extractInclusive`, `vatOf`) — both unit-tested. Tables
+  `erp_currencies` (seeded) + `erp_exchange_rates` (daily Rial rate per code×date);
+  data layer `currencyData.ts` (`latestRates`/`setRate`/`rateHistory`). API
+  `GET/POST /api/admin/erp/finance/currency` (rates + `?convert`/`?history`,
+  setRate RBAC+audit). Finance Center **Currency** tab (set rate + converter +
+  rates table). Verified vs real PostgreSQL (seed + rate + convert). Report:
+  `docs/governance/phase26-erp-currency-tax.md`.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

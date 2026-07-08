@@ -7,7 +7,7 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
-type Tab = 'dashboard' | 'accounts' | 'journal' | 'reports'
+type Tab = 'dashboard' | 'accounts' | 'journal' | 'reports' | 'currency'
 type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
 
 interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
@@ -40,7 +40,7 @@ export function FinanceCenter() {
       <ToastContainer />
       <PageHeader title={t('fin_title')} subtitle={t('fin_subtitle')} />
       <div className="flex gap-1 mb-6 border-b border-subtle overflow-x-auto">
-        {(['dashboard', 'accounts', 'journal', 'reports'] as Tab[]).map(tb => (
+        {(['dashboard', 'accounts', 'journal', 'reports', 'currency'] as Tab[]).map(tb => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${tab === tb ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
             {t(`fin_tab_${tb}` as 'fin_tab_dashboard')}
@@ -51,6 +51,7 @@ export function FinanceCenter() {
       {tab === 'accounts' && <Accounts t={t} fa={fa} toast={toast} />}
       {tab === 'journal' && <Journal t={t} fa={fa} toast={toast} />}
       {tab === 'reports' && <ReportsView t={t} fa={fa} />}
+      {tab === 'currency' && <CurrencyView fa={fa} toast={toast} />}
     </>
   )
 }
@@ -323,6 +324,70 @@ function ReportsView({ t, fa }: { t: T; fa: boolean }) {
           <div className="mt-3"><Badge color={d.balanceSheet.balanced ? 'green' : 'red'}>{d.balanceSheet.balanced ? t('fin_balanced') : t('fin_unbalanced')}</Badge></div>
         </Card>
       )}
+    </div>
+  )
+}
+
+// ── Currency & exchange rates (Phase 26) ─────────────────────────────────────
+interface CurRow { code: string; nameEn: string; nameFa: string; symbolEn: string; symbolFa: string; decimals: number; isBase: boolean; active: boolean; latestRate: number | null; rateDate: string | null }
+const L = (fa: boolean, en: string, faS: string) => (fa ? faS : en)
+
+function CurrencyView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [rows, setRows] = useState<CurRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState({ code: 'USD', rateDate: new Date().toISOString().slice(0, 10), baseRate: '' })
+  const [conv, setConv] = useState({ amount: '1', from: 'USD', to: 'IRT', result: '' })
+  const load = useCallback(async () => {
+    setLoading(true)
+    try { const d = await fetch('/api/admin/erp/finance/currency').then(r => r.json()); setRows(d.currencies ?? []) } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function saveRate() {
+    if (!form.baseRate) { toast(L(fa, 'Enter a rate', 'نرخ را وارد کنید'), 'error'); return }
+    const r = await fetch('/api/admin/erp/finance/currency', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setRate', code: form.code, rateDate: form.rateDate, baseRate: Number(form.baseRate) }) })
+    if (r.ok) { toast(L(fa, 'Rate saved', 'نرخ ذخیره شد'), 'success'); setForm(f => ({ ...f, baseRate: '' })); load() }
+    else { const d = await r.json().catch(() => ({})); toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error') }
+  }
+  async function doConvert() {
+    const d = await fetch(`/api/admin/erp/finance/currency?convert=${encodeURIComponent(conv.amount)}&from=${conv.from}&to=${conv.to}`).then(r => r.json())
+    setConv(c => ({ ...c, result: String(d.result ?? '') }))
+  }
+
+  const codes = rows.map(r => ({ value: r.code, label: r.code }))
+  const columns: Column<CurRow>[] = [
+    { key: 'code', labelEn: 'Code', labelFa: 'کد', render: c => <span className="font-mono font-semibold">{c.code}{c.isBase && <Badge color="blue">base</Badge>}</span> },
+    { key: 'nameEn', labelEn: 'Name', labelFa: 'نام', render: c => <span>{fa ? c.nameFa : c.nameEn}</span> },
+    { key: 'latestRate', labelEn: 'Rial rate', labelFa: 'نرخ ریالی', type: 'number', numeric: true, render: c => <span>{c.latestRate != null ? c.latestRate.toLocaleString() : (c.code === 'IRR' ? '1' : c.code === 'IRT' ? '10' : '—')}</span> },
+    { key: 'rateDate', labelEn: 'As of', labelFa: 'تاریخ', render: c => <span className="text-xs text-text-tertiary">{c.rateDate ?? '—'}</span> },
+  ]
+  return (
+    <div className="space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-text-primary">{L(fa, 'Set exchange rate', 'ثبت نرخ ارز')}</h3>
+          <p className="text-xs text-text-tertiary">{L(fa, 'Rate = Rial value of one unit of the currency.', 'نرخ = ارزش ریالی هر واحد ارز.')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Select label={L(fa, 'Currency', 'ارز')} value={form.code} onChange={v => setForm(f => ({ ...f, code: v }))} options={codes.filter(c => c.value !== 'IRR' && c.value !== 'IRT')} />
+            <Input label={L(fa, 'Date', 'تاریخ')} value={form.rateDate} onChange={v => setForm(f => ({ ...f, rateDate: v }))} />
+          </div>
+          <Input label={L(fa, 'Rial per unit', 'ریال به ازای هر واحد')} value={form.baseRate} onChange={v => setForm(f => ({ ...f, baseRate: v }))} type="text" />
+          <Btn onClick={saveRate}>{L(fa, 'Save rate', 'ذخیره نرخ')}</Btn>
+        </Card>
+        <Card className="p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-text-primary">{L(fa, 'Converter', 'مبدل ارز')}</h3>
+          <div className="grid grid-cols-3 gap-2 items-end">
+            <Input label={L(fa, 'Amount', 'مبلغ')} value={conv.amount} onChange={v => setConv(c => ({ ...c, amount: v }))} />
+            <Select label={L(fa, 'From', 'از')} value={conv.from} onChange={v => setConv(c => ({ ...c, from: v }))} options={codes} />
+            <Select label={L(fa, 'To', 'به')} value={conv.to} onChange={v => setConv(c => ({ ...c, to: v }))} options={codes} />
+          </div>
+          <Btn variant="secondary" onClick={doConvert}>{L(fa, 'Convert', 'تبدیل')}</Btn>
+          {conv.result !== '' && <p className="text-lg font-bold text-text-primary">{Number(conv.result).toLocaleString()} <span className="text-sm text-text-tertiary">{conv.to}</span></p>}
+        </Card>
+      </div>
+      <Card className="p-4">
+        <DataTable tableId="erp-currencies" columns={columns} rows={rows} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={c => c.code} onRefresh={load} exportName="currencies" emptyLabel={L(fa, 'No currencies.', 'ارزی نیست.')} />
+      </Card>
     </div>
   )
 }

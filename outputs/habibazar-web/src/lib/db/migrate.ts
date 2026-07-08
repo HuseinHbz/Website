@@ -746,6 +746,36 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- Phase 26: multi-currency (base = Iranian Rial; Toman is a display unit).
+    CREATE TABLE IF NOT EXISTS erp_currencies (
+      code TEXT PRIMARY KEY,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      symbol_en TEXT NOT NULL,
+      symbol_fa TEXT NOT NULL,
+      decimals INTEGER NOT NULL DEFAULT 2,
+      is_base BOOLEAN NOT NULL DEFAULT false,
+      active BOOLEAN NOT NULL DEFAULT true
+    );
+    CREATE TABLE IF NOT EXISTS erp_exchange_rates (
+      id BIGSERIAL PRIMARY KEY,
+      code TEXT NOT NULL REFERENCES erp_currencies(code),
+      rate_date TEXT NOT NULL,          -- YYYY-MM-DD
+      base_rate DOUBLE PRECISION NOT NULL,   -- Rial value of one unit
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE(code, rate_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_erp_rates_code ON erp_exchange_rates(code, rate_date DESC);
+    -- Seed the built-in currencies idempotently.
+    INSERT INTO erp_currencies (code, name_en, name_fa, symbol_en, symbol_fa, decimals, is_base) VALUES
+      ('IRR','Iranian Rial','ریال','IRR','ریال',0,true),
+      ('IRT','Iranian Toman','تومان','Toman','تومان',0,false),
+      ('USD','US Dollar','دلار آمریکا','$','دلار',2,false),
+      ('EUR','Euro','یورو','€','یورو',2,false),
+      ('AED','UAE Dirham','درهم امارات','AED','درهم',2,false)
+    ON CONFLICT (code) DO NOTHING;
+
     CREATE TABLE IF NOT EXISTS gl_accounts (
       id SERIAL PRIMARY KEY,
       code TEXT NOT NULL UNIQUE,
