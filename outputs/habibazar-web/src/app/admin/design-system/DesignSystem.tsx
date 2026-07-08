@@ -20,6 +20,9 @@ const TYPE = [
   { cls: 'text-lg font-semibold', label: 'Heading 3' },
   { cls: 'text-sm', label: 'Body' },
   { cls: 'text-xs text-text-tertiary', label: 'Caption' },
+  { cls: 'text-2xs text-text-tertiary', label: 'Micro (2xs · 11px)' },
+  { cls: 'text-3xs text-text-tertiary', label: 'Micro (3xs · 10px)' },
+  { cls: 'text-4xs text-text-tertiary', label: 'Micro (4xs · 9px)' },
   { cls: 'text-overline text-text-tertiary', label: 'Overline / Label' },
 ]
 const BADGES = ['green', 'red', 'yellow', 'blue', 'indigo', 'slate']

@@ -47,6 +47,37 @@ superseded by the Phase-23 `HeroCenter` + `HeroBuilder` and no longer referenced
 anywhere. The legacy public `Hero.tsx` renderer and its DB-backed fallback
 content are untouched, so the home page is unaffected.
 
+### 4. PostgreSQL foreign-key index audit
+
+Live schema introspection (against real PostgreSQL) found **83** foreign-key
+columns lacking a covering index. Rather than index all 83 blindly, **24 covering
+indexes** were added for the *hot* structural/lookup FKs that actually participate
+in JOIN/WHERE — session & RBAC lookups, join tables (`page_sections`,
+`section_versions`), tree parents (`gl_accounts.parent_id`), and
+category/product/period/source lookups. Audit-trail FKs
+(`created_by`/`updated_by`/`author_id`/`owner_id`/…) are **intentionally left
+unindexed** — they are almost never filtered on and indexing them only adds write
+cost + bloat. All new indexes are idempotent (`CREATE INDEX IF NOT EXISTS`) in
+`migrate.ts`. Re-audit: FK-without-index **83 → 59**; every hot FK covered.
+Verified via a live introspection round-trip.
+
+### 5. Utility de-duplication — `money()`
+
+Seven near-identical `money()` formatters had drifted across the admin
+ERP/CRM/dashboard modules (different fraction digits, sign handling,
+dash-for-zero). Consolidated the formatting logic into one options-driven
+`fmtMoney` (`src/lib/format.ts`); each module keeps a one-line binding that
+preserves its exact house style. Verified **byte-for-byte identical over 63
+cases** (7 variants × 9 inputs) — zero visual regression. The domain-specific
+`slugify` in the heroes route (60-char cap + fallback) and the currency/rounding
+`money` in `erp/documents`+`reports` are purpose-distinct and left as-is.
+
+### 6. Design-system reference completeness
+
+The `/admin/design-system` type-scale reference now lists the micro tokens
+(`2xs`/`3xs`/`4xs`) so the design-language reference stays truthful to the scale
+the `audit:ui` gate enforces.
+
 ## Verification (all green, post-change)
 
 - TypeScript 0 · ESLint 0 · **256 unit tests** pass
