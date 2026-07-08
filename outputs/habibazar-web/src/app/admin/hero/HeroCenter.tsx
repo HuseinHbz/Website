@@ -10,7 +10,7 @@ import { validateHero } from '@/lib/hero/rules'
 import type { HeroConfig, HeroRecord, HeroStatus, HeroCta, Locale } from '@/lib/hero/types'
 import { HeroBuilder } from './HeroBuilder'
 
-type Tab = 'dashboard' | 'heroes' | 'templates' | 'experiments' | 'analytics'
+type Tab = 'dashboard' | 'heroes' | 'templates' | 'library' | 'experiments' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -29,6 +29,7 @@ export function HeroCenter() {
     { id: 'dashboard', en: 'Dashboard', fa: 'داشبورد' },
     { id: 'heroes', en: 'Heroes', fa: 'هیروها' },
     { id: 'templates', en: 'Templates', fa: 'قالب‌ها' },
+    { id: 'library', en: 'Animation Library', fa: 'کتابخانه انیمیشن' },
     { id: 'experiments', en: 'A/B Testing', fa: 'آزمون A/B' },
     { id: 'analytics', en: 'Analytics', fa: 'تحلیل‌ها' },
   ]
@@ -45,6 +46,7 @@ export function HeroCenter() {
       {tab === 'dashboard' && <Dashboard rtl={rtl} onOpen={setEditingId} />}
       {tab === 'heroes' && <Heroes rtl={rtl} locale={locale} toast={toast} onOpen={setEditingId} />}
       {tab === 'templates' && <Templates rtl={rtl} toast={toast} onOpen={setEditingId} />}
+      {tab === 'library' && <AnimationLibrary rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'experiments' && <Experiments rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'analytics' && <Analytics rtl={rtl} locale={locale} />}
     </>
@@ -279,6 +281,86 @@ function Analytics({ rtl, locale }: { rtl: boolean; locale: 'fa' | 'en' }) {
           exportName="hero-analytics"
           emptyLabel={lc(rtl, 'No analytics data yet.', 'داده‌ای نیست.')}
         />
+      </Card>
+    </div>
+  )
+}
+
+interface AnimPreset { id: number; key: string; nameEn: string; nameFa: string; category: string; enabled: boolean; archived: boolean; favorite: boolean; usageCount: number; version: number }
+
+function AnimationLibrary({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; toast: Toast }) {
+  const [rows, setRows] = useState<AnimPreset[]>([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<{ total: number; enabled: number; archived: number; mostUsed: { key: string; usageCount: number }[] } | null>(null)
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [l, a] = await Promise.all([fetch('/api/admin/heroes/animations').then(r => r.json()), fetch('/api/admin/heroes/animations?view=analytics').then(r => r.json())])
+      setRows(l.presets ?? []); setStats(a)
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function op(action: string, extra: Record<string, unknown>) {
+    const r = await fetch('/api/admin/heroes/animations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...extra }) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(lc(rtl, 'Done', 'انجام شد'), 'success'); load() } else toast(d.error || lc(rtl, 'Failed', 'ناموفق'), 'error')
+  }
+  async function create() {
+    const key = window.prompt(lc(rtl, 'Preset key (a-z0-9-)', 'کلید پریست')); if (!key) return
+    const name = window.prompt(lc(rtl, 'Name', 'نام')) || key
+    await op('create', { key, nameEn: name, nameFa: name, category: 'entrance', basePreset: 'fade-up', config: {} })
+  }
+  async function exportPkg() {
+    const pkg = await fetch('/api/admin/heroes/animations?view=export').then(r => r.json())
+    const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'hero-animation-package.json'; a.click(); URL.revokeObjectURL(url)
+    toast(lc(rtl, 'Exported (signed package)', 'خروجی گرفته شد'), 'success')
+  }
+  async function importPkg(file: File) {
+    try { const pkg = JSON.parse(await file.text()); const r = await fetch('/api/admin/heroes/animations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'import', pkg }) }); const d = await r.json().catch(() => ({}))
+      if (r.ok) { toast(lc(rtl, `Imported ${d.created} presets`, `${d.created} پریست وارد شد`), 'success'); load() }
+      else toast((d.reasons?.[0] || d.error) || lc(rtl, 'Import failed', 'ورود ناموفق'), 'error')
+    } catch { toast(lc(rtl, 'Invalid package file', 'فایل نامعتبر'), 'error') }
+  }
+
+  const columns: Column<AnimPreset>[] = [
+    { key: 'nameEn', labelEn: 'Name', labelFa: 'نام', render: p => <div><div className="font-medium text-text-primary">{rtl ? p.nameFa : p.nameEn} {p.favorite && '★'}</div><div className="text-3xs text-text-tertiary font-mono">{p.key}</div></div> },
+    { key: 'category', labelEn: 'Category', labelFa: 'دسته', type: 'enum' },
+    { key: 'usageCount', labelEn: 'Used', labelFa: 'استفاده', type: 'number', numeric: true },
+    { key: 'version', labelEn: 'Ver', labelFa: 'نسخه', type: 'number', numeric: true, render: p => <span className="text-text-tertiary text-xs">v{p.version}</span> },
+    { key: 'enabled', labelEn: 'State', labelFa: 'وضعیت', type: 'boolean', render: p => <Badge color={p.archived ? 'red' : p.enabled ? 'green' : 'slate'}>{p.archived ? 'archived' : p.enabled ? 'enabled' : 'disabled'}</Badge> },
+  ]
+  const rowActions: RowAction<AnimPreset>[] = [
+    { id: 'fav', labelEn: 'Toggle favorite', labelFa: 'علاقه‌مندی', icon: '★', onClick: p => op('toggle', { id: p.id, field: 'favorite', value: !p.favorite }) },
+    { id: 'toggle', labelEn: 'Enable/Disable', labelFa: 'فعال/غیرفعال', icon: '⏻', onClick: p => op('toggle', { id: p.id, field: 'enabled', value: !p.enabled }) },
+    { id: 'archive', labelEn: 'Archive/Restore', labelFa: 'بایگانی', icon: '📦', onClick: p => op('toggle', { id: p.id, field: 'archived', value: !p.archived }) },
+  ]
+  const bulkActions = [
+    { id: 'enable', labelEn: 'Enable', labelFa: 'فعال', run: async (ids: string[]) => op('bulk', { op: 'enable', ids: ids.map(Number) }) },
+    { id: 'disable', labelEn: 'Disable', labelFa: 'غیرفعال', run: async (ids: string[]) => op('bulk', { op: 'disable', ids: ids.map(Number) }) },
+    { id: 'archive', labelEn: 'Archive', labelFa: 'بایگانی', run: async (ids: string[]) => op('bulk', { op: 'archive', ids: ids.map(Number) }) },
+    { id: 'delete', labelEn: 'Delete', labelFa: 'حذف', danger: true, requires: 'delete', confirmEn: 'Delete presets?', confirmFa: 'حذف شود؟', run: async (ids: string[]) => op('bulk', { op: 'delete', ids: ids.map(Number) }) },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi label={lc(rtl, 'Custom presets', 'پریست سفارشی')} value={stats?.total ?? 0} />
+        <Kpi label={lc(rtl, 'Enabled', 'فعال')} value={stats?.enabled ?? 0} tone="ok" />
+        <Kpi label={lc(rtl, 'Archived', 'بایگانی')} value={stats?.archived ?? 0} tone="warn" />
+        <Kpi label={lc(rtl, 'Top used', 'پرکاربرد')} value={stats?.mostUsed?.[0]?.key ?? '—'} />
+      </div>
+      <div className="flex flex-wrap gap-2 justify-end">
+        <Btn size="sm" onClick={create}>+ {lc(rtl, 'New preset', 'پریست جدید')}</Btn>
+        <Btn size="sm" variant="secondary" onClick={exportPkg}>⇩ {lc(rtl, 'Export signed package', 'خروجی امضاشده')}</Btn>
+        <label className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white/5 text-text-secondary hover:text-white text-sm cursor-pointer">
+          ⇧ {lc(rtl, 'Import package', 'ورود بسته')}
+          <input type="file" accept="application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importPkg(f); e.target.value = '' }} />
+        </label>
+      </div>
+      <Card className="p-4">
+        <DataTable tableId="hero-animation-library" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={p => String(p.id)} rowActions={rowActions} bulkActions={bulkActions} selectable exportName="hero-animations" onRefresh={load} emptyLabel={lc(rtl, 'No custom presets yet — the 53 built-in presets are always available in the builder.', 'هنوز پریست سفارشی نیست — ۵۳ پریست داخلی همیشه در سازنده در دسترس‌اند.')} />
       </Card>
     </div>
   )

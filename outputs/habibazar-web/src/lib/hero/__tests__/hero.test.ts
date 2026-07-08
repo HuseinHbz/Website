@@ -196,3 +196,50 @@ describe('AI assist prompt builder', () => {
     expect(tr.systemPrompt).toContain('Persian')
   })
 })
+
+import { buildPackage, verifyPackage, validateDependencies, planImport, animationAnalytics, canonicalize } from '../animationLibrary'
+
+describe('animation library package engine', () => {
+  const items = [
+    { key: 'glow-strong', nameEn: 'Strong Glow', nameFa: 'درخشش قوی', category: 'emphasis', basePreset: 'glow', config: { durationMs: 1800 } },
+    { key: 'fade-hero', nameEn: 'Hero Fade', nameFa: 'محو هیرو', category: 'entrance', basePreset: 'fade-up', config: {} },
+  ]
+  const secret = 'test-secret'
+  it('builds a signed package that verifies, and detects tampering', () => {
+    const pkg = buildPackage({ kind: 'animation', name: 'Pack', version: '1.0.0' }, items, secret)
+    expect(pkg.checksum).toHaveLength(64)
+    expect(verifyPackage(pkg, secret).ok).toBe(true)
+    // tamper the body
+    const tampered = { ...pkg, items: [{ ...items[0], config: { durationMs: 99 } }, items[1]] }
+    const v = verifyPackage(tampered, secret)
+    expect(v.ok).toBe(false); expect(v.tampered).toBe(true)
+    // wrong secret → signature invalid
+    expect(verifyPackage(pkg, 'other').signatureValid).toBe(false)
+  })
+  it('validates dependencies against the built-in registry', () => {
+    const good = buildPackage({ kind: 'animation', name: 'P', version: '1.0.0' }, items, secret)
+    expect(validateDependencies(good).ok).toBe(true)
+    const bad = buildPackage({ kind: 'animation', name: 'P', version: '1.0.0' }, [{ key: 'x', nameEn: 'X', nameFa: 'X', category: 'entrance', basePreset: 'does-not-exist', config: {} }], secret)
+    expect(validateDependencies(bad).ok).toBe(false)
+    expect(validateDependencies(bad).missingPresets).toContain('does-not-exist')
+  })
+  it('plans an import splitting new / conflict / invalid', () => {
+    const pkg = buildPackage({ kind: 'animation', name: 'P', version: '1.0.0' }, items, secret)
+    const plan = planImport(pkg, ['glow-strong'])
+    expect(plan.conflicts).toContain('glow-strong')
+    expect(plan.toCreate.map(i => i.key)).toEqual(['fade-hero'])
+  })
+  it('canonicalize is key-order stable', () => {
+    expect(canonicalize({ b: 1, a: 2 })).toBe(canonicalize({ a: 2, b: 1 }))
+  })
+  it('rolls usage into analytics', () => {
+    const a = animationAnalytics([
+      { key: 'a', nameEn: 'A', category: 'entrance', usageCount: 10, enabled: true },
+      { key: 'b', nameEn: 'B', category: 'emphasis', usageCount: 2, enabled: true },
+      { key: 'c', nameEn: 'C', category: 'entrance', usageCount: 0, enabled: false },
+    ])
+    expect(a.total).toBe(3); expect(a.enabled).toBe(2)
+    expect(a.mostUsed[0].key).toBe('a')
+    expect(a.byCategory[0].category).toBe('entrance')
+  })
+})

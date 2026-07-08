@@ -584,6 +584,22 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   weight/estFps/warnings; `accessibilityReport` → WCAG score/issues) surfaced as a
   live **Insights** card in the builder (real-time warnings). All engines pure +
   unit-tested. Report: `docs/governance/phase25.1-hero-ai-intelligence.md`.
+- **Hero Animation Library CMS** (Phase 25.2) — PostgreSQL-native managed library
+  on top of the 53 built-in presets. Tables `hero_animation_presets` (custom
+  presets: config JSON/tags/collection/enabled/archived/favorite/usage_count/
+  version) + `hero_animation_versions` (rollback) + `hero_collections`. Pure
+  engine `src/lib/hero/animationLibrary.ts` — `buildPackage`/`verifyPackage`
+  (SHA-256 checksum over canonical JSON + HMAC-SHA256 signature → tamper
+  detection), `validateDependencies` (rejects unknown built-in preset/template
+  refs), `planImport` (new/conflict/invalid), `animationAnalytics`; unit-tested.
+  API `GET/POST /api/admin/heroes/animations` (list/search/`?view=analytics|export`
+  signed package; create/update+version/toggle/rollback/bulk/import — import+delete
+  need administrator, RBAC+zod+audit). Admin: Hero Center **Animation Library** tab
+  (Enterprise DataTable, favorite/enable/archive, bulk, export signed pkg / import
+  verified pkg). Verified vs real PostgreSQL (version rollback + sign/verify/import
+  round-trip). The After-Effects-style visual timeline studio is the one deferred
+  piece (config column is schema-ready for keyframe data). Report:
+  `docs/governance/phase25.2-hero-animation-library.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

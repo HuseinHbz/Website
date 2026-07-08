@@ -493,6 +493,50 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_hero_events_hero ON hero_events(hero_id, type);
     CREATE INDEX IF NOT EXISTS idx_hero_events_exp ON hero_events(experiment_key);
 
+    -- Phase 25.2: Animation Library CMS (custom/managed presets on top of the
+    -- built-in registry) + versioning + collections.
+    CREATE TABLE IF NOT EXISTS hero_collections (
+      id SERIAL PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      visibility TEXT NOT NULL DEFAULT 'private',   -- private | organization
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS hero_animation_presets (
+      id SERIAL PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'entrance',
+      base_preset TEXT,                              -- built-in preset it derives from
+      config TEXT NOT NULL DEFAULT '{}',             -- HeroAnimation JSON (timing/easing/…)
+      tags TEXT NOT NULL DEFAULT '[]',
+      collection_id INTEGER,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      favorite BOOLEAN NOT NULL DEFAULT false,
+      usage_count INTEGER NOT NULL DEFAULT 0,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS hero_animation_versions (
+      id BIGSERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL,
+      version INTEGER NOT NULL,
+      config TEXT NOT NULL,
+      note TEXT,
+      author_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hanim_category ON hero_animation_presets(category, archived);
+    CREATE INDEX IF NOT EXISTS idx_hanim_collection ON hero_animation_presets(collection_id);
+    CREATE INDEX IF NOT EXISTS idx_hanim_favorite ON hero_animation_presets(favorite) WHERE favorite = true;
+    CREATE INDEX IF NOT EXISTS idx_hanim_versions_pid ON hero_animation_versions(preset_id, version DESC);
+
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.
     CREATE TABLE IF NOT EXISTS dashboard_layouts (
