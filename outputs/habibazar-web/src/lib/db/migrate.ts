@@ -423,6 +423,76 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_table_views_table ON table_views(table_id);
     CREATE INDEX IF NOT EXISTS idx_table_views_owner ON table_views(owner_id, table_id);
 
+    -- ── Enterprise Hero Platform (Phase 23) ────────────────────────────────
+    -- Versioned, template-driven landing experiences. The config column holds the
+    -- full editable hero JSON (per-language content + style + blocks). Distinct
+    -- from the legacy hero_content/hero_variant (kept intact for the current home).
+    CREATE TABLE IF NOT EXISTS heroes (
+      id SERIAL PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      template TEXT NOT NULL,
+      category TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'draft',
+      config TEXT NOT NULL DEFAULT '{}',
+      version INTEGER NOT NULL DEFAULT 1,
+      target_path TEXT,
+      author_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      published_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_heroes_status ON heroes(status);
+    CREATE INDEX IF NOT EXISTS idx_heroes_target ON heroes(target_path);
+    -- Immutable version history (rollback / compare / audit trail).
+    CREATE TABLE IF NOT EXISTS hero_versions (
+      id SERIAL PRIMARY KEY,
+      hero_id INTEGER NOT NULL REFERENCES heroes(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      config TEXT NOT NULL,
+      status TEXT NOT NULL,
+      note TEXT,
+      author_id TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hero_versions_hero ON hero_versions(hero_id, version DESC);
+    -- A/B experiments (variants + weights + lifecycle).
+    CREATE TABLE IF NOT EXISTS hero_experiments (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      target_path TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      variants TEXT NOT NULL DEFAULT '[]',
+      winner TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    -- Personalization targeting rules (device/lang/country/returning/campaign/…).
+    CREATE TABLE IF NOT EXISTS hero_rules (
+      id SERIAL PRIMARY KEY,
+      hero_id INTEGER NOT NULL REFERENCES heroes(id) ON DELETE CASCADE,
+      target_path TEXT,
+      priority INTEGER NOT NULL DEFAULT 0,
+      match TEXT NOT NULL DEFAULT '{}',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hero_rules_target ON hero_rules(target_path, active);
+    -- Analytics events (view/click/conversion/scroll/time) — append-only.
+    CREATE TABLE IF NOT EXISTS hero_events (
+      id BIGSERIAL PRIMARY KEY,
+      hero_id INTEGER NOT NULL,
+      experiment_key TEXT,
+      variant_id TEXT,
+      type TEXT NOT NULL,
+      value REAL,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hero_events_hero ON hero_events(hero_id, type);
+    CREATE INDEX IF NOT EXISTS idx_hero_events_exp ON hero_events(experiment_key);
+
     -- Per-user dashboard layouts (Phase 22.2). One saved widget layout per
     -- (user, workspace); absent → the system default layout is used.
     CREATE TABLE IF NOT EXISTS dashboard_layouts (
