@@ -53,7 +53,7 @@ function Tile({ label, value, sub, tone }: { label: string; value: string; sub?:
     <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}>
       <p className="text-xs text-text-tertiary mb-1">{label}</p>
       <p className="text-2xl font-bold text-text-primary">{value}</p>
-      {sub && <p className="text-[11px] text-text-tertiary mt-1 truncate">{sub}</p>}
+      {sub && <p className="text-2xs text-text-tertiary mt-1 truncate">{sub}</p>}
     </div>
   )
 }
@@ -151,8 +151,8 @@ export function BackupManager() {
               {SCHEDULE.map((s) => (
                 <div key={s.bucket} className="rounded-lg p-3 bg-surface-2 border border-subtle">
                   <p className="text-xs font-medium text-text-primary capitalize">{s.bucket}</p>
-                  <p className="text-[11px] text-text-secondary">{s.cadence}</p>
-                  <p className="text-[10px] text-text-tertiary mt-1">{s.scope}</p>
+                  <p className="text-2xs text-text-secondary">{s.cadence}</p>
+                  <p className="text-3xs text-text-tertiary mt-1">{s.scope}</p>
                 </div>
               ))}
             </div>
@@ -188,7 +188,7 @@ export function BackupManager() {
                 emptyLabel="هنوز بکاپی ثبت نشده."
               />
             </div>
-            <p className="text-[11px] text-text-tertiary px-5 py-3 border-t border-subtle">
+            <p className="text-2xs text-text-tertiary px-5 py-3 border-t border-subtle">
               محل ذخیره: <span className="font-mono">{engine.root}</span> · محیط: {engine.env} · پایش زنده رخدادها در «لاگ‌ها و پایش زنده».
             </p>
           </Card>

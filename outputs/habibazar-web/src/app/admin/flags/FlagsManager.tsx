@@ -106,7 +106,7 @@ export function FlagsManager() {
           quickCreate={{ labelEn: 'New Flag', labelFa: t('flag_newFlag'), onClick: () => { setEditing(EMPTY); setModal(true) } }}
         />
       </Card>
-      <p className="text-[11px] text-text-tertiary mt-3">{t('flag_footnote')} <span className="font-mono">isEnabled(flag, subjectId)</span>.</p>
+      <p className="text-2xs text-text-tertiary mt-3">{t('flag_footnote')} <span className="font-mono">isEnabled(flag, subjectId)</span>.</p>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('flag_editFlag') : t('flag_newFlag')} size="md">
         <div className="space-y-4">

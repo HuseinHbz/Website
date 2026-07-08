@@ -242,7 +242,7 @@ export function AnalyticsPanel() {
         <DataTable
           tableId="analytics-activity"
           columns={[
-            { key: 'action', labelEn: 'Action', labelFa: 'عملیات', type: 'enum', render: log => <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style={{ background: `${ACTION_COLORS[log.action] || '#4a4a6a'}20`, color: ACTION_COLORS[log.action] || '#9090b0' }}>{ACTION_FA[log.action] || log.action}</span> },
+            { key: 'action', labelEn: 'Action', labelFa: 'عملیات', type: 'enum', render: log => <span className="px-2 py-0.5 rounded text-3xs font-bold uppercase" style={{ background: `${ACTION_COLORS[log.action] || '#4a4a6a'}20`, color: ACTION_COLORS[log.action] || '#9090b0' }}>{ACTION_FA[log.action] || log.action}</span> },
             { key: 'resource', labelEn: 'Resource', labelFa: 'منبع', type: 'enum', render: log => <span className="text-text-secondary">{RESOURCE_FA[log.resource] || log.resource}</span> },
             { key: 'resourceId', labelEn: 'ID', labelFa: 'شناسه', render: log => <span className="font-mono text-text-disabled">{log.resourceId || '—'}</span> },
             { key: 'userEmail', labelEn: 'User', labelFa: 'کاربر', render: log => <span className="text-text-tertiary">{log.userEmail}</span> },

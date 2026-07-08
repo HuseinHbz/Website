@@ -101,7 +101,7 @@ export function RulesCenter() {
             {sim && (
               <div className="mt-3 space-y-2">
                 <div className="flex flex-wrap gap-1.5">{sim.matched.length === 0 ? <span className="text-xs text-text-tertiary">{t('rule_noMatch')}</span> : sim.matched.map(m => <Badge key={m} color="green">{m}</Badge>)}</div>
-                <div><p className="text-xs text-text-tertiary mb-1">{t('rule_outputs')}</p><pre className="text-[11px] text-text-secondary bg-background rounded p-2 overflow-x-auto">{JSON.stringify(sim.outputs, null, 2)}</pre></div>
+                <div><p className="text-xs text-text-tertiary mb-1">{t('rule_outputs')}</p><pre className="text-2xs text-text-secondary bg-background rounded p-2 overflow-x-auto">{JSON.stringify(sim.outputs, null, 2)}</pre></div>
                 <div><p className="text-xs text-text-tertiary mb-1">{t('rule_trace')}</p><div className="flex flex-wrap gap-1">{sim.trace.map((tr, i) => <Badge key={i} color={tr.matched ? 'green' : 'slate'}>{tr.ruleId}</Badge>)}</div></div>
               </div>
             )}

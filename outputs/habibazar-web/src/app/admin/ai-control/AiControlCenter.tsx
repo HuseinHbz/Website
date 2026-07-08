@@ -203,7 +203,7 @@ export function AiControlCenter() {
                     </div>
                     <p className="text-xs text-text-tertiary mt-0.5 truncate">{mod.descriptionEn}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full text-text-secondary" style={{ background: 'rgba(255,255,255,0.05)' }}>{mod.category}</span>
+                      <span className="text-3xs px-2 py-0.5 rounded-full text-text-secondary" style={{ background: 'rgba(255,255,255,0.05)' }}>{mod.category}</span>
                       <span className="text-xs text-text-disabled">{mod.usageCount} {t('usesLabel')}</span>
                       <button onClick={() => { setEditingModule(mod); setModuleModal(true) }}
                         className="ml-auto text-xs text-text-tertiary hover:text-brand transition-colors">{t('editModule')}</button>
@@ -236,8 +236,8 @@ export function AiControlCenter() {
                     </div>
                     {item.content && <p className="text-xs text-text-tertiary line-clamp-2">{item.content}</p>}
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-text-disabled">{item.tags}</span>
-                      <span className="text-[10px] text-text-disabled">priority: {item.priority}</span>
+                      <span className="text-3xs text-text-disabled">{item.tags}</span>
+                      <span className="text-3xs text-text-disabled">priority: {item.priority}</span>
                     </div>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
@@ -318,7 +318,7 @@ export function AiControlCenter() {
                   return (
                     <div key={day.date} className="flex-1 flex flex-col items-center gap-1" title={`${day.date}: ${day.count}`}>
                       <div className="w-full rounded-t" style={{ height: `${(day.count / max) * 80}px`, minHeight: 2, background: 'rgba(99,102,241,0.5)' }} />
-                      <span className="text-[8px] text-text-disabled truncate w-full text-center">{day.date.slice(5)}</span>
+                      <span className="text-4xs text-text-disabled truncate w-full text-center">{day.date.slice(5)}</span>
                     </div>
                   )
                 })}

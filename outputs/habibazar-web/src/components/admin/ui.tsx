@@ -175,7 +175,7 @@ export function Badge({ children, color = 'slate' }: { children: React.ReactNode
     slate:  'bg-surface-2     text-text-secondary border border-border',
   }
   return (
-    <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-widest ${colors[color] ?? colors.slate}`}>
+    <span className={`inline-flex items-center text-3xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-widest ${colors[color] ?? colors.slate}`}>
       {children}
     </span>
   )

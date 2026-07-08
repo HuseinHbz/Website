@@ -33,7 +33,7 @@ function Tile({ label, value, sub, tone }: { label: string; value: string; sub?:
     <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}>
       <p className="text-xs text-text-tertiary mb-1">{label}</p>
       <p className="text-2xl font-bold text-text-primary">{value}</p>
-      {sub && <p className="text-[11px] text-text-tertiary mt-1 truncate">{sub}</p>}
+      {sub && <p className="text-2xs text-text-tertiary mt-1 truncate">{sub}</p>}
     </div>
   )
 }
@@ -71,7 +71,7 @@ export function DatabaseHealth() {
             <div className={`rounded-xl p-4 border ${statusTone === 'ok' ? 'bg-success/10 border-success/40' : statusTone === 'warn' ? 'bg-warning/10 border-warning/40' : 'bg-danger/10 border-danger/40'}`}>
               <p className="text-xs text-text-tertiary mb-1">سلامت دیتابیس</p>
               <p className="text-2xl font-bold text-text-primary">{data.health.score}<span className="text-sm text-text-tertiary">/100</span></p>
-              <p className="text-[11px] mt-1"><Badge color={statusTone === 'ok' ? 'green' : statusTone === 'warn' ? 'yellow' : 'red'}>{data.health.status}</Badge></p>
+              <p className="text-2xs mt-1"><Badge color={statusTone === 'ok' ? 'green' : statusTone === 'warn' ? 'yellow' : 'red'}>{data.health.status}</Badge></p>
             </div>
             <Tile label="جداول" value={String(data.census.tables)} sub={`${data.census.indexes} ایندکس`} />
             <Tile label="کل رکوردها" value={data.census.totalRows.toLocaleString()} />
@@ -90,7 +90,7 @@ export function DatabaseHealth() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-text-tertiary mt-3">
+              <p className="text-2xs text-text-tertiary mt-3">
                 integrity_check: <span className="font-mono">{data.integrity.integrity}</span> · quick_check: <span className="font-mono">{data.integrity.quick}</span> ·
                 FK: {data.integrity.fkEnabled ? 'on' : 'off'} ({data.integrity.fkViolations} violation) · journal: {data.storage.journalMode}
               </p>
@@ -105,11 +105,11 @@ export function DatabaseHealth() {
                   <ul className="text-xs font-mono">{data.schema.missingCritical.map((t) => <li key={t}>• {t}</li>)}</ul>
                 </div>
               )}
-              <p className="text-[11px] text-text-tertiary mt-3">
+              <p className="text-2xs text-text-tertiary mt-3">
                 صفحه: {data.storage.pageSize}B × {data.storage.pageCount.toLocaleString()} = {fmtBytes(data.storage.logicalBytes)} منطقی ·
                 driver: {data.driver}
               </p>
-              <p className="text-[10px] text-text-tertiary mt-1 font-mono truncate" title={data.path}>{data.path}</p>
+              <p className="text-3xs text-text-tertiary mt-1 font-mono truncate" title={data.path}>{data.path}</p>
             </Card>
           </div>
 
@@ -133,7 +133,7 @@ export function DatabaseHealth() {
                 exportName="db-row-counts"
               />
             </div>
-            <p className="text-[11px] text-text-tertiary px-5 py-3 border-t border-subtle">
+            <p className="text-2xs text-text-tertiary px-5 py-3 border-t border-subtle">
               فقط جداول دارای رکورد نمایش داده می‌شوند · restore sandbox و تأیید بکاپ در «Backup & Recovery».
             </p>
           </Card>

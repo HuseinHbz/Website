@@ -50,7 +50,7 @@ export function AuditView() {
         {Object.entries(ACTION_COLOR).map(([action]) => (
           <div key={action} className="flex flex-col items-center gap-1 p-3 rounded-xl border border-border bg-surface-2">
             <span className="text-base">{ACTION_ICON[action] || '•'}</span>
-            <span className="text-[10px] text-text-tertiary uppercase font-bold">{action}</span>
+            <span className="text-3xs text-text-tertiary uppercase font-bold">{action}</span>
             <span className="text-sm font-bold text-white">{stats[action] || 0}</span>
           </div>
         ))}

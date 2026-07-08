@@ -35,7 +35,7 @@ function Metric({ label, value, sub, tone }: { label: string; value: string; sub
     <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}>
       <p className="text-xs text-text-tertiary mb-1">{label}</p>
       <p className="text-2xl font-bold text-text-primary">{value}</p>
-      {sub && <p className="text-[11px] text-text-tertiary mt-1 truncate">{sub}</p>}
+      {sub && <p className="text-2xs text-text-tertiary mt-1 truncate">{sub}</p>}
     </div>
   )
 }
@@ -102,17 +102,17 @@ export function OperationsCenter() {
             <div className="rounded-xl p-4 bg-surface-2 border border-subtle">
               <div className="flex justify-between"><span className="text-xs text-text-tertiary">CPU load</span><span className="text-sm font-bold text-text-primary">{m.cpuLoadPct}%</span></div>
               <Bar pct={m.cpuLoadPct} tone={tone(m.cpuLoadPct, 70, 90)} />
-              <p className="text-[10px] text-text-tertiary mt-1">load1 {m.cpuLoad1} · {data.infra.cpuCount} vCPU</p>
+              <p className="text-3xs text-text-tertiary mt-1">load1 {m.cpuLoad1} · {data.infra.cpuCount} vCPU</p>
             </div>
             <div className="rounded-xl p-4 bg-surface-2 border border-subtle">
               <div className="flex justify-between"><span className="text-xs text-text-tertiary">Memory</span><span className="text-sm font-bold text-text-primary">{m.memPct}%</span></div>
               <Bar pct={m.memPct} tone={tone(m.memPct, 80, 90)} />
-              <p className="text-[10px] text-text-tertiary mt-1">{m.memUsedMb}/{m.memTotalMb} MB · rss {m.rssMb} MB</p>
+              <p className="text-3xs text-text-tertiary mt-1">{m.memUsedMb}/{m.memTotalMb} MB · rss {m.rssMb} MB</p>
             </div>
             <div className="rounded-xl p-4 bg-surface-2 border border-subtle">
               <div className="flex justify-between"><span className="text-xs text-text-tertiary">Disk</span><span className="text-sm font-bold text-text-primary">{m.diskUsedPct == null ? 'n/a' : `${m.diskUsedPct}%`}</span></div>
               <Bar pct={m.diskUsedPct ?? 0} tone={tone(m.diskUsedPct, 80, 90)} />
-              <p className="text-[10px] text-text-tertiary mt-1">{m.diskFreeGb == null ? '—' : `${m.diskFreeGb} GB free / ${m.diskTotalGb} GB`}</p>
+              <p className="text-3xs text-text-tertiary mt-1">{m.diskFreeGb == null ? '—' : `${m.diskFreeGb} GB free / ${m.diskTotalGb} GB`}</p>
             </div>
           </div>
 

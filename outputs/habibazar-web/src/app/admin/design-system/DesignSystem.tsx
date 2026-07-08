@@ -60,7 +60,7 @@ export function DesignSystem() {
             {TOKENS.map(tk => (
               <div key={tk.name} className="text-center">
                 <div className={`${tk.cls} h-12 rounded-lg border border-border`} />
-                <p className="text-[10px] text-text-tertiary mt-1 truncate">{tk.name}</p>
+                <p className="text-3xs text-text-tertiary mt-1 truncate">{tk.name}</p>
               </div>
             ))}
           </div>

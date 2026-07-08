@@ -15,13 +15,14 @@
     "audit:links": "node scripts/link-integrity-audit.mjs",
     "audit:i18n": "node scripts/i18n-audit.mjs",
     "audit:pgcompat": "node scripts/pg-compat-audit.mjs",
-    "audit": "npm run audit:tokens && npm run audit:content && npm run audit:reuse && npm run audit:deps && npm run audit:links && npm run audit:i18n",
+    "audit": "npm run audit:tokens && npm run audit:content && npm run audit:reuse && npm run audit:deps && npm run audit:links && npm run audit:i18n && npm run audit:ui",
     "db:migrate:pg": "node scripts/migrate-to-postgres.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "audit:ui": "node scripts/ui-consistency-audit.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

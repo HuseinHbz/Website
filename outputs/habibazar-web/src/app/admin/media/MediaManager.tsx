@@ -89,7 +89,7 @@ export function MediaManager() {
         {/* Folder sidebar */}
         <div className="w-44 flex-shrink-0">
           <Card className="p-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-text-disabled mb-2">Folders</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-text-disabled mb-2">Folders</p>
             {FOLDERS.map((f) => (
               <button
                 key={f}
@@ -152,14 +152,14 @@ export function MediaManager() {
                       <div className="w-full h-20 flex flex-col items-center justify-center gap-1"
                         style={{ background:`linear-gradient(135deg, #0c0c1e, #111128)`, borderBottom:`2px solid ${fileColor(f.mimeType)}33` }}>
                         <span className="text-2xl">{fileIcon(f.mimeType)}</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: fileColor(f.mimeType) }}>
+                        <span className="text-4xs font-bold uppercase tracking-wider" style={{ color: fileColor(f.mimeType) }}>
                           {f.mimeType.split('/')[1]?.split('.').pop()?.slice(0,8) || 'FILE'}
                         </span>
                       </div>
                     )}
                     <div className="p-1.5">
-                      <p className="text-[10px] text-text-secondary truncate">{f.originalName}</p>
-                      <p className="text-[10px] text-text-disabled">{formatBytes(f.size)}</p>
+                      <p className="text-3xs text-text-secondary truncate">{f.originalName}</p>
+                      <p className="text-3xs text-text-disabled">{formatBytes(f.size)}</p>
                     </div>
                   </div>
                 ))}
@@ -206,7 +206,7 @@ export function MediaManager() {
                 <div className="flex justify-between"><span className="text-text-tertiary">Date</span><span className="text-text-primary">{new Date(selected.uploadedAt).toLocaleDateString()}</span></div>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] text-text-tertiary font-medium">URL</p>
+                <p className="text-3xs text-text-tertiary font-medium">URL</p>
                 <div className="bg-background rounded p-2 text-xs text-brand break-all select-all">{selected.url}</div>
               </div>
               <div className="flex gap-2">

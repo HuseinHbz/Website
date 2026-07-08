@@ -115,7 +115,7 @@ export function SocDashboard() {
               )}
             </Card>
           </div>
-          <p className="text-[11px] text-text-tertiary mt-4">
+          <p className="text-2xs text-text-tertiary mt-4">
             Built on real signal from the log bus + audit trail. Detailed streams in Logs & Monitoring; user 2FA/sessions in Security & 2FA.
           </p>
         </>

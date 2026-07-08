@@ -223,7 +223,7 @@ export function FormBuilder() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono text-text-tertiary">{FIELD_TYPE_LABELS[field.type]}</span>
-                        {field.required && <span className="text-[9px] text-red-400 font-bold">REQUIRED</span>}
+                        {field.required && <span className="text-4xs text-red-400 font-bold">REQUIRED</span>}
                         <span className="text-xs font-bold text-brand">{field.width === 'half' ? '½' : '□'}</span>
                       </div>
                       <p className="text-sm text-white">{field.labelEn || '(no label)'}</p>

@@ -120,8 +120,8 @@ export function MenuBuilder() {
                 <div className={`flex items-center gap-3 p-2.5 rounded-lg ${item.active ? '' : 'opacity-50'}`}
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <div className="flex flex-col gap-0.5">
-                    <button onClick={() => reorder(item.id, -1)} className="text-text-disabled hover:text-white text-[10px]">▲</button>
-                    <button onClick={() => reorder(item.id, 1)} className="text-text-disabled hover:text-white text-[10px]">▼</button>
+                    <button onClick={() => reorder(item.id, -1)} className="text-text-disabled hover:text-white text-3xs">▲</button>
+                    <button onClick={() => reorder(item.id, 1)} className="text-text-disabled hover:text-white text-3xs">▼</button>
                   </div>
                   <span className="text-base">{item.icon || '◦'}</span>
                   <div className="flex-1 min-w-0">
@@ -143,7 +143,7 @@ export function MenuBuilder() {
                     <span className="text-text-disabled text-xs">↳</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-white">{child.labelEn}</p>
-                      <p className="text-[10px] text-text-tertiary font-mono">{child.href}</p>
+                      <p className="text-3xs text-text-tertiary font-mono">{child.href}</p>
                     </div>
                     <div className="flex gap-1">
                       <Btn size="sm" variant="ghost" onClick={() => { setEditing({ ...child }); setModal(true) }}>✏</Btn>

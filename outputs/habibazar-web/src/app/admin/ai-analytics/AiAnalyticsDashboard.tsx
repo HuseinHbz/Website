@@ -126,7 +126,7 @@ function Tile({ label, value, sub, tone }: { label: string; value: string; sub?:
     <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}>
       <p className="text-xs text-text-tertiary mb-1">{label}</p>
       <p className="text-xl font-bold text-text-primary">{value}</p>
-      {sub && <p className="text-[11px] text-text-tertiary mt-0.5">{sub}</p>}
+      {sub && <p className="text-2xs text-text-tertiary mt-0.5">{sub}</p>}
     </div>
   )
 }

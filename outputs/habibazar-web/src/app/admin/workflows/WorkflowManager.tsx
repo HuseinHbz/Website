@@ -187,7 +187,7 @@ export function WorkflowManager() {
                 <span className="text-xs text-text-tertiary ml-auto">{r.startedAt}</span>
               </div>
               {r.error && <p className="text-xs text-danger mb-1">{r.error}</p>}
-              <pre className="text-[11px] text-text-secondary bg-background rounded p-2 overflow-x-auto max-h-40">{
+              <pre className="text-2xs text-text-secondary bg-background rounded p-2 overflow-x-auto max-h-40">{
                 (() => { try { return (JSON.parse(r.log) as { node: string; message: string }[]).map((l) => `• ${l.node}: ${l.message}`).join('\n') } catch { return r.log } })()
               }</pre>
             </div>

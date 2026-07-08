@@ -146,14 +146,14 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
             placeholder={isRTL ? 'جستجوی فضاها، ماژول‌ها، دستورات و رکوردها...' : 'Search workspaces, modules, commands and records...'}
             className="flex-1 bg-transparent text-text-primary text-sm outline-none placeholder:text-text-disabled" aria-label={isRTL ? 'جستجو' : 'Search'} />
           {status && <span className={`text-xs shrink-0 ${status.ok ? 'text-success-text' : 'text-danger-text'}`}>{status.msg}</span>}
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded text-text-tertiary bg-white/5 border border-white/10">ESC</kbd>
+          <kbd className="text-3xs px-1.5 py-0.5 rounded text-text-tertiary bg-white/5 border border-white/10">ESC</kbd>
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto" role="listbox">
           {rows.length === 0 && <div className="text-center py-12 text-text-tertiary text-sm">{isRTL ? 'نتیجه‌ای یافت نشد' : 'No results found'}</div>}
           {groups.map(g => (
             <div key={g.label}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-text-disabled px-4 pt-3 pb-1">{g.label}</p>
+              <p className="text-3xs font-bold uppercase tracking-widest text-text-disabled px-4 pt-3 pb-1">{g.label}</p>
               {g.rows.map(({ row, idx }) => {
                 const isSel = idx === selected
                 return (
@@ -162,13 +162,13 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-start transition-all ${isSel ? 'bg-brand/15 text-brand' : 'text-text-secondary'}`}>
                       <span className={`text-base w-5 text-center shrink-0 ${isSel ? 'text-brand' : 'text-text-tertiary'}`}>{row.icon}</span>
                       <span className="flex-1 text-start truncate">{isRTL ? row.labelFa : row.label}{row.sub ? <span className="text-text-tertiary"> — {row.sub}</span> : null}</span>
-                      {isSel && <kbd className="text-[10px] px-1.5 py-0.5 rounded text-text-tertiary bg-white/5 border border-white/10 shrink-0">↵</kbd>}
+                      {isSel && <kbd className="text-3xs px-1.5 py-0.5 rounded text-text-tertiary bg-white/5 border border-white/10 shrink-0">↵</kbd>}
                     </button>
                     {isSel && row.entity && (
                       <div className="flex items-center gap-2 px-12 pb-2 flex-wrap">
                         {row.entity.map(a => (
                           <button key={a.id} onClick={() => runEntity(a)}
-                            className="text-[11px] px-2 py-1 rounded-md text-text-secondary bg-white/5 border border-white/10 hover:border-brand/40 hover:text-brand transition-colors">
+                            className="text-2xs px-2 py-1 rounded-md text-text-secondary bg-white/5 border border-white/10 hover:border-brand/40 hover:text-brand transition-colors">
                             <span className="me-1">{a.icon}</span>{isRTL ? a.labelFa : a.labelEn}
                           </button>
                         ))}
@@ -181,7 +181,7 @@ export function CommandPalette({ open, onClose, locale, role }: Props) {
           ))}
         </div>
 
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-white/5 text-[10px] text-text-tertiary">
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-white/5 text-3xs text-text-tertiary">
           <span><kbd className="text-text-secondary">↑↓</kbd> {isRTL ? 'ناوبری' : 'navigate'}</span>
           <span><kbd className="text-text-secondary">↵</kbd> {isRTL ? 'اجرا' : 'run'}</span>
           <span><kbd className="text-text-secondary">ESC</kbd> {isRTL ? 'بستن' : 'close'}</span>

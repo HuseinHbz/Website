@@ -302,7 +302,7 @@ export function LogsMonitoring() {
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between px-3 py-1.5 border-t border-subtle text-[11px] text-text-tertiary">
+          <div className="flex items-center justify-between px-3 py-1.5 border-t border-subtle text-2xs text-text-tertiary">
             <span>{rows.length} entries{mode === 'live' ? ` · ${entries.length} buffered` : ''}</span>
             <span>{mode === 'live' ? (paused ? 'paused' : 'streaming') : 'history'}</span>
           </div>
@@ -316,9 +316,9 @@ function StatTile({ label, value, sub, tone }: { label: string; value: string; s
   const ring = tone === 'ok' ? 'border-success/40' : tone === 'warn' ? 'border-warning/40' : tone === 'bad' ? 'border-danger/40' : 'border-subtle'
   return (
     <div className={`rounded-xl p-3 bg-surface-2 border ${ring}`}>
-      <p className="text-[11px] text-text-tertiary mb-0.5">{label}</p>
+      <p className="text-2xs text-text-tertiary mb-0.5">{label}</p>
       <p className="text-lg font-bold text-text-primary">{value}</p>
-      {sub && <p className="text-[10px] text-text-tertiary truncate">{sub}</p>}
+      {sub && <p className="text-3xs text-text-tertiary truncate">{sub}</p>}
     </div>
   )
 }

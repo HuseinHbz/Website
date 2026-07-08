@@ -110,7 +110,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
           <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
           {expanded && <span className="truncate flex-1">{label}</span>}
           {(badges[item.href] ?? 0) > 0 && (
-            <span className={`shrink-0 text-[10px] font-bold rounded-full bg-danger text-white min-w-[16px] h-4 px-1 inline-flex items-center justify-center ${expanded ? '' : 'absolute top-1 end-1'}`} aria-label={`${badges[item.href]} new`}>
+            <span className={`shrink-0 text-3xs font-bold rounded-full bg-danger text-white min-w-[16px] h-4 px-1 inline-flex items-center justify-center ${expanded ? '' : 'absolute top-1 end-1'}`} aria-label={`${badges[item.href]} new`}>
               {badges[item.href] > 99 ? '99+' : badges[item.href]}
             </span>
           )}
@@ -136,14 +136,14 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
             onClick={() => toggleGroup(groupKey!)}
             aria-expanded={!isCollapsed}
             data-group={groupKey}
-            className="w-full flex items-center gap-1 px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-text-disabled hover:text-text-tertiary transition-colors"
+            className="w-full flex items-center gap-1 px-2 mb-1 text-3xs font-bold uppercase tracking-widest text-text-disabled hover:text-text-tertiary transition-colors"
           >
-            <span className="text-[8px]">{isCollapsed ? '▸' : '▾'}</span>
+            <span className="text-4xs">{isCollapsed ? '▸' : '▾'}</span>
             <span className="flex-1 text-start">{label}</span>
             {badgeCount > 0 && <span className="text-danger-text">●</span>}
           </button>
         ) : (
-          <p className="text-[10px] font-bold uppercase tracking-widest text-text-disabled px-2 mb-1">{label}</p>
+          <p className="text-3xs font-bold uppercase tracking-widest text-text-disabled px-2 mb-1">{label}</p>
         ))}
         {!isCollapsed && <ul className="space-y-0.5">{children}</ul>}
       </div>
@@ -162,7 +162,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
         {expanded && (
           <div className="min-w-0 flex-1">
             <div className="text-sm font-bold text-text-primary truncate">{isRTL ? 'مرکز کنترل' : 'Control Center'}</div>
-            <div className="text-[10px] text-text-tertiary truncate">HBZ Technology</div>
+            <div className="text-3xs text-text-tertiary truncate">HBZ Technology</div>
           </div>
         )}
         <button onClick={onMobileClose} className="lg:hidden text-text-muted hover:text-text-primary transition-colors flex-shrink-0 p-1" aria-label="Close sidebar">
@@ -194,7 +194,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
               {([['fav', switcher.favs, isRTL ? 'دلخواه' : 'Favorites'], ['recent', switcher.recent, isRTL ? 'اخیر' : 'Recent'], ['all', switcher.rest, isRTL ? 'همه' : 'All']] as const).map(([key, list, label]) => (
                 list.length > 0 && (
                   <div key={key}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-text-disabled px-3 pt-2 pb-0.5">{label}</p>
+                    <p className="text-4xs font-bold uppercase tracking-widest text-text-disabled px-3 pt-2 pb-0.5">{label}</p>
                     {list.map(w => {
                       const flatIdx = switcher.flat.indexOf(w)
                       const sel = flatIdx === wsSel

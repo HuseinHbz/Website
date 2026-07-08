@@ -119,14 +119,14 @@ export function PromptCenter() {
               <div className="space-y-2 mb-3">
                 {vars.map(v => (
                   <div key={v}>
-                    <label className="text-[11px] text-text-tertiary font-mono">{`{{${v}}}`}</label>
+                    <label className="text-2xs text-text-tertiary font-mono">{`{{${v}}}`}</label>
                     <input value={testVars[v] ?? ''} onChange={e => setTestVars(s => ({ ...s, [v]: e.target.value }))} className="form-input w-full !py-1.5" />
                   </div>
                 ))}
               </div>
             )}
-            <p className="text-[11px] text-text-tertiary mb-1">{t('apr_preview')}</p>
-            <pre className="text-[11px] text-text-secondary bg-background rounded p-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{preview || '—'}</pre>
+            <p className="text-2xs text-text-tertiary mb-1">{t('apr_preview')}</p>
+            <pre className="text-2xs text-text-secondary bg-background rounded p-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{preview || '—'}</pre>
           </Card>
         </div>
 
@@ -139,13 +139,13 @@ export function PromptCenter() {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-semibold text-text-primary">v{v.version}</span>
                   {v.version === detail.activeVersion && <Badge color="green">{t('apr_activeBadge')}</Badge>}
-                  <span className="text-[11px] text-text-tertiary">{v.note || ''}</span>
-                  <span className="text-[11px] text-text-tertiary ml-auto">{v.createdAt}</span>
+                  <span className="text-2xs text-text-tertiary">{v.note || ''}</span>
+                  <span className="text-2xs text-text-tertiary ml-auto">{v.createdAt}</span>
                   {v.version !== detail.activeVersion && (
                     <Btn size="sm" variant="secondary" onClick={() => op({ id: detail.id, op: 'setActive', version: v.version }, t('apr_rolledBack'))}>{t('apr_makeActive')}</Btn>
                   )}
                 </div>
-                <pre className="text-[11px] text-text-secondary bg-background rounded p-2 whitespace-pre-wrap max-h-32 overflow-y-auto">{v.body}</pre>
+                <pre className="text-2xs text-text-secondary bg-background rounded p-2 whitespace-pre-wrap max-h-32 overflow-y-auto">{v.body}</pre>
               </div>
             ))}
           </div>
@@ -196,7 +196,7 @@ export function PromptCenter() {
           <div>
             <label className="form-label">{t('apr_bodyL')}</label>
             <textarea value={draft.body} onChange={e => setDraft(s => ({ ...s, body: e.target.value }))} rows={7} placeholder={t('apr_bodyPh')} className="form-input w-full font-mono text-xs" />
-            <p className="text-[11px] text-text-tertiary mt-1">{t('apr_varsHint')}</p>
+            <p className="text-2xs text-text-tertiary mt-1">{t('apr_varsHint')}</p>
           </div>
           <div className="flex gap-3">
             <Btn onClick={create} disabled={saving}>{saving ? t('apr_saving') : t('apr_create')}</Btn>

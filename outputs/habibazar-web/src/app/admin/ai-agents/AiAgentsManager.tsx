@@ -99,7 +99,7 @@ export function AiAgentsManager() {
           />
           <div className="flex flex-wrap gap-2 mb-4">
             {examples.map((ex, i) => (
-              <button key={i} onClick={() => setTask(ex)} className="text-[11px] px-2 py-1 rounded-md bg-surface-2 border border-subtle text-text-secondary hover:border-brand/40">
+              <button key={i} onClick={() => setTask(ex)} className="text-2xs px-2 py-1 rounded-md bg-surface-2 border border-subtle text-text-secondary hover:border-brand/40">
                 {ex}
               </button>
             ))}

@@ -89,7 +89,7 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
         >
           <span>🔍</span>
           <span className="hidden lg:inline">{isRTL ? 'جستجو...' : 'Search...'}</span>
-          <kbd className="text-[10px] px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>⌘K</kbd>
+          <kbd className="text-3xs px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>⌘K</kbd>
         </button>
 
         {/* Locale toggle */}
@@ -108,7 +108,7 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
           >
             🔔
             {unread > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center bg-brand text-white">
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full text-4xs font-bold flex items-center justify-center bg-brand text-white">
                 {unread}
               </span>
             )}
@@ -150,7 +150,7 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
                       <span className={`mt-0.5 shrink-0 ${TYPE_COLOR[n.type]}`}>{TYPE_ICON[n.type]}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-text-primary leading-snug">{isRTL ? n.titleFa : n.titleEn}</p>
-                        <p className="text-[10px] text-text-tertiary mt-0.5">{n.time}</p>
+                        <p className="text-3xs text-text-tertiary mt-0.5">{n.time}</p>
                       </div>
                       {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />}
                     </div>

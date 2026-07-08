@@ -571,7 +571,7 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
 - E2E seeds/logs in via the seeded admin above (see `e2e/helpers.ts`).
 - Target: zero TS errors, zero lint warnings, 0 vulnerabilities, all tests green.
 
-## Governance audits (`npm run audit` runs all six; docs in `docs/governance/`)
+## Governance audits (`npm run audit` runs all seven; docs in `docs/governance/`)
 - `audit:tokens` — design tokens: fails on arbitrary Tailwind color classes
   (drift). Source of truth: `tailwind.config.ts` + `src/lib/design/tokens.ts`
   (`BRAND`, `CHART_PALETTE`, `SOCIAL_BRAND`) for values that can't be a class.
@@ -589,7 +589,14 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   missing from `src/lib/admin/locale.tsx` or has an empty fa/en**. Scoped to files
   importing `@/lib/admin/locale` (public marketing uses next-intl `messages/*.json`
   — a separate system, not audited here). Orphan keys reported informationally.
-- `tokens`, `content`, `deps`, `links` and `i18n` audits gate CI (in the ESLint job).
+- `audit:ui` — UI Consistency Engine (Phase 24): governs the **type scale** —
+  **fails on any arbitrary Tailwind font-size** (`text-[13px]`, `text-[0.9rem]`,
+  …) instead of a named scale token (`text-4xs`…`text-9xl`/`text-display` in
+  `tailwind.config.ts`; budget 0). Arbitrary interactive control heights reported
+  informationally. Micro sizes are on-scale via `4xs` (9px)/`3xs` (10px)/`2xs`
+  (11px). Complements `audit:tokens` (colour). Report:
+  `docs/governance/phase24-quality-platform.md`.
+- `tokens`, `content`, `deps`, `links`, `i18n` and `ui` audits gate CI (in the ESLint job).
 
 ## CI (`.github/workflows/ci.yml`)
 Jobs: TypeScript, ESLint, Unit Tests, Build, Security Audit

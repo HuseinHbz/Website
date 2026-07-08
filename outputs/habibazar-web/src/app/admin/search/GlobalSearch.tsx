@@ -135,7 +135,7 @@ export function GlobalSearch() {
                     <p className="text-sm font-medium text-text-primary truncate">{h.title}</p>
                     {h.subtitle && <p className="text-xs text-text-tertiary truncate">{h.subtitle}</p>}
                   </div>
-                  <span className="shrink-0 text-[11px] uppercase tracking-wide text-text-tertiary">{t(`gs_type_${h.type}`)}</span>
+                  <span className="shrink-0 text-2xs uppercase tracking-wide text-text-tertiary">{t(`gs_type_${h.type}`)}</span>
                 </Link>
               ))}
             </Card>

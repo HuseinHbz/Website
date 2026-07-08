@@ -112,7 +112,7 @@ function Connectors({ t, toast }: { t: T; toast: Toast }) {
           )}
           {intent && (
             <>
-              <p className="text-[11px] text-warning-text">{t('int_intentNote')}</p>
+              <p className="text-2xs text-warning-text">{t('int_intentNote')}</p>
               <div className="grid grid-cols-2 gap-4">
                 <Input label={editing.type === 'sftp' ? t('int_fHost') : t('int_fBroker')} value={String((editing.type === 'sftp' ? editing.config.host : editing.config.broker) ?? '')} onChange={v => cfg(editing.type === 'sftp' ? 'host' : 'broker', v)} />
                 <Input label={editing.type === 'sftp' ? t('int_fPath') : editing.type === 'kafka' ? t('int_fTopic') : t('int_fQueue')} value={String((editing.type === 'sftp' ? editing.config.path : editing.type === 'kafka' ? editing.config.topic : editing.config.queue) ?? '')} onChange={v => cfg(editing.type === 'sftp' ? 'path' : editing.type === 'kafka' ? 'topic' : 'queue', v)} />
@@ -140,7 +140,7 @@ function Monitoring({ t }: { t: T }) {
   const columns: Column<Dispatch>[] = [
     { key: 'createdAt', labelEn: 'Date', labelFa: t('int_cDate'), type: 'date', render: d => <span className="text-text-tertiary text-xs font-mono">{d.createdAt}</span> },
     { key: 'connectorKey', labelEn: 'Connector', labelFa: t('int_cConnector'), render: d => <span className="text-text-secondary text-xs">{d.connectorKey} <Badge color="slate">{d.type}</Badge></span> },
-    { key: 'status', labelEn: 'Status', labelFa: t('int_cStatus'), type: 'enum', options: ['success', 'failed', 'dead', 'queued'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: d => <><Badge color={STATUS_COLOR[d.status] ?? 'slate'}>{t(`int_st_${d.status}` as 'int_st_success')}</Badge>{d.error && <span className="text-[11px] text-danger ml-1">{d.error.slice(0, 40)}</span>}</> },
+    { key: 'status', labelEn: 'Status', labelFa: t('int_cStatus'), type: 'enum', options: ['success', 'failed', 'dead', 'queued'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: d => <><Badge color={STATUS_COLOR[d.status] ?? 'slate'}>{t(`int_st_${d.status}` as 'int_st_success')}</Badge>{d.error && <span className="text-2xs text-danger ml-1">{d.error.slice(0, 40)}</span>}</> },
     { key: 'latencyMs', labelEn: 'Latency', labelFa: t('int_cLatency'), type: 'number', numeric: true, render: d => <span className="text-text-secondary text-xs">{d.latencyMs}ms</span> },
     { key: 'attempts', labelEn: 'Attempts', labelFa: t('int_cAttempts'), type: 'number', numeric: true },
   ]

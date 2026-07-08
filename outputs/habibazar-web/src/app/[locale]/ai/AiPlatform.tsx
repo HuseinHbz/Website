@@ -103,7 +103,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
         {parts.map((p, i) => {
           if (/^\*\*.*\*\*$/.test(p)) return <strong key={i} className="font-semibold text-white">{p.slice(2, -2)}</strong>
           if (/^`[^`]+`$/.test(p)) return <code key={i} className="px-1 py-0.5 rounded text-xs font-mono text-indigo-300 bg-indigo-500/15">{p.slice(1, -1)}</code>
-          if (/^\[\d+\]$/.test(p)) return <sup key={i} className="text-indigo-400 text-[10px] ml-0.5 cursor-pointer">{p}</sup>
+          if (/^\[\d+\]$/.test(p)) return <sup key={i} className="text-indigo-400 text-3xs ml-0.5 cursor-pointer">{p}</sup>
           return p
         })}
       </span>
@@ -324,7 +324,7 @@ export function AiPlatform({ locale }: Props) {
       {/* ── Top Bar ─────────────────────────────────────────────────── */}
       <header className="h-14 flex items-center gap-3 px-4 border-b border-border flex-shrink-0" style={{ background: 'rgba(8,8,15,0.95)', backdropFilter: 'blur(12px)' }}>
         <Link href={`/${locale}`} className="flex items-center gap-2 mr-2 rtl:mr-0 rtl:ml-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white text-[10px] font-black">HBZ</div>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white text-3xs font-black">HBZ</div>
           {!isRTL
             ? <span className="text-sm font-bold text-white hidden sm:block">AI Platform</span>
             : <span className="text-sm font-bold text-white hidden sm:block">پلتفرم هوش مصنوعی</span>
@@ -346,7 +346,7 @@ export function AiPlatform({ locale }: Props) {
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <span>🔍</span>
             <span className="hidden md:block">{t('Search knowledge...', 'جستجوی دانش...')}</span>
-            <kbd className="text-[10px] hidden md:block opacity-50">⌘K</kbd>
+            <kbd className="text-3xs hidden md:block opacity-50">⌘K</kbd>
           </button>
           {/* Export */}
           {messages.length > 0 && (
@@ -382,7 +382,7 @@ export function AiPlatform({ locale }: Props) {
           <aside className="w-64 flex-shrink-0 flex flex-col border-r border-border overflow-hidden" style={{ background: 'rgba(10,10,20,0.8)' }}>
             {/* Modules */}
             <div className="flex-shrink-0 px-3 pt-3 pb-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 px-1 mb-2">{t('AI Advisors', 'مشاوران هوش مصنوعی')}</p>
+              <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 px-1 mb-2">{t('AI Advisors', 'مشاوران هوش مصنوعی')}</p>
               <div className="space-y-0.5">
                 {modules.map(mod => {
                   const c = getColor(mod.color)
@@ -409,13 +409,13 @@ export function AiPlatform({ locale }: Props) {
 
             {/* History */}
             <div className="flex-1 overflow-y-auto px-3 pb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 px-1 mb-2">{t('History', 'تاریخچه')}</p>
+              <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 px-1 mb-2">{t('History', 'تاریخچه')}</p>
               {conversations.length === 0 && (
                 <p className="text-xs text-slate-700 px-1">{t('No conversations yet', 'هنوز گفتگویی نیست')}</p>
               )}
               {groupedConvs.today.length > 0 && (
                 <div className="mb-2">
-                  <p className="text-[9px] text-slate-700 uppercase font-bold px-1 mb-1">{t('Today', 'امروز')}</p>
+                  <p className="text-4xs text-slate-700 uppercase font-bold px-1 mb-1">{t('Today', 'امروز')}</p>
                   {groupedConvs.today.map(c => (
                     <button key={c.id} className="w-full text-start px-2 py-1.5 rounded-lg text-xs text-slate-500 hover:text-white hover:bg-white/5 transition-all truncate block">
                       {c.titleEn || t('Conversation', 'گفتگو')}
@@ -425,7 +425,7 @@ export function AiPlatform({ locale }: Props) {
               )}
               {groupedConvs.week.length > 0 && (
                 <div className="mb-2">
-                  <p className="text-[9px] text-slate-700 uppercase font-bold px-1 mb-1">{t('This Week', 'این هفته')}</p>
+                  <p className="text-4xs text-slate-700 uppercase font-bold px-1 mb-1">{t('This Week', 'این هفته')}</p>
                   {groupedConvs.week.map(c => (
                     <button key={c.id} className="w-full text-start px-2 py-1.5 rounded-lg text-xs text-slate-500 hover:text-white hover:bg-white/5 transition-all truncate block">
                       {c.titleEn || t('Conversation', 'گفتگو')}
@@ -460,7 +460,7 @@ export function AiPlatform({ locale }: Props) {
                 <p className="text-xs text-slate-500">{isRTL ? (activeModule.descriptionFa || activeModule.descriptionEn) : activeModule.descriptionEn}</p>
               </div>
               <div className="ml-auto rtl:ml-0 rtl:mr-auto flex items-center gap-2">
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: getColor(activeModule.color).bg, color: getColor(activeModule.color).text, border: `1px solid ${getColor(activeModule.color).border}` }}>
+                <span className="text-3xs px-2 py-0.5 rounded-full font-medium" style={{ background: getColor(activeModule.color).bg, color: getColor(activeModule.color).text, border: `1px solid ${getColor(activeModule.color).border}` }}>
                   {t('Enterprise AI', 'هوش مصنوعی سازمانی')}
                 </span>
               </div>
@@ -525,7 +525,7 @@ export function AiPlatform({ locale }: Props) {
                   {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && msg.content !== '' && (
                     <div className="flex flex-wrap gap-1.5">
                       {msg.sources.map((src, i) => (
-                        <span key={src.id} className="text-[10px] px-2 py-0.5 rounded-full text-indigo-300 cursor-default" style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}
+                        <span key={src.id} className="text-3xs px-2 py-0.5 rounded-full text-indigo-300 cursor-default" style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}
                           title={src.excerpt}>
                           [{i + 1}] {src.title.slice(0, 30)}{src.title.length > 30 ? '…' : ''}
                         </span>
@@ -536,7 +536,7 @@ export function AiPlatform({ locale }: Props) {
                   {/* Suggestions */}
                   {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && msg.content !== '' && (
                     <div className="flex flex-col gap-1 w-full mt-1">
-                      <p className="text-[10px] text-slate-600 font-medium">{t('Continue exploring:', 'ادامه دهید:')}</p>
+                      <p className="text-3xs text-slate-600 font-medium">{t('Continue exploring:', 'ادامه دهید:')}</p>
                       {msg.suggestions.map((s, i) => (
                         <button key={i} onClick={() => sendMessage(s)}
                           className="text-xs text-start px-3 py-2 rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all"
@@ -576,7 +576,7 @@ export function AiPlatform({ locale }: Props) {
                   {isLoading ? <TypingDots /> : <span className="text-sm">↑</span>}
                 </button>
               </div>
-              <p className="text-[10px] text-slate-700 text-center mt-2">
+              <p className="text-3xs text-slate-700 text-center mt-2">
                 {t('HBZ AI Platform · Enterprise Technology Advisor · Press Enter to send, Shift+Enter for new line', 'HBZ AI Platform · مشاور فناوری سازمانی · Enter برای ارسال، Shift+Enter برای خط جدید')}
               </p>
             </div>
@@ -589,7 +589,7 @@ export function AiPlatform({ locale }: Props) {
             <div className="flex-1 overflow-y-auto p-4 space-y-5">
               {/* Knowledge Sources */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Knowledge Sources', 'منابع دانش')}</p>
+                <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Knowledge Sources', 'منابع دانش')}</p>
                 {currentSources.length === 0 ? (
                   <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)' }}>
                     <p className="text-xs text-slate-700">{t('Sources will appear here after AI responses', 'منابع پس از پاسخ هوش مصنوعی نمایش داده می‌شوند')}</p>
@@ -597,10 +597,10 @@ export function AiPlatform({ locale }: Props) {
                 ) : currentSources.map((src, i) => (
                   <div key={src.id} className="rounded-lg p-3 mb-2" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
                     <div className="flex items-start gap-2">
-                      <span className="text-[10px] font-bold text-indigo-400 mt-0.5">[{i + 1}]</span>
+                      <span className="text-3xs font-bold text-indigo-400 mt-0.5">[{i + 1}]</span>
                       <div>
                         <p className="text-xs font-medium text-slate-300">{src.title}</p>
-                        <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{src.excerpt}</p>
+                        <p className="text-2xs text-slate-600 mt-1 line-clamp-2">{src.excerpt}</p>
                       </div>
                     </div>
                   </div>
@@ -610,7 +610,7 @@ export function AiPlatform({ locale }: Props) {
               {/* Smart suggestions */}
               {activeModule && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Suggested Questions', 'سوالات پیشنهادی')}</p>
+                  <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Suggested Questions', 'سوالات پیشنهادی')}</p>
                   <div className="space-y-1.5">
                     {(SUGGESTIONS_EN[activeModule.slug] || []).map((s, i) => (
                       <button key={i} onClick={() => sendMessage(s)}
@@ -625,7 +625,7 @@ export function AiPlatform({ locale }: Props) {
 
               {/* All modules quick switch */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Switch Advisor', 'تغییر مشاور')}</p>
+                <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Switch Advisor', 'تغییر مشاور')}</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {modules.map(mod => {
                     const c = getColor(mod.color)
@@ -635,7 +635,7 @@ export function AiPlatform({ locale }: Props) {
                         className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center"
                         style={active ? { background: c.bg, border: `1px solid ${c.border}` } : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <span className="text-lg">{mod.icon}</span>
-                        <span className="text-[9px] leading-tight" style={{ color: active ? c.text : '#64748b' }}>
+                        <span className="text-4xs leading-tight" style={{ color: active ? c.text : '#64748b' }}>
                           {isRTL ? mod.nameFa.replace('HBZ ', '').replace('مشاور ', '').replace('دستیار ', '').replace('بازبین ', '').replace('طراح ', '') : mod.nameEn.replace('HBZ ', '').split(' ')[0]}
                         </span>
                       </button>
@@ -647,7 +647,7 @@ export function AiPlatform({ locale }: Props) {
               {/* Voice ready banner */}
               <div className="rounded-xl p-3" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
                 <p className="text-xs font-semibold text-indigo-400 mb-1">🎙 {t('Voice Ready', 'آماده صوت')}</p>
-                <p className="text-[11px] text-slate-600">{t('Speech-to-text and voice conversation coming soon', 'تبدیل گفتار به متن و مکالمه صوتی به زودی')}</p>
+                <p className="text-2xs text-slate-600">{t('Speech-to-text and voice conversation coming soon', 'تبدیل گفتار به متن و مکالمه صوتی به زودی')}</p>
               </div>
 
               {/* Back to site */}
@@ -657,7 +657,7 @@ export function AiPlatform({ locale }: Props) {
                 <span>📅</span>
                 <div>
                   <p className="font-semibold">{t('Book a Consultation', 'رزرو مشاوره')}</p>
-                  <p className="text-[10px] text-slate-500">{t('Talk to a human expert', 'با متخصص انسانی صحبت کنید')}</p>
+                  <p className="text-3xs text-slate-500">{t('Talk to a human expert', 'با متخصص انسانی صحبت کنید')}</p>
                 </div>
               </Link>
             </div>
@@ -690,7 +690,7 @@ export function AiPlatform({ locale }: Props) {
                 <div key={`${r.type}-${r.id}`} className="px-3 py-2.5 rounded-lg hover:bg-white/5 cursor-pointer transition-all"
                   onClick={() => { if (r.url) window.open(`/${locale}${r.url}`, '_blank'); else { setSearchOpen(false); sendMessage(r.title) } }}>
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{
+                    <span className="text-4xs px-1.5 py-0.5 rounded font-bold uppercase" style={{
                       background: r.type === 'knowledge' ? 'rgba(99,102,241,0.15)' : r.type === 'project' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
                       color: r.type === 'knowledge' ? '#818cf8' : r.type === 'project' ? '#34d399' : '#fbbf24',
                     }}>{r.type}</span>

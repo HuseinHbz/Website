@@ -188,7 +188,7 @@ function CertCard({ cert, isRTL, index }: { cert: CertItem; isRTL: boolean; inde
             )}
           </div>
           <span
-            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+            className="text-3xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
             style={{ background: `${cert.color}15`, color: cert.color, border: `1px solid ${cert.color}30` }}
           >
             {isRTL ? 'تأیید شده' : 'Verified'}

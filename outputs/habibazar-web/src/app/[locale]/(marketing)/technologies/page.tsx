@@ -109,16 +109,16 @@ export default async function TechnologiesPage({ params }: Props) {
                           {t.icon}
                         </div>
                         {tierMeta && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                          <span className="text-3xs px-2 py-0.5 rounded-full font-medium"
                             style={{ background: `${tierMeta.color}15`, color: tierMeta.color, border: `1px solid ${tierMeta.color}30` }}>
                             {fa ? tierMeta.fa : tierMeta.en}
                           </span>
                         )}
                       </div>
                       <div className="font-semibold text-white text-sm">{fa ? (t.nameFa || t.nameEn) : t.nameEn}</div>
-                      {t.vendor && <div className="text-[11px] text-slate-500 mt-0.5">{t.vendor}</div>}
+                      {t.vendor && <div className="text-2xs text-slate-500 mt-0.5">{t.vendor}</div>}
                       {(fa ? t.descriptionFa : t.descriptionEn) && (
-                        <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                        <p className="text-2xs text-slate-500 mt-2 leading-relaxed">
                           {fa ? t.descriptionFa : t.descriptionEn}
                         </p>
                       )}

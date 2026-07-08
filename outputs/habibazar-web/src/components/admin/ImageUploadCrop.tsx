@@ -157,11 +157,11 @@ export function ImageUploadCrop({
             >
               {uploading ? '⏳ Uploading...' : '↑ Upload & Crop'}
             </button>
-            <p className="text-[10px] text-slate-600">JPG · PNG · WebP · AVIF · GIF · SVG · BMP</p>
+            <p className="text-3xs text-slate-600">JPG · PNG · WebP · AVIF · GIF · SVG · BMP</p>
 
             {/* URL input */}
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Or paste URL</label>
+              <label className="text-3xs text-slate-500 uppercase tracking-wider">Or paste URL</label>
               <input
                 type="text"
                 value={value || ''}

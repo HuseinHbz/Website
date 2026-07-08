@@ -79,7 +79,7 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
         <div className="flex gap-4">
           {/* Folder list */}
           <div className="w-36 flex-shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Folders</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">Folders</p>
             {FOLDERS.map((f) => (
               <button
                 key={f}
@@ -128,7 +128,7 @@ export function MediaPicker({ value, onChange, label, folder: defaultFolder = 'g
                       </div>
                     )}
                     <div className="p-1.5">
-                      <p className="text-[10px] text-slate-400 truncate">{f.originalName}</p>
+                      <p className="text-3xs text-slate-400 truncate">{f.originalName}</p>
                     </div>
                   </button>
                 ))}
@@ -202,7 +202,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
             <img src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-strong" />
             <button
               onClick={() => remove(url)}
-              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] hidden group-hover:flex items-center justify-center"
+              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-3xs hidden group-hover:flex items-center justify-center"
             >✕</button>
           </div>
         ))}
@@ -218,7 +218,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
       <Modal open={open} onClose={() => setOpen(false)} title="Pick Gallery Images (click to toggle)" size="xl">
         <div className="flex gap-4">
           <div className="w-36 flex-shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Folders</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">Folders</p>
             {FOLDERS.map((f) => (
               <button key={f} onClick={() => setFolder(f)}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs mb-0.5 transition-colors ${folder === f ? 'bg-indigo-600/20 text-indigo-400' : 'text-slate-400 hover:bg-white/5'}`}>
@@ -252,7 +252,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
                       </div>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-400 truncate p-1">{f.originalName}</p>
+                  <p className="text-3xs text-slate-400 truncate p-1">{f.originalName}</p>
                 </button>
               ))}
             </div>

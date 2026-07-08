@@ -117,7 +117,7 @@ function StatBar({ stats }: { stats: HeroContent['stats'] }) {
             : ''
         } ${i < 2 ? 'border-b sm:border-b-0 border-border' : ''}`}>
           <span className="text-xl lg:text-2xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
-          <span className="text-[10px] text-text-muted mt-0.5 leading-tight">{s.label}</span>
+          <span className="text-3xs text-text-muted mt-0.5 leading-tight">{s.label}</span>
         </div>
       ))}
     </div>
@@ -207,7 +207,7 @@ function ScrollIndicator({ label }: { label: string }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2, duration: 1 }}
       className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-text-muted pointer-events-none" aria-hidden="true">
-      <span className="text-[10px] tracking-widest uppercase font-medium">{label}</span>
+      <span className="text-3xs tracking-widest uppercase font-medium">{label}</span>
       <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}>
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
@@ -468,7 +468,7 @@ function VariantLuxury({ c }: { c: HeroContent }) {
   return (
     <div className="container-site py-12 flex flex-col items-center text-center gap-5 max-w-4xl mx-auto">
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}
-        className="text-[10px] tracking-[0.4em] uppercase text-text-muted">
+        className="text-3xs tracking-[0.4em] uppercase text-text-muted">
         {c.headlineHi}
       </motion.p>
       <motion.div initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.2 }}
@@ -485,7 +485,7 @@ function VariantLuxury({ c }: { c: HeroContent }) {
       <motion.div initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.55, duration:0.5 }}
         className="flex items-center gap-4 w-72">
         <div className="flex-1 h-px" style={{ background:'linear-gradient(90deg,transparent,#2a2a3e)' }}/>
-        <span className="text-[10px] tracking-[0.3em] uppercase text-text-muted whitespace-nowrap">{c.isRTL ? 'معمار زیرساخت' : 'Infrastructure Architect'}</span>
+        <span className="text-3xs tracking-[0.3em] uppercase text-text-muted whitespace-nowrap">{c.isRTL ? 'معمار زیرساخت' : 'Infrastructure Architect'}</span>
         <div className="flex-1 h-px" style={{ background:'linear-gradient(90deg,#2a2a3e,transparent)' }}/>
       </motion.div>
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
@@ -498,7 +498,7 @@ function VariantLuxury({ c }: { c: HeroContent }) {
         {c.stats.filter(s=>s.value).map((s,i) => (
           <div key={i} className="text-center">
             <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-[10px] text-text-muted uppercase tracking-wider mt-0.5">{s.label}</div>
+            <div className="text-3xs text-text-muted uppercase tracking-wider mt-0.5">{s.label}</div>
           </div>
         ))}
       </motion.div>
@@ -515,7 +515,7 @@ function VariantNeon({ c }: { c: HeroContent }) {
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}
         className="flex items-center gap-3">
         <div className="h-px w-8 bg-cyan-400"/>
-        <span className="text-[10px] tracking-[0.4em] uppercase text-cyan-400">
+        <span className="text-3xs tracking-[0.4em] uppercase text-cyan-400">
           {c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}
         </span>
         <div className="h-px w-8 bg-indigo-400"/>
@@ -565,7 +565,7 @@ function VariantNeon({ c }: { c: HeroContent }) {
           {c.stats.filter(s=>s.value).map((s,i) => (
             <div key={i} className={`flex-1 py-4 text-center ${i<c.stats.length-1?'border-r border-border/40':''}`}>
               <div className="text-xl font-black" style={{ background:'linear-gradient(90deg,#06b6d4,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{s.value}</div>
-              <div className="text-[10px] text-text-muted mt-0.5">{s.label}</div>
+              <div className="text-3xs text-text-muted mt-0.5">{s.label}</div>
             </div>
           ))}
         </div>
@@ -594,7 +594,7 @@ function VariantMagazine({ c }: { c: HeroContent }) {
         {/* Left */}
         <motion.div initial={{ opacity:0, x:c.isRTL?20:-20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }}
           className={`flex-1 flex flex-col gap-5 ${c.isRTL ? 'border-l pl-12' : 'border-r pr-12'} border-border/40`}>
-          <span className="text-[10px] tracking-[0.4em] uppercase text-text-muted">{c.headlineHi}</span>
+          <span className="text-3xs tracking-[0.4em] uppercase text-text-muted">{c.headlineHi}</span>
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-[1.15]">
             <span className="block text-text-primary pb-1">{c.isRTL?'حسین':'HUSEIN'}</span>
             <span className="block" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</span>
@@ -612,28 +612,28 @@ function VariantMagazine({ c }: { c: HeroContent }) {
         <motion.div initial={{ opacity:0, x:c.isRTL?-20:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2 }}
           className="lg:w-64 flex flex-col gap-6">
           <div>
-            <span className="text-[9px] tracking-[0.3em] uppercase text-text-muted mb-3 block">
+            <span className="text-4xs tracking-[0.3em] uppercase text-text-muted mb-3 block">
               {c.isRTL?'مهارت‌های فنی':'Technical Proficiency'}
             </span>
             <div className="flex flex-col gap-2.5">
               {bars.map(b => (
                 <div key={b.label} className="flex items-center gap-2">
-                  <span className="text-[11px] text-text-muted w-16 shrink-0">{b.label}</span>
+                  <span className="text-2xs text-text-muted w-16 shrink-0">{b.label}</span>
                   <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
                     <motion.div initial={{ width:0 }} animate={{ width:`${b.w}%` }}
                       transition={{ delay:0.5, duration:0.8 }}
                       className="h-full rounded-full" style={{ background:b.color }}/>
                   </div>
-                  <span className="text-[10px] font-mono text-text-muted w-6">{b.w}%</span>
+                  <span className="text-3xs font-mono text-text-muted w-6">{b.w}%</span>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <span className="text-[9px] tracking-[0.3em] uppercase text-text-muted mb-2 block">Tech Stack</span>
+            <span className="text-4xs tracking-[0.3em] uppercase text-text-muted mb-2 block">Tech Stack</span>
             <div className="flex flex-wrap gap-1.5">
               {skills.map(s => (
-                <span key={s} className="text-[10px] text-accent border border-accent/25 rounded px-2 py-0.5" style={{ background:'rgba(99,102,241,0.06)' }}>{s}</span>
+                <span key={s} className="text-3xs text-accent border border-accent/25 rounded px-2 py-0.5" style={{ background:'rgba(99,102,241,0.06)' }}>{s}</span>
               ))}
             </div>
           </div>
@@ -641,7 +641,7 @@ function VariantMagazine({ c }: { c: HeroContent }) {
             {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
               <div key={i} className="text-center">
                 <div className="text-base font-black" style={{ color:s.color }}>{s.value}</div>
-                <div className="text-[9px] text-text-muted">{s.label.split(' ')[0]}</div>
+                <div className="text-4xs text-text-muted">{s.label.split(' ')[0]}</div>
               </div>
             ))}
           </div>
@@ -700,7 +700,7 @@ function VariantGradient({ c }: { c: HeroContent }) {
         <Badge label={c.badge} />
       </motion.div>
       <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}>
-        <span className="text-[10px] tracking-[0.4em] uppercase block mb-3" style={{ color:'rgba(99,102,241,0.7)' }}>
+        <span className="text-3xs tracking-[0.4em] uppercase block mb-3" style={{ color:'rgba(99,102,241,0.7)' }}>
           {c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}
         </span>
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight">
@@ -759,7 +759,7 @@ function VariantTimeline({ c }: { c: HeroContent }) {
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
         </div>
         <motion.div initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3 }} className="lg:w-72 flex flex-col gap-0">
-          <p className="text-[9px] tracking-[0.35em] uppercase text-text-muted mb-4">{c.isRTL?'مسیر حرفه‌ای':'Career Path'}</p>
+          <p className="text-4xs tracking-[0.35em] uppercase text-text-muted mb-4">{c.isRTL?'مسیر حرفه‌ای':'Career Path'}</p>
           {items.map((item, i) => (
             <div key={i} className="flex gap-4 relative">
               <div className="flex flex-col items-center">
@@ -767,14 +767,14 @@ function VariantTimeline({ c }: { c: HeroContent }) {
                 {i < items.length-1 && <div className="w-px flex-1 my-1" style={{ background:'linear-gradient(to bottom,'+['#6366f1','#06b6d4','#10b981'][i]+',transparent)' }}/>}
               </div>
               <div className="pb-5">
-                <p className="text-[10px] text-text-muted font-mono">{item.y}</p>
+                <p className="text-3xs text-text-muted font-mono">{item.y}</p>
                 <p className="text-sm font-semibold text-text-primary">{item.t}</p>
               </div>
             </div>
           ))}
           <div className="mt-2 pt-3 border-t border-border flex gap-6">
             {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
-              <div key={i}><div className="text-lg font-black" style={{ color:s.color }}>{s.value}</div><div className="text-[9px] text-text-muted">{s.label.split(' ')[0]}</div></div>
+              <div key={i}><div className="text-lg font-black" style={{ color:s.color }}>{s.value}</div><div className="text-4xs text-text-muted">{s.label.split(' ')[0]}</div></div>
             ))}
           </div>
         </motion.div>
@@ -809,7 +809,7 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
             <div key={i} className="px-5 py-3 rounded-xl text-right"
               style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}30`, backdropFilter:'blur(12px)' }}>
               <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-[10px] text-text-muted">{s.label}</div>
+              <div className="text-3xs text-text-muted">{s.label}</div>
             </div>
           ))}
         </motion.div>
@@ -837,7 +837,7 @@ function VariantCode({ c }: { c: HeroContent }) {
           <div className="rounded-xl overflow-hidden border border-strong" style={{ background:'#0a0a12' }}>
             <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border">
               <div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/><div className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
-              <span className="text-[10px] text-slate-500 ml-2 font-mono">profile.ts</span>
+              <span className="text-3xs text-slate-500 ml-2 font-mono">profile.ts</span>
             </div>
             <div className="p-5 font-mono text-sm" dir="ltr">
               {lines.map((line,i) => (
@@ -860,7 +860,7 @@ function VariantCode({ c }: { c: HeroContent }) {
             {c.stats.filter(s=>s.value).map((s,i) => (
               <div key={i} className="p-3 rounded-lg text-center" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}25` }}>
                 <div className="text-lg font-mono font-black" style={{ color:s.color }}>{s.value}</div>
-                <div className="text-[9px] text-text-muted mt-0.5">{s.label.split(' ')[0]}</div>
+                <div className="text-4xs text-text-muted mt-0.5">{s.label.split(' ')[0]}</div>
               </div>
             ))}
           </div>
@@ -893,7 +893,7 @@ function VariantPortrait({ c }: { c: HeroContent }) {
           <div className="flex flex-col gap-1.5 w-full">
             {c.stats.filter(s=>s.value).map((s,i) => (
               <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}20` }}>
-                <span className="text-[10px] text-text-muted">{s.label}</span>
+                <span className="text-3xs text-text-muted">{s.label}</span>
                 <span className="text-sm font-black" style={{ color:s.color }}>{s.value}</span>
               </div>
             ))}
@@ -959,7 +959,7 @@ function VariantWave({ c }: { c: HeroContent }) {
       </div>
       <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
       <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.8 }}>
-        <span className="text-[10px] tracking-[0.4em] uppercase text-text-muted block mb-2">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
+        <span className="text-3xs tracking-[0.4em] uppercase text-text-muted block mb-2">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
         <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[1.1]"
           style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#818cf8 40%,#06b6d4 70%,#10b981 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
           {c.headline}
@@ -971,7 +971,7 @@ function VariantWave({ c }: { c: HeroContent }) {
         {c.stats.filter(s=>s.value).map((s,i) => (
           <div key={i} className="flex flex-col items-center gap-1">
             <span className="text-3xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-            <span className="text-[10px] text-text-muted uppercase tracking-wider">{s.label}</span>
+            <span className="text-3xs text-text-muted uppercase tracking-wider">{s.label}</span>
           </div>
         ))}
       </motion.div>
@@ -1006,7 +1006,7 @@ function VariantSidebar({ c }: { c: HeroContent }) {
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
           className="flex gap-6 pt-4 border-t border-border">
           {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i}><div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div><div className="text-[10px] text-text-muted">{s.label}</div></div>
+            <div key={i}><div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div><div className="text-3xs text-text-muted">{s.label}</div></div>
           ))}
         </motion.div>
       </div>
@@ -1038,7 +1038,7 @@ function VariantHolo({ c }: { c: HeroContent }) {
         {c.stats.filter(s=>s.value).map((s,i) => (
           <div key={i} className="py-3 rounded-xl text-center" style={{ background:`linear-gradient(135deg,${s.color}0d,${s.color}06)`, border:`1px solid ${s.color}20` }}>
             <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-[9px] text-text-muted mt-1">{s.label}</div>
+            <div className="text-4xs text-text-muted mt-1">{s.label}</div>
           </div>
         ))}
       </motion.div>
@@ -1053,8 +1053,8 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
   return (
     <div className="container-site py-20 max-w-5xl mx-auto" dir={c.isRTL?'rtl':'ltr'}>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }} className="border-t-2 border-b border-border py-3 mb-6 flex items-center justify-between">
-        <span className="text-[10px] tracking-[0.4em] uppercase text-text-muted">{c.isRTL?'معمار زیرساخت · امنیت شبکه':'Infrastructure Architect · Network Security'}</span>
-        <span className="text-[10px] tracking-widest text-text-muted font-mono">HBZ — {new Date().getFullYear()}</span>
+        <span className="text-3xs tracking-[0.4em] uppercase text-text-muted">{c.isRTL?'معمار زیرساخت · امنیت شبکه':'Infrastructure Architect · Network Security'}</span>
+        <span className="text-3xs tracking-widest text-text-muted font-mono">HBZ — {new Date().getFullYear()}</span>
       </motion.div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="lg:col-span-2 border-r border-border pr-8">
@@ -1066,7 +1066,7 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
           <div className="mt-6"><CtaButtons c={c} /></div>
         </motion.div>
         <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.35 }} className="flex flex-col gap-5">
-          <p className="text-[9px] tracking-[0.35em] uppercase text-text-muted border-b border-border pb-2">{c.isRTL?'آمار کلیدی':'Key Statistics'}</p>
+          <p className="text-4xs tracking-[0.35em] uppercase text-text-muted border-b border-border pb-2">{c.isRTL?'آمار کلیدی':'Key Statistics'}</p>
           {c.stats.filter(s=>s.value).map((s,i) => (
             <div key={i} className="border-b border-border pb-4 last:border-0 last:pb-0">
               <div className="text-3xl font-black" style={{ color:s.color }}>{s.value}</div>
@@ -1075,7 +1075,7 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
           ))}
           <div className="flex flex-wrap gap-1 mt-2">
             {['Cisco','VMware','MikroTik','Fortinet','Linux'].map(t => (
-              <span key={t} className="text-[9px] border border-border rounded px-1.5 py-0.5 text-text-muted">{t}</span>
+              <span key={t} className="text-4xs border border-border rounded px-1.5 py-0.5 text-text-muted">{t}</span>
             ))}
           </div>
         </motion.div>
@@ -1096,7 +1096,7 @@ function VariantCyber({ c }: { c: HeroContent }) {
       ))}
       <div className="flex flex-col items-center text-center gap-6">
         <motion.div initial={{ opacity:0, y:-15 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-          className="flex items-center gap-3 text-[10px] tracking-[0.4em] uppercase" style={{ color:'#06b6d4' }}>
+          className="flex items-center gap-3 text-3xs tracking-[0.4em] uppercase" style={{ color:'#06b6d4' }}>
           <div className="w-6 h-px bg-cyan-400"/>
           {c.isRTL?'سیستم آماده ∥ HBZ-v2.5':'SYSTEM ONLINE ∥ HBZ-v2.5'}
           <div className="w-6 h-px bg-cyan-400"/>
@@ -1121,7 +1121,7 @@ function VariantCyber({ c }: { c: HeroContent }) {
             <div key={i} className="py-3 px-2 rounded text-center font-mono"
               style={{ background:'rgba(6,182,212,0.04)', border:'1px solid rgba(6,182,212,0.2)' }}>
               <div className="text-xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-[9px] text-cyan-500/60 mt-0.5">{s.label.split(' ')[0]}</div>
+              <div className="text-4xs text-cyan-500/60 mt-0.5">{s.label.split(' ')[0]}</div>
             </div>
           ))}
         </motion.div>

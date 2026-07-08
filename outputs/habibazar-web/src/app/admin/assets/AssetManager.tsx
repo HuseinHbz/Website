@@ -395,5 +395,5 @@ function AssetDetail({ t, id, onClose, toast, onChange }: { t: T; id: number; on
 }
 
 function Mini({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg bg-surface-2 border border-subtle p-3"><p className="text-[11px] text-text-tertiary">{label}</p><p className="text-base font-bold text-text-primary">{value}</p></div>
+  return <div className="rounded-lg bg-surface-2 border border-subtle p-3"><p className="text-2xs text-text-tertiary">{label}</p><p className="text-base font-bold text-text-primary">{value}</p></div>
 }

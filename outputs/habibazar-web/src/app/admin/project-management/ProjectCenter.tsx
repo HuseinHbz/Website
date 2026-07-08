@@ -97,7 +97,7 @@ function Kpi({ label, value, icon, tone }: { label: string; value: string; icon:
 }
 function CostKpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'ok' | 'warn' | 'bad' }) {
   const ring = tone === 'ok' ? 'border-success/40' : tone === 'warn' ? 'border-warning/40' : tone === 'bad' ? 'border-danger/40' : 'border-subtle'
-  return <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}><p className="text-xs text-text-tertiary mb-1">{label}</p><p className="text-base font-bold text-text-primary">{value}</p>{sub && <p className="text-[11px] text-text-tertiary mt-0.5">{sub}</p>}</div>
+  return <div className={`rounded-xl p-4 bg-surface-2 border ${ring}`}><p className="text-xs text-text-tertiary mb-1">{label}</p><p className="text-base font-bold text-text-primary">{value}</p>{sub && <p className="text-2xs text-text-tertiary mt-0.5">{sub}</p>}</div>
 }
 
 function Projects({ t, toast, onOpen }: { t: T; toast: Toast; onOpen: (id: number) => void }) {
@@ -214,11 +214,11 @@ function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () 
                     return (
                       <div key={tk.id} className="rounded-lg bg-background border border-subtle p-2.5">
                         <div className="flex items-start justify-between gap-2"><span className="text-xs text-text-primary font-medium">{tk.title}</span><Badge color={PRIO_COLOR[tk.priority]}>{t(`pm_p_${tk.priority}` as 'pm_p_low')}</Badge></div>
-                        {tk.assignee && <p className="text-[11px] text-text-tertiary mt-1">{tk.assignee} · {tk.estimateHours}h</p>}
+                        {tk.assignee && <p className="text-2xs text-text-tertiary mt-1">{tk.assignee} · {tk.estimateHours}h</p>}
                         <div className="flex items-center gap-1 mt-2">
-                          {si > 0 && <button onClick={() => moveTask(tk.id, T_STATUSES[si - 1])} className="text-[11px] text-text-tertiary hover:text-brand">←</button>}
-                          {si < 3 && <button onClick={() => moveTask(tk.id, T_STATUSES[si + 1])} className="text-[11px] text-text-tertiary hover:text-brand">→</button>}
-                          <button onClick={() => delItem('task', tk.id)} className="text-[11px] text-danger hover:underline ml-auto">✕</button>
+                          {si > 0 && <button onClick={() => moveTask(tk.id, T_STATUSES[si - 1])} className="text-2xs text-text-tertiary hover:text-brand">←</button>}
+                          {si < 3 && <button onClick={() => moveTask(tk.id, T_STATUSES[si + 1])} className="text-2xs text-text-tertiary hover:text-brand">→</button>}
+                          <button onClick={() => delItem('task', tk.id)} className="text-2xs text-danger hover:underline ml-auto">✕</button>
                         </div>
                       </div>
                     )
@@ -241,7 +241,7 @@ function ProjectDetail({ t, id, onBack, toast }: { t: T; id: number; onBack: () 
                   <div key={tk.id} className="flex items-center gap-3">
                     <span className="text-xs text-text-secondary w-40 truncate shrink-0">{tk.title}</span>
                     <div className="relative flex-1 h-5 rounded bg-sunken">
-                      {bar?.visible ? <div className="absolute top-0.5 h-4 rounded bg-brand" style={{ left: `${bar.offsetPct}%`, width: `${bar.widthPct}%` }} title={`${tk.startDate} → ${tk.dueDate}`} /> : <span className="absolute inset-0 flex items-center justify-center text-[10px] text-text-disabled">{t('pm_noDates')}</span>}
+                      {bar?.visible ? <div className="absolute top-0.5 h-4 rounded bg-brand" style={{ left: `${bar.offsetPct}%`, width: `${bar.widthPct}%` }} title={`${tk.startDate} → ${tk.dueDate}`} /> : <span className="absolute inset-0 flex items-center justify-center text-3xs text-text-disabled">{t('pm_noDates')}</span>}
                     </div>
                   </div>
                 )

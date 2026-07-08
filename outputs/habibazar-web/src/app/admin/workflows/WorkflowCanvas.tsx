@@ -98,7 +98,7 @@ export function WorkflowCanvas({ value, onChange }: { value: string; onChange: (
             {/* Palette */}
             <div className="flex flex-wrap gap-1.5 mb-2">
               {NODE_TYPES.map(nt => (
-                <button key={nt} type="button" onClick={() => addNode(nt)} className="px-2 py-1 rounded-md text-[11px] font-medium border border-border bg-surface-2 hover:border-brand/50" style={{ color: NODE_COLOR[nt] }}>+ {t(`wf_n_${nt}` as 'wf_n_start')}</button>
+                <button key={nt} type="button" onClick={() => addNode(nt)} className="px-2 py-1 rounded-md text-2xs font-medium border border-border bg-surface-2 hover:border-brand/50" style={{ color: NODE_COLOR[nt] }}>+ {t(`wf_n_${nt}` as 'wf_n_start')}</button>
               ))}
             </div>
             {/* Canvas */}
@@ -124,21 +124,21 @@ export function WorkflowCanvas({ value, onChange }: { value: string; onChange: (
                     <div key={n.id} onPointerDown={e => onPointerDown(e, n.id)}
                       className={`absolute rounded-lg border-2 px-2 py-1.5 cursor-move select-none bg-surface-2 ${isSel ? 'ring-2 ring-brand' : ''}`}
                       style={{ left: p.x, top: p.y, width: W, borderColor: NODE_COLOR[n.type] }}>
-                      <div className="flex items-center gap-1.5"><span aria-hidden style={{ color: NODE_COLOR[n.type] }}>{NODE_ICON[n.type]}</span><span className="text-[11px] font-semibold text-text-primary truncate">{n.id}</span></div>
-                      <div className="text-[10px] text-text-tertiary truncate">{n.label || t(`wf_n_${n.type}` as 'wf_n_start')}</div>
+                      <div className="flex items-center gap-1.5"><span aria-hidden style={{ color: NODE_COLOR[n.type] }}>{NODE_ICON[n.type]}</span><span className="text-2xs font-semibold text-text-primary truncate">{n.id}</span></div>
+                      <div className="text-3xs text-text-tertiary truncate">{n.label || t(`wf_n_${n.type}` as 'wf_n_start')}</div>
                     </div>
                   )
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-text-tertiary mt-1">{t('wf_canvasHint')}</p>
+            <p className="text-2xs text-text-tertiary mt-1">{t('wf_canvasHint')}</p>
           </div>
 
           {/* Property panel */}
           <div className="rounded-lg border border-border bg-surface-2 p-3">
             {!sel ? <p className="text-xs text-text-tertiary">{t('wf_selectNode')}</p> : (
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between"><span className="text-xs font-semibold text-text-primary">{t(`wf_n_${sel.type}` as 'wf_n_start')}</span><button type="button" onClick={() => delNode(sel.id)} className="text-[11px] text-danger hover:underline">{t('wf_delNode')}</button></div>
+                <div className="flex items-center justify-between"><span className="text-xs font-semibold text-text-primary">{t(`wf_n_${sel.type}` as 'wf_n_start')}</span><button type="button" onClick={() => delNode(sel.id)} className="text-2xs text-danger hover:underline">{t('wf_delNode')}</button></div>
                 <Field label={t('wf_pId')} value={sel.id} onChange={v => { if (v && !nodeIds.includes(v)) { const old = sel.id; commit({ ...def, start: def.start === old ? v : def.start, nodes: def.nodes.map(n => ({ ...renameRefs(n, old, v), id: n.id === old ? v : n.id })) }); setSelected(v) } }} />
                 <Field label={t('wf_pLabel')} value={sel.label ?? ''} onChange={v => updateNode(sel.id, { label: v })} />
                 {sel.type === 'condition' ? (
@@ -167,10 +167,10 @@ export function WorkflowCanvas({ value, onChange }: { value: string; onChange: (
 
 type T = ReturnType<typeof useT>
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return <div><label className="text-[11px] text-text-tertiary">{label}</label><input value={value} onChange={e => onChange(e.target.value)} className="form-input w-full !py-1.5 text-xs" /></div>
+  return <div><label className="text-2xs text-text-tertiary">{label}</label><input value={value} onChange={e => onChange(e.target.value)} className="form-input w-full !py-1.5 text-xs" /></div>
 }
 function Conn({ label, ids, value, onChange, t }: { label: string; ids: string[]; value?: string; onChange: (v: string) => void; t: T }) {
-  return <div><label className="text-[11px] text-text-tertiary">{label}</label>
+  return <div><label className="text-2xs text-text-tertiary">{label}</label>
     <select value={value ?? ''} onChange={e => onChange(e.target.value)} className="form-input w-full !py-1.5 text-xs">
       <option value="">{t('wf_none')}</option>
       {ids.map(id => <option key={id} value={id}>{id}</option>)}

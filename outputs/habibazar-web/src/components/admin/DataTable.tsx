@@ -308,7 +308,7 @@ export function DataTable<T extends object>({
                       <label className="flex items-center gap-2 cursor-pointer flex-1">
                         <input type="checkbox" checked={!hidden} onChange={() => toggleHidden(c.key)} /> {label(c)}
                       </label>
-                      <button onClick={() => pinCol(c.key, pin === 'start' ? undefined : 'start')} title={lc(isRTL, 'Pin', 'سنجاق')} className={`text-[10px] px-1 rounded ${pin ? 'text-brand' : 'text-text-disabled hover:text-text-secondary'}`}>📌</button>
+                      <button onClick={() => pinCol(c.key, pin === 'start' ? undefined : 'start')} title={lc(isRTL, 'Pin', 'سنجاق')} className={`text-3xs px-1 rounded ${pin ? 'text-brand' : 'text-text-disabled hover:text-text-secondary'}`}>📌</button>
                     </div>
                   )
                 })}
@@ -407,8 +407,8 @@ export function DataTable<T extends object>({
                       {sortable ? (
                         <button onClick={e => onHeaderSort(c, e.shiftKey)} className="inline-flex items-center gap-1 hover:text-text-primary transition-colors">
                           {label(c)}
-                          <span aria-hidden className="text-[10px]">{si ? (si.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
-                          {si?.multi && <sup className="text-[8px] text-brand">{si.pos}</sup>}
+                          <span aria-hidden className="text-3xs">{si ? (si.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+                          {si?.multi && <sup className="text-4xs text-brand">{si.pos}</sup>}
                         </button>
                       ) : label(c)}
                       {c.key !== '__actions' && <span onMouseDown={e => { resizing.current = { key: c.key, startX: e.clientX, startW: c.width ?? (e.currentTarget.parentElement as HTMLElement).offsetWidth } }}

@@ -52,6 +52,8 @@ jobs:
         run: npm run audit:links
       - name: Translation-key integrity
         run: npm run audit:i18n
+      - name: UI consistency (design language)
+        run: npm run audit:ui
 
   # ── Unit tests ─────────────────────────────────────────────────────────────
   test:

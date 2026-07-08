@@ -215,7 +215,7 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
                   {addable.map(a => (
                     <button key={a.id} onClick={() => addWidget(a.id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-start text-text-secondary hover:bg-white/5 hover:text-text-primary">
                       <span className="w-5 text-center">{a.icon}</span><span className="flex-1 truncate">{isRTL ? a.titleFa : a.titleEn}</span>
-                      <span className="text-[10px] text-text-tertiary uppercase">{a.category}</span>
+                      <span className="text-3xs text-text-tertiary uppercase">{a.category}</span>
                     </button>
                   ))}
                 </div>
@@ -256,7 +256,7 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
                           onChange={e => setRefresh(entry.id, Number(e.target.value))}
                           title={t('dash_refreshEvery')}
                           aria-label={t('dash_refreshEvery')}
-                          className="text-[10px] bg-white/[0.04] border border-white/[0.08] rounded px-1 py-0.5 text-text-tertiary outline-none"
+                          className="text-3xs bg-white/[0.04] border border-white/[0.08] rounded px-1 py-0.5 text-text-tertiary outline-none"
                         >
                           <option value={0}>{t('dash_refreshOff')}</option>
                           <option value={30}>30s</option>

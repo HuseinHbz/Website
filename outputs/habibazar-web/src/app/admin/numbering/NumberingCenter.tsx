@@ -254,7 +254,7 @@ function Formats({ t, toast }: { t: (k: string) => string; toast: (m: string, k?
             <label className="form-label">{t('num_f_placeholders')}</label>
             <div className="flex flex-wrap gap-1.5">
               {PLACEHOLDERS.map(p => (
-                <button key={p} onClick={() => insertToken(p)} className="rounded-md border border-border bg-surface-2 px-2 py-1 text-[11px] font-mono text-text-secondary hover:border-border-strong hover:text-text-primary">{`{${p}}`}</button>
+                <button key={p} onClick={() => insertToken(p)} className="rounded-md border border-border bg-surface-2 px-2 py-1 text-2xs font-mono text-text-secondary hover:border-border-strong hover:text-text-primary">{`{${p}}`}</button>
               ))}
             </div>
           </div>
