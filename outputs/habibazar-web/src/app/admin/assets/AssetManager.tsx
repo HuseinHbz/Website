@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -37,7 +38,7 @@ const EMPTY: Asset = {
   purchasePrice: 0, residualValue: 0, usefulLifeYears: 0, depreciationMethod: 'none', warrantyExpiry: '',
   insurancePolicy: '', insuranceExpiry: '', contractRef: '', calibrationDue: '', gpsLat: null, gpsLng: null, notes: '',
 }
-function money(n: number | undefined): string { return `$${(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}` }
+const money = (n: number | null | undefined) => fmtMoney(n, { max: 0 })
 
 export function AssetManager() {
   const t = useT()

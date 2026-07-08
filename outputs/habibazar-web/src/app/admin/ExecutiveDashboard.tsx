@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, Btn } from '@/components/admin/ui'
@@ -19,7 +20,7 @@ interface Overview { finance: FinanceK | null; inventory: InvK | null; assets: A
 interface Traffic { stats: { totalViews: number; weeklyViews: number; newContacts: number; newConsultations: number; publishedPosts: number; activeProjects: number }; dailyViews: { date: string; count: number }[]; topPages: { page: string; count: number }[] }
 
 const ACTION_COLOR: Record<string, string> = { CREATE: 'text-success-text', UPDATE: 'text-info-text', DELETE: 'text-danger-text', LOGIN: 'text-warning-text' }
-function money(n: number | undefined | null): string { const v = n ?? 0; return `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}` }
+const money = (n: number | null | undefined) => fmtMoney(n, { signed: true })
 function num(n: number | undefined | null): string { return (n ?? 0).toLocaleString() }
 
 export function ExecutiveDashboard() {

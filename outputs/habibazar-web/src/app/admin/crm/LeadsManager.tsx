@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -20,7 +21,7 @@ const STATUSES: Status[] = ['new', 'contacted', 'qualified', 'proposal', 'won', 
 const SOURCES: Source[] = ['website', 'referral', 'consultation', 'contact_form', 'event', 'social', 'email', 'other']
 const EMPTY: Lead = { name: '', email: '', phone: '', company: '', source: 'other', status: 'new', score: 0, value: 0, notes: '' }
 
-function money(n: number): string { return n ? `$${n.toLocaleString()}` : '—' }
+const money = (n: number | null | undefined) => fmtMoney(n, { max: 3, dashZero: true })
 
 export function LeadsManager() {
   const t = useT()

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -16,7 +17,7 @@ interface Payment { id: number; date: string; amount: number; method: string; re
 interface Kpis { customers: number; quotes: number; orders: number; invoiced: number; collected: number; outstanding: number; wonValue: number; taxCollected: number }
 interface Overview { kpis: Kpis; recent: DocRow[]; topCustomers: { name: string; invoiced: number }[] }
 
-const money = (n: number | undefined | null) => { const v = n ?? 0; return `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}` }
+const money = (n: number | null | undefined) => fmtMoney(n, { max: 2 })
 const STATUS_COLOR: Record<string, 'yellow' | 'blue' | 'indigo' | 'green' | 'red' | 'slate'> = { draft: 'slate', sent: 'blue', confirmed: 'indigo', partial: 'yellow', paid: 'green', void: 'red' }
 const TABS: Tab[] = ['dashboard', 'customers', 'quote', 'order', 'invoice', 'payments']
 

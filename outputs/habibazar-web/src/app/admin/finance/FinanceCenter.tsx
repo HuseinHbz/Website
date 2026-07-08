@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -27,7 +28,7 @@ interface Overview {
 
 const ATYPES: AType[] = ['asset', 'liability', 'equity', 'revenue', 'expense']
 const TYPE_COLOR: Record<AType, 'blue' | 'red' | 'indigo' | 'green' | 'yellow'> = { asset: 'blue', liability: 'red', equity: 'indigo', revenue: 'green', expense: 'yellow' }
-function money(n: number | undefined): string { const v = n ?? 0; return `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+const money = (n: number | null | undefined) => fmtMoney(n, { min: 2, max: 2, signed: true })
 
 export function FinanceCenter() {
   const t = useT()

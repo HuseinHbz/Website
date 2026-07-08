@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -31,7 +32,7 @@ const EMPTY_PRODUCT: Product = {
 const EMPTY_WH: Warehouse = { code: '', nameEn: '', nameFa: '', branch: '', address: '', active: true }
 const MOVE_TYPES = ['receipt', 'issue', 'transfer', 'adjustment', 'return', 'count'] as const
 
-function money(n: number | undefined): string { return n ? `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0' }
+const money = (n: number | null | undefined) => fmtMoney(n, { max: 2 })
 
 export function InventoryCenter() {
   const t = useT()

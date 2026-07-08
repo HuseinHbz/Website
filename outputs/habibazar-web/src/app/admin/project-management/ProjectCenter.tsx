@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { fmtMoney } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -23,7 +24,7 @@ const T_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'review', 'done']
 const PRIORITIES = ['low', 'medium', 'high', 'urgent']
 const HEALTH_COLOR: Record<Health, 'green' | 'yellow' | 'red' | 'blue'> = { on_track: 'green', at_risk: 'yellow', overdue: 'red', done: 'blue' }
 const PRIO_COLOR: Record<string, 'slate' | 'blue' | 'yellow' | 'red'> = { low: 'slate', medium: 'blue', high: 'yellow', urgent: 'red' }
-const money = (n: number | undefined) => `$${(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+const money = (n: number | null | undefined) => fmtMoney(n, { max: 0 })
 const EMPTY: Project = { code: '', name: '', customer: '', manager: '', status: 'planning', startDate: '', endDate: '', budget: 0, hourlyRate: 0, notes: '' }
 
 export function ProjectCenter() {

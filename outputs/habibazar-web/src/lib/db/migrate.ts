@@ -912,5 +912,35 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_assets_warranty ON assets(warranty_expiry);
     CREATE INDEX IF NOT EXISTS idx_wf_runs_wf ON workflow_runs(workflow_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_wf_status ON workflows(status);
+
+    -- Phase 24: cover hot structural/lookup foreign keys that participate in
+    -- JOIN/WHERE (parent→child containment, tree parents, join tables, session
+    -- and RBAC lookups). Audit-trail FKs (created_by/updated_by/author_id/
+    -- owner_id/…) are intentionally left unindexed — they are almost never
+    -- filtered on and indexing them only adds write cost + bloat.
+    CREATE INDEX IF NOT EXISTS idx_admin_sessions_user ON admin_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_role_assignments_user ON role_assignments(user_id);
+    CREATE INDEX IF NOT EXISTS idx_hero_rules_hero ON hero_rules(hero_id);
+    CREATE INDEX IF NOT EXISTS idx_page_sections_page ON page_sections(page_id);
+    CREATE INDEX IF NOT EXISTS idx_page_sections_section ON page_sections(section_id);
+    CREATE INDEX IF NOT EXISTS idx_section_versions_section ON section_versions(section_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_event_registrations_event ON event_registrations(event_id);
+    CREATE INDEX IF NOT EXISTS idx_course_lessons_course ON course_lessons(course_id);
+    CREATE INDEX IF NOT EXISTS idx_pm_timesheets_task ON pm_timesheets(task_id);
+    CREATE INDEX IF NOT EXISTS idx_gl_journal_period ON gl_journal_entries(period_id);
+    CREATE INDEX IF NOT EXISTS idx_gl_accounts_parent ON gl_accounts(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_sales_documents_source ON sales_documents(source_id);
+    CREATE INDEX IF NOT EXISTS idx_blog_posts_category ON blog_posts(category_id);
+    CREATE INDEX IF NOT EXISTS idx_content_category ON content(category_id);
+    CREATE INDEX IF NOT EXISTS idx_content_product ON content(product_id);
+    CREATE INDEX IF NOT EXISTS idx_docs_category ON docs(category_id);
+    CREATE INDEX IF NOT EXISTS idx_docs_product ON docs(product_id);
+    CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+    CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category_id);
+    CREATE INDEX IF NOT EXISTS idx_courses_instructor ON courses(instructor_id);
+    CREATE INDEX IF NOT EXISTS idx_product_releases_product ON product_releases(product_id);
+    CREATE INDEX IF NOT EXISTS idx_success_stories_org ON success_stories(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_inv_moves_location ON inv_moves(location_id);
+    CREATE INDEX IF NOT EXISTS idx_numbering_audit_format ON numbering_audit(format_id);
   `)
 }
