@@ -5,7 +5,7 @@ import { logAction } from '@/lib/admin/audit'
 import {
   listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition,
   listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
-  recordPayment, convertDocument, overview,
+  recordPayment, convertDocument, overview, postPurchaseInvoiceToGl,
 } from '@/lib/erp/purchasingData'
 import type { PurchaseDocType } from '@/lib/erp/purchasing'
 
@@ -41,7 +41,8 @@ const docSubmit = z.object({ action: z.literal('doc.submit'), id: z.number().int
 const docApprove = z.object({ action: z.literal('doc.approve'), id: z.number().int(), level: z.number().int().min(1).max(3), decision: z.enum(['approved', 'rejected']), comment: z.string().max(500).optional() })
 const docConvert = z.object({ action: z.literal('doc.convert'), sourceId: z.number().int(), toType: z.enum(DOC_TYPES) })
 const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional() })
-const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment])
+const docPost = z.object({ action: z.literal('doc.post'), id: z.number().int() })
+const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost])
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin('edit')
@@ -66,6 +67,13 @@ export async function POST(req: NextRequest) {
       }
       case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }
       case 'doc.payment': { await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid); await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount }); return NextResponse.json({ ok: true }) }
+      case 'doc.post': {
+        // Posting to the double-entry GL is an accounting action — administrator only.
+        if (!['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'Posting to the GL requires an administrator' }, { status: 403 })
+        const res = await postPurchaseInvoiceToGl(d.id, uid)
+        await logAction(auth.user, 'erp.purchase.post', 'purchase_documents', String(d.id), { entryId: res.entryId, alreadyPosted: res.alreadyPosted })
+        return NextResponse.json(res)
+      }
     }
   } catch (e) { return apiError(e, 'Failed to update purchasing') }
 }

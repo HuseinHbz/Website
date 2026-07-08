@@ -49,16 +49,28 @@ create with line editor + submit/approve L1/L2/reject/convert inline). Bilingual
   evaluation → PO (10 × 30M + 9% VAT = **327M Rial**) → routed to **2 approval
   levels** → L1 alone stays `submitted`, L1+L2 → `approved`. ✓
 
+### GL auto-posting (continuation — double-entry integration)
+
+Purchase invoices now post into the existing double-entry GL (reusing the Finance
+module — no duplication). Pure `purchaseInvoicePostingLines(net, tax, total)` →
+**Dr Inventory (1200) + Dr Taxes Payable (2100, VAT input) / Cr Accounts Payable
+(2000)**, always balanced (`postingBalanced`); `purchasePaymentPostingLines` →
+Dr AP / Cr Bank. Data layer `postPurchaseInvoiceToGl(docId)` resolves accounts by
+code, writes a **posted** `gl_journal_entry` + lines, links `purchase_documents.
+gl_entry_id`, and is **idempotent** (re-post returns the same entry). API
+`doc.post` action is **administrator-gated** + audited; UI shows a "Post to GL"
+row action on confirmed invoices and a GL badge once posted. Unit-tested (balanced
+postings, VAT omitted at 0 tax) + live PG round-trip (invoice 1090 → entry
+balances, AP credited 1090, Inventory 1000; second post idempotent).
+
 ## Honest scope note
 
 Delivered for real: vendors, all 8 purchase document types (unified header),
 multi-level approval workflow + budget validation, vendor evaluation/rating,
 contracts schema, payments, PR→PO→GRN→invoice conversion, dashboard, numbering +
-audit. **Deferred** (documented, not faked) — larger standalone builds: a public
-**Vendor Portal** (external-facing auth surface), automatic **GL posting** of
-purchase invoices into the double-entry ledger, and purchase **analytics
-charts**. The engine + data layer are structured so those attach cleanly (e.g. a
-posting hook on invoice confirm).
+audit, and **GL auto-posting** of purchase invoices. **Deferred** (documented,
+not faked) — larger standalone builds: a public **Vendor Portal** (external-facing
+auth surface) and purchase **analytics charts**.
 
 ## Preserved (zero regression)
 

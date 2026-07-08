@@ -342,7 +342,12 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   convert/payment — L2+ approvals need administrator; RBAC/zod/audit). UI tabs:
   Dashboard · Vendors (+ 5-criteria evaluation) · Documents (line editor + submit/
   approve/convert). Verified vs real PostgreSQL (327M PO → 2-level approval flow).
-  Deferred: vendor portal, GL auto-posting, analytics charts. Report:
+  **GL auto-posting**: pure `purchaseInvoicePostingLines` (Dr Inventory 1200 + Dr
+  Taxes Payable 2100 / Cr Accounts Payable 2000, balanced) + `postPurchaseInvoice
+  ToGl` writes a posted `gl_journal_entry` (idempotent, links `gl_entry_id`),
+  reusing the Finance GL — API `doc.post` (administrator-gated) + "Post to GL" UI
+  action. Verified vs real PostgreSQL (invoice 1090 → balanced entry, AP credited).
+  Deferred: vendor portal, analytics charts. Report:
   `docs/governance/phase26.1-purchasing-platform.md`.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·

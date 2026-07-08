@@ -815,6 +815,7 @@ export async function runMigrations() {
       status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','expired','terminated')),
       note TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
     CREATE INDEX IF NOT EXISTS idx_pur_docs_type ON purchase_documents(doc_type, status);
     CREATE INDEX IF NOT EXISTS idx_pur_docs_vendor ON purchase_documents(vendor_id);
     CREATE INDEX IF NOT EXISTS idx_pur_lines_doc ON purchase_document_lines(document_id);

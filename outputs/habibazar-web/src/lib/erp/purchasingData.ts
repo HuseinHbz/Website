@@ -59,12 +59,12 @@ export async function vendorPosition(vendorId: number) {
 }
 
 // ── Documents ────────────────────────────────────────────────────────────────
-interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number }
+interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number; gl_entry_id: number | null }
 export async function listDocuments(docType?: PurchaseDocType) {
   const rows = await pgQuery<DocRow & { vendor_name: string | null }>(
     `SELECT d.*, v.name AS vendor_name FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id=d.vendor_id
      ${docType ? 'WHERE d.doc_type=$1' : ''} ORDER BY d.created_at DESC`, docType ? [docType] : [])
-  return rows.map(r => ({ id: r.id, docNo: r.doc_no, docType: r.doc_type, vendorId: r.vendor_id, vendorName: r.vendor_name, status: r.status, date: r.date, total: num(r.total), paidTotal: num(r.paid_total), approvalLevels: r.approval_levels, budget: num(r.budget) }))
+  return rows.map(r => ({ id: r.id, docNo: r.doc_no, docType: r.doc_type, vendorId: r.vendor_id, vendorName: r.vendor_name, status: r.status, date: r.date, total: num(r.total), paidTotal: num(r.paid_total), approvalLevels: r.approval_levels, budget: num(r.budget), glEntryId: r.gl_entry_id }))
 }
 export async function getDocument(id: number) {
   const d = (await pgQuery<DocRow>(`SELECT * FROM purchase_documents WHERE id=$1`, [id]))[0]
@@ -141,6 +141,46 @@ export async function convertDocument(sourceId: number, toType: PurchaseDocType,
   if (!src) throw new Error('Source not found')
   const lines = (src.lines as unknown as LineRow[]).map(l => ({ description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct) }))
   return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
+}
+
+// ── GL posting ───────────────────────────────────────────────────────────────
+import { purchaseInvoicePostingLines, postingBalanced } from './purchasing'
+
+/**
+ * Post a confirmed purchase invoice into the double-entry GL (idempotent).
+ * Dr Inventory (net) + Dr Taxes Payable (VAT) / Cr Accounts Payable (total).
+ * Returns the created journal entry id, or the existing one if already posted.
+ */
+export async function postPurchaseInvoiceToGl(docId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
+  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null }>(
+    `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!d) throw new Error('Document not found')
+  if (d.gl_entry_id) return { entryId: d.gl_entry_id, alreadyPosted: true }
+  if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices post to the GL')
+  if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the invoice before posting')
+
+  const net = num(d.subtotal) - num(d.discount_total)
+  const lines = purchaseInvoicePostingLines(net, num(d.tax_total), num(d.total))
+  if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+
+  // Resolve account ids by code (seeded standard chart).
+  const codes = [...new Set(lines.map(l => l.accountCode))]
+  const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
+  const idOf = new Map(accs.map(a => [a.code, a.id]))
+  for (const c of codes) if (!idOf.has(c)) throw new Error(`GL account ${c} is missing from the chart`)
+
+  const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
+  const entry = (await pgQuery<{ id: number }>(
+    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
+     VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, ${NOW}, ${NOW}) RETURNING id`,
+    [entryNo, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null]))[0]
+  let ln = 0
+  for (const l of lines) {
+    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
+  }
+  await pgQuery(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
+  return { entryId: entry.id, alreadyPosted: false }
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────

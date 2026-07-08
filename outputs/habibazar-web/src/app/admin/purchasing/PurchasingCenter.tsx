@@ -141,7 +141,7 @@ function EvaluateModal({ rtl, vendor, onClose, onDone, toast }: { rtl: boolean; 
   )
 }
 
-interface PurDoc { id: number; docNo: string | null; docType: string; vendorName: string | null; status: string; date: string; total: number; approvalLevels: number }
+interface PurDoc { id: number; docNo: string | null; docType: string; vendorName: string | null; status: string; date: string; total: number; approvalLevels: number; glEntryId: number | null }
 function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; toast: Toast }) {
   const [rows, setRows] = useState<PurDoc[]>([])
   const [loading, setLoading] = useState(true)
@@ -161,7 +161,7 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { key: 'vendorName', labelEn: 'Vendor', labelFa: 'تأمین‌کننده', render: d => <span>{d.vendorName || '—'}</span> },
     { key: 'date', labelEn: 'Date', labelFa: 'تاریخ' },
     { key: 'total', labelEn: 'Total', labelFa: 'مبلغ', type: 'number', numeric: true, render: d => <span>{money(d.total)}</span> },
-    { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: d => <Badge color={STATUS_COLOR[d.status] || 'slate'}>{d.status}</Badge> },
+    { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: d => <span className="flex items-center gap-1"><Badge color={STATUS_COLOR[d.status] || 'slate'}>{d.status}</Badge>{d.glEntryId && <Badge color="indigo">{lc(rtl, 'GL', 'دفتر')}</Badge>}</span> },
   ]
   const rowActions: RowAction<PurDoc>[] = [
     { id: 'submit', labelEn: 'Submit', labelFa: 'ارسال', icon: '➤', hidden: d => d.status !== 'draft', onClick: d => op('doc.submit', { id: d.id }) },
@@ -169,6 +169,7 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { id: 'approve2', labelEn: 'Approve L2', labelFa: 'تأیید سطح ۲', icon: '✓✓', hidden: d => d.status !== 'submitted' || d.approvalLevels < 2, onClick: d => op('doc.approve', { id: d.id, level: 2, decision: 'approved' }) },
     { id: 'reject', labelEn: 'Reject', labelFa: 'رد', icon: '✕', hidden: d => d.status !== 'submitted', onClick: d => op('doc.approve', { id: d.id, level: 1, decision: 'rejected' }) },
     { id: 'po', labelEn: 'Convert to Order', labelFa: 'تبدیل به سفارش', icon: '↪', hidden: d => !(d.docType === 'request' || d.docType === 'quotation') || d.status !== 'approved', onClick: d => op('doc.convert', { sourceId: d.id, toType: 'order' }) },
+    { id: 'post', labelEn: 'Post to GL', labelFa: 'ثبت در دفتر کل', icon: '📒', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || ['draft', 'void'].includes(d.status), onClick: d => op('doc.post', { id: d.id }) },
   ]
   return (
     <div className="space-y-4">

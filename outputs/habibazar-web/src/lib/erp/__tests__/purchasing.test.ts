@@ -40,3 +40,27 @@ describe('purchasing engine', () => {
     expect(k.openOrders).toBe(1); expect(k.ordersValue).toBe(500); expect(k.pendingApproval).toBe(2)
   })
 })
+
+import { purchaseInvoicePostingLines, purchasePaymentPostingLines, postingBalanced } from '../purchasing'
+
+describe('purchasing GL posting', () => {
+  it('purchase invoice posts a balanced Dr Inventory + Dr VAT / Cr AP', () => {
+    const lines = purchaseInvoicePostingLines(1000, 90, 1090)
+    expect(postingBalanced(lines)).toBe(true)
+    const ap = lines.find(l => l.accountCode === '2000')!
+    expect(ap.credit).toBe(1090)
+    expect(lines.find(l => l.accountCode === '1200')!.debit).toBe(1000)
+    expect(lines.find(l => l.accountCode === '2100')!.debit).toBe(90)
+  })
+  it('omits the VAT line when tax is zero and still balances', () => {
+    const lines = purchaseInvoicePostingLines(1000, 0, 1000)
+    expect(lines.some(l => l.accountCode === '2100')).toBe(false)
+    expect(postingBalanced(lines)).toBe(true)
+  })
+  it('payment posts Dr AP / Cr Bank, balanced', () => {
+    const lines = purchasePaymentPostingLines(500)
+    expect(postingBalanced(lines)).toBe(true)
+    expect(lines.find(l => l.accountCode === '2000')!.debit).toBe(500)
+    expect(lines.find(l => l.accountCode === '1010')!.credit).toBe(500)
+  })
+})

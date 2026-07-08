@@ -103,6 +103,35 @@ export function purchaseInvoiceStatus(total: number, paid: number): PurchaseStat
   return 'partial'
 }
 
+// ── GL posting (double-entry integration) ───────────────────────────────────
+export interface PostingLine { accountCode: string; debit: number; credit: number; memo: string }
+/**
+ * Double-entry lines for a purchase invoice (goods): Dr Inventory (net),
+ * Dr Taxes Payable (recoverable VAT input), Cr Accounts Payable (gross total).
+ * Always balances (Σdebit = Σcredit = total).
+ */
+export function purchaseInvoicePostingLines(net: number, tax: number, total: number): PostingLine[] {
+  const lines: PostingLine[] = [
+    { accountCode: '1200', debit: round2(net), credit: 0, memo: 'Purchase (net)' },
+  ]
+  if (tax > 0) lines.push({ accountCode: '2100', debit: round2(tax), credit: 0, memo: 'VAT input' })
+  lines.push({ accountCode: '2000', debit: 0, credit: round2(total), memo: 'Accounts payable' })
+  return lines
+}
+/** Payment of a vendor invoice: Dr Accounts Payable, Cr Bank. */
+export function purchasePaymentPostingLines(amount: number): PostingLine[] {
+  return [
+    { accountCode: '2000', debit: round2(amount), credit: 0, memo: 'Settle payable' },
+    { accountCode: '1010', debit: 0, credit: round2(amount), memo: 'Bank payment' },
+  ]
+}
+/** A set of posting lines is valid only when it balances. */
+export function postingBalanced(lines: PostingLine[]): boolean {
+  const d = lines.reduce((s, l) => s + l.debit, 0)
+  const c = lines.reduce((s, l) => s + l.credit, 0)
+  return Math.abs(round2(d) - round2(c)) < 0.001
+}
+
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 export interface PurchaseKpis {
   openOrders: number; ordersValue: number
