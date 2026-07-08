@@ -31,6 +31,13 @@
    (هر پرامپ به‌صورت کامل و به ترتیب اجرا شود؛ تیکه‌تیکه یا ناقص اجرا نشود — کل
    پرامپ یک‌جا تمام شود. اگر موردی واقعاً بدون جعل قابل ساخت نیست، همان زیرساخت
    لازمش را بساز؛ اگر واقعاً غیرممکن بود، صریح بگو و بپرس، نه اینکه بی‌صدا رهایش کنی.)
+5. **Never switch branches unless I explicitly say so.** Always stay on the
+   current working branch (`feature/v2-enterprise-upgrade`). Do not `git checkout`,
+   `switch`, create, rename, or push to any other branch without an explicit
+   instruction from the maintainer. If a workflow seems to need a different branch,
+   STOP and ask first — never change branches on your own.
+   (هیچ‌وقت برنچ را عوض نکن مگر من صریحاً گفته باشم؛ همیشه روی همین برنچ کاری بمان و
+   بدون دستور من به برنچ دیگری checkout/push نکن.)
 
 ---
 
