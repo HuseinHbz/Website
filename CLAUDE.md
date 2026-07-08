@@ -572,6 +572,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   = **50 total**; Hero Center Templates tab has a Classic/Premium/All switch.
   Verified vs real PostgreSQL (hero with animations round-trips). Report:
   `docs/governance/phase25-hero-animation-engine.md`.
+- **Hero Intelligence** (Phase 25.1) — AI + scoring layer on the Hero Platform,
+  reusing the existing AI Platform (no second AI system). **AI Content Assistant**:
+  pure prompt builder `src/lib/hero/aiAssist.ts` (14 actions × 7 tones × en/fa) +
+  `POST /api/admin/heroes/ai` dispatching through `runCompletion` (provider mgr +
+  telemetry + audit), returning **editable** suggestions; wired into HeroBuilder's
+  Content card (Headline/Subtitle/Improve/SEO/Meta). **Smart recommendation**
+  `src/lib/hero/recommend.ts` (`recommendAnimations` category→recipe, auto-lightens
+  under reduced-motion/mobile) — API + one-click builder button. **Performance +
+  A11y engines** `src/lib/hero/performance.ts` (`animationPerformance` → score/
+  weight/estFps/warnings; `accessibilityReport` → WCAG score/issues) surfaced as a
+  live **Insights** card in the builder (real-time warnings). All engines pure +
+  unit-tested. Report: `docs/governance/phase25.1-hero-ai-intelligence.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

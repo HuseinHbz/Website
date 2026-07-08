@@ -156,3 +156,43 @@ describe('animation engine', () => {
     expect(heavy.length).toBeGreaterThan(0)
   })
 })
+
+import { animationPerformance, accessibilityReport } from '../performance'
+import { recommendAnimations, recommendationRationale } from '../recommend'
+import { buildAssistPrompt } from '../aiAssist'
+
+describe('performance + a11y engines', () => {
+  it('scores a light hero high and a heavy hero lower', () => {
+    const light = animationPerformance(baseConfig({ animations: { headline: { preset: 'fade-up' } } }))
+    const heavy = animationPerformance(baseConfig({ animations: { headline: { preset: 'flip' }, media: { preset: 'rotate-3d' }, ctas: { preset: 'mask-reveal' }, badge: { preset: 'card-stack' } }, style: { background: { kind: 'video', value: 'x.mp4' } } }))
+    expect(light.score).toBeGreaterThan(heavy.score)
+    expect(heavy.warnings.length).toBeGreaterThan(0)
+    expect(heavy.estFps).toBeLessThanOrEqual(45)
+  })
+  it('flags missing H1 and low contrast as WCAG errors', () => {
+    const bad = accessibilityReport(baseConfig({ content: { en: { headline: '' }, fa: { headline: '' } }, style: { textColor: '#888888', background: { kind: 'solid', color: '#999999' } } }))
+    expect(bad.passesWCAG).toBe(false)
+    expect(bad.issues.some(i => i.code === 'a11y.h1')).toBe(true)
+  })
+})
+
+describe('recommendation engine', () => {
+  it('recommends category-appropriate animations and lightens on mobile', () => {
+    const sec = recommendAnimations(baseConfig({ template: 'cyber-security' }))
+    expect(sec.headline?.preset).toBeTruthy()
+    const mobile = recommendAnimations(baseConfig({ template: 'video-fullscreen' }), { device: 'mobile' })
+    // media recipe uses heavy mask-reveal/video-reveal → lightened to fade-up on mobile
+    expect(mobile.headline?.preset).toBe('fade-up')
+    expect(recommendationRationale(baseConfig(), 'fa')).toContain('هیرو')
+  })
+})
+
+describe('AI assist prompt builder', () => {
+  it('builds a localized, action-specific prompt', () => {
+    const en = buildAssistPrompt({ action: 'title', locale: 'en', tone: 'executive', category: 'security' })
+    expect(en.systemPrompt).toContain('English')
+    expect(en.userMessage.toLowerCase()).toContain('headline')
+    const tr = buildAssistPrompt({ action: 'translate', locale: 'en', targetLocale: 'fa', selection: 'Hello' })
+    expect(tr.systemPrompt).toContain('Persian')
+  })
+})

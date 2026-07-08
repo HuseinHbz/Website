@@ -7,6 +7,8 @@ import { HERO_TEMPLATES, getTemplate } from '@/lib/hero/templates'
 import { validateHero } from '@/lib/hero/rules'
 import { ANIMATION_PRESETS, EASING_CSS, type AnimationEasing } from '@/lib/hero/animations'
 import type { HeroAnimations, HeroElementAnimation } from '@/lib/hero/types'
+import { animationPerformance, accessibilityReport } from '@/lib/hero/performance'
+import { recommendAnimations } from '@/lib/hero/recommend'
 import type { HeroConfig, HeroContentL, HeroCta, HeroStat, HeroStatus, Locale } from '@/lib/hero/types'
 
 type Toast = ReturnType<typeof useToast>['toast']
@@ -55,6 +57,30 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
   }
   function patchAnim(key: keyof HeroAnimations, fn: (a: HeroElementAnimation) => HeroElementAnimation) {
     patchConfig(c => ({ ...c, animations: { ...c.animations, [key]: fn(c.animations?.[key] ?? { preset: 'none' }) } }))
+  }
+
+  const [aiBusy, setAiBusy] = useState<string | null>(null)
+  // AI Content Assistant — dispatches through the shared AI Platform via the API.
+  async function aiGen(action: string, apply: (text: string) => void) {
+    if (!config) return
+    setAiBusy(action)
+    try {
+      const cur = config.content[editLocale]
+      const r = await fetch('/api/admin/heroes/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'content', action, locale: editLocale, category: getTemplate(config.template)?.category, headline: cur.headline, subheadline: cur.subheadline, selection: cur.subheadline || cur.headline }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.text) { apply(d.text); toast(lc(rtl, 'AI suggestion applied', 'پیشنهاد هوش مصنوعی اعمال شد'), 'success') }
+      else toast(d.error || lc(rtl, 'AI failed', 'هوش مصنوعی ناموفق'), 'error')
+    } finally { setAiBusy(null) }
+  }
+  // Smart recommendation — deterministic engine, applied client-side.
+  function applyRecommendedAnimations() {
+    if (!config) return
+    const rec = recommendAnimations(config, { reduceMotion: !!config.reduceMotion })
+    patchConfig(c => ({ ...c, animations: { ...c.animations, ...rec } }))
+    toast(lc(rtl, 'Recommended animations applied', 'انیمیشن‌های پیشنهادی اعمال شد'), 'success')
   }
 
   async function save() {
@@ -143,6 +169,17 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
             <Input label={lc(rtl, 'Subheadline', 'زیرعنوان')} value={cur.subheadline ?? ''} onChange={v => patchContent(editLocale, c => ({ ...c, subheadline: v }))} multiline rows={3} />
             <Input label={lc(rtl, 'Media URL (image/video)', 'آدرس رسانه')} value={cur.mediaUrl ?? ''} onChange={v => patchContent(editLocale, c => ({ ...c, mediaUrl: v }))} />
             <Input label={lc(rtl, 'Media alt text', 'متن جایگزین رسانه')} value={cur.mediaAlt ?? ''} onChange={v => patchContent(editLocale, c => ({ ...c, mediaAlt: v }))} />
+            {/* AI Content Assistant — reuses the shared AI Platform */}
+            <div className="pt-2 border-t border-subtle">
+              <p className="text-xs text-text-tertiary mb-2">✨ {lc(rtl, 'AI assistant (editable suggestions)', 'دستیار هوش مصنوعی (پیشنهاد قابل‌ویرایش)')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <Btn size="sm" variant="secondary" disabled={aiBusy !== null} onClick={() => aiGen('title', t => patchContent(editLocale, c => ({ ...c, headline: t })))}>{aiBusy === 'title' ? '…' : lc(rtl, 'Headline', 'عنوان')}</Btn>
+                <Btn size="sm" variant="secondary" disabled={aiBusy !== null} onClick={() => aiGen('subtitle', t => patchContent(editLocale, c => ({ ...c, subheadline: t })))}>{aiBusy === 'subtitle' ? '…' : lc(rtl, 'Subtitle', 'زیرعنوان')}</Btn>
+                <Btn size="sm" variant="secondary" disabled={aiBusy !== null} onClick={() => aiGen('improve', t => patchContent(editLocale, c => ({ ...c, subheadline: t })))}>{aiBusy === 'improve' ? '…' : lc(rtl, 'Improve', 'بهبود')}</Btn>
+                <Btn size="sm" variant="secondary" disabled={aiBusy !== null} onClick={() => aiGen('seo-title', t => patchConfig(c => ({ ...c, seo: { ...c.seo, title: t } })))}>{aiBusy === 'seo-title' ? '…' : lc(rtl, 'SEO title', 'عنوان سئو')}</Btn>
+                <Btn size="sm" variant="secondary" disabled={aiBusy !== null} onClick={() => aiGen('meta', t => patchConfig(c => ({ ...c, seo: { ...c.seo, description: t } })))}>{aiBusy === 'meta' ? '…' : lc(rtl, 'Meta', 'متا')}</Btn>
+              </div>
+            </div>
           </Card>
 
           {/* CTAs */}
@@ -258,6 +295,9 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
             </ul>
           </Card>
 
+          {/* Insights — real-time performance + accessibility + recommendation */}
+          <InsightsCard rtl={rtl} config={config} onRecommend={applyRecommendedAnimations} />
+
           {/* Version history */}
           <Card className="p-4">
             <h3 className="text-sm font-semibold text-text-primary mb-2">{lc(rtl, 'Version history', 'تاریخچه نسخه‌ها')}</h3>
@@ -289,6 +329,38 @@ function CtaRow({ cta, rtl, onChange, onRemove }: { cta: HeroCta; rtl: boolean; 
         <Btn size="sm" variant="ghost" onClick={onRemove}>✕</Btn>
       </div>
     </div>
+  )
+}
+
+function ScoreBar({ label, score }: { label: string; score: number }) {
+  const tone = score >= 85 ? 'bg-success' : score >= 60 ? 'bg-warning' : 'bg-danger'
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1"><span className="text-text-secondary">{label}</span><span className="text-text-primary font-semibold">{score}</span></div>
+      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className={`h-full ${tone}`} style={{ width: `${score}%` }} /></div>
+    </div>
+  )
+}
+
+function InsightsCard({ rtl, config, onRecommend }: { rtl: boolean; config: HeroConfig; onRecommend: () => void }) {
+  const perf = useMemo(() => animationPerformance(config), [config])
+  const a11y = useMemo(() => accessibilityReport(config), [config])
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Insights', 'بینش‌ها')}</h3>
+        <Btn size="sm" variant="secondary" onClick={onRecommend}>✨ {lc(rtl, 'Recommend animations', 'پیشنهاد انیمیشن')}</Btn>
+      </div>
+      <ScoreBar label={lc(rtl, 'Performance', 'کارایی')} score={perf.score} />
+      <ScoreBar label={lc(rtl, 'Accessibility (WCAG)', 'دسترس‌پذیری')} score={a11y.score} />
+      <p className="text-3xs text-text-tertiary">{lc(rtl, `Est. ${perf.estFps} fps · weight ${perf.weight} · ${perf.heavyCount} heavy / ${perf.loopingCount} looping`, `تخمین ${perf.estFps} fps · وزن ${perf.weight}`)}</p>
+      {(perf.warnings.length > 0 || a11y.issues.length > 0) && (
+        <ul className="space-y-1">
+          {perf.warnings.map((w, i) => <li key={`p${i}`} className="text-3xs text-warning-text flex gap-1.5"><span>⚡</span>{w.message}</li>)}
+          {a11y.issues.map((w, i) => <li key={`a${i}`} className={`text-3xs flex gap-1.5 ${w.severity === 'error' ? 'text-danger-text' : 'text-warning-text'}`}><span>♿</span>{w.message}</li>)}
+        </ul>
+      )}
+    </Card>
   )
 }
 
