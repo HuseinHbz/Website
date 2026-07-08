@@ -122,7 +122,35 @@ export const PREMIUM_TEMPLATES: HeroTemplate[] = [
   },
 ]
 
-export const HERO_TEMPLATES: HeroTemplate[] = [...LEGACY_TEMPLATES, ...PREMIUM_TEMPLATES]
+/** 20 further premium templates (Phase 25) — one per enterprise vertical.
+ * `category` maps onto an existing layout family (it only drives public layout). */
+const prem = (id: string, nameEn: string, nameFa: string, category: HeroTemplate['category'], backgrounds: HeroTemplate['backgrounds'], blocks: HeroBlockType[] = COMMON_BLOCKS): HeroTemplate =>
+  ({ id, nameEn, nameFa, category, premium: true, blocks, constraints: { ...DEFAULT_CONSTRAINTS }, backgrounds })
+
+export const PREMIUM_TEMPLATES_V2: HeroTemplate[] = [
+  prem('devops-pipeline', 'DevOps Pipeline', 'خط لوله DevOps', 'technology', ['gradient', 'animation', 'canvas'], [...COMMON_BLOCKS, 'technologies', 'features']),
+  prem('networking-grid', 'Networking Grid', 'شبکه‌بندی', 'cloud', ['animation', 'canvas', 'gradient'], [...COMMON_BLOCKS, 'technologies']),
+  prem('infrastructure-core', 'Infrastructure Core', 'هستهٔ زیرساخت', 'cloud', ['gradient', 'image', 'animation'], [...COMMON_BLOCKS, 'stats', 'logos']),
+  prem('modern-startup', 'Modern Startup', 'استارتاپ مدرن', 'product', ['gradient', 'animation'], [...COMMON_BLOCKS, 'features', 'card']),
+  prem('enterprise-suite', 'Enterprise Suite', 'مجموعهٔ سازمانی', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'logos', 'testimonials']),
+  prem('creative-agency', 'Creative Agency', 'آژانس خلاق', 'media', ['gradient', 'image', 'video'], [...COMMON_BLOCKS, 'card', 'logos']),
+  prem('minimal-mono', 'Minimal Mono', 'مینیمال تک‌رنگ', 'portfolio', ['solid', 'gradient'], ['text', 'button', 'image', 'icon', 'background']),
+  prem('dark-executive', 'Dark Executive', 'اجرایی تیره', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'stats']),
+  prem('light-editorial', 'Light Editorial', 'روشن مطبوعاتی', 'media', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'card']),
+  prem('healthcare-trust', 'Healthcare Trust', 'سلامت مطمئن', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features', 'stats']),
+  prem('education-campus', 'Education Campus', 'کمپ آموزشی', 'corporate', ['gradient', 'image'], [...COMMON_BLOCKS, 'features', 'stats']),
+  prem('industrial-heavy', 'Industrial', 'صنعتی', 'product', ['image', 'gradient', 'solid'], [...COMMON_BLOCKS, 'stats']),
+  prem('construction-build', 'Construction', 'ساخت‌وساز', 'product', ['image', 'gradient'], [...COMMON_BLOCKS, 'stats']),
+  prem('government-civic', 'Government', 'دولتی', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features']),
+  prem('finance-markets', 'Finance & Markets', 'مالی و بازار', 'corporate', ['gradient', 'animation', 'solid'], [...COMMON_BLOCKS, 'stats', 'features']),
+  prem('insurance-shield', 'Insurance', 'بیمه', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features']),
+  prem('retail-commerce', 'Retail Commerce', 'خرده‌فروشی', 'product', ['gradient', 'image', 'animation'], [...COMMON_BLOCKS, 'pricing', 'card']),
+  prem('manufacturing-line', 'Manufacturing', 'تولید', 'product', ['image', 'gradient'], [...COMMON_BLOCKS, 'stats', 'technologies']),
+  prem('energy-power', 'Energy & Power', 'انرژی', 'cloud', ['gradient', 'animation', 'image'], [...COMMON_BLOCKS, 'stats']),
+  prem('saas-hybrid', 'SaaS Hybrid', 'سس هیبرید', 'product', ['gradient', 'animation', 'canvas'], [...COMMON_BLOCKS, 'pricing', 'features', 'card']),
+]
+
+export const HERO_TEMPLATES: HeroTemplate[] = [...LEGACY_TEMPLATES, ...PREMIUM_TEMPLATES, ...PREMIUM_TEMPLATES_V2]
 
 const BY_ID = new Map(HERO_TEMPLATES.map(t => [t.id, t]))
 

@@ -557,6 +557,21 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   emits view/click/conversion/scroll/time). Falls back to legacy `Hero.tsx` when no
   hero is published (zero regression). Verified vs real PostgreSQL. Report:
   `docs/governance/phase23-hero-platform.md`.
+- **Hero Animation Engine** (Phase 25, `src/lib/hero/animations.ts`) — extends the
+  Hero Platform (no rewrite; legacy `Hero.tsx` + its 196 framer-motion animations
+  stay the public fallback, untouched). Pure, unit-tested registry of **53 presets**
+  (+`none`) across entrance/emphasis/text/background/scroll/interactive;
+  `resolveAnimation(a,{reduceMotion,lowEnd})` → `{className,style}` with `--hx-*`
+  custom props, auto-suppressing heavy/looping under reduced-motion / low-end;
+  `animationConflicts` feeds the rule engine. CSS `hx-*` keyframes/classes in
+  `globals.css` (reduced-motion guarded; JS-only presets fall back to fade).
+  `HeroConfig.animations` (per-element, optional → backward compatible) is applied
+  by `HeroExperience` (public) and assigned in `HeroBuilder`'s Animations section
+  (per-element preset + duration/delay/easing + live preview). Templates: 20
+  legacy = **Classic** library + **30 premium** (10 Phase-23 + 20 new verticals)
+  = **50 total**; Hero Center Templates tab has a Classic/Premium/All switch.
+  Verified vs real PostgreSQL (hero with animations round-trips). Report:
+  `docs/governance/phase25-hero-animation-engine.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT

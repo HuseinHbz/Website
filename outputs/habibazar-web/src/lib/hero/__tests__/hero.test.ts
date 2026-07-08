@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { HERO_TEMPLATES, LEGACY_TEMPLATES, PREMIUM_TEMPLATES, getTemplate, defaultConfig, templatesByCategory } from '../templates'
+import { HERO_TEMPLATES, LEGACY_TEMPLATES, PREMIUM_TEMPLATES, PREMIUM_TEMPLATES_V2, getTemplate, defaultConfig, templatesByCategory } from '../templates'
 import { validateHero, canPublish, contrastRatio, parseHex } from '../rules'
 import { bucketOf, pickVariant, experimentResult, type Experiment } from '../experiment'
 import { resolveHero, ruleMatches, type RequestContext } from '../personalize'
@@ -7,11 +7,11 @@ import { summarizeHeroEvents } from '../analytics'
 import type { HeroConfig } from '../types'
 
 describe('template registry', () => {
-  it('registers 30 templates (20 legacy + 10 premium), unique ids', () => {
+  it('registers 50 templates (20 legacy + 30 premium), unique ids', () => {
     expect(LEGACY_TEMPLATES).toHaveLength(20)
-    expect(PREMIUM_TEMPLATES).toHaveLength(10)
-    expect(HERO_TEMPLATES).toHaveLength(30)
-    expect(new Set(HERO_TEMPLATES.map(t => t.id)).size).toBe(30)
+    expect(PREMIUM_TEMPLATES.length + PREMIUM_TEMPLATES_V2.length).toBe(30)
+    expect(HERO_TEMPLATES).toHaveLength(50)
+    expect(new Set(HERO_TEMPLATES.map(t => t.id)).size).toBe(50)
   })
   it('keeps the legacy split/cyber ids for compatibility', () => {
     expect(getTemplate('split')).toBeTruthy()
@@ -118,5 +118,41 @@ describe('analytics summarize', () => {
     expect(h1.views).toBe(2); expect(h1.ctr).toBe(50); expect(h1.conversionRate).toBe(50); expect(h1.avgScrollDepth).toBe(80)
     expect(s.totals.views).toBe(4)
     expect(s.topHero).toBe(1); expect(s.worstHero).toBe(2)
+  })
+})
+
+import { ANIMATION_PRESETS, ANIMATION_COUNT, ANIMATION_CATEGORIES, getAnimation, animationsByCategory, resolveAnimation, animationConflicts } from '../animations'
+
+describe('animation engine', () => {
+  it('ships a 50+ preset library with unique ids', () => {
+    expect(ANIMATION_COUNT).toBeGreaterThanOrEqual(50)
+    expect(new Set(ANIMATION_PRESETS.map(a => a.id)).size).toBe(ANIMATION_PRESETS.length)
+    expect(getAnimation('fade-up')?.category).toBe('entrance')
+  })
+  it('groups presets by category', () => {
+    expect(ANIMATION_CATEGORIES).toContain('entrance')
+    expect(animationsByCategory('emphasis').some(a => a.id === 'pulse')).toBe(true)
+  })
+  it('resolves an assignment to a class + custom properties', () => {
+    const r = resolveAnimation({ preset: 'fade-up', durationMs: 900, delayMs: 100, easing: 'spring' })
+    expect(r?.className).toContain('hx-fade-up')
+    expect(r?.style['--hx-dur']).toBe('900ms')
+    expect(r?.style['--hx-delay']).toBe('100ms')
+  })
+  it('returns null for none / unknown / disabled', () => {
+    expect(resolveAnimation({ preset: 'none' })).toBeNull()
+    expect(resolveAnimation({ preset: 'nope' })).toBeNull()
+    expect(resolveAnimation({ preset: 'fade', disabled: true })).toBeNull()
+    expect(resolveAnimation(undefined)).toBeNull()
+  })
+  it('suppresses heavy/looping under reduced-motion and heavy under low-end', () => {
+    expect(resolveAnimation({ preset: 'pulse' }, { reduceMotion: true })).toBeNull() // looping
+    expect(resolveAnimation({ preset: 'flip' }, { reduceMotion: true })).toBeNull() // heavy
+    expect(resolveAnimation({ preset: 'flip' }, { lowEnd: true })).toBeNull()       // heavy
+    expect(resolveAnimation({ preset: 'fade-up' }, { lowEnd: true })).not.toBeNull() // light survives
+  })
+  it('flags conflicts among too many heavy/looping animations', () => {
+    const heavy = animationConflicts([{ preset: 'flip' }, { preset: 'rotate-3d' }, { preset: 'mask-reveal' }, { preset: 'card-stack' }])
+    expect(heavy.length).toBeGreaterThan(0)
   })
 })

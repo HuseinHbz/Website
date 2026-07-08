@@ -7,6 +7,7 @@
  */
 import type { HeroConfig, HeroContentL, Locale } from './types'
 import { getTemplate } from './templates'
+import { animationConflicts, isKnownAnimation, type HeroAnimation } from './animations'
 
 export type Severity = 'error' | 'warning'
 export interface HeroIssue {
@@ -103,6 +104,19 @@ export function validateHero(config: HeroConfig, primaryLocale: Locale = 'en'): 
   // Reduced motion advisory
   if (!config.reduceMotion && s.background?.kind === 'video')
     issues.push({ code: 'a11y.motion', severity: 'warning', message: 'Consider offering reduced motion for video backgrounds.' })
+
+  // Animation validation (Phase 25): unknown presets are an error; too many
+  // simultaneous heavy/looping animations is a performance/a11y warning.
+  const anims = config.animations
+  if (anims) {
+    const list = Object.values(anims) as (HeroAnimation | undefined)[]
+    for (const a of list) {
+      if (a && a.preset && !isKnownAnimation(a.preset))
+        issues.push({ code: 'animation.unknown', severity: 'error', field: 'animations', message: `Unknown animation preset "${a.preset}".` })
+    }
+    for (const msg of animationConflicts(list))
+      issues.push({ code: 'animation.conflict', severity: 'warning', field: 'animations', message: msg })
+  }
 
   return finalize(issues)
 }

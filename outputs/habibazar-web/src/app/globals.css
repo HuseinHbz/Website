@@ -1008,3 +1008,92 @@ select.form-input option {
   color: var(--color-text-primary);
   background-color: var(--color-bg-elevated);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Hero Animation Engine (Phase 25)
+   Config-driven presets applied by HeroExperience via the `hx-*` classes.
+   Timing is parametrised by custom properties set inline by resolveAnimation:
+   --hx-dur, --hx-delay, --hx-ease, --hx-repeat.
+   ══════════════════════════════════════════════════════════════════════════ */
+.hx-anim {
+  animation-duration: var(--hx-dur, 700ms);
+  animation-delay: var(--hx-delay, 0ms);
+  animation-timing-function: var(--hx-ease, ease-out);
+  animation-iteration-count: var(--hx-repeat, 1);
+  animation-fill-mode: both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hx-anim { animation: none !important; }
+}
+
+/* Entrance — fade family */
+@keyframes hxFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes hxFadeUp { from { opacity: 0; transform: translateY(28px) } to { opacity: 1; transform: none } }
+@keyframes hxFadeDown { from { opacity: 0; transform: translateY(-28px) } to { opacity: 1; transform: none } }
+@keyframes hxFadeLeft { from { opacity: 0; transform: translateX(-32px) } to { opacity: 1; transform: none } }
+@keyframes hxFadeRight { from { opacity: 0; transform: translateX(32px) } to { opacity: 1; transform: none } }
+@keyframes hxSlideUp { from { transform: translateY(40px) } to { transform: none } }
+@keyframes hxSlideDown { from { transform: translateY(-40px) } to { transform: none } }
+@keyframes hxSlideLeft { from { transform: translateX(-48px) } to { transform: none } }
+@keyframes hxSlideRight { from { transform: translateX(48px) } to { transform: none } }
+@keyframes hxZoom { from { opacity: 0; transform: scale(.85) } to { opacity: 1; transform: none } }
+@keyframes hxZoomOut { from { opacity: 0; transform: scale(1.15) } to { opacity: 1; transform: none } }
+@keyframes hxRotate { from { opacity: 0; transform: rotate(-8deg) scale(.96) } to { opacity: 1; transform: none } }
+@keyframes hxRotate3d { from { opacity: 0; transform: perspective(800px) rotateY(35deg) } to { opacity: 1; transform: none } }
+@keyframes hxFlipX { from { opacity: 0; transform: perspective(800px) rotateX(90deg) } to { opacity: 1; transform: none } }
+@keyframes hxFlipY { from { opacity: 0; transform: perspective(800px) rotateY(90deg) } to { opacity: 1; transform: none } }
+@keyframes hxReveal { from { opacity: 0; clip-path: inset(0 100% 0 0) } to { opacity: 1; clip-path: inset(0 0 0 0) } }
+@keyframes hxMaskReveal { from { clip-path: inset(0 0 100% 0) } to { clip-path: inset(0 0 0 0) } }
+@keyframes hxCardStack { from { opacity: 0; transform: translateY(24px) scale(.94) rotate(-2deg) } to { opacity: 1; transform: none } }
+
+.hx-fade { animation-name: hxFade }
+.hx-fade-up, .hx-slide-up-fade { animation-name: hxFadeUp }
+.hx-fade-down { animation-name: hxFadeDown }
+.hx-fade-left { animation-name: hxFadeLeft }
+.hx-fade-right { animation-name: hxFadeRight }
+.hx-slide-up { animation-name: hxSlideUp }
+.hx-slide-down { animation-name: hxSlideDown }
+.hx-slide-left { animation-name: hxSlideLeft }
+.hx-slide-right { animation-name: hxSlideRight }
+.hx-zoom, .hx-zoom-in, .hx-scale, .hx-spring, .hx-bounce, .hx-elastic { animation-name: hxZoom }
+.hx-zoom-out { animation-name: hxZoomOut }
+.hx-rotate { animation-name: hxRotate }
+.hx-rotate-3d { animation-name: hxRotate3d }
+.hx-flip, .hx-flip-x { animation-name: hxFlipX }
+.hx-flip-y { animation-name: hxFlipY }
+.hx-reveal, .hx-video-reveal { animation-name: hxReveal }
+.hx-mask-reveal { animation-name: hxMaskReveal }
+.hx-card-stack, .hx-particle-entrance { animation-name: hxCardStack }
+
+/* Text — most gracefully fall back to fade-up so they never break the layout */
+.hx-split-text, .hx-letter-reveal, .hx-word-reveal, .hx-typing, .hx-counter,
+.hx-scroll-reveal, .hx-stagger { animation-name: hxFadeUp }
+
+/* Emphasis / loop */
+@keyframes hxPulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
+@keyframes hxGlow { 0%,100% { filter: drop-shadow(0 0 0 rgba(99,102,241,0)) } 50% { filter: drop-shadow(0 0 14px rgba(99,102,241,.6)) } }
+@keyframes hxFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+@keyframes hxWave { 0%,100% { transform: rotate(0deg) } 25% { transform: rotate(2deg) } 75% { transform: rotate(-2deg) } }
+@keyframes hxSpin { to { transform: rotate(360deg) } }
+@keyframes hxHeartbeat { 0%,100% { transform: scale(1) } 15% { transform: scale(1.12) } 30% { transform: scale(1) } 45% { transform: scale(1.08) } }
+@keyframes hxShimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+@keyframes hxGradientShift { 0%,100% { background-position: 0% 50% } 50% { background-position: 100% 50% } }
+.hx-pulse { animation-name: hxPulse }
+.hx-glow { animation-name: hxGlow }
+.hx-floating { animation-name: hxFloat }
+.hx-wave { animation-name: hxWave }
+.hx-spin-slow { animation-name: hxSpin }
+.hx-heartbeat { animation-name: hxHeartbeat }
+.hx-shimmer { animation-name: hxShimmer; background-size: 200% 100% }
+.hx-gradient-shift, .hx-gradient-text, .hx-morph, .hx-blob-motion,
+.hx-background-motion { animation-name: hxGradientShift; background-size: 200% 200% }
+
+/* Marquee */
+@keyframes hxMarquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+.hx-marquee { animation-name: hxMarquee }
+
+/* JS-driven presets (parallax, mouse-follow, spotlight, canvas, lottie,
+   image-sequence, timeline, svg-path-draw) get a safe fade fallback on the pure
+   CSS path so they always render; richer behaviour is layered by the renderer. */
+.hx-parallax, .hx-mouse-follow, .hx-spotlight, .hx-canvas-motion, .hx-lottie,
+.hx-image-sequence, .hx-timeline, .hx-svg-path-draw { animation-name: hxFade }

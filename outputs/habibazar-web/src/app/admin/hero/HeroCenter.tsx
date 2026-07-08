@@ -150,7 +150,10 @@ function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | '
 
 function Templates({ rtl, toast, onOpen }: { rtl: boolean; toast: Toast; onOpen: (id: number) => void }) {
   const [cat, setCat] = useState('all')
-  const shown = useMemo(() => cat === 'all' ? HERO_TEMPLATES : HERO_TEMPLATES.filter(t => t.category === cat), [cat])
+  const [lib, setLib] = useState<'all' | 'classic' | 'premium'>('all')
+  const shown = useMemo(() => HERO_TEMPLATES
+    .filter(t => lib === 'all' || (lib === 'premium' ? t.premium : !t.premium))
+    .filter(t => cat === 'all' || t.category === cat), [cat, lib])
   async function create(templateId: string) {
     const name = window.prompt(lc(rtl, 'Hero name', 'نام هیرو')); if (!name) return
     const r = await fetch('/api/admin/heroes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', name, template: templateId }) })
@@ -159,6 +162,13 @@ function Templates({ rtl, toast, onOpen }: { rtl: boolean; toast: Toast; onOpen:
   }
   return (
     <div className="space-y-4">
+      <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1">
+        {(['all', 'classic', 'premium'] as const).map(l => (
+          <button key={l} onClick={() => setLib(l)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${lib === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>
+            {l === 'all' ? lc(rtl, 'All', 'همه') : l === 'classic' ? lc(rtl, 'Classic Templates', 'قالب‌های کلاسیک') : lc(rtl, 'Premium Templates', 'قالب‌های ویژه')}
+          </button>
+        ))}
+      </div>
       <div className="flex flex-wrap gap-2">
         {['all', ...HERO_CATEGORIES].map(c => (
           <button key={c} onClick={() => setCat(c)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cat === c ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>{c}</button>

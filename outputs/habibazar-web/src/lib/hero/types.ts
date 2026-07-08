@@ -75,12 +75,38 @@ export interface HeroBlock {
   props?: Record<string, unknown>
 }
 
+/** Per-element animation assignment (preset id + optional timing overrides).
+ * Structurally mirrors `HeroAnimation` in `animations.ts` (kept here so the
+ * config type stays import-cheap and free of engine code). */
+export interface HeroElementAnimation {
+  preset: string
+  durationMs?: number
+  delayMs?: number
+  easing?: string
+  repeat?: number
+  trigger?: string
+  disabled?: boolean
+}
+
+/** Animations assigned to each hero element (all optional, backward-compatible). */
+export interface HeroAnimations {
+  badge?: HeroElementAnimation
+  headline?: HeroElementAnimation
+  subheadline?: HeroElementAnimation
+  ctas?: HeroElementAnimation
+  stats?: HeroElementAnimation
+  media?: HeroElementAnimation
+  background?: HeroElementAnimation
+}
+
 /** The full editable hero configuration (persisted as JSON on `heroes.config`). */
 export interface HeroConfig {
   template: string
   content: { en: HeroContentL; fa: HeroContentL }
   style: HeroStyle
   blocks?: HeroBlock[]
+  /** Per-element animation assignments (Phase 25 Animation Engine). */
+  animations?: HeroAnimations
   /** SEO overrides. */
   seo?: { title?: string; description?: string; ogImage?: string }
   /** Reduce/disable animation for motion-sensitive users. */

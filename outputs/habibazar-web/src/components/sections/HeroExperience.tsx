@@ -10,9 +10,10 @@
  * (view / scroll / click / conversion) to /api/hero/track. Fully
  * dependency-free and respects reduced-motion.
  */
-import { useEffect, useRef } from 'react'
-import type { HeroConfig, Locale } from '@/lib/hero/types'
+import { useEffect, useRef, useState } from 'react'
+import type { HeroConfig, HeroElementAnimation, Locale } from '@/lib/hero/types'
 import { getTemplate } from '@/lib/hero/templates'
+import { resolveAnimation, type HeroAnimation } from '@/lib/hero/animations'
 
 type Layout = 'centered' | 'split' | 'showcase'
 const LAYOUT_BY_CATEGORY: Record<string, Layout> = {
@@ -60,12 +61,27 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroId])
 
+  // Detect low-end devices client-side to auto-disable heavy animations.
+  const [lowEnd, setLowEnd] = useState(false)
+  useEffect(() => {
+    const nav = navigator as Navigator & { deviceMemory?: number; hardwareConcurrency?: number }
+    setLowEnd((nav.deviceMemory != null && nav.deviceMemory <= 4) || (nav.hardwareConcurrency != null && nav.hardwareConcurrency <= 4))
+  }, [])
+
   const c = config.content[locale] ?? config.content.en
   const s = config.style
   const rtl = locale === 'fa'
   const tmpl = getTemplate(config.template)
   const layout = LAYOUT_BY_CATEGORY[tmpl?.category ?? 'classic'] ?? 'centered'
   const reduce = !!config.reduceMotion
+
+  // Resolve a per-element animation assignment → { className, style } to merge.
+  const anims = config.animations
+  const anim = (key: keyof NonNullable<HeroConfig['animations']>): { className: string; style: React.CSSProperties } => {
+    const a = anims?.[key] as HeroElementAnimation | undefined
+    const r = resolveAnimation(a as HeroAnimation | undefined, { reduceMotion: reduce, lowEnd })
+    return r ? { className: ` ${r.className}`, style: r.style as React.CSSProperties } : { className: '', style: {} }
+  }
   const bg = s.background?.kind ?? 'gradient'
   const fg = s.textColor
   const hasMedia = !!c.mediaUrl
@@ -79,14 +95,14 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
 
   const Copy = (
     <div className="relative z-10 max-w-2xl" style={{ maxWidth: s.containerWidth ? `${s.containerWidth}px` : undefined }}>
-      {c.badge && <span className="inline-block mb-5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border border-white/20 bg-white/5">{c.badge}</span>}
-      <h1 className="font-black tracking-tight" style={{ fontSize: `clamp(2.25rem, 6vw, ${s.titleSize ?? 56}px)`, fontWeight: s.fontWeight ?? 800, lineHeight: s.lineHeight ?? 1.08, letterSpacing: s.letterSpacing ? `${s.letterSpacing}px` : undefined }}>
+      {c.badge && <span className={`inline-block mb-5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border border-white/20 bg-white/5${anim('badge').className}`} style={anim('badge').style}>{c.badge}</span>}
+      <h1 className={`font-black tracking-tight${anim('headline').className}`} style={{ fontSize: `clamp(2.25rem, 6vw, ${s.titleSize ?? 56}px)`, fontWeight: s.fontWeight ?? 800, lineHeight: s.lineHeight ?? 1.08, letterSpacing: s.letterSpacing ? `${s.letterSpacing}px` : undefined, ...anim('headline').style }}>
         {c.headline}
         {c.headlineHighlight && <span className="text-brand"> {c.headlineHighlight}</span>}
       </h1>
-      {c.subheadline && <p className="mt-5 opacity-80 leading-relaxed" style={{ fontSize: `${s.subtitleSize ?? 20}px` }}>{c.subheadline}</p>}
+      {c.subheadline && <p className={`mt-5 opacity-80 leading-relaxed${anim('subheadline').className}`} style={{ fontSize: `${s.subtitleSize ?? 20}px`, ...anim('subheadline').style }}>{c.subheadline}</p>}
       {(c.ctas ?? []).length > 0 && (
-        <div className="mt-8 flex flex-wrap gap-4">
+        <div className={`mt-8 flex flex-wrap gap-4${anim('ctas').className}`} style={anim('ctas').style}>
           {(c.ctas ?? []).map((cta, i) => {
             const primary = (cta.variant ?? 'primary') === 'primary'
             return (
@@ -99,7 +115,7 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
         </div>
       )}
       {(c.stats ?? []).length > 0 && (
-        <div className="mt-12 flex flex-wrap gap-10">
+        <div className={`mt-12 flex flex-wrap gap-10${anim('stats').className}`} style={anim('stats').style}>
           {(c.stats ?? []).map((st, i) => (
             <div key={i}><div className="text-3xl font-bold text-brand">{st.value}</div><div className="text-sm opacity-70 mt-1">{st.label}</div></div>
           ))}
@@ -109,7 +125,7 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
   )
 
   const Media = hasMedia ? (
-    <div className="relative z-10 flex-1 flex items-center justify-center">
+    <div className={`relative z-10 flex-1 flex items-center justify-center${anim('media').className}`} style={anim('media').style}>
       {/\.(mp4|webm)$/i.test(c.mediaUrl!)
         ? <video src={c.mediaUrl} autoPlay={!reduce} muted loop playsInline aria-label={c.mediaAlt} className="w-full max-w-lg rounded-2xl shadow-2xl" style={{ opacity: s.imageOpacity ?? 1 }} />
         // eslint-disable-next-line @next/next/no-img-element

@@ -5,6 +5,8 @@ import { Card, Btn, Input, Select, Badge, useToast } from '@/components/admin/ui
 import { useAdminLocale } from '@/lib/admin/locale'
 import { HERO_TEMPLATES, getTemplate } from '@/lib/hero/templates'
 import { validateHero } from '@/lib/hero/rules'
+import { ANIMATION_PRESETS, EASING_CSS, type AnimationEasing } from '@/lib/hero/animations'
+import type { HeroAnimations, HeroElementAnimation } from '@/lib/hero/types'
 import type { HeroConfig, HeroContentL, HeroCta, HeroStat, HeroStatus, Locale } from '@/lib/hero/types'
 
 type Toast = ReturnType<typeof useToast>['toast']
@@ -50,6 +52,9 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
   }
   function patchStyle(fn: (s: HeroConfig['style']) => HeroConfig['style']) {
     patchConfig(c => ({ ...c, style: fn(c.style) }))
+  }
+  function patchAnim(key: keyof HeroAnimations, fn: (a: HeroElementAnimation) => HeroElementAnimation) {
+    patchConfig(c => ({ ...c, animations: { ...c.animations, [key]: fn(c.animations?.[key] ?? { preset: 'none' }) } }))
   }
 
   async function save() {
@@ -201,6 +206,15 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
               {lc(rtl, 'Reduce motion (accessibility)', 'کاهش حرکت')}
             </label>
           </Card>
+
+          {/* Animation engine — assign a preset per element */}
+          <Card className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Animations', 'انیمیشن‌ها')}</h3>
+            <p className="text-xs text-text-tertiary">{lc(rtl, `Assign one of ${ANIMATION_PRESETS.length - 1} presets per element. Heavy/looping animations auto-disable on low-end devices and reduced-motion.`, 'برای هر عنصر یک پریست انتخاب کنید. انیمیشن‌های سنگین در دستگاه‌های ضعیف و حالت کاهش حرکت خودکار غیرفعال می‌شوند.')}</p>
+            {(['badge', 'headline', 'subheadline', 'ctas', 'stats', 'media'] as (keyof HeroAnimations)[]).map(key => (
+              <AnimRow key={key} rtl={rtl} label={key} value={config.animations?.[key]} onChange={fn => patchAnim(key, fn)} />
+            ))}
+          </Card>
         </div>
 
         {/* ── Preview + validation + versions column ── */}
@@ -274,6 +288,36 @@ function CtaRow({ cta, rtl, onChange, onRemove }: { cta: HeroCta; rtl: boolean; 
         <Select label={lc(rtl, 'Style', 'سبک')} value={cta.variant ?? 'primary'} onChange={v => onChange({ ...cta, variant: v as HeroCta['variant'] })} options={[{ value: 'primary', label: 'Primary' }, { value: 'secondary', label: 'Secondary' }, { value: 'ghost', label: 'Ghost' }]} />
         <Btn size="sm" variant="ghost" onClick={onRemove}>✕</Btn>
       </div>
+    </div>
+  )
+}
+
+function AnimRow({ rtl, label, value, onChange }: { rtl: boolean; label: string; value?: HeroElementAnimation; onChange: (fn: (a: HeroElementAnimation) => HeroElementAnimation) => void }) {
+  const preset = value?.preset ?? 'none'
+  const opts = ANIMATION_PRESETS.map(a => ({ value: a.id, label: rtl ? a.nameFa : a.nameEn }))
+  const easings = Object.keys(EASING_CSS) as AnimationEasing[]
+  return (
+    <div className="border border-subtle rounded-lg p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-text-secondary capitalize">{label}</span>
+        {preset !== 'none' && (
+          <span key={`${label}-${preset}-${value?.durationMs}`} className={`text-3xs text-text-tertiary px-2 py-0.5 rounded bg-white/5 hx-anim hx-${preset}`}
+            style={{ ['--hx-dur' as string]: `${value?.durationMs ?? 700}ms`, ['--hx-ease' as string]: EASING_CSS[value?.easing as AnimationEasing ?? 'ease-out'], ['--hx-repeat' as string]: '1' }}>
+            {lc(rtl, 'preview', 'پیش‌نمایش')}
+          </span>
+        )}
+      </div>
+      <Select label="" value={preset} onChange={v => onChange(a => ({ ...a, preset: v }))} options={opts} />
+      {preset !== 'none' && (
+        <div className="grid grid-cols-3 gap-2">
+          <NumField label={lc(rtl, 'Dur (ms)', 'مدت')} value={value?.durationMs} step={50} onChange={v => onChange(a => ({ ...a, durationMs: v }))} />
+          <NumField label={lc(rtl, 'Delay', 'تأخیر')} value={value?.delayMs} step={50} onChange={v => onChange(a => ({ ...a, delayMs: v }))} />
+          <div>
+            <label className="block text-xs text-text-tertiary mb-1">{lc(rtl, 'Easing', 'شتاب')}</label>
+            <Select label="" value={value?.easing ?? ''} onChange={v => onChange(a => ({ ...a, easing: (v || undefined) as AnimationEasing }))} options={[{ value: '', label: '—' }, ...easings.map(e => ({ value: e, label: e }))]} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
