@@ -325,6 +325,25 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   setRate RBAC+audit). Finance Center **Currency** tab (set rate + converter +
   rates table). Verified vs real PostgreSQL (seed + rate + convert). Report:
   `docs/governance/phase26-erp-currency-tax.md`.
+- **Purchasing Center** (`/admin/purchasing`, `PurchasingCenter`) — Phase-26.1
+  procure-to-pay (the ERP buy side). Pure engine `src/lib/erp/purchasing.ts`
+  (`documentTotals` reusing sales line-math; multi-level approval routing
+  `requiredApprovalLevels`/`isFullyApproved` by amount — ≤50M Rial→1, ≤500M→2,
+  above→3; `validateBudget`; `vendorScore` weighted 0–100→stars+A/B/C/D grade;
+  `vendorPayable`/`purchaseInvoiceStatus`/`purchaseKpis`; 7 unit tests). Tables
+  `purchase_vendors`/`purchase_documents` (unified header: request/rfq/quotation/
+  order/receipt/invoice/return/credit_note)/`purchase_document_lines`/
+  `purchase_approvals`/`purchase_payments`/`vendor_evaluations`/`vendor_contracts`.
+  Data layer `purchasingData.ts` (vendor CRUD+eval, doc save w/ server totals +
+  `nextNumber`, submit→approval-levels, `decideApproval` advances to approved only
+  when every level signs, `recordPayment`, `convertDocument` PR→PO→GRN→invoice,
+  `overview`). API `/api/admin/erp/purchasing` (`?view=overview|vendors`, type
+  list, detail; POST vendor.create/update/evaluate + doc.save/submit/approve/
+  convert/payment — L2+ approvals need administrator; RBAC/zod/audit). UI tabs:
+  Dashboard · Vendors (+ 5-criteria evaluation) · Documents (line editor + submit/
+  approve/convert). Verified vs real PostgreSQL (327M PO → 2-level approval flow).
+  Deferred: vendor portal, GL auto-posting, analytics charts. Report:
+  `docs/governance/phase26.1-purchasing-platform.md`.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

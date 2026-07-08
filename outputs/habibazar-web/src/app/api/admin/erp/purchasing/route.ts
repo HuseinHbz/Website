@@ -1,0 +1,71 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { logAction } from '@/lib/admin/audit'
+import {
+  listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition,
+  listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
+  recordPayment, convertDocument, overview,
+} from '@/lib/erp/purchasingData'
+import type { PurchaseDocType } from '@/lib/erp/purchasing'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+const DOC_TYPES = ['request', 'rfq', 'quotation', 'order', 'receipt', 'invoice', 'return', 'credit_note'] as const
+
+export async function GET(req: NextRequest) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth.error
+  try {
+    const sp = req.nextUrl.searchParams
+    const view = sp.get('view')
+    if (view === 'overview') return NextResponse.json(await overview())
+    if (view === 'vendors') return NextResponse.json({ vendors: await listVendors() })
+    if (sp.get('vendorPosition')) return NextResponse.json(await vendorPosition(Number(sp.get('vendorPosition'))))
+    if (sp.get('id')) {
+      const doc = await getDocument(Number(sp.get('id')))
+      return doc ? NextResponse.json(doc) : NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+    const type = sp.get('type') as PurchaseDocType | null
+    return NextResponse.json({ documents: await listDocuments(type ?? undefined) })
+  } catch (e) { return apiError(e, 'Failed to load purchasing data') }
+}
+
+const lineSchema = z.object({ description: z.string().min(1).max(300), qty: z.number(), unitPrice: z.number(), discountPct: z.number().default(0), taxPct: z.number().default(0) })
+const vendorCreate = z.object({ action: z.literal('vendor.create'), name: z.string().min(1).max(160), kind: z.enum(['individual', 'company', 'international']).optional(), email: z.string().max(160).optional(), phone: z.string().max(40).optional(), taxId: z.string().max(40).optional(), economicCode: z.string().max(40).optional(), address: z.string().max(400).optional(), iban: z.string().max(40).optional(), currency: z.string().max(4).optional(), paymentTerms: z.number().int().optional() })
+const vendorUpdate = z.object({ action: z.literal('vendor.update'), id: z.number().int(), name: z.string().max(160).optional(), email: z.string().max(160).optional(), phone: z.string().max(40).optional(), taxId: z.string().max(40).optional(), address: z.string().max(400).optional(), iban: z.string().max(40).optional(), currency: z.string().max(4).optional(), paymentTerms: z.number().int().optional() })
+const score = z.number().min(0).max(5)
+const evaluate = z.object({ action: z.literal('vendor.evaluate'), vendorId: z.number().int(), quality: score, delivery: score, price: score, service: score, compliance: score, note: z.string().max(500).optional() })
+const docSave = z.object({ action: z.literal('doc.save'), id: z.number().int().optional(), docType: z.enum(DOC_TYPES), vendorId: z.number().int().optional(), date: z.string().max(20), currency: z.string().max(4).optional(), department: z.string().max(80).optional(), budget: z.number().optional(), sourceId: z.number().int().optional(), note: z.string().max(1000).optional(), lines: z.array(lineSchema).max(200).default([]) })
+const docSubmit = z.object({ action: z.literal('doc.submit'), id: z.number().int() })
+const docApprove = z.object({ action: z.literal('doc.approve'), id: z.number().int(), level: z.number().int().min(1).max(3), decision: z.enum(['approved', 'rejected']), comment: z.string().max(500).optional() })
+const docConvert = z.object({ action: z.literal('doc.convert'), sourceId: z.number().int(), toType: z.enum(DOC_TYPES) })
+const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional() })
+const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment])
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAdmin('edit')
+  if ('error' in auth) return auth.error
+  const parsed = await readJson(req, body)
+  if ('error' in parsed) return parsed.error
+  const d = parsed.data
+  const uid = auth.user.id
+  try {
+    switch (d.action) {
+      case 'vendor.create': { const id = await createVendor(d, uid); await logAction(auth.user, 'erp.vendor.create', 'purchase_vendors', String(id), { name: d.name }); return NextResponse.json({ id }) }
+      case 'vendor.update': { await updateVendor(d.id, d); await logAction(auth.user, 'erp.vendor.update', 'purchase_vendors', String(d.id), {}); return NextResponse.json({ ok: true }) }
+      case 'vendor.evaluate': { const s = await evaluateVendor(d.vendorId, d, d.note, uid); await logAction(auth.user, 'erp.vendor.evaluate', 'purchase_vendors', String(d.vendorId), { score: s.score, grade: s.grade }); return NextResponse.json(s) }
+      case 'doc.save': { const id = await saveDocument(d, uid); await logAction(auth.user, 'erp.purchase.save', 'purchase_documents', String(id), { type: d.docType }); return NextResponse.json({ id }) }
+      case 'doc.submit': { await submitDocument(d.id); await logAction(auth.user, 'erp.purchase.submit', 'purchase_documents', String(d.id), {}); return NextResponse.json({ ok: true }) }
+      case 'doc.approve': {
+        // Level ≥2 approvals require an elevated role (multi-level approval).
+        if (d.level >= 2 && !['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'This approval level requires an administrator' }, { status: 403 })
+        const status = await decideApproval(d.id, d.level, d.decision, uid, d.comment)
+        await logAction(auth.user, 'erp.purchase.approve', 'purchase_documents', String(d.id), { level: d.level, decision: d.decision })
+        return NextResponse.json({ ok: true, status })
+      }
+      case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }
+      case 'doc.payment': { await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid); await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount }); return NextResponse.json({ ok: true }) }
+    }
+  } catch (e) { return apiError(e, 'Failed to update purchasing') }
+}

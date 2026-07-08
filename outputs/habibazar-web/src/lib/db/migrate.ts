@@ -736,6 +736,93 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- Enterprise Purchasing Platform (Phase 26.1) — procure-to-pay.
+    CREATE TABLE IF NOT EXISTS purchase_vendors (
+      id SERIAL PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'company' CHECK(kind IN ('individual','company','international')),
+      email TEXT, phone TEXT, tax_id TEXT, economic_code TEXT,
+      address TEXT, iban TEXT, currency TEXT NOT NULL DEFAULT 'IRR',
+      payment_terms INTEGER NOT NULL DEFAULT 0,
+      score DOUBLE PRECISION NOT NULL DEFAULT 0,
+      grade TEXT NOT NULL DEFAULT 'C',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW}), updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS purchase_documents (
+      id SERIAL PRIMARY KEY,
+      doc_no TEXT UNIQUE,
+      doc_type TEXT NOT NULL CHECK(doc_type IN ('request','rfq','quotation','order','receipt','invoice','return','credit_note')),
+      vendor_id INTEGER REFERENCES purchase_vendors(id),
+      status TEXT NOT NULL DEFAULT 'draft',
+      date TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      department TEXT, project_id INTEGER,
+      budget NUMERIC NOT NULL DEFAULT 0,
+      source_id INTEGER,                  -- linked upstream doc (PR→PO→GRN→invoice)
+      subtotal NUMERIC NOT NULL DEFAULT 0,
+      discount_total NUMERIC NOT NULL DEFAULT 0,
+      tax_total NUMERIC NOT NULL DEFAULT 0,
+      total NUMERIC NOT NULL DEFAULT 0,
+      paid_total NUMERIC NOT NULL DEFAULT 0,
+      approval_levels INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW}), updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS purchase_document_lines (
+      id SERIAL PRIMARY KEY,
+      document_id INTEGER NOT NULL REFERENCES purchase_documents(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      qty NUMERIC NOT NULL DEFAULT 1,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      discount_pct NUMERIC NOT NULL DEFAULT 0,
+      tax_pct NUMERIC NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS purchase_approvals (
+      id BIGSERIAL PRIMARY KEY,
+      document_id INTEGER NOT NULL REFERENCES purchase_documents(id) ON DELETE CASCADE,
+      level INTEGER NOT NULL,
+      decision TEXT NOT NULL CHECK(decision IN ('approved','rejected')),
+      approver_id TEXT, comment TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS purchase_payments (
+      id SERIAL PRIMARY KEY,
+      vendor_id INTEGER NOT NULL REFERENCES purchase_vendors(id),
+      document_id INTEGER REFERENCES purchase_documents(id),
+      date TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      method TEXT NOT NULL DEFAULT 'bank' CHECK(method IN ('cash','bank','card','cheque','other')),
+      reference TEXT, note TEXT,
+      created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS vendor_evaluations (
+      id BIGSERIAL PRIMARY KEY,
+      vendor_id INTEGER NOT NULL REFERENCES purchase_vendors(id) ON DELETE CASCADE,
+      quality NUMERIC NOT NULL DEFAULT 0, delivery NUMERIC NOT NULL DEFAULT 0,
+      price NUMERIC NOT NULL DEFAULT 0, service NUMERIC NOT NULL DEFAULT 0, compliance NUMERIC NOT NULL DEFAULT 0,
+      score DOUBLE PRECISION NOT NULL DEFAULT 0, grade TEXT NOT NULL DEFAULT 'C',
+      note TEXT, evaluator_id TEXT, created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS vendor_contracts (
+      id SERIAL PRIMARY KEY,
+      vendor_id INTEGER NOT NULL REFERENCES purchase_vendors(id) ON DELETE CASCADE,
+      title TEXT NOT NULL, ref_no TEXT,
+      start_date TEXT, end_date TEXT,
+      value NUMERIC NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'IRR',
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','expired','terminated')),
+      note TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_pur_docs_type ON purchase_documents(doc_type, status);
+    CREATE INDEX IF NOT EXISTS idx_pur_docs_vendor ON purchase_documents(vendor_id);
+    CREATE INDEX IF NOT EXISTS idx_pur_lines_doc ON purchase_document_lines(document_id);
+    CREATE INDEX IF NOT EXISTS idx_pur_approvals_doc ON purchase_approvals(document_id);
+    CREATE INDEX IF NOT EXISTS idx_pur_payments_vendor ON purchase_payments(vendor_id);
+    CREATE INDEX IF NOT EXISTS idx_vendor_evals_vendor ON vendor_evaluations(vendor_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_vendor_contracts_vendor ON vendor_contracts(vendor_id);
+
     -- Enterprise Financial System (Phase 21 ERP, Module 1) — double-entry GL.
     CREATE TABLE IF NOT EXISTS gl_fiscal_periods (
       id SERIAL PRIMARY KEY,

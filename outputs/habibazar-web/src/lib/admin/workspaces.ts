@@ -109,6 +109,7 @@ export const WORKSPACES: Workspace[] = [
       { en: 'Operations', fa: 'عملیات', items: [
         { labelEn: 'Financial Center', labelFa: 'مرکز مالی', href: '/admin/finance', icon: '💰' },
         { labelEn: 'Sales Center', labelFa: 'مرکز فروش', href: '/admin/sales', icon: '🛒' },
+        { labelEn: 'Purchasing Center', labelFa: 'مرکز خرید', href: '/admin/purchasing', icon: '🧾' },
         { labelEn: 'Inventory Center', labelFa: 'مرکز انبار', href: '/admin/inventory', icon: '📦' },
         { labelEn: 'Asset Center', labelFa: 'مرکز دارایی‌ها', href: '/admin/assets', icon: '🖧' },
         { labelEn: 'Project Center', labelFa: 'مرکز پروژه', href: '/admin/project-management', icon: '📋' },
