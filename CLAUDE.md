@@ -526,6 +526,30 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   Dashboard-Platform widget, and the live SSE log console are intentionally kept.
   Verified live vs real PostgreSQL (prefs + shared views round-trip). Report:
   `docs/governance/phase22-datatable-platform.md`.
+- **Enterprise Hero Platform** (Phase 23, `/admin/hero`, `HeroCenter`) — the
+  public landing experience is now a versioned, template-driven, per-language
+  configurable Hero platform. Pure engines in `src/lib/hero/`: `types.ts`,
+  `templates.ts` (30 templates — 20 legacy `Hero.tsx` variants + 10 premium:
+  executive/tech-enterprise/ai-platform/cyber-security/cloud-infra/consulting/
+  portfolio-minimal/video-fullscreen/split-screen/product-showcase — each with
+  blocks/constraints/backgrounds), `rules.ts` (`validateHero` title/subtitle/font/
+  CTA bounds + WCAG contrast + overflow/a11y heuristics; `canPublish` gate),
+  `experiment.ts` (deterministic `pickVariant`/`experimentResult`), `personalize.ts`
+  (`resolveHero` by device/locale/country/returning/loggedIn/campaign/referral/
+  schedule), `analytics.ts` (`summarizeHeroEvents`); 16 unit tests. Tables
+  `heroes`/`hero_versions`/`hero_experiments`/`hero_rules`/`hero_events`. APIs
+  `/api/admin/heroes` (lifecycle draft→review→approved→published→archived +
+  duplicate/rollback/bulk, publish gated by `canPublish`, one published per target
+  path), `/heroes/experiments` (A/B live results + promote), `/heroes/analytics`,
+  public `/api/hero/track` (rate-limited beacon). Admin: `HeroCenter` (Dashboard·
+  Heroes·Templates·A/B·Analytics, all on the Enterprise DataTable) + `HeroBuilder`
+  (per-language content, style system, real-time validation panel blocking
+  publish, multi-breakpoint/theme/RTL live preview, version rollback). Public:
+  `resolveActiveHero` (A/B → personalization → published default) →
+  `HeroExperience` (config-driven category layout + backgrounds, reduced-motion,
+  emits view/click/conversion/scroll/time). Falls back to legacy `Hero.tsx` when no
+  hero is published (zero regression). Verified vs real PostgreSQL. Report:
+  `docs/governance/phase23-hero-platform.md`.
 
 ## Auth
 - Login `POST /api/admin/auth/login` → bcrypt check (+ optional TOTP) → HS256 JWT
