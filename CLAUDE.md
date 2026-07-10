@@ -17,20 +17,28 @@
    automatically after it resets and keep going until the requested work is
    fully finished and pushed — don't leave the project half-done.
    (هر وقت به لیمیت خوردی، بعد از اتمامش پروژه رو ادامه بده و تمومش کن.)
-4. **Execute the WHOLE prompt, in order, completely.** When a prompt (or master
-   prompt) is given, implement every item it lists, in the order given — do not
-   split it into pieces, do not deliver a partial subset and defer the rest, do
-   not silently "stage" items. Finish the entire prompt in one pass, then verify
-   and push. This overrides any instinct to scope down. The only hard limit is the
-   no-fake rule (see below): if an item genuinely cannot be built for real (e.g. it
-   needs a DB column/UI/data that does not exist yet, or a heavy dependency the
-   audits forbid), then BUILD what it truly needs — add the missing column, the
-   missing table, the missing UI, the light-weight dependency-free implementation —
-   rather than skipping it. If after that it is still genuinely impossible, STOP
-   and say so explicitly and ask; never quietly leave a listed item undone.
-   (هر پرامپ به‌صورت کامل و به ترتیب اجرا شود؛ تیکه‌تیکه یا ناقص اجرا نشود — کل
-   پرامپ یک‌جا تمام شود. اگر موردی واقعاً بدون جعل قابل ساخت نیست، همان زیرساخت
-   لازمش را بساز؛ اگر واقعاً غیرممکن بود، صریح بگو و بپرس، نه اینکه بی‌صدا رهایش کنی.)
+4. **⭐ TOP PRIORITY — Finish every phase COMPLETELY, item by item.** This rule
+   always outranks every other instinct (scoping down, batching, "later passes").
+   When a phase / prompt / master prompt is given, execute it **بند به بند** —
+   item by item, in the order listed — and do not stop until EVERY item is fully
+   built, verified and pushed. Do not split a phase into pieces, do not deliver a
+   partial subset, do not mark items "deferred"/"remaining"/"next pass", do not
+   silently stage work for later. A phase is DONE only when 100% of its listed
+   items are done. If one pass/session is not enough, keep going in the next pass
+   automatically until the phase is closed — but never present a partial result
+   as the finished phase. The only hard limit is the no-fake rule (see below): if
+   an item genuinely cannot be built for real (e.g. it needs a DB column/UI/data
+   that does not exist yet, or a heavy dependency the audits forbid), then BUILD
+   what it truly needs — the missing column, table, UI, or a light-weight
+   dependency-free implementation — rather than skipping it. If after that it is
+   still genuinely impossible, STOP and say so explicitly and ask; never quietly
+   leave a listed item undone.
+   (⭐ قانون همیشه در اولویت: هر فازی که داده می‌شود باید کامل کاملِ نهایی شود —
+   تیکه‌تیکه نشود؛ کل فاز بند به بند و به ترتیب اجرا شود و تا وقتی همهٔ بندها
+   واقعاً ساخته، verify و push نشده‌اند فاز تمام‌شده اعلام نشود. هیچ بندی
+   deferred یا «باقی‌مانده» نماند؛ اگر یک پاس کافی نبود، خودکار ادامه بده تا فاز
+   بسته شود. اگر موردی واقعاً بدون جعل قابل ساخت نیست، همان زیرساخت لازمش را
+   بساز؛ اگر باز هم غیرممکن بود، صریح بگو و بپرس، نه اینکه بی‌صدا رهایش کنی.)
 5. **Never switch branches unless I explicitly say so.** Always stay on the
    current working branch (`feature/v2-enterprise-upgrade`). Do not `git checkout`,
    `switch`, create, rename, or push to any other branch without an explicit
