@@ -17,17 +17,27 @@ export interface NotificationData {
   body: string
 }
 
-export async function sendEmailNotification(data: NotificationData) {
+export interface MailInput {
+  to: string
+  subject: string
+  text?: string
+  html?: string
+  attachments?: { filename: string; content: string; contentType?: string }[]
+}
+
+/**
+ * Low-level SMTP send using the CMS-configured server (site_settings smtp_*).
+ * Used by explicit admin actions (e.g. emailing a generated document), so it is
+ * NOT gated by the notify_* toggles — only by SMTP being configured. Returns a
+ * result instead of throwing so callers can surface "not configured" cleanly.
+ */
+export async function sendMail(mail: MailInput): Promise<{ ok: boolean; error?: string }> {
   const smtpHost = await getSetting('smtp_host')
   const smtpPort = await getSetting('smtp_port')
   const smtpUser = await getSetting('smtp_user')
   const smtpPass = await getSetting('smtp_pass')
   const smtpFrom = await getSetting('smtp_from')
-  const notifyTo = await getSetting('notify_email_to')
-  const notifyEnabled = await getSetting(`notify_email_${data.type}s`)
-
-  if (!smtpHost || !notifyTo || notifyEnabled !== '1') return
-
+  if (!smtpHost) return { ok: false, error: 'SMTP is not configured (Settings → smtp_host)' }
   try {
     const nm = (await import('nodemailer')) as unknown as { createTransport: (cfg: unknown) => { sendMail: (opts: unknown) => Promise<void> } }
     const transporter = nm.createTransport({
@@ -36,16 +46,26 @@ export async function sendEmailNotification(data: NotificationData) {
       secure: smtpPort === '465',
       auth: smtpUser ? { user: smtpUser, pass: smtpPass } : undefined,
     })
-
     await breakers.smtp.execute(() => transporter.sendMail({
       from: smtpFrom || smtpUser,
-      to: notifyTo,
-      subject: data.subject,
-      text: data.body,
+      to: mail.to,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
+      attachments: mail.attachments,
     }))
+    return { ok: true }
   } catch (err) {
-    console.error('Email notification failed:', err)
+    console.error('SMTP send failed:', err)
+    return { ok: false, error: 'SMTP send failed' }
   }
+}
+
+export async function sendEmailNotification(data: NotificationData) {
+  const notifyTo = await getSetting('notify_email_to')
+  const notifyEnabled = await getSetting(`notify_email_${data.type}s`)
+  if (!notifyTo || notifyEnabled !== '1') return
+  await sendMail({ to: notifyTo, subject: data.subject, text: data.body })
 }
 
 export async function sendSmsNotification(data: NotificationData) {

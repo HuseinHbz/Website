@@ -34,6 +34,7 @@ export function DocumentCenter() {
   const [saving, setSaving] = useState(false)
   const [templates, setTemplates] = useState<DocTemplate[]>([])
   const [templateKey, setTemplateKey] = useState('')
+  const [emailFor, setEmailFor] = useState<GenDoc | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/erp/documents/templates').then(r => r.json()).then(d => setTemplates((d.templates ?? []).filter((x: DocTemplate) => x.active))).catch(() => {})
@@ -90,6 +91,7 @@ export function DocumentCenter() {
   ]
   const rowActions: RowAction<GenDoc>[] = [
     { id: 'print', labelEn: 'Print', labelFa: t('doc_print'), icon: '🖨', onClick: d => window.open(`/api/admin/erp/documents/render?id=${d.id}`, '_blank') },
+    { id: 'email', labelEn: 'Email', labelFa: rtl ? 'ارسال ایمیل' : 'Email', icon: '✉️', hidden: d => d.status !== 'issued', onClick: d => setEmailFor(d) },
     { id: 'void', labelEn: 'Void', labelFa: t('doc_void'), icon: '✕', danger: true, hidden: d => d.status !== 'issued', onClick: d => void_(d.id) },
   ]
 
@@ -172,7 +174,43 @@ export function DocumentCenter() {
           </div>
         </div>
       </Modal>
+      {emailFor && <EmailDocModal rtl={rtl} doc={emailFor} onClose={() => setEmailFor(null)} toast={toast} />}
     </>
+  )
+}
+
+/** Email a generated document (HTML attachment via the CMS SMTP settings). */
+function EmailDocModal({ rtl, doc, onClose, toast }: { rtl: boolean; doc: GenDoc; onClose: () => void; toast: Toast2 }) {
+  const [to, setTo] = useState('')
+  const [subject, setSubject] = useState(`${doc.title} ${doc.number}`)
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  async function send() {
+    if (!to.trim()) { toast(L2(rtl, 'Recipient email is required', 'ایمیل گیرنده الزامی است'), 'error'); return }
+    setSending(true)
+    try {
+      const r = await fetch('/api/admin/erp/documents/email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: doc.id, to: to.trim(), subject: subject.trim() || undefined, message: message.trim() || undefined }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) { toast(L2(rtl, 'Document emailed', 'سند ایمیل شد'), 'success'); onClose() }
+      else toast(d.error || L2(rtl, 'Send failed', 'ارسال ناموفق'), 'error')
+    } finally { setSending(false) }
+  }
+  return (
+    <Modal open onClose={onClose} title={L2(rtl, `Email ${doc.number}`, `ارسال ${doc.number}`)}>
+      <div className="space-y-3">
+        <Input label={L2(rtl, 'To (email)', 'گیرنده (ایمیل)')} value={to} onChange={setTo} placeholder="client@example.com" />
+        <Input label={L2(rtl, 'Subject', 'موضوع')} value={subject} onChange={setSubject} />
+        <Input label={L2(rtl, 'Message (optional)', 'پیام (اختیاری)')} value={message} onChange={setMessage} multiline rows={3} />
+        <p className="text-3xs text-text-tertiary">{L2(rtl, 'The print-ready document is attached as HTML; the recipient opens it and saves as PDF. Requires SMTP settings.', 'سند چاپی به‌صورت HTML پیوست می‌شود؛ گیرنده آن را باز و به PDF ذخیره می‌کند. نیازمند تنظیمات SMTP است.')}</p>
+        <div className="flex justify-end gap-2">
+          <Btn variant="ghost" onClick={onClose}>{L2(rtl, 'Cancel', 'انصراف')}</Btn>
+          <Btn onClick={send} disabled={sending}>{sending ? L2(rtl, 'Sending…', 'در حال ارسال…') : L2(rtl, 'Send', 'ارسال')}</Btn>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
@@ -186,7 +224,7 @@ type Toast2 = ReturnType<typeof useToast>['toast']
 interface TplConfig {
   variant?: string; accentColor?: string; watermarkText?: string; headerNote?: string
   terms?: string; paymentInstructions?: string; footerNote?: string
-  showLogo?: boolean; showSeal?: boolean; showSignature?: boolean; showQr?: boolean
+  showLogo?: boolean; showSeal?: boolean; showSignature?: boolean; showQr?: boolean; showBarcode?: boolean
   customFields?: { label: string; value: string }[]
 }
 const L2 = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
@@ -232,8 +270,9 @@ function InvoiceDesigner({ rtl, toast, templates, onTemplatesChange }: { rtl: bo
     else toast(d.error || L2(rtl, 'Failed', 'ناموفق'), 'error')
   }
   const set = (patch: Partial<TplConfig>) => setCfg(c => ({ ...c, ...patch }))
-  const toggles: [keyof TplConfig, string, string][] = [
-    ['showLogo', 'Logo', 'لوگو'], ['showSeal', 'Seal', 'مهر'], ['showSignature', 'Signature', 'امضا'], ['showQr', 'QR verify', 'کیو‌آر'],
+  const toggles: [keyof TplConfig, string, string, boolean][] = [
+    ['showLogo', 'Logo', 'لوگو', true], ['showSeal', 'Seal', 'مهر', true], ['showSignature', 'Signature', 'امضا', true], ['showQr', 'QR verify', 'کیو‌آر', true],
+    ['showBarcode', 'Barcode (doc no)', 'بارکد شماره سند', false],
   ]
 
   return (
@@ -258,9 +297,9 @@ function InvoiceDesigner({ rtl, toast, templates, onTemplatesChange }: { rtl: bo
               <Input label={L2(rtl, 'Watermark', 'واترمارک')} value={cfg.watermarkText ?? ''} onChange={v => set({ watermarkText: v })} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {toggles.map(([k, en, fa]) => (
+              {toggles.map(([k, en, fa, defaultOn]) => (
                 <label key={k} className="flex items-center gap-2 text-sm text-text-secondary">
-                  <input type="checkbox" checked={cfg[k] !== false} onChange={e => set({ [k]: e.target.checked } as Partial<TplConfig>)} />
+                  <input type="checkbox" checked={defaultOn ? cfg[k] !== false : cfg[k] === true} onChange={e => set({ [k]: e.target.checked } as Partial<TplConfig>)} />
                   {L2(rtl, en, fa)}
                 </label>
               ))}

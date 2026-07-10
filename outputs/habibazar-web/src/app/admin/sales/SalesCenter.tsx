@@ -10,7 +10,7 @@ import type { Column } from '@/lib/admin/dataTable'
 type Tab = 'dashboard' | 'customers' | 'quote' | 'order' | 'invoice' | 'payments'
 type DocType = 'quote' | 'order' | 'invoice' | 'credit_note'
 
-interface Customer { id?: number; code: string; name: string; email: string | null; phone: string | null; company: string | null; taxId: string | null; creditLimit: number; address?: string | null; notes?: string | null; active: number | boolean; invoiced?: number; paid?: number; outstanding?: number; available?: number; overLimit?: boolean; utilizationPct?: number }
+interface Customer { id?: number; code: string; name: string; email: string | null; phone: string | null; company: string | null; taxId: string | null; kind?: string; nationalId?: string | null; regNo?: string | null; economicCode?: string | null; creditLimit: number; address?: string | null; notes?: string | null; active: number | boolean; invoiced?: number; paid?: number; outstanding?: number; available?: number; overLimit?: boolean; utilizationPct?: number }
 interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number }
 interface Line { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number }
 interface Payment { id: number; date: string; amount: number; method: string; reference: string | null; note: string | null; customer: string; docNo: string | null }
@@ -97,10 +97,12 @@ function Kpi({ label, value, icon, tone }: { label: string; value: string; icon:
 // ── Customers ────────────────────────────────────────────────────────────────
 function Customers({ t, toast }: { t: T; toast: Toast }) {
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc2 = (en: string, fa: string) => (rtl ? fa : en)
   const [rows, setRows] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
-  const [editing, setEditing] = useState<Customer>({ code: '', name: '', email: '', phone: '', company: '', taxId: '', creditLimit: 0, address: '', notes: '', active: true })
+  const [editing, setEditing] = useState<Customer>({ code: '', name: '', email: '', phone: '', company: '', taxId: '', kind: 'company', nationalId: '', regNo: '', economicCode: '', creditLimit: 0, address: '', notes: '', active: true })
   const [saving, setSaving] = useState(false)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/sales/customers'); if (r.ok) { const d = await r.json(); setRows(d.customers ?? []) } } catch { toast(t('sales_loadFail'), 'error') } finally { setLoading(false) } }, [toast, t])
   useEffect(() => { load() }, [load])
@@ -114,6 +116,7 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
   const columns: Column<Customer>[] = [
     { key: 'code', labelEn: 'Code', labelFa: t('sales_cCode'), render: c => <span className="font-mono text-xs text-text-secondary">{c.code}</span> },
     { key: 'name', labelEn: 'Name', labelFa: t('sales_cName'), render: c => <div className="text-text-primary">{c.name}<div className="text-xs text-text-tertiary">{c.company || c.email || ''}</div></div> },
+    { key: 'kind', labelEn: 'Kind', labelFa: lc2('Kind', 'نوع شخص'), type: 'enum', render: c => <Badge color={c.kind === 'individual' ? 'blue' : 'indigo'}>{c.kind === 'individual' ? lc2('Individual', 'حقیقی') : lc2('Company', 'حقوقی')}</Badge> },
     { key: 'creditLimit', labelEn: 'Limit', labelFa: t('sales_cLimit'), type: 'number', numeric: true, render: c => <span className="text-text-secondary text-xs">{money(c.creditLimit)}</span> },
     { key: 'outstanding', labelEn: 'Outstanding', labelFa: t('sales_cOutstanding'), type: 'number', numeric: true, value: c => c.outstanding ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.outstanding)}{c.overLimit && <Badge color="red">{t('sales_overLimit')}</Badge>}</span> },
     { key: 'available', labelEn: 'Available', labelFa: t('sales_cAvailable'), type: 'number', numeric: true, value: c => c.available ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.available)}</span> },
@@ -121,7 +124,7 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
   const rowActions: RowAction<Customer>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('sales_edit'), icon: '✎', onClick: c => { setEditing({ ...c, active: !!c.active }); setModal(true) } }]
   return (
     <>
-      <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing({ code: '', name: '', email: '', phone: '', company: '', taxId: '', creditLimit: 0, address: '', notes: '', active: true }); setModal(true) }}>{t('sales_newCustomer')}</Btn></div>
+      <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing({ code: '', name: '', email: '', phone: '', company: '', taxId: '', kind: 'company', nationalId: '', regNo: '', economicCode: '', creditLimit: 0, address: '', notes: '', active: true }); setModal(true) }}>{t('sales_newCustomer')}</Btn></div>
       <Card className="p-4">
         <DataTable tableId="sales-customers" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={c => String(c.id)} rowActions={rowActions} exportName="customers" emptyLabel={t('sales_noCustomers')} />
       </Card>
@@ -129,6 +132,16 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4"><Input label={t('sales_fCode')} value={editing.code} onChange={v => set('code', v)} /><Input label={t('sales_fName')} value={editing.name} onChange={v => set('name', v)} /></div>
           <div className="grid grid-cols-2 gap-4"><Input label={t('sales_fEmail')} value={editing.email || ''} onChange={v => set('email', v)} /><Input label={t('sales_fPhone')} value={editing.phone || ''} onChange={v => set('phone', v)} /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select label={lc2('Party kind', 'نوع شخص')} value={editing.kind || 'company'} onChange={v => set('kind', v)} options={[{ value: 'company', label: lc2('Company (حقوقی)', 'حقوقی') }, { value: 'individual', label: lc2('Individual (حقیقی)', 'حقیقی') }]} />
+            <Input label={editing.kind === 'individual' ? lc2('National ID (کد ملی)', 'کد ملی') : lc2('National ID (شناسه ملی)', 'شناسه ملی')} value={editing.nationalId || ''} onChange={v => set('nationalId', v)} />
+          </div>
+          {editing.kind !== 'individual' && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input label={lc2('Registration no', 'شماره ثبت')} value={editing.regNo || ''} onChange={v => set('regNo', v)} />
+              <Input label={lc2('Economic code', 'کد اقتصادی')} value={editing.economicCode || ''} onChange={v => set('economicCode', v)} />
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-4"><Input label={t('sales_fCompany')} value={editing.company || ''} onChange={v => set('company', v)} /><Input label={t('sales_fTaxId')} value={editing.taxId || ''} onChange={v => set('taxId', v)} /><Input label={t('sales_fLimit')} type="number" value={String(editing.creditLimit)} onChange={v => set('creditLimit', Number(v) || 0)} /></div>
           <Input label={t('sales_fAddress')} value={editing.address || ''} onChange={v => set('address', v)} multiline rows={2} />
           <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={!!editing.active} onChange={e => set('active', e.target.checked)} /> {t('sales_fActive')}</label>

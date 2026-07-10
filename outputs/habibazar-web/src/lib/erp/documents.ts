@@ -7,6 +7,7 @@
  * can be authenticated. Pure and side-effect-free → unit-tested; the API layer
  * loads source data + generates the QR data-URL and hands them here.
  */
+import { code39Svg } from './barcode'
 
 export const DOC_TYPES = [
   'invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty',
@@ -61,6 +62,8 @@ export interface DocTemplateConfig {
   showSeal?: boolean
   showSignature?: boolean
   showQr?: boolean
+  /** Code 39 barcode of the document number (opt-in). */
+  showBarcode?: boolean
   customFields?: { label: string; value: string }[]
 }
 
@@ -214,7 +217,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
         <div class="issuer">${escapeHtml(m.issuerName)}${m.issuerInfo ? `<br>${escapeHtml(m.issuerInfo)}` : ''}</div>
         ${identity ? `<div class="identity">${identity}</div>` : ''}
       </div>
-      <div class="num-block"><div class="n">${escapeHtml(m.number)}</div><div>${escapeHtml(m.date)}</div>${t.variant ? `<div>${escapeHtml(t.variant)}</div>` : ''}</div>
+      <div class="num-block"><div class="n">${escapeHtml(m.number)}</div><div>${escapeHtml(m.date)}</div>${t.variant ? `<div>${escapeHtml(t.variant)}</div>` : ''}${t.showBarcode === true ? (code39Svg(m.number, { moduleWidth: 1, height: 34 }) ?? '') : ''}</div>
     </div>
     ${t.headerNote ? `<div class="body">${escapeHtml(t.headerNote)}</div>` : ''}
     <div class="parties">

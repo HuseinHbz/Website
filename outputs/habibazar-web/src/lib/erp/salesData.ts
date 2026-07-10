@@ -30,7 +30,7 @@ async function billing(): Promise<Map<number, { invoiced: number; paid: number; 
 
 export async function loadCustomers(): Promise<CustomerWithCredit[]> {
   const rows = (await pgQuery(
-    `SELECT id, code, name, email, phone, company, tax_id AS "taxId", credit_limit::float AS "creditLimit", active
+    `SELECT id, code, name, email, phone, company, tax_id AS "taxId", kind, national_id AS "nationalId", reg_no AS "regNo", economic_code AS "economicCode", credit_limit::float AS "creditLimit", active
      FROM sales_customers ORDER BY name`, [])) as Omit<CustomerWithCredit, 'invoiced' | 'paid' | 'creditNotes' | 'outstanding' | 'available' | 'overLimit' | 'utilizationPct'>[]
   const bill = await billing()
   return rows.map(c => {

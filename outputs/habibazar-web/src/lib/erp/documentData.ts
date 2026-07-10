@@ -83,16 +83,25 @@ export async function createDocument(input: CreateInput, userId: string): Promis
 
   if (input.sourceType === 'sales' && input.sourceId) {
     const doc = (await pgQuery(
-      `SELECT d.doc_no AS "docNo", d.date, c.name AS "customerName", c.address, c.email, c.phone
+      `SELECT d.doc_no AS "docNo", d.date, c.name AS "customerName", c.address, c.email, c.phone,
+              c.kind, c.national_id AS "nationalId", c.reg_no AS "regNo", c.economic_code AS "economicCode", c.tax_id AS "taxId"
        FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.id=$1`, [input.sourceId]))[0] as
-      { docNo: string; date: string; customerName: string; address: string | null; email: string | null; phone: string | null } | undefined
+      { docNo: string; date: string; customerName: string; address: string | null; email: string | null; phone: string | null;
+        kind: string | null; nationalId: string | null; regNo: string | null; economicCode: string | null; taxId: string | null } | undefined
     if (!doc) throw new Error('Source sales document not found')
     const lines = (await pgQuery(
       `SELECT description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct"
        FROM sales_document_lines WHERE document_id=$1 ORDER BY line_no, id`, [input.sourceId])) as
       { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number }[]
     partyName = doc.customerName
-    partyInfo = [doc.address, doc.email, doc.phone].filter(Boolean).join('\n')
+    // Legal identity (Phase 26.2): حقیقی (individual) → national ID; حقوقی
+    // (company) → registration/national-ID/economic code, as Iranian tax
+    // invoices require the buyer's identifiers on the document.
+    const legal = doc.kind === 'individual'
+      ? [doc.nationalId ? `National ID: ${doc.nationalId}` : '']
+      : [doc.regNo ? `Reg. no: ${doc.regNo}` : '', doc.nationalId ? `National ID: ${doc.nationalId}` : '',
+         doc.economicCode ? `Economic code: ${doc.economicCode}` : '', doc.taxId ? `Tax no: ${doc.taxId}` : '']
+    partyInfo = [...legal, doc.address, doc.email, doc.phone].filter(Boolean).join('\n')
     payload = buildSalesPayload(lines, input.currency ?? 'USD', [{ label: 'Reference', value: doc.docNo }])
   } else {
     // Manual composition.
