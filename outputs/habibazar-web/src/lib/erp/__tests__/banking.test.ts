@@ -67,3 +67,27 @@ describe('banking — petty cash', () => {
     expect(ok.lowBalance).toBe(false)
   })
 })
+
+import { scanAnomalies, buildFinancePrompt } from '../financeAi'
+
+describe('finance AI — deterministic pre-analysis + prompt', () => {
+  it('flags duplicate totals on the same day and 5x-median outliers', () => {
+    const anoms = scanAnomalies([
+      { id: 1, date: '2026-07-01', total: 500 },
+      { id: 2, date: '2026-07-01', total: 500 },   // duplicate
+      { id: 3, date: '2026-07-02', total: 480 },
+      { id: 4, date: '2026-07-03', total: 520 },
+      { id: 5, date: '2026-07-04', total: 9000 },  // outlier vs median ~500
+    ])
+    expect(anoms.some(a => a.code === 'duplicate.total' && a.entryIds.includes(1) && a.entryIds.includes(2))).toBe(true)
+    expect(anoms.some(a => a.code === 'outlier.total' && a.entryIds.includes(5))).toBe(true)
+  })
+  it('builds a grounded localized prompt embedding the snapshot + anomalies', () => {
+    const p = buildFinancePrompt('analyze', 'Cash 100 | Net income 40', { locale: 'fa', anomalies: [{ code: 'x', message: 'possible duplicate', entryIds: [1] }] })
+    expect(p.systemPrompt).toContain('Persian')
+    expect(p.systemPrompt).toContain('Cash 100')
+    expect(p.systemPrompt).toContain('possible duplicate')
+    expect(p.systemPrompt).toContain('Never invent')
+    expect(p.userMessage.toLowerCase()).toContain('analyze')
+  })
+})

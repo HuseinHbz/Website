@@ -47,7 +47,7 @@ export function FinanceCenter() {
           </button>
         ))}
       </div>
-      {tab === 'dashboard' && <Dashboard t={t} />}
+      {tab === 'dashboard' && <div className="space-y-6"><Dashboard t={t} /><FinanceAiCard fa={fa} /></div>}
       {tab === 'accounts' && <Accounts t={t} fa={fa} toast={toast} />}
       {tab === 'journal' && <Journal t={t} fa={fa} toast={toast} />}
       {tab === 'reports' && <ReportsView t={t} fa={fa} />}
@@ -600,5 +600,49 @@ function PettySection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
         ] as Column<PettyRow>[]} rows={rows} locale={fa ? 'fa' : 'en'} rowKey={(e: PettyRow) => String(e.id)} exportName="petty-cash" emptyLabel={L(fa, 'No entries yet.', 'ثبتی نیست.')} />
       </Card>
     </div>
+  )
+}
+
+// ── AI Financial Assistant (Phase 26) — grounded on the live books ───────────
+function FinanceAiCard({ fa }: { fa: boolean }) {
+  const [action, setAction] = useState('summarize')
+  const [question, setQuestion] = useState('')
+  const [answer, setAnswer] = useState('')
+  const [anoms, setAnoms] = useState<{ code: string; message: string }[]>([])
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  async function ask() {
+    setBusy(true); setErr('')
+    try {
+      const r = await fetch('/api/admin/erp/finance/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, question: question || undefined, locale: fa ? 'fa' : 'en' }) })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) { setAnswer(d.text ?? ''); setAnoms(d.anomalies ?? []) }
+      else setErr(d.error || L(fa, 'Assistant failed', 'دستیار ناموفق بود'))
+    } finally { setBusy(false) }
+  }
+  return (
+    <Card className="p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-text-primary">✨ {L(fa, 'AI Financial Assistant (grounded on live books)', 'دستیار مالی هوش مصنوعی (متصل به دفاتر زنده)')}</h3>
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <Select label={L(fa, 'Task', 'وظیفه')} value={action} onChange={setAction} options={[
+          { value: 'summarize', label: L(fa, 'Summarize financial position', 'خلاصهٔ وضعیت مالی') },
+          { value: 'analyze', label: L(fa, 'Analyze risks & anomalies', 'تحلیل ریسک و ناهنجاری') },
+          { value: 'forecast', label: L(fa, 'Cash outlook', 'چشم‌انداز نقدینگی') },
+          { value: 'explain', label: L(fa, 'Explain accounting concept', 'توضیح مفهوم حسابداری') },
+        ]} />
+        <div className="flex-1 min-w-[220px]"><Input label={L(fa, 'Question (optional)', 'سؤال (اختیاری)')} value={question} onChange={setQuestion} /></div>
+        <Btn onClick={ask} disabled={busy}>{busy ? L(fa, 'Thinking…', 'در حال فکر…') : L(fa, 'Ask', 'بپرس')}</Btn>
+      </div>
+      {err && <p className="text-xs text-danger-text">{err}</p>}
+      {anoms.length > 0 && (
+        <ul className="space-y-1">
+          {anoms.map((a, i) => <li key={i} className="text-3xs text-warning-text flex gap-1.5"><span>⚠</span>{a.message}</li>)}
+        </ul>
+      )}
+      {answer && <div className="rounded-lg border border-subtle bg-surface-2 p-4 text-sm text-text-secondary whitespace-pre-line leading-relaxed">{answer}</div>}
+      <p className="text-4xs text-text-tertiary">{L(fa, 'The assistant sees only a read-only snapshot of the books; every generation is audited.', 'دستیار فقط یک تصویر فقط‌خواندنی از دفاتر می‌بیند؛ هر تولید در audit ثبت می‌شود.')}</p>
+    </Card>
   )
 }
