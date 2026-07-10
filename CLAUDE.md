@@ -216,6 +216,19 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `/api/admin/erp/documents` (list/generate/void) + `/documents/render` (HTML).
   Public verification page `/[locale]/verify/[code]` (the QR target) confirms a
   document is issued. Verified vs real PostgreSQL (generate→render→verify).
+- **Company Profile & Invoice Designer** (Phase 26) — `/admin/company`
+  (`CompanyProfile`): legal identity/registration+tax/address/banking/branding
+  media persisted as `company_*` keys in site_settings; the Document Engine
+  (`loadCompanyProfile`) prints them automatically on every generated document
+  (logo, reg/national/economic/tax/VAT block, bank+contact footers, seal +
+  signature). **Invoice Designer**: `doc_templates` (seeded official/unofficial/
+  tax/service variants) + `DocTemplateConfig` (variant/accent w/ `safeAccent`
+  guard/watermark/terms/payment instructions/footer/toggles/custom fields);
+  API `/api/admin/erp/documents/templates` (CRUD) + render `?template=` override
+  + POST live-preview; Document Center **Invoice Designer** tab (form + debounced
+  preview iframe) and a template selector on generation (`gen_documents.
+  template_key`). Verified vs real PostgreSQL (branding + watermark on rendered
+  HTML; override wins).
 - **Reporting Center** (`/admin/reports`, `ReportingCenter`) — Phase 21.9 Reporting
   Platform. A fixed report catalog reads live from each module's already-verified
   data layer (no arbitrary SQL, no duplicated aggregation). Pure core
@@ -338,8 +351,23 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   data layer `currencyData.ts` (`latestRates`/`setRate`/`rateHistory`). API
   `GET/POST /api/admin/erp/finance/currency` (rates + `?convert`/`?history`,
   setRate RBAC+audit). Finance Center **Currency** tab (set rate + converter +
-  rates table). Verified vs real PostgreSQL (seed + rate + convert). Report:
-  `docs/governance/phase26-erp-currency-tax.md`.
+  rates table). Verified vs real PostgreSQL (seed + rate + convert).
+  **Banking (Phase 26)**: pure engine `src/lib/erp/banking.ts` (statement
+  auto-match by amount+date-window w/ confidence, cheque lifecycle state machine
+  issued/received→…→cleared/bounced, petty-cash balance w/ low-balance flag;
+  tested) + tables `bank_accounts`/`bank_statement_lines`/`cheques`/
+  `petty_cash_entries`, data layer `bankingData.ts` (auto-match vs sales+purchase
+  payments), API `/api/admin/erp/finance/banking`, Finance **Banking** tab
+  (Reconciliation/Cheques/Petty cash). **Multi-company (Phase 26)**:
+  `erp_companies` (seeded HQ default) + `gl_journal_entries.company_id`;
+  `loadTallies(companyId?)` scopes books (NULL→default co.), pure
+  `consolidateTallies`; reports API `?company=<id|all>` + UI scope selector +
+  company create. **AI Financial Assistant (Phase 26)**: `financeAi.ts`
+  (deterministic anomaly scan — duplicate totals/5×-median outliers — + grounded
+  prompt builder; tested) → `POST /api/admin/erp/finance/ai` through the shared
+  `runCompletion` with a live read-only snapshot (KPIs/receivables/payables/
+  recent entries), audited; Finance Dashboard AI card. All verified vs real
+  PostgreSQL. Report: `docs/governance/phase26-erp-currency-tax.md`.
 - **Purchasing Center** (`/admin/purchasing`, `PurchasingCenter`) — Phase-26.1
   procure-to-pay (the ERP buy side). Pure engine `src/lib/erp/purchasing.ts`
   (`documentTotals` reusing sales line-math; multi-level approval routing
@@ -365,7 +393,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   **Analytics tab**: pure `purchaseAnalytics` (committed spend/month — drafts
   excluded, spend by type, top vendors, status distribution; unit-tested) →
   `?view=analytics` → `PurchasingCharts.tsx` (recharts via `next/dynamic`, page
-  stays 172 kB). Verified vs real PostgreSQL. Deferred: vendor portal. Report:
+  stays 172 kB). Verified vs real PostgreSQL. **Vendor Portal**: token-gated
+  read-only supplier view — `vendor_portal_tokens` (128-bit, expiring,
+  revocable) + `vendorPortal.ts` (fails closed; own-vendor isolation), admin
+  `vendor.portalLink`/`portalRevoke` actions, public noindex page
+  `/[locale]/vendor/[token]`. Verified vs real PostgreSQL. Report:
   `docs/governance/phase26.1-purchasing-platform.md`.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
@@ -652,8 +684,13 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   need administrator, RBAC+zod+audit). Admin: Hero Center **Animation Library** tab
   (Enterprise DataTable, favorite/enable/archive, bulk, export signed pkg / import
   verified pkg). Verified vs real PostgreSQL (version rollback + sign/verify/import
-  round-trip). The After-Effects-style visual timeline studio is the one deferred
-  piece (config column is schema-ready for keyframe data). Report:
+  round-trip). **Timeline Studio** (completion): pure keyframe engine
+  `src/lib/hero/timeline.ts` (tracks opacity/scale/rotate/x/y, per-segment
+  cubic-bezier solver, scrubber sampler, WAAPI compiler, snap/validation; 11
+  tests) + `TimelineStudio.tsx` (multi-track visual editor: drag keyframes,
+  scrubber+playhead, WAAPI playback, undo/redo, bezier inspector, copy/paste,
+  zoom/snap) persisting into `config.timeline` via the versioned API — opened
+  from a row action in the Animation Library. Report:
   `docs/governance/phase25.2-hero-animation-library.md`.
 
 ## Auth

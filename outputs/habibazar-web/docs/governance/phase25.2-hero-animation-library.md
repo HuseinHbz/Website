@@ -62,18 +62,21 @@ packaging) — added here.
   (idempotent `migrate.ts`); signing reuses the existing `BACKUP_ENCRYPTION_KEY`/
   `ADMIN_JWT_SECRET`.
 
-## Honest scope note (deferred, not faked)
+## Visual Timeline Studio (completion pass — item closed)
 
-Delivered above: Library CMS, versioning, signed import/export, dependency
-validation, collections schema, bulk ops, analytics, marketplace-ready package
-format (metadata + signature + dependency graph). **Not** attempted this pass —
-it is a genuinely large dedicated build needing a canvas timeline engine and
-heavy interaction the governance audits/bundle budget won't accept: the full
-**After-Effects-style Visual Timeline Studio** (multi-track keyframe editor with
-a bezier-curve editor and frame scrubber). The preset `config` column is
-schema-ready to store such keyframe data when that studio is built, so this phase
-is the foundation it would sit on. All other Phase-25.2 acceptance items are
-implemented and verified.
+The one deferred item was subsequently **built for real, dependency-free**:
+pure keyframe engine `src/lib/hero/timeline.ts` (property tracks opacity/scale/
+rotate/x/y, per-segment cubic-bezier easing with a Newton-Raphson + bisection
+solver, scrubber sampler, WAAPI compiler `toWaapi` that bakes curves via dense
+sampling, validation, snap-to-grid; 11 unit tests) + `TimelineStudio.tsx`
+(multi-track visual timeline: double-click to add keyframes, pointer-drag
+diamonds, scrubber + playhead, WAAPI live playback with frame-step,
+duration/delay/repeat/direction/speed, zoom, snap, undo/redo, keyframe
+inspector with bezier presets, copy/paste/duplicate). Timelines persist in
+`hero_animation_presets.config.timeline` through the existing versioned API
+(every save snapshots a version) and open from a Timeline Studio row action in
+the Animation Library. Verified vs real PostgreSQL (save → version → reload →
+compiles to WAAPI). **No Phase-25.2 item remains open.**
 
 ## Preserved (zero regression)
 

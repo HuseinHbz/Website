@@ -78,14 +78,24 @@ Bilingual; token palette (`BRAND`/`chartColor`). Verified vs real PostgreSQL
 (confirmed order + paid invoice aggregate; a draft order is excluded from spend
 but counted in the status distribution).
 
-## Honest scope note
+### Vendor Portal (completion — item closed)
+
+Token-gated, **read-only** supplier access without a second auth system:
+`vendor_portal_tokens` (128-bit random token, expiring default 90 days,
+revocable, `last_used_at` stamp) + `vendorPortal.ts` (`issueVendorToken` /
+`revokeVendorTokens` / `portalData` — fails closed on bad/expired/revoked
+tokens and returns ONLY that vendor's documents/payments/outstanding).
+Admin actions `vendor.portalLink` (copies the magic URL) + `vendor.portalRevoke`
+on the Vendors tab; public bilingual noindex page `/[locale]/vendor/[token]`.
+Verified vs real PostgreSQL incl. cross-vendor isolation. **No Phase-26.1 item
+remains open.**
+
+## Scope summary
 
 Delivered for real: vendors, all 8 purchase document types (unified header),
 multi-level approval workflow + budget validation, vendor evaluation/rating,
 contracts schema, payments, PR→PO→GRN→invoice conversion, dashboard, numbering +
-audit, **GL auto-posting** of purchase invoices, and **purchase analytics**
-(charts on real data). **Deferred** (documented, not faked): a public **Vendor
-Portal** — an external-facing auth surface that is a standalone build.
+audit, **GL auto-posting**, **purchase analytics**, and the **Vendor Portal**.
 
 ## Preserved (zero regression)
 

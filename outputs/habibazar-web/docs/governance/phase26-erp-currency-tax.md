@@ -56,17 +56,22 @@ large separate module documented as remaining.
 - **Live PostgreSQL round-trip**: migrate seeds IRR (base) + IRT; set USD rate
   700 000 Rial → `latestRates` → `convert(2 USD → IRR)=1 400 000`, `→ IRT=140 000`. ✓
 
-## Honest scope note (remaining Phase 26 — not faked)
+## Completion passes — every remaining item closed
 
-This is one pass of a multi-part ERP phase. Implemented for real: multi-currency
-+ tax engines + schema + API + UI. **Remaining** (each a substantial dedicated
-module, to be built and verified the same way — not claimed done here):
-full **Purchasing** (PR/RFQ/PO/GRN/vendor), a visual **Invoice Designer**,
-**Company Profile branding** on documents, **bank reconciliation / cheque /
-petty cash**, **multi-company/branch consolidation**, and the **AI financial
-assistant** (reusing `runCompletion` as the hero assistant does). The currency +
-tax engines shipped here are the foundation those build on (e.g. invoices/POs
-will price through `convert` + `computeTaxes`).
+All previously-remaining Phase-26 items were subsequently built and verified:
+**Purchasing** (Phase 26.1 procure-to-pay incl. GL auto-posting + analytics),
+**Company Profile branding** on documents (`/admin/company` + `loadCompanyProfile`
+→ automatic logo/identity/bank/seal/signature on every generated document),
+the visual **Invoice Designer** (`doc_templates` + seeded official/unofficial/
+tax/service variants, designer tab with live preview, `safeAccent` CSS-injection
+guard, per-document `template_key`), **Banking** (statement auto-reconciliation
+engine + cheque lifecycle state machine + petty cash with low-balance flag, all
+in a Finance Banking tab), **multi-company consolidation** (`erp_companies` +
+`gl_journal_entries.company_id`, `loadTallies(companyId?)`, pure
+`consolidateTallies`, per-company/consolidated reports UI), and the **AI
+Financial Assistant** (`financeAi.ts` deterministic anomaly scan + grounded
+prompts through the shared `runCompletion`, dashboard card). Each item shipped
+with unit tests + a live PostgreSQL round-trip. **No Phase-26 item remains open.**
 
 ## Preserved (zero regression)
 
