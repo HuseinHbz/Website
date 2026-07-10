@@ -877,6 +877,58 @@ export async function runMigrations() {
       UNIQUE(code, rate_date)
     );
     CREATE INDEX IF NOT EXISTS idx_erp_rates_code ON erp_exchange_rates(code, rate_date DESC);
+
+    -- Phase 26: Banking — accounts, statement reconciliation, cheques, petty cash.
+    CREATE TABLE IF NOT EXISTS bank_accounts (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      bank TEXT,
+      iban TEXT,
+      account_no TEXT,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      opening_balance NUMERIC NOT NULL DEFAULT 0,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS bank_statement_lines (
+      id BIGSERIAL PRIMARY KEY,
+      account_id INTEGER NOT NULL REFERENCES bank_accounts(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      description TEXT,
+      amount NUMERIC NOT NULL,               -- signed: + inflow, - outflow
+      reference TEXT,
+      status TEXT NOT NULL DEFAULT 'unmatched' CHECK(status IN ('unmatched','matched','excluded')),
+      matched_ref TEXT,                      -- e.g. sales_payment:12 | purchase_payment:7
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS cheques (
+      id SERIAL PRIMARY KEY,
+      direction TEXT NOT NULL CHECK(direction IN ('issued','received')),
+      number TEXT NOT NULL,
+      party TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      due_date TEXT,
+      bank_account_id INTEGER REFERENCES bank_accounts(id),
+      status TEXT NOT NULL DEFAULT 'draft',
+      note TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS petty_cash_entries (
+      id BIGSERIAL PRIMARY KEY,
+      kind TEXT NOT NULL CHECK(kind IN ('float','expense','replenish')),
+      date TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      category TEXT,
+      note TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_stmt_lines_account ON bank_statement_lines(account_id, status);
+    CREATE INDEX IF NOT EXISTS idx_cheques_status ON cheques(status, due_date);
+    CREATE INDEX IF NOT EXISTS idx_petty_date ON petty_cash_entries(date DESC);
     -- Seed the built-in currencies idempotently.
     INSERT INTO erp_currencies (code, name_en, name_fa, symbol_en, symbol_fa, decimals, is_base) VALUES
       ('IRR','Iranian Rial','ریال','IRR','ریال',0,true),

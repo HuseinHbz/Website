@@ -7,7 +7,7 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
-type Tab = 'dashboard' | 'accounts' | 'journal' | 'reports' | 'currency'
+type Tab = 'dashboard' | 'accounts' | 'journal' | 'reports' | 'currency' | 'banking'
 type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
 
 interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
@@ -40,7 +40,7 @@ export function FinanceCenter() {
       <ToastContainer />
       <PageHeader title={t('fin_title')} subtitle={t('fin_subtitle')} />
       <div className="flex gap-1 mb-6 border-b border-subtle overflow-x-auto">
-        {(['dashboard', 'accounts', 'journal', 'reports', 'currency'] as Tab[]).map(tb => (
+        {(['dashboard', 'accounts', 'journal', 'reports', 'currency', 'banking'] as Tab[]).map(tb => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${tab === tb ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
             {t(`fin_tab_${tb}` as 'fin_tab_dashboard')}
@@ -52,6 +52,7 @@ export function FinanceCenter() {
       {tab === 'journal' && <Journal t={t} fa={fa} toast={toast} />}
       {tab === 'reports' && <ReportsView t={t} fa={fa} />}
       {tab === 'currency' && <CurrencyView fa={fa} toast={toast} />}
+      {tab === 'banking' && <BankingView fa={fa} toast={toast} />}
     </>
   )
 }
@@ -387,6 +388,201 @@ function CurrencyView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
       </div>
       <Card className="p-4">
         <DataTable tableId="erp-currencies" columns={columns} rows={rows} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={c => c.code} onRefresh={load} exportName="currencies" emptyLabel={L(fa, 'No currencies.', 'ارزی نیست.')} />
+      </Card>
+    </div>
+  )
+}
+
+// ── Banking: reconciliation · cheques · petty cash (Phase 26) ─────────────────
+interface BankAccount { id: number; name: string; bank: string | null; iban: string | null; currency: string }
+interface StmtLine { id: number; date: string; description: string | null; amount: number; reference: string | null; status: string; matched_ref: string | null }
+interface Cheque { id: number; direction: string; number: string; party: string; amount: number; dueDate: string | null; status: string }
+interface PettyRow { id: number; kind: string; date: string; amount: number; category: string | null; note: string | null }
+
+function BankingView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [sec, setSec] = useState<'recon' | 'cheques' | 'petty'>('recon')
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1">
+        {([['recon', 'Reconciliation', 'مغایرت‌گیری بانکی'], ['cheques', 'Cheques', 'چک‌ها'], ['petty', 'Petty cash', 'تنخواه']] as const).map(([id, en, faL]) => (
+          <button key={id} onClick={() => setSec(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${sec === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
+        ))}
+      </div>
+      {sec === 'recon' && <ReconSection fa={fa} toast={toast} />}
+      {sec === 'cheques' && <ChequeSection fa={fa} toast={toast} />}
+      {sec === 'petty' && <PettySection fa={fa} toast={toast} />}
+    </div>
+  )
+}
+
+function ReconSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [accounts, setAccounts] = useState<BankAccount[]>([])
+  const [accountId, setAccountId] = useState(0)
+  const [lines, setLines] = useState<StmtLine[]>([])
+  const [summary, setSummary] = useState<{ total: number; matched: number; unmatched: number; matchedPct: number; inflow: number; outflow: number } | null>(null)
+  const [csv, setCsv] = useState('')
+
+  const loadAccounts = useCallback(async () => {
+    const d = await fetch('/api/admin/erp/finance/banking?view=accounts').then(r => r.json()).catch(() => ({ accounts: [] }))
+    setAccounts(d.accounts ?? [])
+    if (!accountId && d.accounts?.[0]) setAccountId(d.accounts[0].id)
+  }, [accountId])
+  const loadLines = useCallback(async () => {
+    if (!accountId) return
+    const d = await fetch(`/api/admin/erp/finance/banking?view=statement&account=${accountId}`).then(r => r.json()).catch(() => ({}))
+    setLines(d.lines ?? []); setSummary(d.summary ?? null)
+  }, [accountId])
+  useEffect(() => { loadAccounts() }, [loadAccounts])
+  useEffect(() => { loadLines() }, [loadLines])
+
+  async function post(bodyObj: Record<string, unknown>, okMsg: string) {
+    const r = await fetch('/api/admin/erp/finance/banking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyObj) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(okMsg, 'success'); loadAccounts(); loadLines() } else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+    return d
+  }
+  async function addAccount() {
+    const name = window.prompt(L(fa, 'Account name', 'نام حساب')); if (!name) return
+    await post({ action: 'account.create', name }, L(fa, 'Account created', 'حساب ساخته شد'))
+  }
+  async function importCsv() {
+    // CSV: date,amount,description — one line per row.
+    const rows = csv.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+      const [date, amount, ...desc] = l.split(',')
+      return { date: date?.trim(), amount: Number(amount), description: desc.join(',').trim() || undefined }
+    }).filter(r => r.date && Number.isFinite(r.amount))
+    if (!rows.length) { toast(L(fa, 'No valid rows (date,amount,description)', 'ردیف معتبری نیست'), 'error'); return }
+    const d = await post({ action: 'statement.import', accountId, lines: rows }, L(fa, 'Statement imported', 'صورتحساب وارد شد'))
+    if (d.imported != null) setCsv('')
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <Select label={L(fa, 'Bank account', 'حساب بانکی')} value={String(accountId)} onChange={v => setAccountId(Number(v))} options={[{ value: '0', label: '—' }, ...accounts.map(a => ({ value: String(a.id), label: a.name }))]} />
+        <Btn size="sm" variant="secondary" onClick={addAccount}>+ {L(fa, 'New account', 'حساب جدید')}</Btn>
+        <Btn size="sm" onClick={() => post({ action: 'statement.auto', accountId }, L(fa, 'Auto-match complete', 'تطبیق خودکار انجام شد'))} disabled={!accountId}>⚡ {L(fa, 'Auto-match', 'تطبیق خودکار')}</Btn>
+      </div>
+      {summary && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {([['Total lines', 'کل ردیف‌ها', summary.total], ['Matched', 'تطبیق‌شده', summary.matched], ['Unmatched', 'نامطابق', summary.unmatched], ['Inflow', 'ورودی', summary.inflow.toLocaleString()], ['Outflow', 'خروجی', summary.outflow.toLocaleString()]] as const).map(([en, faL, v]) => (
+            <div key={en} className="rounded-xl p-3 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary">{L(fa, en, faL)}</p><p className="text-lg font-bold text-text-primary">{v}</p></div>
+          ))}
+        </div>
+      )}
+      <Card className="p-4 space-y-2">
+        <h4 className="text-xs font-semibold text-text-primary">{L(fa, 'Import statement (CSV: date,amount,description)', 'ورود صورتحساب (CSV: تاریخ،مبلغ،شرح)')}</h4>
+        <Input label="" value={csv} onChange={setCsv} multiline rows={3} placeholder="2026-07-01, 1500000, Customer transfer" />
+        <Btn size="sm" variant="secondary" onClick={importCsv} disabled={!accountId}>{L(fa, 'Import', 'ورود')}</Btn>
+      </Card>
+      <Card className="p-4">
+        <DataTable tableId="bank-statement" columns={[
+          { key: 'date', labelEn: 'Date', labelFa: 'تاریخ' },
+          { key: 'description', labelEn: 'Description', labelFa: 'شرح', render: (l: StmtLine) => <span className="text-text-secondary text-xs">{l.description || '—'}</span> },
+          { key: 'amount', labelEn: 'Amount', labelFa: 'مبلغ', type: 'number', numeric: true, render: (l: StmtLine) => <span className={l.amount >= 0 ? 'text-success-text' : 'text-danger-text'}>{l.amount.toLocaleString()}</span> },
+          { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: (l: StmtLine) => <span className="flex items-center gap-1"><Badge color={l.status === 'matched' ? 'green' : l.status === 'excluded' ? 'slate' : 'yellow'}>{l.status}</Badge>{l.matched_ref && <span className="text-4xs text-text-tertiary font-mono">{l.matched_ref}</span>}</span> },
+        ] as Column<StmtLine>[]} rows={lines} locale={fa ? 'fa' : 'en'} rowKey={(l: StmtLine) => String(l.id)}
+          rowActions={[
+            { id: 'unmatch', labelEn: 'Unmatch', labelFa: 'لغو تطبیق', icon: '↩', hidden: (l: StmtLine) => l.status !== 'matched', onClick: (l: StmtLine) => post({ action: 'statement.set', lineId: l.id, status: 'unmatched' }, L(fa, 'Unmatched', 'لغو شد')) },
+            { id: 'exclude', labelEn: 'Exclude', labelFa: 'مستثنا', icon: '✕', hidden: (l: StmtLine) => l.status === 'excluded', onClick: (l: StmtLine) => post({ action: 'statement.set', lineId: l.id, status: 'excluded' }, L(fa, 'Excluded', 'مستثنا شد')) },
+          ] as RowAction<StmtLine>[]}
+          exportName="bank-statement" emptyLabel={L(fa, 'No statement lines — import a CSV above.', 'ردیفی نیست — CSV وارد کنید.')} />
+      </Card>
+    </div>
+  )
+}
+
+function ChequeSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [rows, setRows] = useState<Cheque[]>([])
+  const [kpis, setKpis] = useState<{ open: number; openAmount: number; dueSoon: number; bounced: number; cleared: number } | null>(null)
+  const [form, setForm] = useState({ direction: 'issued', number: '', party: '', amount: '', dueDate: '' })
+  const load = useCallback(async () => {
+    const d = await fetch('/api/admin/erp/finance/banking?view=cheques').then(r => r.json()).catch(() => ({}))
+    setRows(d.cheques ?? []); setKpis(d.kpis ?? null)
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function post(bodyObj: Record<string, unknown>, okMsg: string) {
+    const r = await fetch('/api/admin/erp/finance/banking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyObj) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(okMsg, 'success'); load() } else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+  }
+  const NEXT: Record<string, string[]> = { issued: ['presented', 'cancelled'], received: ['deposited', 'cancelled'], presented: ['cleared', 'bounced'], deposited: ['cleared', 'bounced'], bounced: ['presented', 'deposited', 'cancelled'] }
+  return (
+    <div className="space-y-4">
+      {kpis && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {([['Open', 'باز', kpis.open], ['Open amount', 'مبلغ باز', kpis.openAmount.toLocaleString()], ['Due ≤7d', 'سررسید ≤۷روز', kpis.dueSoon], ['Bounced', 'برگشتی', kpis.bounced], ['Cleared', 'وصول‌شده', kpis.cleared]] as const).map(([en, faL, v]) => (
+            <div key={en} className="rounded-xl p-3 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary">{L(fa, en, faL)}</p><p className="text-lg font-bold text-text-primary">{v}</p></div>
+          ))}
+        </div>
+      )}
+      <Card className="p-4 grid md:grid-cols-6 gap-3 items-end">
+        <Select label={L(fa, 'Direction', 'نوع')} value={form.direction} onChange={v => setForm(f => ({ ...f, direction: v }))} options={[{ value: 'issued', label: L(fa, 'Issued (payable)', 'پرداختنی') }, { value: 'received', label: L(fa, 'Received (receivable)', 'دریافتنی') }]} />
+        <Input label={L(fa, 'Cheque no.', 'شماره چک')} value={form.number} onChange={v => setForm(f => ({ ...f, number: v }))} />
+        <Input label={L(fa, 'Party', 'طرف')} value={form.party} onChange={v => setForm(f => ({ ...f, party: v }))} />
+        <Input label={L(fa, 'Amount', 'مبلغ')} value={form.amount} onChange={v => setForm(f => ({ ...f, amount: v }))} />
+        <Input label={L(fa, 'Due date', 'سررسید')} value={form.dueDate} onChange={v => setForm(f => ({ ...f, dueDate: v }))} placeholder="2026-08-01" />
+        <Btn onClick={() => { if (!form.number || !form.party || !Number(form.amount)) { toast(L(fa, 'Fill number/party/amount', 'شماره/طرف/مبلغ'), 'error'); return } post({ action: 'cheque.create', direction: form.direction, number: form.number, party: form.party, amount: Number(form.amount), dueDate: form.dueDate || undefined }, L(fa, 'Cheque registered', 'چک ثبت شد')); setForm(f => ({ ...f, number: '', party: '', amount: '', dueDate: '' })) }}>{L(fa, 'Register', 'ثبت')}</Btn>
+      </Card>
+      <Card className="p-4">
+        <DataTable tableId="cheques" columns={[
+          { key: 'number', labelEn: 'No.', labelFa: 'شماره', render: (c: Cheque) => <span className="font-mono text-xs">{c.number}</span> },
+          { key: 'direction', labelEn: 'Direction', labelFa: 'نوع', type: 'enum' },
+          { key: 'party', labelEn: 'Party', labelFa: 'طرف' },
+          { key: 'amount', labelEn: 'Amount', labelFa: 'مبلغ', type: 'number', numeric: true, render: (c: Cheque) => <span>{c.amount.toLocaleString()}</span> },
+          { key: 'dueDate', labelEn: 'Due', labelFa: 'سررسید', render: (c: Cheque) => <span className="text-xs text-text-tertiary">{c.dueDate || '—'}</span> },
+          { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: (c: Cheque) => <Badge color={c.status === 'cleared' ? 'green' : c.status === 'bounced' ? 'red' : c.status === 'cancelled' ? 'slate' : 'yellow'}>{c.status}</Badge> },
+        ] as Column<Cheque>[]} rows={rows} locale={fa ? 'fa' : 'en'} rowKey={(c: Cheque) => String(c.id)}
+          rowActions={(['presented', 'deposited', 'cleared', 'bounced', 'cancelled'] as const).map(to => ({
+            id: to, labelEn: `→ ${to}`, labelFa: `→ ${to}`, icon: '▸',
+            hidden: (c: Cheque) => !(NEXT[c.status] ?? []).includes(to),
+            onClick: (c: Cheque) => post({ action: 'cheque.transition', id: c.id, to }, L(fa, `Moved to ${to}`, `به ${to} منتقل شد`)),
+          })) as RowAction<Cheque>[]}
+          exportName="cheques" emptyLabel={L(fa, 'No cheques registered.', 'چکی ثبت نشده.')} />
+      </Card>
+    </div>
+  )
+}
+
+function PettySection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [rows, setRows] = useState<PettyRow[]>([])
+  const [summary, setSummary] = useState<{ balance: number; floatTotal: number; spent: number; replenished: number; lowBalance: boolean } | null>(null)
+  const [form, setForm] = useState({ kind: 'expense', amount: '', category: '', note: '' })
+  const load = useCallback(async () => {
+    const d = await fetch('/api/admin/erp/finance/banking?view=petty').then(r => r.json()).catch(() => ({}))
+    setRows(d.entries ?? []); setSummary(d.summary ?? null)
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function add() {
+    if (!Number(form.amount)) { toast(L(fa, 'Enter an amount', 'مبلغ را وارد کنید'), 'error'); return }
+    const r = await fetch('/api/admin/erp/finance/banking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'petty.add', kind: form.kind, date: new Date().toISOString().slice(0, 10), amount: Number(form.amount), category: form.category || undefined, note: form.note || undefined }) })
+    if (r.ok) { toast(L(fa, 'Entry recorded', 'ثبت شد'), 'success'); setForm(f => ({ ...f, amount: '', category: '', note: '' })); load() } else toast(L(fa, 'Failed', 'ناموفق'), 'error')
+  }
+  return (
+    <div className="space-y-4">
+      {summary && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {([['Balance', 'مانده', summary.balance.toLocaleString()], ['Float', 'تنخواه اولیه', summary.floatTotal.toLocaleString()], ['Spent', 'هزینه‌شده', summary.spent.toLocaleString()], ['Replenished', 'شارژ مجدد', summary.replenished.toLocaleString()]] as const).map(([en, faL, v]) => (
+            <div key={en} className={`rounded-xl p-3 bg-surface-2 border ${en === 'Balance' && summary.lowBalance ? 'border-danger/50' : 'border-subtle'}`}><p className="text-xs text-text-tertiary">{L(fa, en, faL)}</p><p className="text-lg font-bold text-text-primary">{v}</p></div>
+          ))}
+        </div>
+      )}
+      {summary?.lowBalance && <p className="text-xs text-danger-text">⚠ {L(fa, 'Petty cash is below 20% of the float — consider replenishing.', 'ماندهٔ تنخواه زیر ۲۰٪ است — شارژ مجدد کنید.')}</p>}
+      <Card className="p-4 grid md:grid-cols-5 gap-3 items-end">
+        <Select label={L(fa, 'Kind', 'نوع')} value={form.kind} onChange={v => setForm(f => ({ ...f, kind: v }))} options={[{ value: 'expense', label: L(fa, 'Expense', 'هزینه') }, { value: 'float', label: L(fa, 'Float (initial)', 'تنخواه اولیه') }, { value: 'replenish', label: L(fa, 'Replenish', 'شارژ مجدد') }]} />
+        <Input label={L(fa, 'Amount', 'مبلغ')} value={form.amount} onChange={v => setForm(f => ({ ...f, amount: v }))} />
+        <Input label={L(fa, 'Category', 'دسته')} value={form.category} onChange={v => setForm(f => ({ ...f, category: v }))} />
+        <Input label={L(fa, 'Note', 'یادداشت')} value={form.note} onChange={v => setForm(f => ({ ...f, note: v }))} />
+        <Btn onClick={add}>{L(fa, 'Record', 'ثبت')}</Btn>
+      </Card>
+      <Card className="p-4">
+        <DataTable tableId="petty-cash" columns={[
+          { key: 'date', labelEn: 'Date', labelFa: 'تاریخ' },
+          { key: 'kind', labelEn: 'Kind', labelFa: 'نوع', type: 'enum', render: (e: PettyRow) => <Badge color={e.kind === 'expense' ? 'red' : 'green'}>{e.kind}</Badge> },
+          { key: 'amount', labelEn: 'Amount', labelFa: 'مبلغ', type: 'number', numeric: true, render: (e: PettyRow) => <span>{e.amount.toLocaleString()}</span> },
+          { key: 'category', labelEn: 'Category', labelFa: 'دسته', render: (e: PettyRow) => <span className="text-xs text-text-secondary">{e.category || '—'}</span> },
+          { key: 'note', labelEn: 'Note', labelFa: 'یادداشت', render: (e: PettyRow) => <span className="text-xs text-text-tertiary">{e.note || '—'}</span> },
+        ] as Column<PettyRow>[]} rows={rows} locale={fa ? 'fa' : 'en'} rowKey={(e: PettyRow) => String(e.id)} exportName="petty-cash" emptyLabel={L(fa, 'No entries yet.', 'ثبتی نیست.')} />
       </Card>
     </div>
   )
