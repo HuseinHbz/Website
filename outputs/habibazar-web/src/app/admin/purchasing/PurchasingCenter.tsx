@@ -1,12 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import type { PurchasingChartsData } from './PurchasingCharts'
 
-type Tab = 'dashboard' | 'vendors' | 'documents'
+// Recharts is heavy — load the chart chunk only when the Analytics tab renders.
+const PurchasingCharts = dynamic(() => import('./PurchasingCharts'), { ssr: false, loading: () => <div className="h-60 rounded-xl border border-subtle bg-surface animate-pulse" /> })
+
+type Tab = 'dashboard' | 'vendors' | 'documents' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const DOC_TYPES = ['request', 'rfq', 'quotation', 'order', 'receipt', 'invoice', 'return', 'credit_note'] as const
 type DocType = typeof DOC_TYPES[number]
@@ -24,6 +29,7 @@ export function PurchasingCenter() {
     { id: 'dashboard', en: 'Dashboard', fa: 'داشبورد' },
     { id: 'vendors', en: 'Vendors', fa: 'تأمین‌کنندگان' },
     { id: 'documents', en: 'Documents', fa: 'اسناد خرید' },
+    { id: 'analytics', en: 'Analytics', fa: 'تحلیل‌ها' },
   ]
   return (
     <>
@@ -37,7 +43,50 @@ export function PurchasingCenter() {
       {tab === 'dashboard' && <Dashboard rtl={rtl} />}
       {tab === 'vendors' && <Vendors rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'documents' && <Documents rtl={rtl} locale={locale} toast={toast} />}
+      {tab === 'analytics' && <Analytics rtl={rtl} />}
     </>
+  )
+}
+
+function Analytics({ rtl }: { rtl: boolean }) {
+  const [d, setD] = useState<(PurchasingChartsData & { byType: { type: string; total: number; count: number }[]; byStatus: { status: string; count: number }[] }) | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetch('/api/admin/erp/purchasing?view=analytics').then(r => r.json()).then(setD).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+  if (loading) return <div className="h-60 rounded-xl border border-subtle bg-surface animate-pulse" />
+  if (!d || (d.monthlySpend.length === 0 && d.byStatus.length === 0)) {
+    return <Card className="p-8 text-center text-sm text-text-tertiary">{lc(rtl, 'No purchasing activity yet — analytics appear once documents exist.', 'هنوز فعالیتی نیست — با ایجاد اسناد، تحلیل‌ها نمایش داده می‌شوند.')}</Card>
+  }
+  return (
+    <div className="space-y-4">
+      <PurchasingCharts data={d} labels={{ spend: lc(rtl, 'Committed spend by month', 'هزینه ماهانه'), vendors: lc(rtl, 'Top vendors by spend', 'تأمین‌کنندگان پرهزینه') }} />
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{lc(rtl, 'Spend by document type', 'هزینه بر اساس نوع سند')}</h3>
+          <div className="space-y-2">
+            {d.byType.map(t => (
+              <div key={t.type} className="flex items-center justify-between text-sm border border-subtle rounded-lg px-3 py-2">
+                <span className="text-text-secondary">{t.type} <span className="text-3xs text-text-tertiary">× {t.count}</span></span>
+                <span className="font-semibold text-text-primary">{money(t.total)}</span>
+              </div>
+            ))}
+            {d.byType.length === 0 && <p className="text-xs text-text-tertiary">{lc(rtl, 'No committed documents.', 'سند تعهدشده‌ای نیست.')}</p>}
+          </div>
+        </Card>
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{lc(rtl, 'Documents by status', 'اسناد بر اساس وضعیت')}</h3>
+          <div className="flex flex-wrap gap-2">
+            {d.byStatus.map(s => (
+              <span key={s.status} className="inline-flex items-center gap-1.5 rounded-lg border border-subtle px-3 py-1.5 text-sm">
+                <Badge color={STATUS_COLOR[s.status] || 'slate'}>{s.status}</Badge>
+                <span className="text-text-primary font-semibold">{s.count}</span>
+              </span>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
   )
 }
 

@@ -132,6 +132,68 @@ export function postingBalanced(lines: PostingLine[]): boolean {
   return Math.abs(round2(d) - round2(c)) < 0.001
 }
 
+// ── Analytics ────────────────────────────────────────────────────────────────
+export interface PurchaseDocFact {
+  docType: PurchaseDocType
+  status: PurchaseStatus | string
+  total: number
+  /** ISO date (YYYY-MM-DD…). */
+  date: string
+  vendorName?: string | null
+}
+export interface PurchaseAnalytics {
+  /** Committed spend per month (orders+invoices, non-draft/void/rejected), oldest→newest. */
+  monthlySpend: { month: string; total: number }[]
+  /** Spend by document type (same commitment filter). */
+  byType: { type: string; total: number; count: number }[]
+  /** Top vendors by committed spend. */
+  topVendorSpend: { vendor: string; total: number }[]
+  /** Document-count distribution by status (all docs). */
+  byStatus: { status: string; count: number }[]
+}
+
+const COMMITTED_TYPES: PurchaseDocType[] = ['order', 'invoice']
+const NON_COMMITTED_STATUS = new Set(['draft', 'void', 'rejected'])
+
+/** Roll raw purchasing documents into the analytics dashboard series. */
+export function purchaseAnalytics(rows: PurchaseDocFact[], months = 12): PurchaseAnalytics {
+  const committed = rows.filter(r => COMMITTED_TYPES.includes(r.docType) && !NON_COMMITTED_STATUS.has(String(r.status)))
+
+  const monthKey = (d: string) => d.slice(0, 7)
+  const spendByMonth = new Map<string, number>()
+  for (const r of committed) {
+    const k = monthKey(r.date)
+    spendByMonth.set(k, round2((spendByMonth.get(k) ?? 0) + r.total))
+  }
+  const monthlySpend = [...spendByMonth.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-months)
+    .map(([month, total]) => ({ month, total }))
+
+  const typeAgg = new Map<string, { total: number; count: number }>()
+  for (const r of committed) {
+    const t = typeAgg.get(r.docType) ?? { total: 0, count: 0 }
+    t.total = round2(t.total + r.total); t.count++
+    typeAgg.set(r.docType, t)
+  }
+  const byType = [...typeAgg.entries()].map(([type, v]) => ({ type, ...v })).sort((a, b) => b.total - a.total)
+
+  const vendorAgg = new Map<string, number>()
+  for (const r of committed) {
+    const v = r.vendorName?.trim()
+    if (!v) continue
+    vendorAgg.set(v, round2((vendorAgg.get(v) ?? 0) + r.total))
+  }
+  const topVendorSpend = [...vendorAgg.entries()].map(([vendor, total]) => ({ vendor, total }))
+    .sort((a, b) => b.total - a.total).slice(0, 8)
+
+  const statusAgg = new Map<string, number>()
+  for (const r of rows) statusAgg.set(String(r.status), (statusAgg.get(String(r.status)) ?? 0) + 1)
+  const byStatus = [...statusAgg.entries()].map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count)
+
+  return { monthlySpend, byType, topVendorSpend, byStatus }
+}
+
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 export interface PurchaseKpis {
   openOrders: number; ordersValue: number

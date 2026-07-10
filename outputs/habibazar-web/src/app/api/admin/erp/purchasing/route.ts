@@ -5,7 +5,7 @@ import { logAction } from '@/lib/admin/audit'
 import {
   listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition,
   listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
-  recordPayment, convertDocument, overview, postPurchaseInvoiceToGl,
+  recordPayment, convertDocument, overview, postPurchaseInvoiceToGl, analytics,
 } from '@/lib/erp/purchasingData'
 import type { PurchaseDocType } from '@/lib/erp/purchasing'
 
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams
     const view = sp.get('view')
     if (view === 'overview') return NextResponse.json(await overview())
+    if (view === 'analytics') return NextResponse.json(await analytics())
     if (view === 'vendors') return NextResponse.json({ vendors: await listVendors() })
     if (sp.get('vendorPosition')) return NextResponse.json(await vendorPosition(Number(sp.get('vendorPosition'))))
     if (sp.get('id')) {

@@ -183,6 +183,21 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   return { entryId: entry.id, alreadyPosted: false }
 }
 
+// ── Analytics ────────────────────────────────────────────────────────────────
+import { purchaseAnalytics, type PurchaseDocFact } from './purchasing'
+
+/** Purchasing analytics — one query, the pure engine does the aggregation. */
+export async function analytics(months = 12) {
+  const rows = await pgQuery<{ doc_type: string; status: string; total: number; date: string; vendor_name: string | null }>(
+    `SELECT d.doc_type, d.status, d.total, d.date, v.name AS vendor_name
+     FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id = d.vendor_id`)
+  const facts: PurchaseDocFact[] = rows.map(r => ({
+    docType: r.doc_type as PurchaseDocFact['docType'], status: r.status,
+    total: num(r.total), date: r.date, vendorName: r.vendor_name,
+  }))
+  return purchaseAnalytics(facts, months)
+}
+
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export async function overview() {
   const orders = (await pgQuery<{ status: string; total: number }>(`SELECT status, total FROM purchase_documents WHERE doc_type='order'`)).map(o => ({ status: o.status as PurchaseStatus, total: num(o.total) }))

@@ -64,3 +64,31 @@ describe('purchasing GL posting', () => {
     expect(lines.find(l => l.accountCode === '1010')!.credit).toBe(500)
   })
 })
+
+import { purchaseAnalytics } from '../purchasing'
+
+describe('purchasing analytics', () => {
+  const rows = [
+    { docType: 'order' as const, status: 'confirmed', total: 100, date: '2026-05-10', vendorName: 'Acme' },
+    { docType: 'order' as const, status: 'draft', total: 999, date: '2026-05-11', vendorName: 'Acme' },      // excluded (draft)
+    { docType: 'invoice' as const, status: 'paid', total: 200, date: '2026-06-01', vendorName: 'Beta' },
+    { docType: 'invoice' as const, status: 'partial', total: 50, date: '2026-06-15', vendorName: 'Acme' },
+    { docType: 'request' as const, status: 'approved', total: 500, date: '2026-06-20', vendorName: 'Beta' }, // excluded (not committed type)
+  ]
+  it('aggregates committed spend by month (orders+invoices, non-draft)', () => {
+    const a = purchaseAnalytics(rows)
+    expect(a.monthlySpend).toEqual([{ month: '2026-05', total: 100 }, { month: '2026-06', total: 250 }])
+  })
+  it('rolls spend by type and top vendors', () => {
+    const a = purchaseAnalytics(rows)
+    expect(a.byType.find(t => t.type === 'invoice')).toEqual({ type: 'invoice', total: 250, count: 2 })
+    expect(a.byType.some(t => t.type === 'request')).toBe(false)
+    expect(a.topVendorSpend[0]).toEqual({ vendor: 'Beta', total: 200 })
+    expect(a.topVendorSpend[1]).toEqual({ vendor: 'Acme', total: 150 })
+  })
+  it('counts every document by status and respects the months window', () => {
+    const a = purchaseAnalytics(rows, 1)
+    expect(a.monthlySpend).toEqual([{ month: '2026-06', total: 250 }])
+    expect(a.byStatus.find(s => s.status === 'draft')?.count).toBe(1)
+  })
+})

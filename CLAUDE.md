@@ -347,7 +347,10 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   ToGl` writes a posted `gl_journal_entry` (idempotent, links `gl_entry_id`),
   reusing the Finance GL — API `doc.post` (administrator-gated) + "Post to GL" UI
   action. Verified vs real PostgreSQL (invoice 1090 → balanced entry, AP credited).
-  Deferred: vendor portal, analytics charts. Report:
+  **Analytics tab**: pure `purchaseAnalytics` (committed spend/month — drafts
+  excluded, spend by type, top vendors, status distribution; unit-tested) →
+  `?view=analytics` → `PurchasingCharts.tsx` (recharts via `next/dynamic`, page
+  stays 172 kB). Verified vs real PostgreSQL. Deferred: vendor portal. Report:
   `docs/governance/phase26.1-purchasing-platform.md`.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·

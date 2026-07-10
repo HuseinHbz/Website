@@ -63,14 +63,29 @@ row action on confirmed invoices and a GL badge once posted. Unit-tested (balanc
 postings, VAT omitted at 0 tax) + live PG round-trip (invoice 1090 → entry
 balances, AP credited 1090, Inventory 1000; second post idempotent).
 
+### Purchase Analytics (continuation)
+
+An **Analytics** tab on the Purchasing Center, on real data. Pure aggregation
+`purchaseAnalytics(rows, months)` in `purchasing.ts` (unit-tested): **committed
+spend** per month (orders + invoices, draft/void/rejected excluded), spend by
+document type, top-8 vendors by spend, and document-count by status. Data layer
+`analytics()` runs one query and feeds the engine; API `?view=analytics`
+(RBAC-gated). UI: `PurchasingCharts.tsx` (recharts, standalone module loaded via
+`next/dynamic` so the chart chunk only loads when the tab renders — the
+`/admin/purchasing` page stays at 172 kB First Load) with a monthly-spend area
+chart + top-vendor bar chart, plus spend-by-type and status-distribution cards.
+Bilingual; token palette (`BRAND`/`chartColor`). Verified vs real PostgreSQL
+(confirmed order + paid invoice aggregate; a draft order is excluded from spend
+but counted in the status distribution).
+
 ## Honest scope note
 
 Delivered for real: vendors, all 8 purchase document types (unified header),
 multi-level approval workflow + budget validation, vendor evaluation/rating,
 contracts schema, payments, PR→PO→GRN→invoice conversion, dashboard, numbering +
-audit, and **GL auto-posting** of purchase invoices. **Deferred** (documented,
-not faked) — larger standalone builds: a public **Vendor Portal** (external-facing
-auth surface) and purchase **analytics charts**.
+audit, **GL auto-posting** of purchase invoices, and **purchase analytics**
+(charts on real data). **Deferred** (documented, not faked): a public **Vendor
+Portal** — an external-facing auth surface that is a standalone build.
 
 ## Preserved (zero regression)
 
