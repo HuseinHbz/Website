@@ -846,6 +846,19 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_vendor_evals_vendor ON vendor_evaluations(vendor_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_vendor_contracts_vendor ON vendor_contracts(vendor_id);
 
+    -- Phase 26.1: Vendor Portal — token-gated, read-only external access.
+    CREATE TABLE IF NOT EXISTS vendor_portal_tokens (
+      id SERIAL PRIMARY KEY,
+      vendor_id INTEGER NOT NULL REFERENCES purchase_vendors(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      revoked BOOLEAN NOT NULL DEFAULT false,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      last_used_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_vendor_tokens_vendor ON vendor_portal_tokens(vendor_id);
+
     -- Phase 26: multi-company (branch accounting + consolidated statements).
     CREATE TABLE IF NOT EXISTS erp_companies (
       id SERIAL PRIMARY KEY,

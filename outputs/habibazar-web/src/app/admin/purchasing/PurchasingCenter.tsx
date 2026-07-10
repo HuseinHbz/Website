@@ -146,7 +146,24 @@ function Vendors({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; to
     { key: 'score', labelEn: 'Score', labelFa: 'امتیاز', type: 'number', numeric: true },
     { key: 'grade', labelEn: 'Grade', labelFa: 'درجه', render: v => <Badge color={v.grade === 'A' ? 'green' : v.grade === 'B' ? 'blue' : v.grade === 'C' ? 'yellow' : 'red'}>{v.grade}</Badge> },
   ]
-  const rowActions: RowAction<Vendor>[] = [{ id: 'eval', labelEn: 'Evaluate', labelFa: 'ارزیابی', icon: '★', onClick: v => setEvalFor(v) }]
+  async function portalLink(v: Vendor) {
+    const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vendor.portalLink', vendorId: v.id }) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok && d.token) {
+      const url = `${window.location.origin}/${rtl ? 'fa' : 'en'}/vendor/${d.token}`
+      try { await navigator.clipboard.writeText(url) } catch { /* clipboard optional */ }
+      toast(lc(rtl, 'Portal link copied (valid 90 days)', 'پیوند پرتال کپی شد (۹۰ روز اعتبار)'), 'success')
+    } else toast(d.error || lc(rtl, 'Failed', 'ناموفق'), 'error')
+  }
+  async function portalRevoke(v: Vendor) {
+    const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vendor.portalRevoke', vendorId: v.id }) })
+    if (r.ok) toast(lc(rtl, 'Portal links revoked', 'پیوندهای پرتال باطل شد'), 'success')
+  }
+  const rowActions: RowAction<Vendor>[] = [
+    { id: 'eval', labelEn: 'Evaluate', labelFa: 'ارزیابی', icon: '★', onClick: v => setEvalFor(v) },
+    { id: 'portal', labelEn: 'Portal link', labelFa: 'پیوند پرتال', icon: '🔗', onClick: v => portalLink(v) },
+    { id: 'portal-revoke', labelEn: 'Revoke portal', labelFa: 'ابطال پرتال', icon: '🚫', danger: true, onClick: v => portalRevoke(v) },
+  ]
   return (
     <div className="space-y-4">
       <div className="flex justify-end"><Btn onClick={() => setShowAdd(true)}>+ {lc(rtl, 'New vendor', 'تأمین‌کننده جدید')}</Btn></div>
