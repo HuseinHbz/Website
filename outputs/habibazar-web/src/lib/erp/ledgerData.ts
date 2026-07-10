@@ -11,21 +11,33 @@ import {
   type AccountTally,
 } from './ledger'
 
-/** Tally debit/credit totals per account across all POSTED entries. */
-export async function loadTallies(): Promise<AccountTally[]> {
+/**
+ * Tally debit/credit totals per account across POSTED entries. `companyId`
+ * scopes to one company (entries with NULL company_id belong to the default
+ * company); omit it for the consolidated group-wide books.
+ */
+export async function loadTallies(companyId?: number): Promise<AccountTally[]> {
   // Only POSTED entries hit the books. The status gate must be on the SUMMED
   // amount (CASE), not the JOIN — a filtered LEFT JOIN still counts the line.
+  const companyGate = companyId != null
+    ? `AND (e.company_id = $1 OR (e.company_id IS NULL AND EXISTS (SELECT 1 FROM erp_companies dc WHERE dc.id = $1 AND dc.is_default)))`
+    : ''
   return (await pgQuery(
     `SELECT a.id, a.code, a.name_en AS "nameEn", a.name_fa AS "nameFa", a.type,
-            COALESCE(SUM(CASE WHEN e.status = 'posted' THEN l.debit ELSE 0 END),0)::float AS debit,
-            COALESCE(SUM(CASE WHEN e.status = 'posted' THEN l.credit ELSE 0 END),0)::float AS credit
+            COALESCE(SUM(CASE WHEN e.status = 'posted' ${companyGate} THEN l.debit ELSE 0 END),0)::float AS debit,
+            COALESCE(SUM(CASE WHEN e.status = 'posted' ${companyGate} THEN l.credit ELSE 0 END),0)::float AS credit
      FROM gl_accounts a
      LEFT JOIN gl_journal_lines l ON l.account_id = a.id
      LEFT JOIN gl_journal_entries e ON e.id = l.entry_id
      WHERE a.active = 1
      GROUP BY a.id, a.code, a.name_en, a.name_fa, a.type
-     ORDER BY a.code`, [],
+     ORDER BY a.code`, companyId != null ? [companyId] : [],
   )) as unknown as AccountTally[]
+}
+
+/** Active companies (default first). */
+export async function listCompanies() {
+  return pgQuery(`SELECT id, code, name_en AS "nameEn", name_fa AS "nameFa", is_default AS "isDefault", active FROM erp_companies ORDER BY is_default DESC, code`)
 }
 
 const isCashCode = (code: string) => code.startsWith('10')

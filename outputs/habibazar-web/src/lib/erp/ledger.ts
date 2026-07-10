@@ -116,3 +116,24 @@ function toLine(t: AccountTally): StatementLine {
 }
 function sumLines(lines: StatementLine[]): number { return round2(lines.reduce((s, l) => s + l.amount, 0)) }
 function round2(n: number): number { return Math.round(n * 100) / 100 }
+
+/**
+ * Consolidate per-company account tallies into group totals (Phase 26
+ * multi-company). Accounts are merged by id, debits/credits summed — feeding
+ * the same trialBalance/incomeStatement/balanceSheet engines afterwards yields
+ * the consolidated statements.
+ */
+export function consolidateTallies(perCompany: AccountTally[][]): AccountTally[] {
+  const merged = new Map<number, AccountTally>()
+  for (const tallies of perCompany) {
+    for (const t of tallies) {
+      const cur = merged.get(t.id)
+      if (!cur) merged.set(t.id, { ...t })
+      else {
+        cur.debit = Math.round((cur.debit + t.debit) * 100) / 100
+        cur.credit = Math.round((cur.credit + t.credit) * 100) / 100
+      }
+    }
+  }
+  return [...merged.values()].sort((a, b) => a.code.localeCompare(b.code))
+}

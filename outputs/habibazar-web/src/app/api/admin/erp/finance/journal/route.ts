@@ -39,6 +39,7 @@ const createSchema = z.object({
   memo: z.string().max(500).optional(),
   reference: z.string().max(120).optional(),
   post: z.boolean().default(false),
+  companyId: z.number().int().positive().optional(),
   lines: z.array(z.object({
     accountId: z.number().int().positive(),
     debit: z.number().min(0).default(0),
@@ -61,9 +62,9 @@ export async function POST(req: NextRequest) {
     const entryNo = `JE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
     const status = d.post ? 'posted' : 'draft'
     const entry = (await pgQuery(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, posted_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,${d.post ? NOW : 'NULL'}) RETURNING id`,
-      [entryNo, d.date, d.memo ?? null, d.reference ?? null, status, check.totalDebit, auth.user.id]))[0] as { id: number }
+      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, posted_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,${d.post ? NOW : 'NULL'}) RETURNING id`,
+      [entryNo, d.date, d.memo ?? null, d.reference ?? null, status, check.totalDebit, auth.user.id, d.companyId ?? null]))[0] as { id: number }
     for (let i = 0; i < d.lines.length; i++) {
       const l = d.lines[i]
       await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,

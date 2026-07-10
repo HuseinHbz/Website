@@ -76,3 +76,19 @@ describe('financial statements', () => {
     expect(k.netIncome).toBe(2500)
   })
 })
+
+import { consolidateTallies } from '../ledger'
+
+describe('multi-company consolidation (Phase 26)', () => {
+  it('merges per-company tallies by account, summing debits/credits', () => {
+    const hq = [{ id: 1, code: '1000', nameEn: 'Cash', type: 'asset' as const, debit: 1000, credit: 200 }]
+    const br = [
+      { id: 1, code: '1000', nameEn: 'Cash', type: 'asset' as const, debit: 500, credit: 100 },
+      { id: 2, code: '4000', nameEn: 'Revenue', type: 'revenue' as const, debit: 0, credit: 700 },
+    ]
+    const c = consolidateTallies([hq, br])
+    expect(c.find(t => t.id === 1)).toMatchObject({ debit: 1500, credit: 300 })
+    expect(c.find(t => t.id === 2)).toMatchObject({ credit: 700 })
+    expect(c.map(t => t.code)).toEqual(['1000', '4000'])
+  })
+})

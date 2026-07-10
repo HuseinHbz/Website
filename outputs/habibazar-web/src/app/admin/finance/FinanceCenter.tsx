@@ -268,21 +268,36 @@ function Journal({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
 }
 
 // ── Reports ──────────────────────────────────────────────────────────────────
+interface CompanyRow { id: number; code: string; nameEn: string; nameFa: string; isDefault: boolean }
 function ReportsView({ t, fa }: { t: T; fa: boolean }) {
-  const [d, setD] = useState<Reports | null>(null)
+  const [d, setD] = useState<(Reports & { companies?: CompanyRow[] }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'trial' | 'income' | 'balance'>('trial')
-  const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/finance/reports'); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [])
+  const [company, setCompany] = useState('all')
+  const load = useCallback(async () => { setLoading(true); try { const r = await fetch(`/api/admin/erp/finance/reports?company=${company}`); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [company])
   useEffect(() => { load() }, [load])
+  async function addCompany() {
+    const code = window.prompt(L(fa, 'Company code (e.g. BR1)', 'کد شرکت/شعبه')); if (!code) return
+    const name = window.prompt(L(fa, 'Company name', 'نام شرکت')) || code
+    const r = await fetch('/api/admin/erp/finance/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'company.create', code, nameEn: name, nameFa: name }) })
+    if (r.ok) load()
+  }
   if (loading && !d) return <p className="text-sm text-text-tertiary">{t('fin_loading')}</p>
   if (!d) return <Card className="p-5"><p className="text-sm text-text-tertiary">{t('fin_empty')}</p></Card>
   const name = (l: { nameEn: string; nameFa?: string | null }) => fa ? (l.nameFa || l.nameEn) : l.nameEn
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        {(['trial', 'income', 'balance'] as const).map(v => (
-          <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${view === v ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>{t(`fin_rep_${v}` as 'fin_rep_trial')}</button>
-        ))}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex gap-2">
+          {(['trial', 'income', 'balance'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${view === v ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>{t(`fin_rep_${v}` as 'fin_rep_trial')}</button>
+          ))}
+        </div>
+        <div className="ms-auto flex items-end gap-2">
+          <Select label={L(fa, 'Company scope', 'محدودهٔ شرکت')} value={company} onChange={setCompany}
+            options={[{ value: 'all', label: L(fa, 'Consolidated (all companies)', 'تلفیقی (همهٔ شرکت‌ها)') }, ...((d?.companies ?? []).map(c => ({ value: String(c.id), label: `${fa ? c.nameFa : c.nameEn} (${c.code})` })))]} />
+          <Btn size="sm" variant="secondary" onClick={addCompany}>+ {L(fa, 'Company', 'شرکت')}</Btn>
+        </div>
       </div>
       {view === 'trial' && (
         <Card className="p-5">

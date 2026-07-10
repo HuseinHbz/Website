@@ -846,6 +846,20 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_vendor_evals_vendor ON vendor_evaluations(vendor_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_vendor_contracts_vendor ON vendor_contracts(vendor_id);
 
+    -- Phase 26: multi-company (branch accounting + consolidated statements).
+    CREATE TABLE IF NOT EXISTS erp_companies (
+      id SERIAL PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      is_default BOOLEAN NOT NULL DEFAULT false,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    INSERT INTO erp_companies (code, name_en, name_fa, is_default)
+      VALUES ('HQ', 'Head Office', 'دفتر مرکزی', true)
+      ON CONFLICT (code) DO NOTHING;
+
     -- Enterprise Financial System (Phase 21 ERP, Module 1) — double-entry GL.
     CREATE TABLE IF NOT EXISTS gl_fiscal_periods (
       id SERIAL PRIMARY KEY,
@@ -962,6 +976,8 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW}),
       posted_at TEXT
     );
+    ALTER TABLE gl_journal_entries ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    CREATE INDEX IF NOT EXISTS idx_gl_entries_company ON gl_journal_entries(company_id);
 
     CREATE TABLE IF NOT EXISTS gl_journal_lines (
       id SERIAL PRIMARY KEY,
