@@ -5,7 +5,7 @@ import { logAction } from '@/lib/admin/audit'
 import {
   listAccounts, createAccount, importStatement, statementLines, autoMatch, setLineStatus, reconSummary,
   listCheques, createCheque, transitionCheque, chequeOverview,
-  listPetty, addPetty, pettyOverview,
+  listPetty, addPetty, pettyOverview, cashFlow,
 } from '@/lib/erp/bankingData'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     if (view === 'accounts') return NextResponse.json({ accounts: await listAccounts() })
     if (view === 'cheques') return NextResponse.json({ cheques: await listCheques(), kpis: await chequeOverview() })
     if (view === 'petty') return NextResponse.json({ entries: await listPetty(), summary: await pettyOverview() })
+    if (view === 'cashflow') return NextResponse.json(await cashFlow())
     if (view === 'statement') {
       const accountId = Number(sp.get('account'))
       if (!accountId) return NextResponse.json({ error: 'account required' }, { status: 400 })

@@ -122,3 +122,72 @@ export function pettyCashSummary(entries: PettyEntry[]): PettySummary {
   const balance = round2(floatTotal + replenished - spent)
   return { balance, floatTotal, spent, replenished, lowBalance: floatTotal > 0 && balance < floatTotal * 0.2 }
 }
+
+// ── Cash flow (Phase 26.3 — treasury dashboard) ──────────────────────────────
+export interface CashFlowPoint { month: string; inflow: number; outflow: number; net: number }
+export interface CashFlowResult {
+  months: CashFlowPoint[]
+  /** Deterministic projection: 3-month moving average of the trailing actuals. */
+  forecast: CashFlowPoint[]
+  totals: { inflow: number; outflow: number; net: number }
+}
+
+/** 'YYYY-MM' key of a date string ('' when unparseable). */
+export function monthKey(date: string): string {
+  return /^\d{4}-\d{2}/.test(date ?? '') ? date.slice(0, 7) : ''
+}
+
+/** Next month of a 'YYYY-MM' key (pure string arithmetic). */
+export function nextMonthKey(key: string): string {
+  const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7))
+  return m >= 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+}
+
+/**
+ * Monthly treasury series: receipts (money in) vs payments (money out) bucketed
+ * into the trailing `months` window ending at `now`, plus a moving-average
+ * forecast. Amounts are treated as magnitudes; sign conventions of the source
+ * ledgers don't leak in.
+ */
+export function cashFlowSeries(
+  receipts: { date: string; amount: number }[],
+  payments: { date: string; amount: number }[],
+  opts: { months?: number; forecastMonths?: number; now?: string } = {},
+): CashFlowResult {
+  const span = Math.max(1, opts.months ?? 12)
+  const fSpan = Math.max(0, opts.forecastMonths ?? 3)
+  const now = monthKey(opts.now ?? new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 7)
+
+  // Trailing window of month keys ending at `now`.
+  const keys: string[] = [now]
+  while (keys.length < span) {
+    const first = keys[0]
+    const y = Number(first.slice(0, 4)), m = Number(first.slice(5, 7))
+    keys.unshift(m <= 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`)
+  }
+  const inflow = new Map<string, number>(), outflow = new Map<string, number>()
+  for (const r of receipts) { const k = monthKey(r.date); if (k) inflow.set(k, (inflow.get(k) ?? 0) + Math.abs(r.amount)) }
+  for (const p of payments) { const k = monthKey(p.date); if (k) outflow.set(k, (outflow.get(k) ?? 0) + Math.abs(p.amount)) }
+
+  const months: CashFlowPoint[] = keys.map(k => {
+    const i = round2(inflow.get(k) ?? 0), o = round2(outflow.get(k) ?? 0)
+    return { month: k, inflow: i, outflow: o, net: round2(i - o) }
+  })
+  const totals = {
+    inflow: round2(months.reduce((s, m) => s + m.inflow, 0)),
+    outflow: round2(months.reduce((s, m) => s + m.outflow, 0)),
+    net: round2(months.reduce((s, m) => s + m.net, 0)),
+  }
+
+  // Forecast = mean of the last up-to-3 actual months, held constant forward.
+  const tail = months.slice(-3)
+  const avgIn = round2(tail.reduce((s, m) => s + m.inflow, 0) / Math.max(1, tail.length))
+  const avgOut = round2(tail.reduce((s, m) => s + m.outflow, 0) / Math.max(1, tail.length))
+  const forecast: CashFlowPoint[] = []
+  let cursor = now
+  for (let i = 0; i < fSpan; i++) {
+    cursor = nextMonthKey(cursor)
+    forecast.push({ month: cursor, inflow: avgIn, outflow: avgOut, net: round2(avgIn - avgOut) })
+  }
+  return { months, forecast, totals }
+}

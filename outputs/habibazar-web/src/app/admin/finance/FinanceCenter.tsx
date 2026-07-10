@@ -415,17 +415,81 @@ interface Cheque { id: number; direction: string; number: string; party: string;
 interface PettyRow { id: number; kind: string; date: string; amount: number; category: string | null; note: string | null }
 
 function BankingView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
-  const [sec, setSec] = useState<'recon' | 'cheques' | 'petty'>('recon')
+  const [sec, setSec] = useState<'recon' | 'cheques' | 'petty' | 'cashflow'>('recon')
   return (
     <div className="space-y-4">
       <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1">
-        {([['recon', 'Reconciliation', 'مغایرت‌گیری بانکی'], ['cheques', 'Cheques', 'چک‌ها'], ['petty', 'Petty cash', 'تنخواه']] as const).map(([id, en, faL]) => (
+        {([['recon', 'Reconciliation', 'مغایرت‌گیری بانکی'], ['cheques', 'Cheques', 'چک‌ها'], ['petty', 'Petty cash', 'تنخواه'], ['cashflow', 'Cash flow', 'جریان نقدی']] as const).map(([id, en, faL]) => (
           <button key={id} onClick={() => setSec(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${sec === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
         ))}
       </div>
       {sec === 'recon' && <ReconSection fa={fa} toast={toast} />}
       {sec === 'cheques' && <ChequeSection fa={fa} toast={toast} />}
       {sec === 'petty' && <PettySection fa={fa} toast={toast} />}
+      {sec === 'cashflow' && <CashFlowSection fa={fa} />}
+    </div>
+  )
+}
+
+/** Treasury dashboard: live bank balances + monthly in/out/net + MA forecast. */
+function CashFlowSection({ fa }: { fa: boolean }) {
+  interface CfPoint { month: string; inflow: number; outflow: number; net: number }
+  interface CfData { months: CfPoint[]; forecast: CfPoint[]; totals: { inflow: number; outflow: number; net: number }; accounts: { id: number; name: string; currency: string; balance: number }[]; bankBalance: number }
+  const [d, setD] = useState<CfData | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetch('/api/admin/erp/finance/banking?view=cashflow').then(r => r.json()).then(setD).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+  if (loading) return <div className="h-60 rounded-xl border border-subtle bg-surface animate-pulse" />
+  if (!d) return <Card className="p-8 text-center text-sm text-text-tertiary">{L(fa, 'Cash-flow data unavailable.', 'داده جریان نقدی در دسترس نیست.')}</Card>
+  const peak = Math.max(1, ...d.months.map(m => Math.max(m.inflow, m.outflow)), ...d.forecast.map(m => Math.max(m.inflow, m.outflow)))
+  const bar = (v: number, tone: 'in' | 'out') => (
+    <div className="h-2 rounded bg-surface-2 overflow-hidden"><div className={`h-full ${tone === 'in' ? 'bg-success' : 'bg-danger'}`} style={{ width: `${Math.min(100, (v / peak) * 100)}%` }} /></div>
+  )
+  const rows = [...d.months.map(m => ({ ...m, isForecast: false })), ...d.forecast.map(m => ({ ...m, isForecast: true }))]
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {([
+          ['Bank balance (live)', 'موجودی بانک (زنده)', d.bankBalance.toLocaleString(), d.bankBalance >= 0],
+          ['Inflow (12m)', 'ورودی (۱۲ ماه)', d.totals.inflow.toLocaleString(), true],
+          ['Outflow (12m)', 'خروجی (۱۲ ماه)', d.totals.outflow.toLocaleString(), false],
+          ['Net (12m)', 'خالص (۱۲ ماه)', d.totals.net.toLocaleString(), d.totals.net >= 0],
+        ] as const).map(([en, faL, v, ok]) => (
+          <div key={en} className={`rounded-xl p-3 bg-surface-2 border ${ok ? 'border-success/40' : 'border-danger/40'}`}>
+            <p className="text-xs text-text-tertiary">{L(fa, en, faL)}</p><p className="text-lg font-bold text-text-primary">{v}</p>
+          </div>
+        ))}
+      </div>
+      {d.accounts.length > 0 && (
+        <Card className="p-4">
+          <h4 className="text-xs font-semibold text-text-primary mb-2">{L(fa, 'Account balances', 'موجودی حساب‌ها')}</h4>
+          <div className="flex flex-wrap gap-2">
+            {d.accounts.map(a => (
+              <span key={a.id} className="inline-flex items-center gap-2 rounded-lg border border-subtle px-3 py-1.5 text-sm">
+                <span className="text-text-secondary">{a.name}</span>
+                <span className={`font-semibold ${a.balance >= 0 ? 'text-success-text' : 'text-danger-text'}`}>{a.balance.toLocaleString()} {a.currency}</span>
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
+      <Card className="p-4">
+        <h4 className="text-xs font-semibold text-text-primary mb-3">{L(fa, 'Monthly cash flow + 3-month forecast (moving average)', 'جریان نقدی ماهانه + پیش‌بینی ۳ ماهه (میانگین متحرک)')}</h4>
+        <div className="space-y-1.5">
+          {rows.map(m => (
+            <div key={m.month} className={`grid grid-cols-12 items-center gap-2 text-xs rounded-lg px-2 py-1.5 ${m.isForecast ? 'border border-dashed border-subtle opacity-80' : ''}`}>
+              <span className="col-span-2 font-mono text-text-tertiary">{m.month}{m.isForecast && <span className="ms-1 text-4xs">{L(fa, '(fc)', '(پیش‌بینی)')}</span>}</span>
+              <div className="col-span-3">{bar(m.inflow, 'in')}</div>
+              <span className="col-span-2 text-success-text text-end">{m.inflow.toLocaleString()}</span>
+              <div className="col-span-3">{bar(m.outflow, 'out')}</div>
+              <span className="col-span-1 text-danger-text text-end">{m.outflow.toLocaleString()}</span>
+              <span className={`col-span-1 text-end font-semibold ${m.net >= 0 ? 'text-success-text' : 'text-danger-text'}`}>{m.net.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-3xs text-text-tertiary mt-3">{L(fa, 'Inflow = customer receipts (sales payments) · Outflow = vendor payments (purchasing). Forecast holds the trailing 3-month average.', 'ورودی = دریافت از مشتری (پرداخت‌های فروش) · خروجی = پرداخت به تأمین‌کننده (خرید). پیش‌بینی، میانگین ۳ ماه اخیر است.')}</p>
+      </Card>
     </div>
   )
 }

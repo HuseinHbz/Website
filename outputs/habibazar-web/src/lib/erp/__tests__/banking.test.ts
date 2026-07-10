@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matchStatement, reconciliationSummary, canTransition, chequeStart, chequeKpis, pettyCashSummary, CHEQUE_FLOW } from '../banking'
+import { matchStatement, reconciliationSummary, canTransition, chequeStart, chequeKpis, pettyCashSummary, CHEQUE_FLOW, cashFlowSeries } from '../banking'
 
 describe('banking — statement reconciliation', () => {
   it('matches by amount within a date window, best confidence first, one candidate per line', () => {
@@ -89,5 +89,37 @@ describe('finance AI — deterministic pre-analysis + prompt', () => {
     expect(p.systemPrompt).toContain('possible duplicate')
     expect(p.systemPrompt).toContain('Never invent')
     expect(p.userMessage.toLowerCase()).toContain('analyze')
+  })
+})
+
+describe('cashFlowSeries (26.3)', () => {
+  const receipts = [
+    { date: '2026-05-10', amount: 300 }, { date: '2026-06-02', amount: 600 },
+    { date: '2026-07-01', amount: 900 }, { date: '2020-01-01', amount: 9999 }, // outside window
+  ]
+  const payments = [{ date: '2026-06-15', amount: -200 }, { date: '2026-07-03', amount: 100 }]
+
+  it('buckets by month over the trailing window and totals correctly', () => {
+    const r = cashFlowSeries(receipts, payments, { months: 4, forecastMonths: 0, now: '2026-07-10' })
+    expect(r.months.map(m => m.month)).toEqual(['2026-04', '2026-05', '2026-06', '2026-07'])
+    expect(r.months[1]).toEqual({ month: '2026-05', inflow: 300, outflow: 0, net: 300 })
+    expect(r.months[2]).toEqual({ month: '2026-06', inflow: 600, outflow: 200, net: 400 }) // sign-safe
+    expect(r.months[3]).toEqual({ month: '2026-07', inflow: 900, outflow: 100, net: 800 })
+    expect(r.totals).toEqual({ inflow: 1800, outflow: 300, net: 1500 })
+  })
+  it('forecasts a 3-month moving average forward across year ends', () => {
+    const r = cashFlowSeries(receipts, payments, { months: 3, forecastMonths: 3, now: '2026-12-05' })
+    // last 3 actual months (Oct/Nov/Dec 2026) are empty → zero forecast, keys roll into 2027
+    expect(r.forecast.map(f => f.month)).toEqual(['2027-01', '2027-02', '2027-03'])
+    const r2 = cashFlowSeries(receipts, payments, { months: 3, forecastMonths: 2, now: '2026-07-10' })
+    expect(r2.forecast[0].inflow).toBe(600) // (300+600+900)/3
+    expect(r2.forecast[0].outflow).toBe(100) // (0+200+100)/3
+    expect(r2.forecast[0].net).toBe(500)
+    expect(r2.forecast[1]).toEqual({ ...r2.forecast[0], month: '2026-09' })
+  })
+  it('ignores unparseable dates and handles empty ledgers', () => {
+    const r = cashFlowSeries([{ date: 'bad', amount: 100 }], [], { months: 2, forecastMonths: 1, now: '2026-07-10' })
+    expect(r.totals).toEqual({ inflow: 0, outflow: 0, net: 0 })
+    expect(r.forecast[0].net).toBe(0)
   })
 })

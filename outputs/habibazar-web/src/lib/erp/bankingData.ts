@@ -5,7 +5,7 @@
 import { pgQuery } from '@/lib/db'
 import {
   matchStatement, reconciliationSummary, canTransition, chequeStart, chequeKpis, pettyCashSummary,
-  type MatchCandidate, type ChequeDirection, type ChequeStatus,
+  cashFlowSeries, type MatchCandidate, type ChequeDirection, type ChequeStatus,
 } from './banking'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -13,7 +13,14 @@ const num = (v: unknown) => Number(v ?? 0)
 
 // ── Accounts ─────────────────────────────────────────────────────────────────
 export async function listAccounts() {
-  return pgQuery(`SELECT id, name, bank, iban, account_no AS "accountNo", currency, opening_balance::float AS "openingBalance", active FROM bank_accounts ORDER BY name`)
+  // Live balance = opening balance + every imported statement movement
+  // (excluded lines are still real bank money — exclusion only skips matching).
+  return pgQuery(
+    `SELECT a.id, a.name, a.bank, a.iban, a.account_no AS "accountNo", a.currency,
+            a.opening_balance::float AS "openingBalance",
+            (a.opening_balance + COALESCE((SELECT SUM(l.amount) FROM bank_statement_lines l WHERE l.account_id=a.id),0))::float AS balance,
+            a.active
+     FROM bank_accounts a ORDER BY a.name`)
 }
 export async function createAccount(a: { name: string; bank?: string; iban?: string; accountNo?: string; currency?: string; openingBalance?: number }) {
   const r = (await pgQuery<{ id: number }>(
@@ -111,4 +118,15 @@ export async function addPetty(e: { kind: 'float' | 'expense' | 'replenish'; dat
 export async function pettyOverview() {
   const rows = await pgQuery<{ kind: 'float' | 'expense' | 'replenish'; amount: number }>(`SELECT kind, amount::float AS amount FROM petty_cash_entries`)
   return pettyCashSummary(rows.map(r => ({ kind: r.kind, amount: num(r.amount) })))
+}
+
+// ── Cash flow (Phase 26.3) ───────────────────────────────────────────────────
+/** Treasury dashboard: monthly in/out/net + forecast + live bank position. */
+export async function cashFlow(months = 12) {
+  const receipts = await pgQuery<{ date: string; amount: number }>(`SELECT date, amount::float AS amount FROM sales_payments`)
+  const payments = await pgQuery<{ date: string; amount: number }>(`SELECT date, amount::float AS amount FROM purchase_payments`)
+  const series = cashFlowSeries(receipts, payments, { months })
+  const accounts = (await listAccounts()) as { id: number; name: string; currency: string; balance: number }[]
+  const bankBalance = accounts.reduce((s, a) => s + num(a.balance), 0)
+  return { ...series, accounts: accounts.map(a => ({ id: a.id, name: a.name, currency: a.currency, balance: num(a.balance) })), bankBalance }
 }
