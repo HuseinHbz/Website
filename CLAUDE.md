@@ -239,8 +239,10 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   statement, sales-by-customer, invoice register, inventory valuation, asset
   register, project costing. API `GET /api/admin/erp/reports` (catalog / run /
   `format=csv`), RBAC-gated. Bilingual UI: module-grouped picker, summary cards,
-  Table + group-by Summary views, CSV export. Purchasing report deferred until
-  its module ships. Verified vs real PostgreSQL (all 7 reports aggregate correctly).
+  Table + group-by Summary views, CSV export. 7 reports: trial balance, income
+  statement, sales-by-customer, invoice register, inventory valuation, asset
+  register, project costing. **Purchasing reports added after Phase 26.1**
+  (Purchase Register + Spend by Vendor → 9 total). Verified vs real PostgreSQL.
 - **Enterprise Numbering Engine** (`/admin/numbering`, `NumberingCenter`) — Phase
   21.11. The single source of truth for document numbers across every module (a
   platform service, not a per-module helper). Tables `numbering_formats` (pattern
@@ -431,10 +433,9 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   edges with true/false branch labels, and a property panel for editing node
   fields + connections. Pure geometry helpers `src/lib/workflow/layout.ts`
   (`graphEdges`, `autoLayout` BFS-ranked; 5 unit tests). Reads/writes the exact
-  definition JSON the engine runs (Canvas/JSON toggle). Rules Engine + Integration
-  Hub remain the documented roadmap
-  (`docs/governance/phase21-automation-platform.md`) — they compose via the
-  engine's handler seam (no duplicated logic).
+  definition JSON the engine runs (Canvas/JSON toggle). The Rules Engine (21.7)
+  and Integration Hub (21.8) were subsequently built and compose via the
+  engine's handler seam (no duplicated logic) — see their bullets below.
 - **Business Rules Engine** (`/admin/rules`, `RulesCenter`) — Phase-21.7. Pure
   engine `src/lib/rules/engine.ts` (`evalCondition` with eq/ne/gt/gte/lt/lte/in/
   nin/contains/between/truthy/falsy + dotted paths, `ruleMatches` all/any,

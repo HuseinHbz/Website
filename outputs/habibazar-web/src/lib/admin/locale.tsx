@@ -2031,6 +2031,7 @@ const T: Record<string, { fa: string; en: string }> = {
   rep_footnote: { fa: 'هر گزارش مستقیماً از لایهٔ دادهٔ همان ماژول خوانده می‌شود؛ گزارش خرید پس از افزودن ماژول خرید اضافه می‌شود.', en: 'Each report reads live from its module data layer; the purchasing report arrives once the purchasing module ships.' },
   rep_mod_financial: { fa: 'مالی', en: 'Financial' },
   rep_mod_sales: { fa: 'فروش', en: 'Sales' },
+  rep_mod_purchasing: { fa: 'خرید', en: 'Purchasing' },
   rep_mod_inventory: { fa: 'انبار', en: 'Inventory' },
   rep_mod_assets: { fa: 'دارایی', en: 'Assets' },
   rep_mod_projects: { fa: 'پروژه', en: 'Projects' },

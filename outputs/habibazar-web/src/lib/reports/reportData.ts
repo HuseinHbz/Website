@@ -4,8 +4,7 @@
  * A fixed catalog of reports (no arbitrary SQL → no injection surface), each
  * backed by an existing module's data layer. `runReport` returns flat rows +
  * typed columns + a summary; the pure pivot/CSV helpers do the rest. Reports span
- * the modules that have data (Financial / Sales / Inventory / Assets / Projects);
- * Purchasing awaits its module.
+ * Financial / Sales / Purchasing / Inventory / Assets / Projects.
  */
 import { pgQuery } from '@/lib/db'
 import { financeReports } from '@/lib/erp/ledgerData'
@@ -17,7 +16,7 @@ import type { Row, Column } from './pivot'
 
 export interface ReportDef {
   id: string
-  module: 'financial' | 'sales' | 'inventory' | 'assets' | 'projects'
+  module: 'financial' | 'sales' | 'purchasing' | 'inventory' | 'assets' | 'projects'
   nameEn: string; nameFa: string
   /** sensible defaults for the pivot/chart UI */
   groupField?: string
@@ -29,6 +28,8 @@ export const REPORTS: ReportDef[] = [
   { id: 'fin_income', module: 'financial', nameEn: 'Income Statement', nameFa: 'صورت سود و زیان', groupField: 'kind', measureField: 'amount' },
   { id: 'sales_by_customer', module: 'sales', nameEn: 'Sales by Customer', nameFa: 'فروش به تفکیک مشتری', groupField: 'name', measureField: 'invoiced' },
   { id: 'sales_invoices', module: 'sales', nameEn: 'Invoice Register', nameFa: 'دفتر فاکتورها', groupField: 'status', measureField: 'total' },
+  { id: 'purchase_register', module: 'purchasing', nameEn: 'Purchase Register', nameFa: 'دفتر خرید', groupField: 'status', measureField: 'total' },
+  { id: 'purchase_by_vendor', module: 'purchasing', nameEn: 'Spend by Vendor', nameFa: 'خرید به تفکیک تأمین‌کننده', groupField: 'vendor', measureField: 'total' },
   { id: 'inv_valuation', module: 'inventory', nameEn: 'Inventory Valuation', nameFa: 'ارزش‌گذاری انبار', groupField: 'category', measureField: 'value' },
   { id: 'assets_register', module: 'assets', nameEn: 'Asset Register', nameFa: 'دفتر دارایی‌ها', groupField: 'category', measureField: 'bookValue' },
   { id: 'projects_costing', module: 'projects', nameEn: 'Project Costing', nameFa: 'هزینه‌یابی پروژه', groupField: 'name', measureField: 'profit' },
@@ -68,6 +69,30 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Customer' }, { key: 'invoiced', label: 'Invoiced' }, { key: 'paid', label: 'Paid' }, { key: 'outstanding', label: 'Outstanding' }],
         rows,
         summary: [{ label: 'Invoiced', value: money(c.reduce((s, x) => s + x.invoiced, 0)) }, { label: 'Outstanding', value: money(c.reduce((s, x) => s + x.outstanding, 0)) }],
+      }
+    }
+    case 'purchase_register': {
+      const rows = (await pgQuery(
+        `SELECT d.doc_no AS "docNo", COALESCE(v.name,'—') AS vendor, d.doc_type AS "docType", d.date, d.status, d.total::float AS total, d.paid_total::float AS paid
+         FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id=d.vendor_id
+         WHERE d.status <> 'draft' ORDER BY d.date DESC`, [])) as Row[]
+      return {
+        columns: [{ key: 'docNo', label: 'No.' }, { key: 'vendor', label: 'Vendor' }, { key: 'docType', label: 'Type' }, { key: 'date', label: 'Date' }, { key: 'status', label: 'Status' }, { key: 'total', label: 'Total' }, { key: 'paid', label: 'Paid' }],
+        rows,
+        summary: [{ label: 'Documents', value: rows.length }, { label: 'Total', value: money(rows.reduce((s, r) => s + Number(r.total), 0)) }, { label: 'Paid', value: money(rows.reduce((s, r) => s + Number(r.paid), 0)) }],
+      }
+    }
+    case 'purchase_by_vendor': {
+      const rows = (await pgQuery(
+        `SELECT v.code, v.name AS vendor, v.grade,
+                COALESCE(SUM(CASE WHEN d.doc_type IN ('order','invoice') AND d.status NOT IN ('draft','void','rejected') THEN d.total ELSE 0 END),0)::float AS total,
+                COALESCE(SUM(CASE WHEN d.doc_type='invoice' AND d.status NOT IN ('draft','void') THEN d.total - d.paid_total ELSE 0 END),0)::float AS outstanding
+         FROM purchase_vendors v LEFT JOIN purchase_documents d ON d.vendor_id = v.id
+         GROUP BY v.id, v.code, v.name, v.grade ORDER BY total DESC`, [])) as Row[]
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'vendor', label: 'Vendor' }, { key: 'grade', label: 'Grade' }, { key: 'total', label: 'Committed spend' }, { key: 'outstanding', label: 'Outstanding' }],
+        rows,
+        summary: [{ label: 'Vendors', value: rows.length }, { label: 'Spend', value: money(rows.reduce((s, r) => s + Number(r.total), 0)) }, { label: 'Outstanding', value: money(rows.reduce((s, r) => s + Number(r.outstanding), 0)) }],
       }
     }
     case 'sales_invoices': {

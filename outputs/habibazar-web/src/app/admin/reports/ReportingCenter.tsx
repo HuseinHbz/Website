@@ -9,14 +9,14 @@ import { summarize, type Row, type Column } from '@/lib/reports/pivot'
 
 interface ReportDef {
   id: string
-  module: 'financial' | 'sales' | 'inventory' | 'assets' | 'projects'
+  module: 'financial' | 'sales' | 'purchasing' | 'inventory' | 'assets' | 'projects'
   nameEn: string; nameFa: string
   groupField?: string; measureField?: string
 }
 interface RunResult { def: ReportDef; columns: Column[]; rows: Row[]; summary: { label: string; value: number }[] }
 
 const MODULE_COLOR: Record<ReportDef['module'], string> = {
-  financial: 'green', sales: 'blue', inventory: 'indigo', assets: 'yellow', projects: 'slate',
+  financial: 'green', sales: 'blue', purchasing: 'red', inventory: 'indigo', assets: 'yellow', projects: 'slate',
 }
 const fmt = (v: unknown) => {
   if (typeof v === 'number') return v.toLocaleString(undefined, { maximumFractionDigits: 2 })
