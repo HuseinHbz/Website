@@ -9,6 +9,7 @@ import { HERO_TEMPLATES, HERO_CATEGORIES } from '@/lib/hero/templates'
 import { validateHero } from '@/lib/hero/rules'
 import type { HeroConfig, HeroRecord, HeroStatus, HeroCta, Locale } from '@/lib/hero/types'
 import { HeroBuilder } from './HeroBuilder'
+import { TimelineStudio } from './TimelineStudio'
 
 type Tab = 'dashboard' | 'heroes' | 'templates' | 'library' | 'experiments' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
@@ -292,6 +293,7 @@ function AnimationLibrary({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' |
   const [rows, setRows] = useState<AnimPreset[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<{ total: number; enabled: number; archived: number; mostUsed: { key: string; usageCount: number }[] } | null>(null)
+  const [studioFor, setStudioFor] = useState<AnimPreset | null>(null)
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -332,6 +334,7 @@ function AnimationLibrary({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' |
     { key: 'enabled', labelEn: 'State', labelFa: 'وضعیت', type: 'boolean', render: p => <Badge color={p.archived ? 'red' : p.enabled ? 'green' : 'slate'}>{p.archived ? 'archived' : p.enabled ? 'enabled' : 'disabled'}</Badge> },
   ]
   const rowActions: RowAction<AnimPreset>[] = [
+    { id: 'studio', labelEn: 'Timeline Studio', labelFa: 'استودیو تایم‌لاین', icon: '🎬', onClick: p => setStudioFor(p) },
     { id: 'fav', labelEn: 'Toggle favorite', labelFa: 'علاقه‌مندی', icon: '★', onClick: p => op('toggle', { id: p.id, field: 'favorite', value: !p.favorite }) },
     { id: 'toggle', labelEn: 'Enable/Disable', labelFa: 'فعال/غیرفعال', icon: '⏻', onClick: p => op('toggle', { id: p.id, field: 'enabled', value: !p.enabled }) },
     { id: 'archive', labelEn: 'Archive/Restore', labelFa: 'بایگانی', icon: '📦', onClick: p => op('toggle', { id: p.id, field: 'archived', value: !p.archived }) },
@@ -362,6 +365,10 @@ function AnimationLibrary({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' |
       <Card className="p-4">
         <DataTable tableId="hero-animation-library" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={p => String(p.id)} rowActions={rowActions} bulkActions={bulkActions} selectable exportName="hero-animations" onRefresh={load} emptyLabel={lc(rtl, 'No custom presets yet — the 53 built-in presets are always available in the builder.', 'هنوز پریست سفارشی نیست — ۵۳ پریست داخلی همیشه در سازنده در دسترس‌اند.')} />
       </Card>
+      {studioFor && (
+        <TimelineStudio rtl={rtl} presetId={studioFor.id} presetName={rtl ? studioFor.nameFa : studioFor.nameEn}
+          onClose={() => { setStudioFor(null); load() }} toast={toast} />
+      )}
     </div>
   )
 }
