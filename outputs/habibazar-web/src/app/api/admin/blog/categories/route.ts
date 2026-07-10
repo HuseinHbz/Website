@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { blogCategories } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
-import { getAdminUser } from '@/lib/admin/auth'
+import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
@@ -12,7 +13,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
-  const body = await req.json()
+  if (!user) return unauthorized()
+  const body = await guardJson(req)
   const db = getDb()
   const result = await db.insert(blogCategories).values(body).returning()
   await logAction(user, 'CREATE', 'blog_categories', result[0]?.id, null, body)
@@ -21,7 +23,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
-  const { id, ...data } = await req.json()
+  if (!user) return unauthorized()
+  const { id, ...data } = await guardJson(req)
   const db = getDb()
   await db.update(blogCategories).set(data).where(eq(blogCategories.id, id))
   await logAction(user, 'UPDATE', 'blog_categories', id, null, data)
@@ -30,7 +33,8 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = await getAdminUser()
-  const { id } = await req.json()
+  if (!user || !canDo(user.role, 'delete')) return forbidden('Delete requires an administrator role')
+  const { id } = await guardJson(req)
   const db = getDb()
   await db.delete(blogCategories).where(eq(blogCategories.id, id))
   await logAction(user, 'DELETE', 'blog_categories', id)

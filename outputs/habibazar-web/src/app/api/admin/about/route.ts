@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardJson, unauthorized } from '@/lib/api/respond'
 import { revalidatePath } from 'next/cache'
 import { getDb } from '@/lib/db'
 import { aboutContent } from '@/lib/db/schema'
@@ -14,7 +15,8 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
-  const body = await req.json()
+  if (!user) return unauthorized()
+  const body = await guardJson(req)
   const { locale, ...data } = body
   if (!locale) return NextResponse.json({ error: 'locale required' }, { status: 400 })
   const db = getDb()

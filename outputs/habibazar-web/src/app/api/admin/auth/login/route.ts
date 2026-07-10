@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ user: result.user })
   } catch (e) {
     // Never let the login route emit a non-JSON 500 (the client would show a
-    // generic "Network error"). Surface a real message + log the server detail.
-    // Include the underlying driver cause (e.g. `column ... does not exist`),
-    // which pinpoints schema drift far better than Drizzle's "Failed query".
+    // generic "Network error"). The full detail — incl. the driver cause that
+    // pinpoints schema drift — goes to the server log only; the client gets a
+    // generic message (no internal error disclosure on an unauthenticated route).
     const cause = (e as { cause?: { message?: string } })?.cause?.message
     const detail = `${e instanceof Error ? e.message : String(e)}${cause ? ` — ${cause}` : ''}`
     logger.error('Login route failed', { error: detail })
-    return NextResponse.json({ error: `Login failed: ${detail}` }, { status: 500 })
+    return NextResponse.json({ error: 'Login failed — server error (see admin logs)' }, { status: 500 })
   }
 }

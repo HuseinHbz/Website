@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, guardJson, forbidden, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { sections, sectionVersions } from '@/lib/db/schema'
 import { eq, desc, like, and } from 'drizzle-orm'
-import { getAdminUser } from '@/lib/admin/auth'
+import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { nanoid } from 'nanoid'
 
@@ -45,10 +45,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const me = await getAdminUser()
+    if (!me) return unauthorized()
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (me.role === 'editor') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const body = await req.json()
+    const body = await guardJson(req)
     const { sectionType, variant = 'default', titleEn = '', ...rest } = body
     if (!sectionType) return NextResponse.json({ error: 'sectionType required' }, { status: 400 })
 
@@ -76,10 +77,11 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const me = await getAdminUser()
+    if (!me) return unauthorized()
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (me.role === 'editor') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const body = await req.json()
+    const body = await guardJson(req)
     const { id, ...data } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
@@ -114,12 +116,13 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const me = await getAdminUser()
+    if (!me || !canDo(me.role, 'delete')) return forbidden('Delete requires an administrator role')
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (me.role !== 'super_admin' && me.role !== 'administrator') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { id } = await req.json()
+    const { id } = await guardJson(req)
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const db = getDb()

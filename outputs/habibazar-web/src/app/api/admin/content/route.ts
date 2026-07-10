@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminUser } from '@/lib/admin/auth'
+import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { getDb } from '@/lib/db'
 import { content } from '@/lib/db/schema'
@@ -18,8 +19,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
+  if (!user) return unauthorized()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const body = await req.json()
+  const body = await guardJson(req)
   const db = getDb()
   const [row] = await db.insert(content).values({
     slug: body.slug, type: body.type || 'blog',
@@ -41,8 +43,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
+  if (!user) return unauthorized()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const body = await req.json()
+  const body = await guardJson(req)
   const db = getDb()
   const existing = await db.select({ publishedAt: content.publishedAt, status: content.status })
     .from(content).where(eq(content.id, body.id)).limit(1)
@@ -67,8 +70,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = await getAdminUser()
+  if (!user || !canDo(user.role, 'delete')) return forbidden('Delete requires an administrator role')
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id } = await req.json()
+  const { id } = await guardJson(req)
   const db = getDb()
   await db.delete(content).where(eq(content.id, id))
   await logAction(user, 'delete', 'content', id)

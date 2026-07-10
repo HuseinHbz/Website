@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, guardJson, forbidden, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { aiKnowledgeBase } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { getAdminUser } from '@/lib/admin/auth'
+import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 
 export async function GET() {
@@ -16,7 +16,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {      const user = await getAdminUser()
-      const body = await req.json()
+      if (!user) return unauthorized()
+      const body = await guardJson(req)
       const db = getDb()
       const result = await db.insert(aiKnowledgeBase).values({ ...body, updatedBy: user?.id }).returning()
       await logAction(user, 'CREATE', 'ai_knowledge_base', result[0]?.id, null, body)
@@ -28,7 +29,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {      const user = await getAdminUser()
-      const { id, ...data } = await req.json()
+      if (!user) return unauthorized()
+      const { id, ...data } = await guardJson(req)
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
       const db = getDb()
       await db.update(aiKnowledgeBase).set({ ...data, updatedAt: new Date().toISOString(), updatedBy: user?.id }).where(eq(aiKnowledgeBase.id, id))
@@ -41,7 +43,8 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {      const user = await getAdminUser()
-      const { id } = await req.json()
+      if (!user || !canDo(user.role, 'delete')) return forbidden('Delete requires an administrator role')
+      const { id } = await guardJson(req)
       const db = getDb()
       await db.delete(aiKnowledgeBase).where(eq(aiKnowledgeBase.id, id))
       await logAction(user, 'DELETE', 'ai_knowledge_base', id)

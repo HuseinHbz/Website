@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardJson, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { organization } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -15,8 +16,9 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
+  if (!user) return unauthorized()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const body = await req.json()
+  const body = await guardJson(req)
   const db = getDb()
   const existing = (await db.select().from(organization))[0]
   if (existing) {

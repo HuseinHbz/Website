@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, guardJson, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { heroContent } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -18,7 +18,8 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const user = await getAdminUser()
-    const body = await req.json()
+    if (!user) return unauthorized()
+    const body = await guardJson(req)
     const { locale, ...data } = body
     if (!locale) return NextResponse.json({ error: 'locale required' }, { status: 400 })
     const db = getDb()

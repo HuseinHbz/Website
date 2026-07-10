@@ -7,6 +7,8 @@ import { logBus } from '@/lib/logs/bus'
 import { executeWorkflow, type WorkflowDefinition, type TaskHandler } from '@/lib/workflow/engine'
 import { runRuleByKey } from '@/lib/rules/ruleData'
 import { dispatchByKey } from '@/lib/integration/dispatch'
+import { getAgent, buildAgentRun } from '@/lib/ai/agents'
+import { runCompletion } from '@/lib/ai/engine'
 
 // Execute a workflow (POST) or list its run history (GET ?workflowId=). Runs are
 // recorded in workflow_runs. Task nodes dispatch to a small set of SAFE, built-in
@@ -40,6 +42,24 @@ const handlers: Record<string, TaskHandler> = {
     const res = await dispatchByKey(key, ctx.variables)
     if (!res) return { connector: key, status: 'not_found' }
     return { connector: key, status: res.status, attempts: res.attempts }
+  },
+  // AI Platform seam (closes the Phase-22 "AI Automation" roadmap item): run a
+  // registered AI agent on the workflow variables through the SHARED engine.
+  // The agent's reply lands in ctx.variables.aiReply for downstream nodes
+  // (conditions/rules/integrations) to branch on or forward.
+  agent: async (_a, config, ctx) => {
+    const agentId = String(config.agentId ?? '')
+    const agent = getAgent(agentId)
+    if (!agent) return { agent: agentId, status: 'not_found' }
+    const task = String(config.task ?? '') || `Process this workflow data and respond concisely:\n${JSON.stringify(ctx.variables).slice(0, 4000)}`
+    try {
+      const run = buildAgentRun(agent, task)
+      const res = await runCompletion({ messages: run.messages, systemPrompt: run.systemPrompt, useRag: config.useRag !== false, source: `workflow-agent:${agentId}` })
+      ctx.variables.aiReply = res.reply
+      return { agent: agentId, status: 'ok', provider: res.provider, reply: res.reply.slice(0, 2000) }
+    } catch (e) {
+      return { agent: agentId, status: 'error', error: e instanceof Error && e.name === 'AiConfigError' ? 'AI provider not configured' : 'agent failed' }
+    }
   },
   // Legacy inline external actions are recorded as intents (not executed).
   email: (_a, config) => ({ intent: 'email', to: config.to ?? null, executed: false }),

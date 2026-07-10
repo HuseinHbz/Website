@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, guardJson } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { siteSettings } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest) {
   try {      const auth = await requireAdmin('manage_settings')
       if ('error' in auth) return auth.error
       const user = auth.user
-      const body = await req.json() as Record<string, string>
+      const body = await guardJson(req) as Record<string, string>
       const db = getDb()
       for (const [key, value] of Object.entries(body)) {
         const existing = (await db.select().from(siteSettings).where(eq(siteSettings.key, key)))[0]

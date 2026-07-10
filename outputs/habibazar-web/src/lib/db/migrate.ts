@@ -1135,6 +1135,7 @@ export async function runMigrations() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_syslogs_ts ON system_logs(ts);
+    ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS embedding TEXT;
     CREATE INDEX IF NOT EXISTS idx_ai_usage_ts ON ai_usage(ts);
     CREATE INDEX IF NOT EXISTS idx_ai_usage_source ON ai_usage(source);
     CREATE INDEX IF NOT EXISTS idx_ai_usage_provider ON ai_usage(provider);

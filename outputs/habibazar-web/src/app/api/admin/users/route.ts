@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, guardJson, forbidden, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
-import { getAdminUser, hashPassword } from '@/lib/admin/auth'
+import { getAdminUser, hashPassword, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { nanoid } from 'nanoid'
 
@@ -32,10 +32,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {      const me = await getAdminUser()
+      if (!me) return unauthorized()
       if (me?.role !== 'super_admin' && me?.role !== 'administrator') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-      const { name, email, password, role, department } = await req.json()
+      const { name, email, password, role, department } = await guardJson(req)
       if (!name || !email || !password) return NextResponse.json({ error: 'Name, email, password required' }, { status: 400 })
       const hash = await hashPassword(password)
       const db = getDb()
@@ -56,10 +57,11 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {      const me = await getAdminUser()
+      if (!me) return unauthorized()
       if (me?.role !== 'super_admin' && me?.role !== 'administrator') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-      const { id, password, ...data } = await req.json()
+      const { id, password, ...data } = await guardJson(req)
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
       const db = getDb()
       const updateData: Record<string, unknown> = { ...data }
@@ -74,10 +76,11 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {      const me = await getAdminUser()
+      if (!me || !canDo(me.role, 'delete')) return forbidden('Delete requires an administrator role')
       if (me?.role !== 'super_admin') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-      const { id } = await req.json()
+      const { id } = await guardJson(req)
       if (id === me.id) return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
       const db = getDb()
       // Nullify all FK references before delete

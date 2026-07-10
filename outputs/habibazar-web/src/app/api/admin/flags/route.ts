@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, requireAdmin, readJson, badRequest, guardJson } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { isEnabled, type Flag } from '@/lib/flags/evaluate'
@@ -89,7 +89,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const auth = await requireAdmin('manage_settings')
     if ('error' in auth) return auth.error
-    const { id } = await req.json().catch(() => ({}))
+    const { id } = await guardJson(req).catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')
     await pgQuery(`DELETE FROM feature_flags WHERE id=$1`, [id])
     await logAction(auth.user, 'DELETE', 'feature_flags', id)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, requireAdmin, readJson, badRequest, guardJson } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { validateWorkflow, type WorkflowDefinition } from '@/lib/workflow/engine'
@@ -102,7 +102,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const auth = await requireAdmin('delete')
     if ('error' in auth) return auth.error
-    const { id } = await req.json().catch(() => ({}))
+    const { id } = await guardJson(req).catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')
     await pgQuery(`DELETE FROM workflows WHERE id=$1`, [id])
     await logAction(auth.user, 'DELETE', 'workflows', id)

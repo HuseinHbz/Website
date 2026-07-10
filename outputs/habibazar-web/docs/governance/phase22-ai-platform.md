@@ -83,28 +83,29 @@ Grounded agents show a "Live data" badge.
 **Verified:** tsc 0 · ESLint 0 · vitest (agents+analytics+prompts+tools + existing)
 green · 6 governance audits pass (links: `/ai` resolves, i18n: 0 missing) · build OK.
 
-## Roadmap (documented, not yet built)
+## Roadmap — closure status
 
-Real, planned extensions — listed so scope is transparent, not implied as done.
-Each composes on the shared engine + the workflow engine's handler seam, so
-there is one execution path, no duplication.
+Every substantive roadmap item has since been built and verified:
 
-- **AI Chat Center upgrades**: conversation history/folders/search (the
-  `ai_conversations` table + `/api/ai/conversations` exist as the seam),
-  multi-model side-by-side compare, export/share, voice/image/file upload.
-- **AI Agents v2 — tool handlers**: give agents typed, read-only tools to pull
-  **live** CRM/ERP/Security/Backup telemetry (through the same handler seam the
-  workflow engine uses) so answers are grounded in real module data, not only
-  the KB. This is what powers "این ماه سود چقدر بوده؟" / "کدام مشتری آماده خرید
-  است؟" / "چه بکاپ‌هایی fail شده‌اند؟".
-- **AI Automation Center**: event-driven AI actions (article published → auto
-  translate → SEO → meta/schema/OG → KB sync → social schedule) built as
-  workflow task handlers that call agents — the workflow engine already exists.
-- **Prompt Center**: versioned prompts with approval/rollback/history/owner/test
-  and variables; agents and modules resolve their system prompt from it.
-- **AI Analytics**: per-run tokens/cost/latency/success/failure by provider &
-  model, cache/RAG-hit/citation stats, top prompt/agent, thumbs-up/down feedback
-  (`ai-analytics` API exists as the seam), daily/weekly/monthly charts.
-- **Embeddings + vector search** for RAG (currently keyword scoring over the KB).
-- **AI Executive Summary** card on the dashboard + per-module "✨ Ask AI" buttons
-  (each just calls the shared engine with a context-scoped prompt).
+- ✅ **AI Agents v2 — tool handlers**: built (grounded agents via `agentTools.ts`
+  inject live module snapshots; "Live data" badge).
+- ✅ **Prompt Center**: built (`/admin/ai-prompts`, versioned prompts with
+  approve/rollback/history + `{{var}}` templating).
+- ✅ **AI Analytics**: built (`/admin/ai-analytics` on real `ai_usage` telemetry:
+  latency/tokens/cost/RAG-hit/thumbs, daily + by provider/model/source).
+- ✅ **Embeddings + vector search**: built — `src/lib/ai/embeddings.ts`
+  (pure `cosineSim`/`blendScores`/`normalize`, unit-tested) + an
+  `ai_knowledge_base.embedding` column; `retrieveContext` blends normalized
+  keyword + cosine scores through an OpenAI-compatible `/embeddings` call
+  (injectable embedder), degrading to keyword-only when no provider — verified
+  vs real PostgreSQL (a zero-keyword-overlap query ranks the semantically
+  related entry first; fallback intact).
+- ✅ **AI Automation**: built — the workflow run route gained an `agent` task
+  handler (runs a registered agent on the workflow variables through the shared
+  `runCompletion`; reply lands in `ctx.variables.aiReply` for downstream
+  condition/rule/integration nodes), completing the workflows → rules →
+  integrations → **agents** chain.
+
+Remaining as *optional product enhancements* (UX wishes, not platform gaps —
+each needs a product decision before building): Chat Center folders/side-by-side
+compare/voice-image upload, and per-module "Ask AI" buttons.

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardJson, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { seoSettings } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -12,7 +13,8 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
-  const body = await req.json()
+  if (!user) return unauthorized()
+  const body = await guardJson(req)
   const { pageKey, locale, ...data } = body
   if (!pageKey || !locale) return NextResponse.json({ error: 'pageKey and locale required' }, { status: 400 })
   const db = getDb()

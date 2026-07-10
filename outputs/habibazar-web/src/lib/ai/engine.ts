@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm'
 import { breakers } from '@/lib/circuitBreaker'
 import { retry, isTransient } from '@/lib/retry'
 import { logger } from '@/lib/logger'
+import { cosineSim, blendScores, normalize, loadKbEmbeddings, providerEmbedder, type Embedder } from './embeddings'
 
 export type ChatMsg = { role: 'user' | 'assistant'; content: string }
 export type KbSource = { id: number; title: string; excerpt: string }
@@ -48,16 +49,33 @@ export async function loadProviderConfig(): Promise<ProviderConfig> {
 }
 
 /** RAG: rank knowledge-base rows against the query and build a context block. */
-export async function retrieveContext(userMessage: string): Promise<{ contextBlock: string; sources: KbSource[] }> {
+export async function retrieveContext(userMessage: string, opts: { embedder?: Embedder } = {}): Promise<{ contextBlock: string; sources: KbSource[] }> {
   try {
     const db = getDb()
     const terms = userMessage.toLowerCase().split(/\s+/).filter(t => t.length > 2)
     const items = await db.select().from(aiKnowledgeBase).where(eq(aiKnowledgeBase.active, true))
-    const scored = items.map(item => {
+
+    // Semantic layer (Phase 22 roadmap closed): when KB rows carry embeddings
+    // and an embedder is available, blend cosine similarity with the keyword
+    // score. Any failure degrades to keyword-only — never worse than before.
+    const kbVectors = await loadKbEmbeddings()
+    let queryVec: number[] | null = null
+    if (kbVectors.size > 0) {
+      const embed = opts.embedder ?? providerEmbedder
+      const v = await embed([userMessage])
+      queryVec = v?.[0] ?? null
+    }
+
+    const keywordRaw = items.map(item => {
       const haystack = `${item.title} ${item.content || ''} ${item.tags || ''}`.toLowerCase()
-      const score = terms.reduce((s, t) => s + (haystack.includes(t) ? 1 : 0), 0)
-      return { ...item, score: score + item.priority * 0.1 }
-    }).filter(i => i.score > 0).sort((a, b) => b.score - a.score).slice(0, 4)
+      return terms.reduce((s, t) => s + (haystack.includes(t) ? 1 : 0), 0)
+    })
+    const keywordNorm = normalize(keywordRaw)
+    const scored = items.map((item, i) => {
+      const semantic = queryVec && kbVectors.has(item.id) ? Math.max(0, cosineSim(queryVec, kbVectors.get(item.id)!)) : 0
+      const base = queryVec ? blendScores(keywordNorm[i], semantic) : keywordNorm[i]
+      return { ...item, score: base + item.priority * 0.01 }
+    }).filter(i => i.score > 0.001).sort((a, b) => b.score - a.score).slice(0, 4)
 
     if (scored.length === 0) return { contextBlock: '', sources: [] }
 

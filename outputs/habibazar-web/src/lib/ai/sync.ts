@@ -14,6 +14,7 @@
  * (`buildEntry`) for unit testing.
  */
 import { pgQuery } from '@/lib/db'
+import { backfillKbEmbeddings } from './embeddings'
 import { logBus } from '@/lib/logs/bus'
 
 export interface KbEntry { sourceUrl: string; title: string; content: string; tags: string }
@@ -101,6 +102,10 @@ export async function syncKnowledgeFromCms(userId?: string): Promise<SyncResult>
     message: `knowledge_sync ${result.created}+ ${result.updated}~ ${result.removed}- (${result.total} live)`,
     meta: { ...result },
   })
+  // Semantic layer: best-effort embedding backfill for new/changed entries
+  // (no-op when no embeddings-capable provider is configured).
+  try { await backfillKbEmbeddings() } catch { /* keyword fallback remains */ }
+
   return result
 }
 

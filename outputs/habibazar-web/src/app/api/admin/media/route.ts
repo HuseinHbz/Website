@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { mediaFiles } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { getAdminUser } from '@/lib/admin/auth'
+import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
+  if (!user) return unauthorized()
   const formData = await req.formData()
   const file = formData.get('file') as File | null
   const folder = (formData.get('folder') as string) || 'general'
@@ -55,7 +57,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = await getAdminUser()
-  const { id } = await req.json()
+  if (!user || !canDo(user.role, 'delete')) return forbidden('Delete requires an administrator role')
+  const { id } = await guardJson(req)
   const db = getDb()
   const file = (await db.select().from(mediaFiles).where(eq(mediaFiles.id, id)))[0]
   if (file) {

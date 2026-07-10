@@ -78,8 +78,8 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
 - **next-intl v4** (i18n, RTL); **Tailwind CSS** (+ `tailwind-merge`, `clsx`).
 - **jose** (JWT), **bcryptjs** (hashing), **otplib** (TOTP 2FA).
 - **framer-motion** (animation), **recharts** (charts), **react-image-crop**
-  (image upload/crop), **zod** (validation lib present but not yet wired into API
-  routes), **nodemailer** (SMTP, dynamic import), **qrcode**.
+  (image upload/crop), **zod** (new/ERP routes validate via `readJson`+schemas;
+  legacy CMS routes are guarded by `guardJson` — see Conventions), **nodemailer** (SMTP, dynamic import), **qrcode**.
 - Tests: **vitest** (unit), **@playwright/test** (E2E). Lint: `eslint-config-next`.
 
 ## Directory map (`outputs/habibazar-web/src`)
@@ -126,8 +126,12 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
 ## Conventions
 - API write routes: `const user = await getAdminUser()` then Drizzle insert/update;
   audit via `logAction`. Middleware already guarantees a valid admin JWT.
-  (Known hardening backlog: no zod input validation yet; raw `e.message` returned
-  on 500; RBAC granularity not enforced per-route.)
+  Hardening (Phase 26 closure): every legacy CMS admin route now parses bodies
+  through `guardJson` (`lib/api/respond.ts` — zod-era structural guard: 512 KB
+  size cap, depth/array bounds, prototype-pollution key rejection → 400 via
+  `BodyError`); DELETE handlers enforce `canDo(role,'delete')` (34 gates) and
+  writes reject a null user (72 gates); no route returns raw `e.message`
+  (login + documents leaks fixed). New routes must use `readJson` + a zod schema.
 - **AI chat** (`POST /api/ai/chat`) — multi-provider (OpenAI/Claude/Gemini/Grok/
   Conduit, chosen by `ai_provider` setting), RAG over `ai_knowledge_base` with
   citations, circuit-breaker + retry. Guarded by `lib/ai/guard.ts`: zod-validated
@@ -476,7 +480,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   marketing/hr) each with an anti-fabrication guardrail; `GET/POST /api/admin/ai/
   agents` (RBAC `edit`, zod, audited) runs an agent through the shared engine
   (RAG per agent). Public AI page (`/[locale]/ai`) now linked in `NAV_ITEMS`.
-  Chat Center upgrades, Automation and embeddings are the documented roadmap
+  **Roadmap closed**: embeddings + vector search (`src/lib/ai/embeddings.ts`,
+  `ai_knowledge_base.embedding`, blended keyword+cosine retrieval w/ keyword
+  fallback, verified vs real PG) and AI Automation (workflow `agent` task
+  handler → shared `runCompletion`, reply in `ctx.variables.aiReply`). Chat
+  Center UX extras (folders/compare/voice) remain optional product enhancements
   (`docs/governance/phase22-ai-platform.md`).
 - **AI Analytics** (`/admin/ai-analytics`, `AiAnalyticsDashboard`) — real
   telemetry: the shared engine records every completion into `ai_usage`

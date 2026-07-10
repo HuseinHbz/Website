@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, forbidden, unauthorized } from '@/lib/api/respond'
 import { readdir, stat, mkdir, unlink, readFile } from 'fs/promises'
 import { spawn } from 'child_process'
 import path from 'path'
-import { getAdminUser } from '@/lib/admin/auth'
+import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 
 export const dynamic = 'force-dynamic'
@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
 export async function POST() {
   try {
     const user = await getAdminUser()
+    if (!user) return unauthorized()
     await mkdir(BACKUP_DIR, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19)
     const name = `db-backup-${stamp}.dump`
@@ -81,6 +82,7 @@ export async function POST() {
 export async function DELETE(req: NextRequest) {
   try {
     const user = await getAdminUser()
+    if (!user || !canDo(user.role, 'delete')) return forbidden('Delete requires an administrator role')
     const name = req.nextUrl.searchParams.get('name')
     if (!name || !NAME_RE.test(name)) {
       return NextResponse.json({ error: 'Invalid file name' }, { status: 400 })

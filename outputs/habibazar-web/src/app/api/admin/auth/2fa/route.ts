@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardJson, unauthorized } from '@/lib/api/respond'
 import { generateTotpSecret, verifyTotpCode, generateTotpURI } from '@/lib/admin/auth'
 import QRCode from 'qrcode'
 import { getDb } from '@/lib/db'
@@ -35,9 +36,10 @@ export async function GET(req: NextRequest) {
 // POST — enable or disable 2FA for a user (userId optional, defaults to self)
 export async function POST(req: NextRequest) {
   const adminUser = await getAdminUser()
+  if (!adminUser) return unauthorized()
   if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { action, code, userId } = await req.json() as { action: 'enable' | 'disable'; code: string; userId?: string }
+  const { action, code, userId } = await guardJson(req) as { action: 'enable' | 'disable'; code: string; userId?: string }
   const targetId = userId || adminUser.id
 
   if (targetId !== adminUser.id && adminUser.role !== 'super_admin' && adminUser.role !== 'administrator') {

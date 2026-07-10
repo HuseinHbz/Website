@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const r = await createDocument(parsed.data, auth.user.id)
     await logAction(auth.user, 'doc.generate', 'gen_document', r.id, null, { type: parsed.data.type, number: r.number })
     return NextResponse.json(r)
-  } catch (e) { return apiError(e, e instanceof Error ? e.message : 'Failed to generate document') }
+  } catch (e) { return apiError(e, 'Failed to generate document') }
 }
 
 // PUT — void a document.
