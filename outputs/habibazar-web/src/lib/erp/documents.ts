@@ -27,6 +27,43 @@ export interface DocPayload {
   body?: string
 }
 
+/** Company identity/branding printed on documents (loaded from site_settings). */
+export interface DocBranding {
+  logoUrl?: string
+  sealUrl?: string
+  signatureUrl?: string
+  signatureTitle?: string
+  regNo?: string
+  nationalId?: string
+  economicCode?: string
+  taxNo?: string
+  vatNo?: string
+  iban?: string
+  bankName?: string
+  swift?: string
+  address?: string
+  postalCode?: string
+  phone?: string
+  email?: string
+  website?: string
+}
+
+/** Designer-controlled presentation config (persisted per template). */
+export interface DocTemplateConfig {
+  variant?: string             // official | unofficial | tax | retail | service | ...
+  accentColor?: string         // sanitized hex
+  watermarkText?: string
+  headerNote?: string
+  terms?: string
+  paymentInstructions?: string
+  footerNote?: string
+  showLogo?: boolean
+  showSeal?: boolean
+  showSignature?: boolean
+  showQr?: boolean
+  customFields?: { label: string; value: string }[]
+}
+
 export interface DocModel {
   type: GenDocType
   number: string
@@ -39,6 +76,13 @@ export interface DocModel {
   payload: DocPayload
   verifyCode: string
   verifyUrl: string
+  branding?: DocBranding
+  template?: DocTemplateConfig
+}
+
+/** Only accept a safe hex accent (guards inline CSS injection). */
+export function safeAccent(c: string | undefined, fallback = '#4f46e5'): string {
+  return c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : fallback
 }
 
 /** Escape text for safe HTML interpolation. */
@@ -83,6 +127,21 @@ export function defaultTitle(type: GenDocType): string { return TITLES[type] ?? 
  */
 export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   const p = m.payload
+  const b = m.branding ?? {}
+  const t = m.template ?? {}
+  const accent = safeAccent(t.accentColor)
+  const show = (v: boolean | undefined) => v !== false
+  const idLine = (label: string, v?: string) => (v ? `<div>${escapeHtml(label)}: ${escapeHtml(v)}</div>` : '')
+  const identity = [
+    idLine('Reg. no', b.regNo), idLine('National ID', b.nationalId), idLine('Economic code', b.economicCode),
+    idLine('Tax no', b.taxNo), idLine('VAT no', b.vatNo),
+  ].join('')
+  const contactBits = [b.phone, b.email, b.website, b.address, b.postalCode ? `Postal ${b.postalCode}` : '']
+    .filter(Boolean).map(x => escapeHtml(String(x))).join(' · ')
+  const bankBits = [b.bankName, b.iban ? `IBAN ${b.iban}` : '', b.swift ? `SWIFT ${b.swift}` : '']
+    .filter(Boolean).map(x => escapeHtml(String(x))).join(' · ')
+  const customRows = (t.customFields ?? [])
+    .map(f => `<div class="meta-row"><span>${escapeHtml(f.label)}</span><strong>${escapeHtml(f.value)}</strong></div>`).join('')
   const hasLines = p.lines.length > 0
   const rows = p.lines.map(l => `
       <tr>
@@ -106,9 +165,18 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #1a1a2e; margin: 0; padding: 32px; background: #fff; }
-  .doc { max-width: 800px; margin: 0 auto; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #4f46e5; padding-bottom: 18px; margin-bottom: 24px; }
-  .head h1 { font-size: 28px; letter-spacing: 2px; margin: 0 0 4px; color: #4f46e5; }
+  .doc { max-width: 800px; margin: 0 auto; position: relative; }
+  .watermark { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
+  .watermark span { font-size: 90px; font-weight: 800; letter-spacing: 8px; color: rgba(30,30,60,.06); transform: rotate(-28deg); text-transform: uppercase; white-space: nowrap; }
+  .logo { max-height: 56px; max-width: 200px; margin-bottom: 8px; display: block; }
+  .identity { font-size: 11px; color: #777; margin-top: 6px; line-height: 1.6; }
+  .seal-sign { display: flex; gap: 24px; align-items: flex-end; }
+  .seal { max-height: 90px; opacity: .9; }
+  .sig-img { max-height: 60px; display: block; margin: 0 auto 4px; }
+  .terms { font-size: 11px; color: #666; line-height: 1.7; margin-top: 20px; padding-top: 12px; border-top: 1px dashed #ddd; white-space: pre-line; }
+  .footnote { font-size: 10px; color: #999; margin-top: 10px; text-align: center; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid ${accent}; padding-bottom: 18px; margin-bottom: 24px; }
+  .head h1 { font-size: 28px; letter-spacing: 2px; margin: 0 0 4px; color: ${accent}; }
   .issuer { font-size: 13px; color: #555; }
   .num-block { text-align: right; font-size: 13px; }
   .num-block .n { font-size: 15px; font-weight: 700; }
@@ -123,7 +191,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   .num { text-align: right; }
   table.totals { margin-left: auto; margin-top: 12px; border-collapse: collapse; min-width: 260px; }
   table.totals td { padding: 6px 10px; font-size: 13px; }
-  table.totals tr.grand td { font-size: 16px; font-weight: 700; border-top: 2px solid #4f46e5; color: #4f46e5; }
+  table.totals tr.grand td { font-size: 16px; font-weight: 700; border-top: 2px solid ${accent}; color: ${accent}; }
   .meta { margin: 16px 0; }
   .meta-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px dashed #eee; }
   .body { font-size: 13px; line-height: 1.7; color: #333; white-space: pre-line; margin: 16px 0; }
@@ -137,22 +205,39 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
 </style></head>
 <body>
   <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+  ${t.watermarkText ? `<div class="watermark"><span>${escapeHtml(t.watermarkText)}</span></div>` : ''}
   <div class="doc">
     <div class="head">
-      <div><h1>${escapeHtml(m.title)}</h1><div class="issuer">${escapeHtml(m.issuerName)}${m.issuerInfo ? `<br>${escapeHtml(m.issuerInfo)}` : ''}</div></div>
-      <div class="num-block"><div class="n">${escapeHtml(m.number)}</div><div>${escapeHtml(m.date)}</div></div>
+      <div>
+        ${show(t.showLogo) && b.logoUrl ? `<img class="logo" src="${escapeHtml(b.logoUrl)}" alt="logo">` : ''}
+        <h1>${escapeHtml(m.title)}</h1>
+        <div class="issuer">${escapeHtml(m.issuerName)}${m.issuerInfo ? `<br>${escapeHtml(m.issuerInfo)}` : ''}</div>
+        ${identity ? `<div class="identity">${identity}</div>` : ''}
+      </div>
+      <div class="num-block"><div class="n">${escapeHtml(m.number)}</div><div>${escapeHtml(m.date)}</div>${t.variant ? `<div>${escapeHtml(t.variant)}</div>` : ''}</div>
     </div>
+    ${t.headerNote ? `<div class="body">${escapeHtml(t.headerNote)}</div>` : ''}
     <div class="parties">
       <div class="party"><div class="label">To</div><div class="name">${escapeHtml(m.partyName)}</div>${m.partyInfo ? `<div class="info">${escapeHtml(m.partyInfo)}</div>` : ''}</div>
     </div>
-    ${metaRows ? `<div class="meta">${metaRows}</div>` : ''}
+    ${metaRows || customRows ? `<div class="meta">${metaRows}${customRows}</div>` : ''}
     ${p.body ? `<div class="body">${escapeHtml(p.body)}</div>` : ''}
     ${hasLines ? `<table class="items"><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
     ${totals}
+    ${t.paymentInstructions ? `<div class="terms"><strong>Payment</strong><br>${escapeHtml(t.paymentInstructions)}</div>` : ''}
+    ${t.terms ? `<div class="terms"><strong>Terms &amp; Conditions</strong><br>${escapeHtml(t.terms)}</div>` : ''}
     <div class="foot">
-      <div class="verify"><img src="${qrDataUrl}" alt="verify"><br>Verify: ${escapeHtml(m.verifyCode)}<br>${escapeHtml(m.verifyUrl)}</div>
-      <div class="sign"><div class="line"></div>Authorized signature</div>
+      ${show(t.showQr) ? `<div class="verify"><img src="${qrDataUrl}" alt="verify"><br>Verify: ${escapeHtml(m.verifyCode)}<br>${escapeHtml(m.verifyUrl)}</div>` : '<div></div>'}
+      <div class="seal-sign">
+        ${show(t.showSeal) && b.sealUrl ? `<img class="seal" src="${escapeHtml(b.sealUrl)}" alt="seal">` : ''}
+        <div class="sign">
+          ${show(t.showSignature) && b.signatureUrl ? `<img class="sig-img" src="${escapeHtml(b.signatureUrl)}" alt="signature"><div style="border-top:1px solid #999;width:180px;padding-top:6px">${escapeHtml(b.signatureTitle || 'Authorized signature')}</div>` : `<div class="line"></div>${escapeHtml(b.signatureTitle || 'Authorized signature')}`}
+        </div>
+      </div>
     </div>
+    ${bankBits ? `<div class="footnote">${bankBits}</div>` : ''}
+    ${contactBits ? `<div class="footnote">${contactBits}</div>` : ''}
+    ${t.footerNote ? `<div class="footnote">${escapeHtml(t.footerNote)}</div>` : ''}
   </div>
 </body></html>`
 }

@@ -54,3 +54,35 @@ describe('renderDocumentHtml', () => {
     expect(html).toContain('window.print()')
   })
 })
+
+import { safeAccent, renderDocumentHtml as render2, type DocModel as DM2 } from '../documents'
+
+describe('branding + designer template render (Phase 26)', () => {
+  const base: DM2 = {
+    type: 'invoice', number: 'INV-1', date: '2026-07-10', title: 'INVOICE',
+    partyName: 'Acme <Corp>', issuerName: 'HBZ',
+    payload: { lines: [], subtotal: 0, discountTotal: 0, taxTotal: 0, total: 0, currency: 'USD', meta: [] },
+    verifyCode: 'ABC123', verifyUrl: 'https://x/verify/ABC123',
+  }
+  it('renders company identity, bank and contact from branding (escaped)', () => {
+    const html = render2({ ...base, branding: { regNo: '12345', economicCode: 'EC-9', iban: 'IR12', bankName: 'Melli', phone: '021', email: 'x@y.z', logoUrl: '/uploads/logo.png' } }, 'data:image/png;base64,x')
+    expect(html).toContain('Reg. no: 12345')
+    expect(html).toContain('Economic code: EC-9')
+    expect(html).toContain('IBAN IR12')
+    expect(html).toContain('/uploads/logo.png')
+    expect(html).toContain('Acme &lt;Corp&gt;') // XSS escape preserved
+  })
+  it('applies template config: watermark, accent, terms, custom fields, QR toggle', () => {
+    const html = render2({ ...base, template: { watermarkText: 'UNOFFICIAL', accentColor: '#ff0000', terms: 'Pay in 30 days', customFields: [{ label: 'Project', value: 'Datacenter' }], showQr: false } }, 'data:image/png;base64,x')
+    expect(html).toContain('UNOFFICIAL')
+    expect(html).toContain('#ff0000')
+    expect(html).toContain('Pay in 30 days')
+    expect(html).toContain('Datacenter')
+    expect(html).not.toContain('data:image/png;base64,x') // QR hidden
+  })
+  it('safeAccent rejects CSS injection and falls back', () => {
+    expect(safeAccent('#22c55e')).toBe('#22c55e')
+    expect(safeAccent('red;}body{display:none')).toBe('#4f46e5')
+    expect(safeAccent(undefined)).toBe('#4f46e5')
+  })
+})

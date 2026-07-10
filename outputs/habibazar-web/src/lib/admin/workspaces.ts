@@ -116,6 +116,7 @@ export const WORKSPACES: Workspace[] = [
       ] },
       { en: 'Documents & Reports', fa: 'اسناد و گزارش‌ها', items: [
         { labelEn: 'Document Center', labelFa: 'مرکز اسناد', href: '/admin/documents', icon: '📄' },
+        { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت', href: '/admin/company', icon: '🏢' },
         { labelEn: 'Reporting Center', labelFa: 'مرکز گزارش‌ها', href: '/admin/reports', icon: '📈' },
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
       ] },

@@ -14,10 +14,14 @@ interface GenDoc { id: number; type: string; number: string; title: string; part
 interface ManualLine { description: string; qty: number; unitPrice: number }
 interface SalesDoc { id: number; docNo: string; customerName: string; total: number }
 
+interface DocTemplate { id: number; key: string; nameEn: string; nameFa: string; docType: string | null; config: Record<string, unknown>; active: boolean }
+
 export function DocumentCenter() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
   const { toast, ToastContainer } = useToast()
+  const [view, setView] = useState<'documents' | 'designer'>('documents')
   const [docs, setDocs] = useState<GenDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -28,6 +32,12 @@ export function DocumentCenter() {
   const [manual, setManual] = useState({ title: '', partyName: '', partyInfo: '', body: '', date: new Date().toISOString().slice(0, 10) })
   const [lines, setLines] = useState<ManualLine[]>([{ description: '', qty: 1, unitPrice: 0 }])
   const [saving, setSaving] = useState(false)
+  const [templates, setTemplates] = useState<DocTemplate[]>([])
+  const [templateKey, setTemplateKey] = useState('')
+
+  useEffect(() => {
+    fetch('/api/admin/erp/documents/templates').then(r => r.json()).then(d => setTemplates((d.templates ?? []).filter((x: DocTemplate) => x.active))).catch(() => {})
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -48,9 +58,10 @@ export function DocumentCenter() {
   async function generate() {
     setSaving(true)
     try {
+      const tpl = templateKey ? { templateKey } : {}
       const body = supportsSales && mode === 'sales'
-        ? { type, sourceType: 'sales' as const, sourceId }
-        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, body: manual.body, date: manual.date, lines: lines.filter(l => l.description.trim()) }
+        ? { type, sourceType: 'sales' as const, sourceId, ...tpl }
+        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, body: manual.body, date: manual.date, lines: lines.filter(l => l.description.trim()), ...tpl }
       const r = await fetch('/api/admin/erp/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'failed')
@@ -87,6 +98,17 @@ export function DocumentCenter() {
       <ToastContainer />
       <PageHeader title={t('doc_title')} subtitle={t('doc_subtitle')} action={<Btn onClick={openNew}>{t('doc_new')}</Btn>} />
 
+      <div className="flex gap-1 mb-6 border-b border-subtle">
+        {(['documents', 'designer'] as const).map(v => (
+          <button key={v} onClick={() => setView(v)} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${view === v ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
+            {v === 'documents' ? (rtl ? 'اسناد' : 'Documents') : (rtl ? 'طراح فاکتور' : 'Invoice Designer')}
+          </button>
+        ))}
+      </div>
+
+      {view === 'designer' && <InvoiceDesigner rtl={rtl} toast={toast} templates={templates} onTemplatesChange={setTemplates} />}
+
+      {view === 'documents' && <>
       {/* Type palette */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         {DOC_TYPES.map(dt => (
@@ -111,6 +133,7 @@ export function DocumentCenter() {
           emptyLabel={t('doc_empty')}
         />
       </Card>
+      </>}
 
       <Modal open={modal} onClose={() => setModal(false)} title={t('doc_new')} size="lg">
         <div className="space-y-4">
@@ -118,6 +141,8 @@ export function DocumentCenter() {
             <Select label={t('doc_fType')} value={type} onChange={v => { setType(v as DocType); setSalesDocs([]); if (!SALES_TYPES.includes(v as DocType)) setMode('manual') }} options={DOC_TYPES.map(x => ({ value: x, label: t(`doc_t_${x}` as 'doc_t_invoice') }))} />
             {supportsSales && <Select label={t('doc_fSource')} value={mode} onChange={v => setMode(v as 'sales' | 'manual')} options={[{ value: 'sales', label: t('doc_fromSales') }, { value: 'manual', label: t('doc_manual') }]} />}
           </div>
+          <Select label={rtl ? 'قالب طراحی (اختیاری)' : 'Design template (optional)'} value={templateKey} onChange={setTemplateKey}
+            options={[{ value: '', label: '—' }, ...templates.map(x => ({ value: x.key, label: rtl ? x.nameFa : x.nameEn }))]} />
 
           {supportsSales && mode === 'sales' ? (
             <Select label={t('doc_fSalesDoc')} value={String(sourceId)} onChange={v => setSourceId(Number(v))} options={[{ value: '0', label: t('doc_selectSales') }, ...salesDocs.map(s => ({ value: String(s.id), label: `${s.docNo} — ${s.customerName}` }))]} />
@@ -154,4 +179,118 @@ export function DocumentCenter() {
 function docIcon(t: string): string {
   const m: Record<string, string> = { invoice: '💳', quotation: '📄', purchase_order: '🛒', contract: '📜', proposal: '📝', warranty: '🛡️', delivery_note: '📦', service_report: '🔧', completion_certificate: '🏅', financial_report: '📊' }
   return m[t] ?? '📄'
+}
+
+// ── Invoice Designer (Phase 26) ──────────────────────────────────────────────
+type Toast2 = ReturnType<typeof useToast>['toast']
+interface TplConfig {
+  variant?: string; accentColor?: string; watermarkText?: string; headerNote?: string
+  terms?: string; paymentInstructions?: string; footerNote?: string
+  showLogo?: boolean; showSeal?: boolean; showSignature?: boolean; showQr?: boolean
+  customFields?: { label: string; value: string }[]
+}
+const L2 = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
+
+function InvoiceDesigner({ rtl, toast, templates, onTemplatesChange }: { rtl: boolean; toast: Toast2; templates: DocTemplate[]; onTemplatesChange: (t: DocTemplate[]) => void }) {
+  const [selKey, setSelKey] = useState('')
+  const [cfg, setCfg] = useState<TplConfig>({})
+  const [html, setHtml] = useState('')
+  const [busy, setBusy] = useState(false)
+  const sel = templates.find(x => x.key === selKey) ?? null
+
+  const reloadTemplates = useCallback(async () => {
+    const d = await fetch('/api/admin/erp/documents/templates').then(r => r.json()).catch(() => ({ templates: [] }))
+    onTemplatesChange((d.templates ?? []).filter((x: DocTemplate) => x.active))
+    return (d.templates ?? []) as DocTemplate[]
+  }, [onTemplatesChange])
+
+  useEffect(() => { if (sel) setCfg(sel.config as TplConfig) }, [sel])
+
+  const preview = useCallback(async (config: TplConfig) => {
+    try {
+      const r = await fetch('/api/admin/erp/documents/render', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) })
+      if (r.ok) setHtml(await r.text())
+    } catch { /* preview is best-effort */ }
+  }, [])
+  useEffect(() => { const id = setTimeout(() => preview(cfg), 400); return () => clearTimeout(id) }, [cfg, preview])
+
+  async function save() {
+    if (!sel) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/admin/erp/documents/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update', id: sel.id, config: cfg }) })
+      if (r.ok) { toast(L2(rtl, 'Template saved', 'قالب ذخیره شد'), 'success'); reloadTemplates() }
+      else toast(L2(rtl, 'Save failed', 'ذخیره ناموفق'), 'error')
+    } finally { setBusy(false) }
+  }
+  async function createTpl() {
+    const key = window.prompt(L2(rtl, 'Template key (a-z0-9-)', 'کلید قالب')); if (!key) return
+    const name = window.prompt(L2(rtl, 'Template name', 'نام قالب')) || key
+    const r = await fetch('/api/admin/erp/documents/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', key, nameEn: name, nameFa: name, docType: 'invoice', config: {} }) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(L2(rtl, 'Template created', 'قالب ساخته شد'), 'success'); await reloadTemplates(); setSelKey(key) }
+    else toast(d.error || L2(rtl, 'Failed', 'ناموفق'), 'error')
+  }
+  const set = (patch: Partial<TplConfig>) => setCfg(c => ({ ...c, ...patch }))
+  const toggles: [keyof TplConfig, string, string][] = [
+    ['showLogo', 'Logo', 'لوگو'], ['showSeal', 'Seal', 'مهر'], ['showSignature', 'Signature', 'امضا'], ['showQr', 'QR verify', 'کیو‌آر'],
+  ]
+
+  return (
+    <div className="grid xl:grid-cols-[380px_1fr] gap-4">
+      <div className="space-y-4">
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-text-primary">{L2(rtl, 'Templates', 'قالب‌ها')}</h3>
+            <Btn size="sm" variant="secondary" onClick={createTpl}>+ {L2(rtl, 'New', 'جدید')}</Btn>
+          </div>
+          <Select label="" value={selKey} onChange={setSelKey} options={[{ value: '', label: L2(rtl, 'Select a template…', 'انتخاب قالب…') }, ...templates.map(x => ({ value: x.key, label: `${rtl ? x.nameFa : x.nameEn} (${x.key})` }))]} />
+        </Card>
+        {sel && (
+          <Card className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-text-primary">{L2(rtl, 'Design', 'طراحی')}</h3>
+            <Input label={L2(rtl, 'Variant label (e.g. Official)', 'برچسب نوع (مثلاً رسمی)')} value={cfg.variant ?? ''} onChange={v => set({ variant: v })} />
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div>
+                <label className="block text-xs text-text-tertiary mb-1">{L2(rtl, 'Accent color', 'رنگ اصلی')}</label>
+                <input type="color" value={cfg.accentColor ?? '#4f46e5'} onChange={e => set({ accentColor: e.target.value })} className="h-9 w-full rounded bg-transparent" />
+              </div>
+              <Input label={L2(rtl, 'Watermark', 'واترمارک')} value={cfg.watermarkText ?? ''} onChange={v => set({ watermarkText: v })} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {toggles.map(([k, en, fa]) => (
+                <label key={k} className="flex items-center gap-2 text-sm text-text-secondary">
+                  <input type="checkbox" checked={cfg[k] !== false} onChange={e => set({ [k]: e.target.checked } as Partial<TplConfig>)} />
+                  {L2(rtl, en, fa)}
+                </label>
+              ))}
+            </div>
+            <Input label={L2(rtl, 'Header note', 'یادداشت سربرگ')} value={cfg.headerNote ?? ''} onChange={v => set({ headerNote: v })} />
+            <Input label={L2(rtl, 'Payment instructions', 'دستور پرداخت')} value={cfg.paymentInstructions ?? ''} onChange={v => set({ paymentInstructions: v })} multiline rows={2} />
+            <Input label={L2(rtl, 'Terms & conditions', 'شرایط و ضوابط')} value={cfg.terms ?? ''} onChange={v => set({ terms: v })} multiline rows={3} />
+            <Input label={L2(rtl, 'Footer note', 'یادداشت پاصفحه')} value={cfg.footerNote ?? ''} onChange={v => set({ footerNote: v })} />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-tertiary">{L2(rtl, 'Custom fields', 'فیلدهای سفارشی')}</p>
+                <Btn size="sm" variant="ghost" onClick={() => set({ customFields: [...(cfg.customFields ?? []), { label: '', value: '' }] })}>+ {L2(rtl, 'Add', 'افزودن')}</Btn>
+              </div>
+              {(cfg.customFields ?? []).map((f, i) => (
+                <div key={i} className="grid grid-cols-9 gap-2">
+                  <input value={f.label} onChange={e => set({ customFields: (cfg.customFields ?? []).map((x, j) => j === i ? { ...x, label: e.target.value } : x) })} className="form-input col-span-4 !py-1.5" placeholder={L2(rtl, 'Label', 'برچسب')} />
+                  <input value={f.value} onChange={e => set({ customFields: (cfg.customFields ?? []).map((x, j) => j === i ? { ...x, value: e.target.value } : x) })} className="form-input col-span-4 !py-1.5" placeholder={L2(rtl, 'Value', 'مقدار')} />
+                  <button onClick={() => set({ customFields: (cfg.customFields ?? []).filter((_, j) => j !== i) })} className="col-span-1 text-xs text-danger">✕</button>
+                </div>
+              ))}
+            </div>
+            <Btn onClick={save} disabled={busy}>{busy ? L2(rtl, 'Saving…', 'در حال ذخیره…') : L2(rtl, 'Save template', 'ذخیره قالب')}</Btn>
+          </Card>
+        )}
+      </div>
+      <Card className="p-2 min-h-[480px]">
+        {html
+          ? <iframe title="invoice preview" srcDoc={html} className="w-full h-[75vh] rounded-lg bg-white" />
+          : <div className="h-full flex items-center justify-center text-sm text-text-tertiary p-10">{L2(rtl, 'Select or create a template — the live preview renders here with your real company profile.', 'یک قالب انتخاب/ایجاد کنید — پیش‌نمایش زنده با پروفایل واقعی شرکت اینجا رندر می‌شود.')}</div>}
+      </Card>
+    </div>
+  )
 }

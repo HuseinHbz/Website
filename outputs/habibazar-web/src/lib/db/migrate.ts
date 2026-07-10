@@ -602,6 +602,28 @@ export async function runMigrations() {
       created_by TEXT REFERENCES users(id),
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS template_key TEXT;
+
+    -- Phase 26: Invoice Designer templates (presentation config per variant —
+    -- official/unofficial/tax/retail/service/... — applied at render time).
+    CREATE TABLE IF NOT EXISTS doc_templates (
+      id SERIAL PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      doc_type TEXT,
+      config TEXT NOT NULL DEFAULT '{}',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    INSERT INTO doc_templates (key, name_en, name_fa, doc_type, config) VALUES
+      ('official-invoice','Official Invoice','فاکتور رسمی','invoice','{"variant":"Official","showLogo":true,"showSeal":true,"showSignature":true,"showQr":true}'),
+      ('unofficial-invoice','Unofficial Invoice','فاکتور غیررسمی','invoice','{"variant":"Unofficial","watermarkText":"UNOFFICIAL","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}'),
+      ('tax-invoice','Tax Invoice','فاکتور مالیاتی','invoice','{"variant":"Tax Invoice","showLogo":true,"showSeal":true,"showSignature":true,"showQr":true}'),
+      ('service-invoice','Service Invoice','فاکتور خدمات','invoice','{"variant":"Service","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}')
+    ON CONFLICT (key) DO NOTHING;
 
     -- Enterprise Project Management (Phase 21 ERP, Module 6). Projects with
     -- tasks (Kanban/Gantt), milestones and timesheets.
