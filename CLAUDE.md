@@ -33,12 +33,19 @@
    dependency-free implementation — rather than skipping it. If after that it is
    still genuinely impossible, STOP and say so explicitly and ask; never quietly
    leave a listed item undone.
+   **Already-exists exception:** if a listed item was already built in an earlier
+   phase, do NOT rebuild or duplicate it — audit it, verify it still works, reuse
+   it, and count it as done for the phase. An item is complete when it is either
+   (a) newly built + verified, or (b) confirmed already existing and working.
    (⭐ قانون همیشه در اولویت: هر فازی که داده می‌شود باید کامل کاملِ نهایی شود —
    تیکه‌تیکه نشود؛ کل فاز بند به بند و به ترتیب اجرا شود و تا وقتی همهٔ بندها
    واقعاً ساخته، verify و push نشده‌اند فاز تمام‌شده اعلام نشود. هیچ بندی
    deferred یا «باقی‌مانده» نماند؛ اگر یک پاس کافی نبود، خودکار ادامه بده تا فاز
    بسته شود. اگر موردی واقعاً بدون جعل قابل ساخت نیست، همان زیرساخت لازمش را
-   بساز؛ اگر باز هم غیرممکن بود، صریح بگو و بپرس، نه اینکه بی‌صدا رهایش کنی.)
+   بساز؛ اگر باز هم غیرممکن بود، صریح بگو و بپرس، نه اینکه بی‌صدا رهایش کنی.
+   **استثنا:** مگر آن درخواست/بند از قبل وجود داشته باشد — در آن صورت دوباره
+   نساز و duplicate نکن؛ فقط audit و verify کن، reuse کن و همان را به‌عنوان
+   انجام‌شدهٔ فاز حساب کن.)
 5. **Never switch branches unless I explicitly say so.** Always stay on the
    current working branch (`feature/v2-enterprise-upgrade`). Do not `git checkout`,
    `switch`, create, rename, or push to any other branch without an explicit
