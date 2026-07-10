@@ -207,12 +207,16 @@ function EvaluateModal({ rtl, vendor, onClose, onDone, toast }: { rtl: boolean; 
   )
 }
 
-interface PurDoc { id: number; docNo: string | null; docType: string; vendorName: string | null; status: string; date: string; total: number; approvalLevels: number; glEntryId: number | null }
+interface PurDoc { id: number; docNo: string | null; docType: string; vendorName: string | null; status: string; date: string; total: number; approvalLevels: number; glEntryId: number | null; priority: string }
+const PRIORITY_COLOR: Record<string, string> = { low: 'slate', normal: 'blue', high: 'yellow', urgent: 'red' }
+const PRIORITY_FA: Record<string, string> = { low: 'کم', normal: 'عادی', high: 'زیاد', urgent: 'فوری' }
 function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; toast: Toast }) {
   const [rows, setRows] = useState<PurDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [type, setType] = useState<DocType | 'all'>('all')
   const [showNew, setShowNew] = useState(false)
+  const [receiveFor, setReceiveFor] = useState<PurDoc | null>(null)
+  const [compareFor, setCompareFor] = useState<PurDoc | null>(null)
   const load = useCallback(async () => { setLoading(true); try { const q = type === 'all' ? '' : `?type=${type}`; const d = await fetch(`/api/admin/erp/purchasing${q}`).then(r => r.json()); setRows(d.documents ?? []) } finally { setLoading(false) } }, [type])
   useEffect(() => { load() }, [load])
 
@@ -226,6 +230,7 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { key: 'docType', labelEn: 'Type', labelFa: 'نوع', type: 'enum' },
     { key: 'vendorName', labelEn: 'Vendor', labelFa: 'تأمین‌کننده', render: d => <span>{d.vendorName || '—'}</span> },
     { key: 'date', labelEn: 'Date', labelFa: 'تاریخ' },
+    { key: 'priority', labelEn: 'Priority', labelFa: 'اولویت', type: 'enum', render: d => <Badge color={PRIORITY_COLOR[d.priority] || 'slate'}>{rtl ? (PRIORITY_FA[d.priority] || d.priority) : d.priority}</Badge> },
     { key: 'total', labelEn: 'Total', labelFa: 'مبلغ', type: 'number', numeric: true, render: d => <span>{money(d.total)}</span> },
     { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: d => <span className="flex items-center gap-1"><Badge color={STATUS_COLOR[d.status] || 'slate'}>{d.status}</Badge>{d.glEntryId && <Badge color="indigo">{lc(rtl, 'GL', 'دفتر')}</Badge>}</span> },
   ]
@@ -235,6 +240,9 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { id: 'approve2', labelEn: 'Approve L2', labelFa: 'تأیید سطح ۲', icon: '✓✓', hidden: d => d.status !== 'submitted' || d.approvalLevels < 2, onClick: d => op('doc.approve', { id: d.id, level: 2, decision: 'approved' }) },
     { id: 'reject', labelEn: 'Reject', labelFa: 'رد', icon: '✕', hidden: d => d.status !== 'submitted', onClick: d => op('doc.approve', { id: d.id, level: 1, decision: 'rejected' }) },
     { id: 'po', labelEn: 'Convert to Order', labelFa: 'تبدیل به سفارش', icon: '↪', hidden: d => !(d.docType === 'request' || d.docType === 'quotation') || d.status !== 'approved', onClick: d => op('doc.convert', { sourceId: d.id, toType: 'order' }) },
+    { id: 'grn', labelEn: 'Convert to GRN', labelFa: 'تبدیل به رسید', icon: '📦', hidden: d => d.docType !== 'order' || !['approved', 'confirmed'].includes(d.status), onClick: d => op('doc.convert', { sourceId: d.id, toType: 'receipt' }) },
+    { id: 'receive', labelEn: 'Receive (GRN)', labelFa: 'دریافت کالا', icon: '🏭', hidden: d => d.docType !== 'receipt' || ['received', 'void', 'rejected'].includes(d.status), onClick: d => setReceiveFor(d) },
+    { id: 'compare', labelEn: 'Compare quotes', labelFa: 'مقایسه استعلام‌ها', icon: '⚖', hidden: d => d.docType !== 'rfq', onClick: d => setCompareFor(d) },
     { id: 'post', labelEn: 'Post to GL', labelFa: 'ثبت در دفتر کل', icon: '📒', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || ['draft', 'void'].includes(d.status), onClick: d => op('doc.post', { id: d.id }) },
   ]
   return (
@@ -245,20 +253,154 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
       </div>
       <Card className="p-4"><DataTable tableId="pur-docs" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={d => String(d.id)} rowActions={rowActions} exportName="purchase-documents" onRefresh={load} emptyLabel={lc(rtl, 'No documents.', 'سندی نیست.')} /></Card>
       {showNew && <NewDocModal rtl={rtl} onClose={() => setShowNew(false)} onDone={() => { setShowNew(false); load() }} toast={toast} />}
+      {receiveFor && <ReceiveModal rtl={rtl} doc={receiveFor} onClose={() => setReceiveFor(null)} onDone={() => { setReceiveFor(null); load() }} toast={toast} />}
+      {compareFor && <CompareModal rtl={rtl} doc={compareFor} onClose={() => setCompareFor(null)} />}
     </div>
   )
 }
 
+/** GRN receiving: pick a warehouse, confirm per-line quantities (partial allowed) → real inv_moves. */
+function ReceiveModal({ rtl, doc, onClose, onDone, toast }: { rtl: boolean; doc: PurDoc; onClose: () => void; onDone: () => void; toast: Toast }) {
+  const [warehouses, setWarehouses] = useState<{ id: number; code: string; nameEn: string; nameFa: string | null }[]>([])
+  const [warehouseId, setWarehouseId] = useState('')
+  const [lines, setLines] = useState<{ lineId: number; description: string; qty: number; receivedQty: number; productId: number | null; take: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/admin/erp/inventory/warehouses').then(r => r.json()),
+      fetch(`/api/admin/erp/purchasing?id=${doc.id}`).then(r => r.json()),
+    ]).then(([w, d]) => {
+      const ws = w.warehouses ?? []
+      setWarehouses(ws)
+      if (ws.length) setWarehouseId(String(ws[0].id))
+      type DetailLine = { id: number; description: string; qty: number; receivedQty: number; productId: number | null }
+      setLines(((d.lines ?? []) as DetailLine[]).map(l => ({
+        lineId: l.id, description: l.description, qty: Number(l.qty), receivedQty: Number(l.receivedQty ?? 0),
+        productId: l.productId, take: String(Math.max(0, Number(l.qty) - Number(l.receivedQty ?? 0))),
+      })))
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [doc.id])
+  const productLines = lines.filter(l => l.productId)
+  async function submit() {
+    if (!warehouseId) { toast(lc(rtl, 'Pick a warehouse', 'انبار را انتخاب کنید'), 'error'); return }
+    setSaving(true)
+    try {
+      const payload = productLines.map(l => ({ lineId: l.lineId, qty: Math.max(0, Number(l.take) || 0) })).filter(l => l.qty > 0)
+      const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'doc.receive', id: doc.id, warehouseId: Number(warehouseId), lines: payload }) })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) { toast(lc(rtl, `Received — status: ${d.status}`, `دریافت شد — وضعیت: ${d.status === 'received' ? 'کامل' : 'ناقص'}`), 'success'); onDone() }
+      else toast(d.error || lc(rtl, 'Failed', 'ناموفق'), 'error')
+    } finally { setSaving(false) }
+  }
+  return (
+    <Modal open onClose={onClose} title={lc(rtl, `Receive goods — ${doc.docNo || doc.id}`, `دریافت کالا — ${doc.docNo || doc.id}`)} size="lg">
+      {loading ? <div className="h-40 rounded-xl bg-surface-2 animate-pulse" /> : (
+        <div className="space-y-3">
+          <Select label={lc(rtl, 'Warehouse', 'انبار')} value={warehouseId} onChange={setWarehouseId} options={warehouses.map(w => ({ value: String(w.id), label: `${w.code} — ${rtl ? (w.nameFa || w.nameEn) : w.nameEn}` }))} />
+          {productLines.length === 0 ? (
+            <p className="text-sm text-text-tertiary border border-subtle rounded-lg p-3">{lc(rtl, 'No product-linked lines on this document — link lines to inventory products to receive stock.', 'هیچ ردیفی به کالای انبار متصل نیست — برای دریافت، ردیف‌ها را به کالا متصل کنید.')}</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-12 gap-2 text-3xs text-text-tertiary px-1">
+                <span className="col-span-6">{lc(rtl, 'Line', 'ردیف')}</span>
+                <span className="col-span-3">{lc(rtl, 'Ordered / received', 'سفارش / دریافت‌شده')}</span>
+                <span className="col-span-3">{lc(rtl, 'Receive now', 'دریافت فعلی')}</span>
+              </div>
+              {productLines.map(l => (
+                <div key={l.lineId} className="grid grid-cols-12 gap-2 items-center border border-subtle rounded-lg px-2 py-1.5">
+                  <span className="col-span-6 text-sm text-text-primary truncate">{l.description}</span>
+                  <span className="col-span-3 text-xs text-text-tertiary font-mono">{l.qty} / {l.receivedQty}</span>
+                  <div className="col-span-3"><Input label="" value={l.take} onChange={v => setLines(ls => ls.map(x => x.lineId === l.lineId ? { ...x, take: v } : x))} /></div>
+                </div>
+              ))}
+              <p className="text-3xs text-text-tertiary">{lc(rtl, 'Partial quantities are allowed — the document stays "partial" until every line is fully received.', 'دریافت ناقص مجاز است — سند تا دریافت کامل همه ردیف‌ها «ناقص» می‌ماند.')}</p>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={onClose}>{lc(rtl, 'Cancel', 'انصراف')}</Btn>
+            <Btn onClick={submit} disabled={saving || productLines.length === 0}>{lc(rtl, 'Receive into warehouse', 'ثبت دریافت در انبار')}</Btn>
+          </div>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+/** RFQ award helper: all vendor quotations linked to this RFQ, cheapest first, with vendor rating. */
+function CompareModal({ rtl, doc, onClose }: { rtl: boolean; doc: PurDoc; onClose: () => void }) {
+  const [quotes, setQuotes] = useState<{ id: number; docNo: string | null; date: string; total: number; status: string; vendor: string | null; score: number; grade: string | null; lines: number }[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetch(`/api/admin/erp/purchasing?compare=${doc.id}`).then(r => r.json()).then(d => setQuotes(d.quotes ?? [])).catch(() => {}).finally(() => setLoading(false))
+  }, [doc.id])
+  const best = quotes.length ? Math.min(...quotes.map(q => q.total)) : 0
+  return (
+    <Modal open onClose={onClose} title={lc(rtl, `Quotation comparison — ${doc.docNo || doc.id}`, `مقایسه استعلام‌ها — ${doc.docNo || doc.id}`)} size="lg">
+      {loading ? <div className="h-40 rounded-xl bg-surface-2 animate-pulse" /> : quotes.length === 0 ? (
+        <p className="text-sm text-text-tertiary">{lc(rtl, 'No vendor quotations are linked to this RFQ yet. Create quotation documents with this RFQ as source.', 'هنوز استعلام قیمتی به این RFQ متصل نیست. سند استعلام با مبدأ این RFQ بسازید.')}</p>
+      ) : (
+        <div className="space-y-2">
+          {quotes.map(q => (
+            <div key={q.id} className={`flex flex-wrap items-center justify-between gap-2 border rounded-lg px-3 py-2 ${q.total === best ? 'border-success/50 bg-success/5' : 'border-subtle'}`}>
+              <div>
+                <div className="text-sm font-medium text-text-primary flex items-center gap-2">
+                  {q.vendor || '—'}
+                  {q.grade && <Badge color={q.grade === 'A' ? 'green' : q.grade === 'B' ? 'blue' : q.grade === 'C' ? 'yellow' : 'red'}>{q.grade}</Badge>}
+                  {q.total === best && <Badge color="green">{lc(rtl, 'Best price', 'بهترین قیمت')}</Badge>}
+                </div>
+                <div className="text-3xs text-text-tertiary font-mono">{q.docNo || q.id} · {q.date} · {q.lines} {lc(rtl, 'lines', 'ردیف')} · {lc(rtl, 'score', 'امتیاز')} {q.score}</div>
+              </div>
+              <div className="text-lg font-bold text-text-primary">{money(q.total)}</div>
+            </div>
+          ))}
+          <p className="text-3xs text-text-tertiary">{lc(rtl, 'Sorted cheapest-first. Approve the winning quotation, then convert it to a purchase order.', 'مرتب‌شده از ارزان‌ترین. استعلام برنده را تأیید و سپس به سفارش خرید تبدیل کنید.')}</p>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+type NewLine = { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number; productId: number | null }
 function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: () => void; onDone: () => void; toast: Toast }) {
   const [vendors, setVendors] = useState<{ id: number; name: string }[]>([])
+  const [products, setProducts] = useState<{ id: number; sku: string; nameEn: string; nameFa: string | null; price: number }[]>([])
+  const [rfqs, setRfqs] = useState<{ id: number; docNo: string | null }[]>([])
   const [docType, setDocType] = useState<DocType>('request')
   const [vendorId, setVendorId] = useState('')
-  const [lines, setLines] = useState([{ description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9 }])
-  useEffect(() => { fetch('/api/admin/erp/purchasing?view=vendors').then(r => r.json()).then(d => setVendors(d.vendors ?? [])).catch(() => {}) }, [])
+  const [sourceId, setSourceId] = useState('')
+  const [priority, setPriority] = useState('normal')
+  const [department, setDepartment] = useState('')
+  const [budget, setBudget] = useState('')
+  const [lines, setLines] = useState<NewLine[]>([{ description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9, productId: null }])
+  useEffect(() => {
+    fetch('/api/admin/erp/purchasing?view=vendors').then(r => r.json()).then(d => setVendors(d.vendors ?? [])).catch(() => {})
+    fetch('/api/admin/erp/inventory/products').then(r => r.json()).then(d => setProducts(d.products ?? [])).catch(() => {})
+  }, [])
+  useEffect(() => {
+    if (docType !== 'quotation') { setSourceId(''); return }
+    fetch('/api/admin/erp/purchasing?type=rfq').then(r => r.json()).then(d => setRfqs(d.documents ?? [])).catch(() => {})
+  }, [docType])
+  function pickProduct(i: number, val: string) {
+    const p = products.find(x => String(x.id) === val)
+    setLines(ls => ls.map((x, j) => j !== i ? x : {
+      ...x, productId: p ? p.id : null,
+      description: p && !x.description.trim() ? (rtl ? (p.nameFa || p.nameEn) : p.nameEn) : x.description,
+      unitPrice: p && !x.unitPrice ? Number(p.price) || 0 : x.unitPrice,
+    }))
+  }
   async function save() {
     const clean = lines.filter(l => l.description.trim())
     if (!clean.length) { toast(lc(rtl, 'Add at least one line', 'حداقل یک ردیف'), 'error'); return }
-    const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'doc.save', docType, vendorId: vendorId ? Number(vendorId) : undefined, date: new Date().toISOString().slice(0, 10), lines: clean }) })
+    const r = await fetch('/api/admin/erp/purchasing', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'doc.save', docType, vendorId: vendorId ? Number(vendorId) : undefined,
+        sourceId: sourceId ? Number(sourceId) : undefined, priority,
+        department: department.trim() || undefined, budget: budget ? Number(budget) : undefined,
+        date: new Date().toISOString().slice(0, 10), lines: clean,
+      }),
+    })
     if (r.ok) { toast(lc(rtl, 'Document created', 'سند ساخته شد'), 'success'); onDone() } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
   }
   return (
@@ -268,17 +410,26 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
           <Select label={lc(rtl, 'Type', 'نوع')} value={docType} onChange={v => setDocType(v as DocType)} options={DOC_TYPES.map(t => ({ value: t, label: t }))} />
           <Select label={lc(rtl, 'Vendor', 'تأمین‌کننده')} value={vendorId} onChange={setVendorId} options={[{ value: '', label: '—' }, ...vendors.map(v => ({ value: String(v.id), label: v.name }))]} />
         </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Select label={lc(rtl, 'Priority', 'اولویت')} value={priority} onChange={setPriority} options={(['low', 'normal', 'high', 'urgent'] as const).map(p => ({ value: p, label: rtl ? PRIORITY_FA[p] : p }))} />
+          <Input label={lc(rtl, 'Department', 'واحد/دپارتمان')} value={department} onChange={setDepartment} placeholder={lc(rtl, 'e.g. IT', 'مثلاً فناوری')} />
+          <Input label={lc(rtl, 'Budget cap (0 = none)', 'سقف بودجه (۰ = بدون)')} value={budget} onChange={setBudget} placeholder="0" />
+        </div>
+        {docType === 'quotation' && (
+          <Select label={lc(rtl, 'Linked RFQ (for comparison)', 'RFQ مرتبط (برای مقایسه)')} value={sourceId} onChange={setSourceId} options={[{ value: '', label: '—' }, ...rfqs.map(q => ({ value: String(q.id), label: q.docNo || String(q.id) }))]} />
+        )}
         <div className="space-y-2">
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-end">
-              <div className="col-span-5"><Input label={i === 0 ? lc(rtl, 'Description', 'شرح') : ''} value={l.description} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, description: v } : x))} /></div>
+              <div className="col-span-3"><Select label={i === 0 ? lc(rtl, 'Product', 'کالا') : ''} value={l.productId ? String(l.productId) : ''} onChange={v => pickProduct(i, v)} options={[{ value: '', label: lc(rtl, '— service/free —', '— خدمات/آزاد —') }, ...products.map(p => ({ value: String(p.id), label: `${p.sku} · ${rtl ? (p.nameFa || p.nameEn) : p.nameEn}` }))]} /></div>
+              <div className="col-span-3"><Input label={i === 0 ? lc(rtl, 'Description', 'شرح') : ''} value={l.description} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, description: v } : x))} /></div>
               <div className="col-span-2"><Input label={i === 0 ? lc(rtl, 'Qty', 'تعداد') : ''} value={String(l.qty)} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, qty: Number(v) || 0 } : x))} /></div>
               <div className="col-span-2"><Input label={i === 0 ? lc(rtl, 'Price', 'قیمت') : ''} value={String(l.unitPrice)} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, unitPrice: Number(v) || 0 } : x))} /></div>
-              <div className="col-span-2"><Input label={i === 0 ? lc(rtl, 'Tax %', 'مالیات') : ''} value={String(l.taxPct)} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, taxPct: Number(v) || 0 } : x))} /></div>
+              <div className="col-span-1"><Input label={i === 0 ? lc(rtl, 'Tax %', 'مالیات') : ''} value={String(l.taxPct)} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, taxPct: Number(v) || 0 } : x))} /></div>
               <div className="col-span-1"><Btn size="sm" variant="ghost" onClick={() => setLines(ls => ls.filter((_, j) => j !== i))}>✕</Btn></div>
             </div>
           ))}
-          <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9 }])}>+ {lc(rtl, 'Add line', 'افزودن ردیف')}</Btn>
+          <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9, productId: null }])}>+ {lc(rtl, 'Add line', 'افزودن ردیف')}</Btn>
         </div>
         <div className="flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>{lc(rtl, 'Cancel', 'انصراف')}</Btn><Btn onClick={save}>{lc(rtl, 'Create', 'ساخت')}</Btn></div>
       </div>

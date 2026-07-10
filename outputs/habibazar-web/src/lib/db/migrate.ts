@@ -698,6 +698,7 @@ export async function runMigrations() {
     -- Enterprise Sales (Phase 21 ERP, Module 2). Customers with a credit limit;
     -- a unified sales document (quote/order/invoice/credit_note) with lines
     -- carrying discount % and tax %; and payments applied to invoices.
+    -- Phase 26.2: real/legal party identity on customers.
     CREATE TABLE IF NOT EXISTS sales_customers (
       id SERIAL PRIMARY KEY,
       code TEXT NOT NULL UNIQUE,
@@ -713,6 +714,10 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW}),
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'company';
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS national_id TEXT;
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS reg_no TEXT;
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS economic_code TEXT;
 
     CREATE TABLE IF NOT EXISTS sales_documents (
       id SERIAL PRIMARY KEY,
@@ -838,6 +843,10 @@ export async function runMigrations() {
       note TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW})
     );
     ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'normal';
+    ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS product_id INTEGER;
+    ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS received_qty NUMERIC NOT NULL DEFAULT 0;
+    CREATE INDEX IF NOT EXISTS idx_pur_lines_product ON purchase_document_lines(product_id);
     CREATE INDEX IF NOT EXISTS idx_pur_docs_type ON purchase_documents(doc_type, status);
     CREATE INDEX IF NOT EXISTS idx_pur_docs_vendor ON purchase_documents(vendor_id);
     CREATE INDEX IF NOT EXISTS idx_pur_lines_doc ON purchase_document_lines(document_id);
@@ -872,6 +881,22 @@ export async function runMigrations() {
     INSERT INTO erp_companies (code, name_en, name_fa, is_default)
       VALUES ('HQ', 'Head Office', 'دفتر مرکزی', true)
       ON CONFLICT (code) DO NOTHING;
+    ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS reg_no TEXT;
+    ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS national_id TEXT;
+    ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS economic_code TEXT;
+    ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS tax_no TEXT;
+    ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS phone TEXT;
+
+    -- Phase 26.4: monthly sales targets + commission config.
+    CREATE TABLE IF NOT EXISTS sales_targets (
+      id SERIAL PRIMARY KEY,
+      period TEXT UNIQUE NOT NULL,            -- YYYY-MM
+      target NUMERIC NOT NULL DEFAULT 0,
+      commission_pct NUMERIC NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
 
     -- Enterprise Financial System (Phase 21 ERP, Module 1) — double-entry GL.
     CREATE TABLE IF NOT EXISTS gl_fiscal_periods (
@@ -1022,6 +1047,14 @@ export async function runMigrations() {
       ('6200','Utilities Expense','هزینهٔ آب و برق','expense'),
       ('6900','Depreciation Expense','هزینهٔ استهلاک','expense')
     ON CONFLICT (code) DO NOTHING;
+
+    -- Phase 26.5: intercompany clearing accounts (idempotent seed).
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '1150', 'Due From Affiliates', 'دریافتنی از شرکت‌های گروه', 'asset', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='1150');
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '2150', 'Due To Affiliates', 'پرداختنی به شرکت‌های گروه', 'liability', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='2150');
 
     -- Enterprise Inventory (Phase 21 ERP, Module 4). Multi-warehouse stock with
     -- bin locations, lot/serial tracking, a full move ledger and FIFO/LIFO/WAVG

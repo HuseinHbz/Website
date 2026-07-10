@@ -6,7 +6,7 @@ import { pgQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
-  purchaseInvoiceStatus, purchaseKpis, type LineInput, type PurchaseDocType, type PurchaseStatus,
+  purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
 } from './purchasing'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -17,7 +17,7 @@ export interface VendorInput {
   taxId?: string; economicCode?: string; address?: string; iban?: string
   currency?: string; paymentTerms?: number
 }
-export interface LineRow extends LineInput { description: string }
+export interface LineRow extends LineInput { description: string; productId?: number | null }
 
 // ── Vendors ──────────────────────────────────────────────────────────────────
 export async function listVendors() {
@@ -59,59 +59,132 @@ export async function vendorPosition(vendorId: number) {
 }
 
 // ── Documents ────────────────────────────────────────────────────────────────
-interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number; gl_entry_id: number | null }
+interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number; gl_entry_id: number | null; priority: string }
 export async function listDocuments(docType?: PurchaseDocType) {
   const rows = await pgQuery<DocRow & { vendor_name: string | null }>(
     `SELECT d.*, v.name AS vendor_name FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id=d.vendor_id
      ${docType ? 'WHERE d.doc_type=$1' : ''} ORDER BY d.created_at DESC`, docType ? [docType] : [])
-  return rows.map(r => ({ id: r.id, docNo: r.doc_no, docType: r.doc_type, vendorId: r.vendor_id, vendorName: r.vendor_name, status: r.status, date: r.date, total: num(r.total), paidTotal: num(r.paid_total), approvalLevels: r.approval_levels, budget: num(r.budget), glEntryId: r.gl_entry_id }))
+  return rows.map(r => ({ id: r.id, docNo: r.doc_no, docType: r.doc_type, vendorId: r.vendor_id, vendorName: r.vendor_name, status: r.status, date: r.date, total: num(r.total), paidTotal: num(r.paid_total), approvalLevels: r.approval_levels, budget: num(r.budget), glEntryId: r.gl_entry_id, priority: r.priority }))
 }
 export async function getDocument(id: number) {
   const d = (await pgQuery<DocRow>(`SELECT * FROM purchase_documents WHERE id=$1`, [id]))[0]
   if (!d) return null
-  const lines = await pgQuery(`SELECT id, description, qty, unit_price AS "unitPrice", discount_pct AS "discountPct", tax_pct AS "taxPct" FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [id])
+  const lines = await pgQuery(`SELECT id, description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct", product_id AS "productId", received_qty::float AS "receivedQty" FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [id])
   const approvals = await pgQuery(`SELECT level, decision, approver_id AS "approverId", comment, created_at AS "createdAt" FROM purchase_approvals WHERE document_id=$1 ORDER BY created_at`, [id])
   return { ...d, lines, approvals }
 }
 
 export async function saveDocument(input: {
   id?: number; docType: PurchaseDocType; vendorId?: number; date: string; currency?: string
-  department?: string; budget?: number; sourceId?: number; note?: string; lines: LineRow[]
+  department?: string; budget?: number; sourceId?: number; note?: string; priority?: string; lines: LineRow[]
 }, userId?: string): Promise<number> {
   const totals = documentTotals(input.lines)
   if (input.id) {
     await pgQuery(
       `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
-        note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, updated_at=${NOW} WHERE id=$1`,
+        note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), updated_at=${NOW} WHERE id=$1`,
       [input.id, input.vendorId ?? null, input.date, input.currency ?? null, input.department ?? null, input.budget ?? 0,
-       input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total])
+       input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null])
     await pgQuery(`DELETE FROM purchase_document_lines WHERE document_id=$1`, [input.id])
     await insertLines(input.id, input.lines)
     return input.id
   }
   const docNo = await nextNumber(`purchase_${input.docType}`, { legacyPrefix: input.docType.toUpperCase().slice(0, 3) })
   const row = (await pgQuery<{ id: number }>(
-    `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,created_by,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,${NOW},${NOW}) RETURNING id`,
+    `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,created_at,updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW},${NOW}) RETURNING id`,
     [docNo, input.docType, input.vendorId ?? null, input.date, input.currency ?? 'IRR', input.department ?? null, input.budget ?? 0,
-     input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, userId ?? null]))[0]
+     input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null]))[0]
   await insertLines(row.id, input.lines)
   return row.id
 }
 async function insertLines(docId: number, lines: LineRow[]) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]
-    await pgQuery(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i])
+    await pgQuery(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i, l.productId ?? null])
   }
 }
 
-/** Submit a document for approval — compute the required approval levels. */
-export async function submitDocument(id: number) {
-  const d = (await pgQuery<{ total: number }>(`SELECT total FROM purchase_documents WHERE id=$1`, [id]))[0]
-  if (!d) return
+/**
+ * Submit a document for approval. Runs the BUDGET CHECK first: when the doc
+ * carries a budget envelope, the department's committed spend this year plus
+ * this request must fit inside it — over-budget submits are blocked with the
+ * exact numbers. Then computes the required approval levels.
+ */
+export async function submitDocument(id: number): Promise<{ ok: boolean; error?: string; budget?: ReturnType<typeof validateBudget> }> {
+  const d = (await pgQuery<{ total: number; budget: number; department: string | null; date: string }>(
+    `SELECT total, budget, department, date FROM purchase_documents WHERE id=$1`, [id]))[0]
+  if (!d) return { ok: false, error: 'Document not found' }
+  if (num(d.budget) > 0) {
+    const year = String(d.date ?? '').slice(0, 4) || String(new Date().getFullYear())
+    const committed = d.department
+      ? num((await pgQuery<{ t: number }>(
+          `SELECT COALESCE(SUM(total),0) AS t FROM purchase_documents
+           WHERE id<>$1 AND department=$2 AND date LIKE $3 AND status NOT IN ('draft','void','rejected')`,
+          [id, d.department, `${year}%`]))[0]?.t)
+      : 0
+    const budget = validateBudget({ budget: num(d.budget), committed, requested: num(d.total) })
+    if (!budget.withinBudget)
+      return { ok: false, budget, error: `Over budget: available ${budget.available.toLocaleString()}, requested ${num(d.total).toLocaleString()}` }
+  }
   const levels = requiredApprovalLevels(num(d.total))
   await pgQuery(`UPDATE purchase_documents SET status='submitted', approval_levels=$2, updated_at=${NOW} WHERE id=$1`, [id, levels])
+  return { ok: true }
+}
+
+/**
+ * GRN → warehouse update (Phase 26 completion). Receives quantities on a
+ * receipt document: writes real `inv_moves` receipt rows for every line linked
+ * to a product (at the line's unit price as cost), tracks `received_qty`, and
+ * sets the document to `received` (all product lines complete) or `partial`.
+ * Lines without a product (services) are ignored by receiving.
+ */
+export async function receiveDocument(
+  docId: number, warehouseId: number,
+  linesIn?: { lineId: number; qty: number }[], userId?: string,
+): Promise<{ ok: boolean; error?: string; received: number; status?: string }> {
+  const doc = (await pgQuery<{ doc_type: string; status: string; doc_no: string | null }>(
+    `SELECT doc_type, status, doc_no FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!doc) return { ok: false, error: 'Document not found', received: 0 }
+  if (doc.doc_type !== 'receipt') return { ok: false, error: 'Only goods-receipt (GRN) documents can be received', received: 0 }
+  if (['void', 'rejected'].includes(doc.status)) return { ok: false, error: 'Document is not receivable', received: 0 }
+  const lines = await pgQuery<{ id: number; qty: number; unit_price: number; product_id: number | null; received_qty: number }>(
+    `SELECT id, qty::float AS qty, unit_price::float AS unit_price, product_id, received_qty::float AS received_qty
+     FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [docId])
+  const wanted = new Map((linesIn ?? []).map(l => [l.lineId, Math.max(0, l.qty)]))
+  let received = 0
+  for (const l of lines) {
+    if (!l.product_id) continue
+    const remaining = Math.max(0, num(l.qty) - num(l.received_qty))
+    const take = Math.min(remaining, linesIn ? (wanted.get(l.id) ?? 0) : remaining)
+    if (take <= 0) continue
+    await pgQuery(
+      `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+       VALUES ($1,$2,'receipt',$3,$4,$5,$6,${NOW})`,
+      [l.product_id, warehouseId, take, num(l.unit_price), `GRN ${doc.doc_no ?? docId}`, userId ?? null])
+    await pgQuery(`UPDATE purchase_document_lines SET received_qty = received_qty + $2 WHERE id=$1`, [l.id, take])
+    received++
+  }
+  const after = await pgQuery<{ qty: number; received_qty: number; product_id: number | null }>(
+    `SELECT qty::float AS qty, received_qty::float AS received_qty, product_id FROM purchase_document_lines WHERE document_id=$1`, [docId])
+  const productLines = after.filter(l => l.product_id)
+  const complete = productLines.length === 0 || productLines.every(l => num(l.received_qty) + 0.0001 >= num(l.qty))
+  const status = complete ? 'received' : 'partial'
+  await pgQuery(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, status])
+  return { ok: true, received, status }
+}
+
+/** RFQ quotation comparison: every vendor quotation linked to the RFQ, side by
+ * side with vendor rating — the comparison feed for award decisions. */
+export async function compareQuotes(rfqId: number) {
+  return pgQuery(
+    `SELECT d.id, d.doc_no AS "docNo", d.date, d.total::float AS total, d.status,
+            v.name AS vendor, v.score::float AS score, v.grade,
+            (SELECT COUNT(*)::int FROM purchase_document_lines pl WHERE pl.document_id=d.id) AS lines
+     FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id=d.vendor_id
+     WHERE d.doc_type='quotation' AND d.source_id=$1 AND d.status NOT IN ('void')
+     ORDER BY d.total ASC`, [rfqId])
 }
 
 /** Record an approval decision; advance to 'approved' once every level signs. */
@@ -139,7 +212,7 @@ export async function recordPayment(documentId: number, vendorId: number, amount
 export async function convertDocument(sourceId: number, toType: PurchaseDocType, userId?: string): Promise<number> {
   const src = await getDocument(sourceId)
   if (!src) throw new Error('Source not found')
-  const lines = (src.lines as unknown as LineRow[]).map(l => ({ description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct) }))
+  const lines = (src.lines as unknown as LineRow[]).map(l => ({ description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }))
   return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
 }
 
