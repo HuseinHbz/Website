@@ -405,6 +405,33 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `vendor.portalLink`/`portalRevoke` actions, public noindex page
   `/[locale]/vendor/[token]`. Verified vs real PostgreSQL. Report:
   `docs/governance/phase26.1-purchasing-platform.md`.
+- **Phase 26 — Enterprise ERP Completion** (audit-first gap closure; report:
+  `docs/governance/phase26-enterprise-erp-completion-report.md`, audit:
+  `phase26-erp-completion-audit.md`). **26.1**: `purchase_documents.priority` +
+  budget-gated submit (`validateBudget` vs department committed spend, blocked
+  400 stays draft), **GRN→inventory** (`receiveDocument` writes real `inv_moves`
+  per product line, `received_qty` partial→received, `product_id` carried
+  through conversion), RFQ `compareQuotes` (`?compare=` + modal, cheapest-first
+  w/ vendor rating). **26.2**: customer party identity `kind` حقیقی/حقوقی +
+  `national_id/reg_no/economic_code` printed on sales-sourced documents; shared
+  `sendMail()` (notifications.ts, fails closed) + `POST /api/admin/erp/
+  documents/email` (HTML attachment, audited) + Email action; pure **Code 39
+  barcode** engine (`erp/barcode.ts`) + `DocTemplateConfig.showBarcode`.
+  **26.3**: live bank balances (opening + statement movements) + pure
+  `cashFlowSeries` (MA-3 forecast) → `?view=cashflow` → Banking Cash-flow
+  section. **26.4**: `salesPerformance.ts` (targets/attainment/commission =
+  invoiced × rate, least-squares `forecastSales`, `runStatement` ledger) +
+  `sales/performance` API + dashboard Performance section + customer
+  `?statement=` modal; `sales_targets` table. **26.5**: `erp_companies` legal
+  identity (reg/national/economic/tax/address/phone) + creation modal;
+  **intercompany** pure engine (`erp/intercompany.ts`: mirrored balanced pairs
+  on seeded 1150 Due-From / 2150 Due-To + 1010 Bank; transfer/settle) →
+  `bookIntercompany` posts two company-scoped entries, admin-gated
+  `intercompany.transfer` action + modal; clearing offsets in consolidation.
+  **26.6**: `scanPaymentAnomalies` (double-pay + 5×-median outliers over both
+  payment ledgers) + deterministic 6-month sales/spend series with trend
+  forecasts injected into the finance-AI snapshot (reuses `forecastSales`).
+  All engines pure+unit-tested; every sub-phase live-PG round-trip verified.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

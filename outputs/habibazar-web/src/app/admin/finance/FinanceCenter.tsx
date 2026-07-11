@@ -274,14 +274,10 @@ function ReportsView({ t, fa }: { t: T; fa: boolean }) {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'trial' | 'income' | 'balance'>('trial')
   const [company, setCompany] = useState('all')
+  const [showCompany, setShowCompany] = useState(false)
+  const [showIc, setShowIc] = useState(false)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch(`/api/admin/erp/finance/reports?company=${company}`); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [company])
   useEffect(() => { load() }, [load])
-  async function addCompany() {
-    const code = window.prompt(L(fa, 'Company code (e.g. BR1)', 'کد شرکت/شعبه')); if (!code) return
-    const name = window.prompt(L(fa, 'Company name', 'نام شرکت')) || code
-    const r = await fetch('/api/admin/erp/finance/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'company.create', code, nameEn: name, nameFa: name }) })
-    if (r.ok) load()
-  }
   if (loading && !d) return <p className="text-sm text-text-tertiary">{t('fin_loading')}</p>
   if (!d) return <Card className="p-5"><p className="text-sm text-text-tertiary">{t('fin_empty')}</p></Card>
   const name = (l: { nameEn: string; nameFa?: string | null }) => fa ? (l.nameFa || l.nameEn) : l.nameEn
@@ -296,9 +292,12 @@ function ReportsView({ t, fa }: { t: T; fa: boolean }) {
         <div className="ms-auto flex items-end gap-2">
           <Select label={L(fa, 'Company scope', 'محدودهٔ شرکت')} value={company} onChange={setCompany}
             options={[{ value: 'all', label: L(fa, 'Consolidated (all companies)', 'تلفیقی (همهٔ شرکت‌ها)') }, ...((d?.companies ?? []).map(c => ({ value: String(c.id), label: `${fa ? c.nameFa : c.nameEn} (${c.code})` })))]} />
-          <Btn size="sm" variant="secondary" onClick={addCompany}>+ {L(fa, 'Company', 'شرکت')}</Btn>
+          <Btn size="sm" variant="secondary" onClick={() => setShowCompany(true)}>+ {L(fa, 'Company', 'شرکت')}</Btn>
+          <Btn size="sm" variant="secondary" onClick={() => setShowIc(true)}>⇄ {L(fa, 'Intercompany', 'بین‌شرکتی')}</Btn>
         </div>
       </div>
+      {showCompany && <CompanyModal fa={fa} onClose={() => setShowCompany(false)} onDone={() => { setShowCompany(false); load() }} />}
+      {showIc && <IntercompanyModal fa={fa} companies={d?.companies ?? []} onClose={() => setShowIc(false)} onDone={() => { setShowIc(false); load() }} />}
       {view === 'trial' && (
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-text-primary mb-3">{t('fin_rep_trial')}</h3>
@@ -708,5 +707,99 @@ function FinanceAiCard({ fa }: { fa: boolean }) {
       {answer && <div className="rounded-lg border border-subtle bg-surface-2 p-4 text-sm text-text-secondary whitespace-pre-line leading-relaxed">{answer}</div>}
       <p className="text-4xs text-text-tertiary">{L(fa, 'The assistant sees only a read-only snapshot of the books; every generation is audited.', 'دستیار فقط یک تصویر فقط‌خواندنی از دفاتر می‌بیند؛ هر تولید در audit ثبت می‌شود.')}</p>
     </Card>
+  )
+}
+
+/** Register a company/branch with its legal identity (Phase 26.5). */
+function CompanyModal({ fa, onClose, onDone }: { fa: boolean; onClose: () => void; onDone: () => void }) {
+  const [f, setF] = useState({ code: '', nameEn: '', nameFa: '', regNo: '', nationalId: '', economicCode: '', taxNo: '', address: '', phone: '' })
+  const [err, setErr] = useState('')
+  const [saving, setSaving] = useState(false)
+  const set = (k: keyof typeof f) => (v: string) => setF(x => ({ ...x, [k]: v }))
+  async function save() {
+    if (!f.code.trim() || !f.nameEn.trim()) { setErr(L(fa, 'Code and name are required', 'کد و نام الزامی است')); return }
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/finance/reports', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'company.create', code: f.code.trim(), nameEn: f.nameEn.trim(), nameFa: f.nameFa.trim() || f.nameEn.trim(),
+          regNo: f.regNo.trim() || undefined, nationalId: f.nationalId.trim() || undefined,
+          economicCode: f.economicCode.trim() || undefined, taxNo: f.taxNo.trim() || undefined,
+          address: f.address.trim() || undefined, phone: f.phone.trim() || undefined,
+        }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) onDone(); else setErr(d.error || L(fa, 'Failed', 'ناموفق'))
+    } finally { setSaving(false) }
+  }
+  return (
+    <Modal open onClose={onClose} title={L(fa, 'New company / branch', 'شرکت/شعبه جدید')} size="lg">
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-3">
+          <Input label={L(fa, 'Code', 'کد')} value={f.code} onChange={set('code')} placeholder="BR1" />
+          <Input label={L(fa, 'Name (EN)', 'نام (EN)')} value={f.nameEn} onChange={set('nameEn')} />
+          <Input label={L(fa, 'Name (FA)', 'نام (FA)')} value={f.nameFa} onChange={set('nameFa')} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label={L(fa, 'Registration no', 'شماره ثبت')} value={f.regNo} onChange={set('regNo')} />
+          <Input label={L(fa, 'National ID (شناسه ملی)', 'شناسه ملی')} value={f.nationalId} onChange={set('nationalId')} />
+          <Input label={L(fa, 'Economic code', 'کد اقتصادی')} value={f.economicCode} onChange={set('economicCode')} />
+          <Input label={L(fa, 'Tax no', 'شماره مالیاتی')} value={f.taxNo} onChange={set('taxNo')} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label={L(fa, 'Address', 'نشانی')} value={f.address} onChange={set('address')} />
+          <Input label={L(fa, 'Phone', 'تلفن')} value={f.phone} onChange={set('phone')} />
+        </div>
+        {err && <p className="text-xs text-danger-text">{err}</p>}
+        <div className="flex justify-end gap-2">
+          <Btn variant="ghost" onClick={onClose}>{L(fa, 'Cancel', 'انصراف')}</Btn>
+          <Btn onClick={save} disabled={saving}>{L(fa, 'Create', 'ساخت')}</Btn>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+/** Book a mirrored intercompany transfer/settlement — two posted entries (Phase 26.5). */
+function IntercompanyModal({ fa, companies, onClose, onDone }: { fa: boolean; companies: CompanyRow[]; onClose: () => void; onDone: () => void }) {
+  const [f, setF] = useState({ kind: 'transfer', from: '', to: '', amount: '', date: new Date().toISOString().slice(0, 10), memo: '' })
+  const [err, setErr] = useState('')
+  const [saving, setSaving] = useState(false)
+  const opts = companies.map(c => ({ value: String(c.id), label: `${fa ? c.nameFa : c.nameEn} (${c.code})` }))
+  async function save() {
+    if (!f.from || !f.to || f.from === f.to || !(Number(f.amount) > 0)) { setErr(L(fa, 'Pick two different companies and a positive amount', 'دو شرکت متفاوت و مبلغ مثبت لازم است')); return }
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/finance/reports', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'intercompany.transfer', kind: f.kind, fromCompanyId: Number(f.from), toCompanyId: Number(f.to), amount: Number(f.amount), date: f.date, memo: f.memo.trim() || undefined }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) onDone(); else setErr(d.error || L(fa, 'Failed', 'ناموفق'))
+    } finally { setSaving(false) }
+  }
+  return (
+    <Modal open onClose={onClose} title={L(fa, 'Intercompany transfer', 'انتقال بین‌شرکتی')}>
+      <div className="space-y-3">
+        <Select label={L(fa, 'Kind', 'نوع')} value={f.kind} onChange={v => setF(x => ({ ...x, kind: v }))}
+          options={[{ value: 'transfer', label: L(fa, 'Transfer (lend/fund)', 'انتقال (تأمین وجه)') }, { value: 'settle', label: L(fa, 'Settlement (repay)', 'تسویه (بازپرداخت)') }]} />
+        <div className="grid grid-cols-2 gap-3">
+          <Select label={L(fa, 'From company', 'از شرکت')} value={f.from} onChange={v => setF(x => ({ ...x, from: v }))} options={[{ value: '', label: '—' }, ...opts]} />
+          <Select label={L(fa, 'To company', 'به شرکت')} value={f.to} onChange={v => setF(x => ({ ...x, to: v }))} options={[{ value: '', label: '—' }, ...opts]} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label={L(fa, 'Amount', 'مبلغ')} value={f.amount} onChange={v => setF(x => ({ ...x, amount: v }))} />
+          <Input label={L(fa, 'Date', 'تاریخ')} type="date" value={f.date} onChange={v => setF(x => ({ ...x, date: v }))} />
+        </div>
+        <Input label={L(fa, 'Memo (optional)', 'شرح (اختیاری)')} value={f.memo} onChange={v => setF(x => ({ ...x, memo: v }))} />
+        <p className="text-3xs text-text-tertiary">{L(fa, 'Books two posted, balanced entries via the 1150/2150 clearing accounts — they offset in consolidation. Administrator only.', 'دو سند قطعی متوازن روی حساب‌های واسط ۱۱۵۰/۲۱۵۰ ثبت می‌شود که در تلفیق یکدیگر را خنثی می‌کنند. فقط مدیر.')}</p>
+        {err && <p className="text-xs text-danger-text">{err}</p>}
+        <div className="flex justify-end gap-2">
+          <Btn variant="ghost" onClick={onClose}>{L(fa, 'Cancel', 'انصراف')}</Btn>
+          <Btn onClick={save} disabled={saving}>{L(fa, 'Book entries', 'ثبت اسناد')}</Btn>
+        </div>
+      </div>
+    </Modal>
   )
 }

@@ -66,3 +66,38 @@ export function buildFinancePrompt(
   const userMessage = [ACTION_TASK[action], opts.question ? `Question: ${opts.question}` : ''].filter(Boolean).join('\n\n')
   return { systemPrompt, userMessage }
 }
+
+// ── Payment fraud scan (Phase 26.6) ──────────────────────────────────────────
+export interface PaymentFact { id: number; party: string; date: string; amount: number; source: 'sales' | 'purchase' }
+
+/** Deterministic payment anomaly scan: duplicate payments (same party + amount
+ * + date, a classic double-pay) and outliers > 5× the median (≥ 4 samples). */
+export function scanPaymentAnomalies(payments: PaymentFact[]): Anomaly[] {
+  const anomalies: Anomaly[] = []
+  const byKey = new Map<string, PaymentFact[]>()
+  for (const p of payments) {
+    const k = `${p.source}|${p.party}|${p.date}|${p.amount}`
+    byKey.set(k, [...(byKey.get(k) ?? []), p])
+  }
+  for (const group of byKey.values()) {
+    if (group.length >= 2 && group[0].amount > 0)
+      anomalies.push({
+        code: 'payment.duplicate',
+        message: `${group.length} ${group[0].source} payments to ${group[0].party} of ${group[0].amount.toLocaleString()} on ${group[0].date} — possible double payment.`,
+        entryIds: group.map(p => p.id),
+      })
+  }
+  const amounts = payments.map(p => p.amount).filter(a => a > 0).sort((a, b) => a - b)
+  if (amounts.length >= 4) {
+    const median = amounts[Math.floor(amounts.length / 2)]
+    for (const p of payments) {
+      if (median > 0 && p.amount > median * 5)
+        anomalies.push({
+          code: 'payment.outlier',
+          message: `${p.source === 'sales' ? 'Receipt' : 'Payment'} #${p.id} (${p.party}) of ${p.amount.toLocaleString()} is more than 5× the median payment (${median.toLocaleString()}).`,
+          entryIds: [p.id],
+        })
+    }
+  }
+  return anomalies
+}

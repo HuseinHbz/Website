@@ -37,7 +37,9 @@ export async function loadTallies(companyId?: number): Promise<AccountTally[]> {
 
 /** Active companies (default first). */
 export async function listCompanies() {
-  return pgQuery(`SELECT id, code, name_en AS "nameEn", name_fa AS "nameFa", is_default AS "isDefault", active FROM erp_companies ORDER BY is_default DESC, code`)
+  return pgQuery(`SELECT id, code, name_en AS "nameEn", name_fa AS "nameFa", is_default AS "isDefault", active,
+          reg_no AS "regNo", national_id AS "nationalId", economic_code AS "economicCode", tax_no AS "taxNo", address, phone
+     FROM erp_companies ORDER BY is_default DESC, code`)
 }
 
 const isCashCode = (code: string) => code.startsWith('10')
@@ -65,4 +67,43 @@ export async function financeOverview() {
   )) as { status: string; n: number }[]
   const byStatus = Object.fromEntries(counts.map(c => [c.status, c.n])) as Record<string, number>
   return { kpis, income: is, balance: bs, recent, byStatus }
+}
+
+// ── Intercompany (Phase 26.5) ────────────────────────────────────────────────
+import { intercompanyEntries, icBalanced, type IcTransferInput } from './intercompany'
+
+/**
+ * Book a mirrored intercompany transfer/settlement: two POSTED company-scoped
+ * journal entries built by the pure engine (1150/2150 clearing + 1010 bank).
+ * Both books stay balanced and the clearing accounts offset in consolidation.
+ */
+export async function bookIntercompany(input: IcTransferInput & { date: string }, userId?: string): Promise<{ entryIds: number[]; entryNos: string[] }> {
+  const pair = intercompanyEntries(input)
+  if (!icBalanced(pair)) throw new Error('Intercompany entries are unbalanced') // defensive; engine guarantees this
+  const codes = [...new Set(pair.flatMap(e => e.lines.map(l => l.accountCode)))]
+  const accounts = await pgQuery<{ id: number; code: string }>(
+    `SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
+  const byCode = new Map(accounts.map(a => [a.code, a.id]))
+  for (const c of codes) if (!byCode.has(c)) throw new Error(`GL account ${c} is missing — run migrations`)
+  const companies = await pgQuery<{ id: number }>(`SELECT id FROM erp_companies WHERE id = ANY($1)`, [[input.fromCompanyId, input.toCompanyId]])
+  if (companies.length !== 2) throw new Error('Both companies must exist')
+
+  const NOW_SQL = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
+  const entryIds: number[] = []
+  const entryNos: string[] = []
+  for (const e of pair) {
+    const total = e.lines.reduce((s, l) => s + l.debit, 0)
+    const entryNo = `IC-${input.date.slice(0, 4)}-${Date.now().toString().slice(-6)}${e.companyId}`
+    const row = (await pgQuery<{ id: number }>(
+      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, posted_at)
+       VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,${NOW_SQL}) RETURNING id`,
+      [entryNo, input.date, e.memo, `intercompany:${input.kind}`, total, userId ?? null, e.companyId]))[0]
+    for (let i = 0; i < e.lines.length; i++) {
+      const l = e.lines[i]
+      await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [row.id, byCode.get(l.accountCode), l.debit, l.credit, l.memo, i])
+    }
+    entryIds.push(row.id); entryNos.push(entryNo)
+  }
+  return { entryIds, entryNos }
 }
