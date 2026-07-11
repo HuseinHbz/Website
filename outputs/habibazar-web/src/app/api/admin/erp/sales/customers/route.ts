@@ -3,15 +3,20 @@ import { z } from 'zod'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
-import { loadCustomers } from '@/lib/erp/salesData'
+import { loadCustomers, customerStatement } from '@/lib/erp/salesData'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const auth = await requireAdmin()
   if ('error' in auth) return auth.error
   try {
+    const statementId = Number(req.nextUrl.searchParams.get('statement'))
+    if (statementId) {
+      const st = await customerStatement(statementId)
+      return st ? NextResponse.json(st) : NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
     return NextResponse.json({ customers: await loadCustomers() })
   } catch (e) { return apiError(e, 'Failed to load customers') }
 }

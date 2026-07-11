@@ -85,7 +85,86 @@ function Dashboard({ t }: { t: T }) {
           )}
         </Card>
       </div>
+      <PerformanceSection />
     </div>
+  )
+}
+
+/** Targets · commission · forecast (Phase 26.4). */
+function PerformanceSection() {
+  const locale = useAdminLocale()
+  const fa = locale === 'fa'
+  const lp = (en: string, faL: string) => (fa ? faL : en)
+  interface PerfMonth { month: string; invoiced: number; target: number; commissionPct: number; attainmentPct: number; commission: number; status: string }
+  interface Perf { months: PerfMonth[]; totals: { invoiced: number; target: number; attainmentPct: number; commission: number }; forecast: { month: string; invoiced: number }[] }
+  const [d, setD] = useState<Perf | null>(null)
+  const [form, setForm] = useState({ period: new Date().toISOString().slice(0, 7), target: '', commissionPct: '' })
+  const [saving, setSaving] = useState(false)
+  const load = useCallback(async () => {
+    const r = await fetch('/api/admin/erp/sales/performance').then(x => x.json()).catch(() => null)
+    if (r?.months) setD(r)
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function save() {
+    if (!/^\d{4}-\d{2}$/.test(form.period)) return
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/sales/performance', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period: form.period, target: Number(form.target) || 0, commissionPct: Number(form.commissionPct) || 0 }),
+      })
+      if (r.ok) { setForm(f => ({ ...f, target: '', commissionPct: '' })); load() }
+    } finally { setSaving(false) }
+  }
+  if (!d) return null
+  const STATUS_BADGE: Record<string, string> = { above: 'green', near: 'yellow', below: 'red', no_target: 'slate' }
+  const peak = Math.max(1, ...d.months.map(m => Math.max(m.invoiced, m.target)), ...d.forecast.map(f => f.invoiced))
+  const shown = [...d.months.slice(-6)]
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-text-primary">{lp('Sales performance — targets · commission · forecast', 'عملکرد فروش — هدف · پورسانت · پیش‌بینی')}</h3>
+        <div className="flex flex-wrap items-end gap-2">
+          <Input label={lp('Period', 'دوره')} value={form.period} onChange={v => setForm(f => ({ ...f, period: v }))} placeholder="2026-07" className="w-28" />
+          <Input label={lp('Target', 'هدف')} value={form.target} onChange={v => setForm(f => ({ ...f, target: v }))} className="w-32" />
+          <Input label={lp('Comm. %', 'پورسانت ٪')} value={form.commissionPct} onChange={v => setForm(f => ({ ...f, commissionPct: v }))} className="w-20" />
+          <Btn size="sm" onClick={save} disabled={saving}>{lp('Set target', 'ثبت هدف')}</Btn>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {([
+          [lp('Invoiced (12m)', 'فاکتورشده (۱۲ ماه)'), money(d.totals.invoiced)],
+          [lp('Target (12m)', 'هدف (۱۲ ماه)'), money(d.totals.target)],
+          [lp('Attainment', 'تحقق هدف'), `${d.totals.attainmentPct}%`],
+          [lp('Commission', 'پورسانت'), money(d.totals.commission)],
+        ] as const).map(([label, v]) => (
+          <div key={label} className="rounded-xl p-3 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary">{label}</p><p className="text-lg font-bold text-text-primary">{v}</p></div>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        {shown.map(m => (
+          <div key={m.month} className="grid grid-cols-12 items-center gap-2 text-xs rounded-lg px-2 py-1.5">
+            <span className="col-span-2 font-mono text-text-tertiary">{m.month}</span>
+            <div className="col-span-4 space-y-0.5">
+              <div className="h-2 rounded bg-sunken overflow-hidden"><div className="h-full bg-brand" style={{ width: `${Math.min(100, (m.invoiced / peak) * 100)}%` }} /></div>
+              <div className="h-1 rounded bg-sunken overflow-hidden"><div className="h-full bg-warning" style={{ width: `${Math.min(100, (m.target / peak) * 100)}%` }} /></div>
+            </div>
+            <span className="col-span-2 text-end text-text-secondary">{money(m.invoiced)}</span>
+            <span className="col-span-2 text-end text-text-tertiary">{m.target > 0 ? money(m.target) : '—'}</span>
+            <span className="col-span-1 text-end"><Badge color={STATUS_BADGE[m.status]}>{m.target > 0 ? `${m.attainmentPct}%` : '—'}</Badge></span>
+            <span className="col-span-1 text-end text-text-secondary">{m.commission > 0 ? money(m.commission) : '—'}</span>
+          </div>
+        ))}
+        {d.forecast.map(f => (
+          <div key={f.month} className="grid grid-cols-12 items-center gap-2 text-xs rounded-lg px-2 py-1.5 border border-dashed border-subtle opacity-80">
+            <span className="col-span-2 font-mono text-text-tertiary">{f.month} <span className="text-4xs">{lp('(fc)', '(پیش‌بینی)')}</span></span>
+            <div className="col-span-4"><div className="h-2 rounded bg-sunken overflow-hidden"><div className="h-full bg-brand/60" style={{ width: `${Math.min(100, (f.invoiced / peak) * 100)}%` }} /></div></div>
+            <span className="col-span-6 text-end text-text-tertiary">{money(f.invoiced)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-3xs text-text-tertiary">{lp('Bars: invoiced (top) vs target (thin). Commission = invoiced × rate. Forecast = linear trend of the trailing year.', 'میله‌ها: فاکتورشده (بالا) در برابر هدف (نازک). پورسانت = فاکتورشده × نرخ. پیش‌بینی = روند خطی سال اخیر.')}</p>
+    </Card>
   )
 }
 
@@ -104,6 +183,7 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Customer>({ code: '', name: '', email: '', phone: '', company: '', taxId: '', kind: 'company', nationalId: '', regNo: '', economicCode: '', creditLimit: 0, address: '', notes: '', active: true })
   const [saving, setSaving] = useState(false)
+  const [stmtFor, setStmtFor] = useState<Customer | null>(null)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/sales/customers'); if (r.ok) { const d = await r.json(); setRows(d.customers ?? []) } } catch { toast(t('sales_loadFail'), 'error') } finally { setLoading(false) } }, [toast, t])
   useEffect(() => { load() }, [load])
   function set<K extends keyof Customer>(k: K, v: Customer[K]) { setEditing(e => ({ ...e, [k]: v })) }
@@ -121,7 +201,10 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
     { key: 'outstanding', labelEn: 'Outstanding', labelFa: t('sales_cOutstanding'), type: 'number', numeric: true, value: c => c.outstanding ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.outstanding)}{c.overLimit && <Badge color="red">{t('sales_overLimit')}</Badge>}</span> },
     { key: 'available', labelEn: 'Available', labelFa: t('sales_cAvailable'), type: 'number', numeric: true, value: c => c.available ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.available)}</span> },
   ]
-  const rowActions: RowAction<Customer>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('sales_edit'), icon: '✎', onClick: c => { setEditing({ ...c, active: !!c.active }); setModal(true) } }]
+  const rowActions: RowAction<Customer>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('sales_edit'), icon: '✎', onClick: c => { setEditing({ ...c, active: !!c.active }); setModal(true) } },
+    { id: 'statement', labelEn: 'Statement', labelFa: lc2('Statement', 'صورت‌حساب'), icon: '📑', onClick: c => setStmtFor(c) },
+  ]
   return (
     <>
       <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing({ code: '', name: '', email: '', phone: '', company: '', taxId: '', kind: 'company', nationalId: '', regNo: '', economicCode: '', creditLimit: 0, address: '', notes: '', active: true }); setModal(true) }}>{t('sales_newCustomer')}</Btn></div>
@@ -148,7 +231,55 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
           <div className="flex gap-3"><Btn onClick={save} disabled={saving}>{saving ? t('sales_saving') : t('sales_save')}</Btn><Btn variant="secondary" onClick={() => setModal(false)}>{t('sales_cancel')}</Btn></div>
         </div>
       </Modal>
+      {stmtFor && <StatementModal fa={rtl} customer={stmtFor} onClose={() => setStmtFor(null)} />}
     </>
+  )
+}
+
+/** Customer financial statement: invoices/credit notes vs payments with a running balance (Phase 26.4). */
+function StatementModal({ fa, customer, onClose }: { fa: boolean; customer: Customer; onClose: () => void }) {
+  const lp = (en: string, faL: string) => (fa ? faL : en)
+  interface StLine { date: string; kind: string; ref: string; debit: number; credit: number; balance: number }
+  interface St { lines: StLine[]; totals: { debit: number; credit: number; balance: number } }
+  const [d, setD] = useState<St | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetch(`/api/admin/erp/sales/customers?statement=${customer.id}`).then(r => r.json()).then(setD).catch(() => {}).finally(() => setLoading(false))
+  }, [customer.id])
+  const KIND: Record<string, [string, string, string]> = { invoice: ['Invoice', 'فاکتور', 'blue'], credit_note: ['Credit note', 'برگشت از فروش', 'yellow'], payment: ['Payment', 'پرداخت', 'green'] }
+  return (
+    <Modal open onClose={onClose} title={lp(`Statement — ${customer.name}`, `صورت‌حساب — ${customer.name}`)} size="lg">
+      {loading ? <div className="h-40 rounded-xl bg-surface-2 animate-pulse" /> : !d ? (
+        <p className="text-sm text-text-tertiary">{lp('Statement unavailable.', 'صورت‌حساب در دسترس نیست.')}</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            {([[lp('Invoiced', 'فاکتورشده'), d.totals.debit], [lp('Settled', 'تسویه‌شده'), d.totals.credit], [lp('Balance due', 'مانده بدهی'), d.totals.balance]] as const).map(([label, v]) => (
+              <div key={label} className="rounded-xl p-3 bg-surface-2 border border-subtle"><p className="text-xs text-text-tertiary">{label}</p><p className={`text-lg font-bold ${label === lp('Balance due', 'مانده بدهی') && v > 0 ? 'text-danger-text' : 'text-text-primary'}`}>{money(v)}</p></div>
+            ))}
+          </div>
+          {d.lines.length === 0 ? <p className="text-sm text-text-tertiary">{lp('No transactions yet.', 'تراکنشی نیست.')}</p> : (
+            <div className="max-h-80 overflow-y-auto space-y-1">
+              <div className="grid grid-cols-12 gap-2 text-3xs text-text-tertiary px-2">
+                <span className="col-span-2">{lp('Date', 'تاریخ')}</span><span className="col-span-3">{lp('Ref', 'مرجع')}</span><span className="col-span-2">{lp('Type', 'نوع')}</span>
+                <span className="col-span-2 text-end">{lp('Debit', 'بدهکار')}</span><span className="col-span-1 text-end">{lp('Credit', 'بستانکار')}</span><span className="col-span-2 text-end">{lp('Balance', 'مانده')}</span>
+              </div>
+              {d.lines.map((l, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-center text-xs border border-subtle rounded-lg px-2 py-1.5">
+                  <span className="col-span-2 font-mono text-text-tertiary">{l.date}</span>
+                  <span className="col-span-3 font-mono text-text-secondary truncate">{l.ref}</span>
+                  <span className="col-span-2"><Badge color={KIND[l.kind]?.[2] || 'slate'}>{fa ? KIND[l.kind]?.[1] : KIND[l.kind]?.[0]}</Badge></span>
+                  <span className="col-span-2 text-end text-text-secondary">{l.debit ? money(l.debit) : '—'}</span>
+                  <span className="col-span-1 text-end text-success-text">{l.credit ? money(l.credit) : '—'}</span>
+                  <span className={`col-span-2 text-end font-semibold ${l.balance > 0 ? 'text-text-primary' : 'text-success-text'}`}>{money(l.balance)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end"><Btn variant="ghost" onClick={onClose}>{lp('Close', 'بستن')}</Btn></div>
+        </div>
+      )}
+    </Modal>
   )
 }
 

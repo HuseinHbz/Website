@@ -68,3 +68,60 @@ export async function salesOverview() {
   })
   return { kpis, recent, topCustomers }
 }
+
+// ── Performance: targets · commission · forecast (Phase 26.4) ────────────────
+import { salesPerformance, runStatement, type StatementEntry } from './salesPerformance'
+
+const NOW_SQL = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
+
+/** Trailing monthly invoiced revenue joined with sales_targets → engine. */
+export async function performanceData(months = 12) {
+  const now = new Date().toISOString().slice(0, 7)
+  // Trailing window of month keys ending this month (matches the treasury window).
+  const keys: string[] = [now]
+  while (keys.length < months) {
+    const [y, m] = keys[0].split('-').map(Number)
+    keys.unshift(m <= 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`)
+  }
+  const rows = (await pgQuery(
+    `SELECT substr(date,1,7) AS month, COALESCE(SUM(total),0)::float AS invoiced
+     FROM sales_documents WHERE doc_type='invoice' AND status<>'void' AND substr(date,1,7)>=$1
+     GROUP BY substr(date,1,7)`, [keys[0]])) as { month: string; invoiced: number }[]
+  const byMonth = new Map(rows.map(r => [r.month, r.invoiced]))
+  const sales = keys.map(k => ({ month: k, invoiced: Number(byMonth.get(k) ?? 0) }))
+  const targets = (await pgQuery(
+    `SELECT period, target::float AS target, commission_pct::float AS "commissionPct" FROM sales_targets`)) as
+    { period: string; target: number; commissionPct: number }[]
+  return salesPerformance(sales, targets)
+}
+
+/** Upsert the monthly target + commission rate (period = YYYY-MM). */
+export async function setTarget(period: string, target: number, commissionPct: number, userId?: string) {
+  await pgQuery(
+    `INSERT INTO sales_targets (period, target, commission_pct, created_by, created_at)
+     VALUES ($1,$2,$3,$4,${NOW_SQL})
+     ON CONFLICT (period) DO UPDATE SET target=$2, commission_pct=$3`,
+    [period, target, commissionPct, userId ?? null])
+}
+
+// ── Customer statement (Phase 26.4) ──────────────────────────────────────────
+/** Full ledger for one customer: invoices/credit notes vs payments, running balance. */
+export async function customerStatement(customerId: number) {
+  const customer = (await pgQuery(
+    `SELECT id, code, name, email, credit_limit::float AS "creditLimit" FROM sales_customers WHERE id=$1`, [customerId]))[0]
+  if (!customer) return null
+  const docs = (await pgQuery(
+    `SELECT doc_type AS kind, doc_no AS ref, date, total::float AS total
+     FROM sales_documents WHERE customer_id=$1 AND doc_type IN ('invoice','credit_note') AND status<>'void'`, [customerId])) as
+    { kind: 'invoice' | 'credit_note'; ref: string; date: string; total: number }[]
+  const pays = (await pgQuery(
+    `SELECT id, date, amount::float AS amount, method, reference FROM sales_payments WHERE customer_id=$1`, [customerId])) as
+    { id: number; date: string; amount: number; method: string; reference: string | null }[]
+  const entries: StatementEntry[] = [
+    ...docs.map(d => d.kind === 'invoice'
+      ? { date: d.date, kind: 'invoice' as const, ref: d.ref, debit: d.total, credit: 0 }
+      : { date: d.date, kind: 'credit_note' as const, ref: d.ref, debit: 0, credit: d.total }),
+    ...pays.map(p => ({ date: p.date, kind: 'payment' as const, ref: p.reference || `${p.method.toUpperCase()}-${p.id}`, debit: 0, credit: p.amount })),
+  ]
+  return { customer, ...runStatement(entries) }
+}
