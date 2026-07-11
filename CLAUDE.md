@@ -476,6 +476,30 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   Exposure + Currency Gain/Loss (11 total). setRate audits old+new rate.
   Live-PG verified: 2000-USD asset → USD/IRT/IRR/EUR views; 5000-USD invoice
   immutable through a rate change; 3.5B gain booked once + 700M incremental.
+- **Phase 26.9 — Enterprise ERP Final Completion** (audit-first; report:
+  `docs/governance/phase26.9-final-completion-report.md`, audit:
+  `phase26.9-erp-final-completion-audit.md`). Most of the 12-task pack already
+  existed (26.1–26.8) and was reused/verified — only gaps built. **Accounting
+  Core** (`erp/accountingCore.ts` pure + `accountingData.ts`): 4-level chart-of-
+  accounts hierarchy (`gl_accounts.parent_id` surfaced, cycle-guarded), fiscal-
+  period lifecycle open→closed→locked (`gl_fiscal_periods` kind/parent_id/
+  stamps) with **posting enforcement** (journal post/void rejected in a closed/
+  locked period via `assertPostable`), opening balance (posted `opening` entry,
+  normal-side placement), year-end closing (revenue/expense → retained earnings
+  3900, date-bounded + idempotent), account statement (per-account GL running
+  balance). APIs `/finance/periods` + `/finance/statement`; Finance **Accounting**
+  tab. **Tax profiles** (`tax_profiles` over the existing `computeTaxes` engine,
+  Iran seeds) + `/finance/tax` + Currency-tab card; **debit_note** sales doc
+  type. **Price lists** (`price_lists`/`price_list_items` + `sales_document_lines.
+  product_id`) + `/sales/pricelists` + modal picker + Customers-tab manager;
+  **sales return** op (invoice→credit-note, source untouched). **Audit trail
+  completion**: `clientIp()` + old→new value wired into gl accounts / sales
+  customers / journal post-void-delete / purchasing approve. Pure engines
+  unit-tested (accountingCore 10, taxProfile 3); live-PG verified incl. full
+  **sales cycle** (Customer→Quote→Order→Invoice→Payment→statement/ledger) and
+  **purchase cycle** (Supplier→PR→approve→PO→GRN→receive→Invoice→Payment→GL).
+  Honest boundaries: server-side PDF stays print-HTML→Save-as-PDF (no heavy dep);
+  time-based escalation + arbitrary-SQL report builder intentionally not added.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`
