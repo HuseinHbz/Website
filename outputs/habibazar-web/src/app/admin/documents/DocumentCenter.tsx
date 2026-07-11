@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -33,7 +33,8 @@ export function DocumentCenter() {
   const [mode, setMode] = useState<'sales' | 'manual'>('sales')
   const [salesDocs, setSalesDocs] = useState<SalesDoc[]>([])
   const [sourceId, setSourceId] = useState(0)
-  const [manual, setManual] = useState({ title: '', partyName: '', partyInfo: '', body: '', date: new Date().toISOString().slice(0, 10) })
+  const [manual, setManual] = useState({ title: '', partyName: '', partyInfo: '', body: '', bodyHtml: '', date: new Date().toISOString().slice(0, 10) })
+  const [editorReset, setEditorReset] = useState(0)
   const [lines, setLines] = useState<ManualLine[]>([{ description: '', qty: 1, unitPrice: 0 }])
   const [saving, setSaving] = useState(false)
   const [templates, setTemplates] = useState<DocTemplate[]>([])
@@ -66,7 +67,7 @@ export function DocumentCenter() {
       const tpl = templateKey ? { templateKey } : {}
       const body = supportsSales && mode === 'sales'
         ? { type, sourceType: 'sales' as const, sourceId, ...tpl }
-        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, body: manual.body, date: manual.date, lines: lines.filter(l => l.description.trim()), ...tpl }
+        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, body: manual.body || undefined, bodyHtml: manual.bodyHtml || undefined, date: manual.date, lines: lines.filter(l => l.description.trim()), ...tpl }
       const r = await fetch('/api/admin/erp/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'failed')
@@ -82,7 +83,8 @@ export function DocumentCenter() {
 
   function openNew() {
     setType('invoice'); setMode('sales'); setSalesDocs([]); setSourceId(0)
-    setManual({ title: '', partyName: '', partyInfo: '', body: '', date: new Date().toISOString().slice(0, 10) })
+    setManual({ title: '', partyName: '', partyInfo: '', body: '', bodyHtml: '', date: new Date().toISOString().slice(0, 10) })
+    setEditorReset(n => n + 1)
     setLines([{ description: '', qty: 1, unitPrice: 0 }]); setModal(true)
   }
 
@@ -156,7 +158,10 @@ export function DocumentCenter() {
             <>
               <div className="grid grid-cols-2 gap-4"><Input label={t('doc_fTitle')} value={manual.title} onChange={v => setManual(m => ({ ...m, title: v }))} placeholder={t(`doc_t_${type}` as 'doc_t_invoice')} /><Input label={t('doc_fDate')} type="date" value={manual.date} onChange={v => setManual(m => ({ ...m, date: v }))} /></div>
               <div className="grid grid-cols-2 gap-4"><Input label={t('doc_fParty')} value={manual.partyName} onChange={v => setManual(m => ({ ...m, partyName: v }))} /><Input label={t('doc_fPartyInfo')} value={manual.partyInfo} onChange={v => setManual(m => ({ ...m, partyInfo: v }))} /></div>
-              <Input label={t('doc_fBody')} value={manual.body} onChange={v => setManual(m => ({ ...m, body: v }))} multiline rows={4} />
+              <div>
+                <label className="block text-xs text-text-tertiary mb-1">{t('doc_fBody')}</label>
+                <RichTextEditor rtl={rtl} resetKey={editorReset} onChange={(html, text) => setManual(m => ({ ...m, bodyHtml: html, body: text }))} />
+              </div>
               <div className="space-y-2">
                 <p className="text-xs text-text-tertiary">{t('doc_lines')}</p>
                 {lines.map((l, i) => (
@@ -221,6 +226,92 @@ function EmailDocModal({ rtl, doc, onClose, toast }: { rtl: boolean; doc: GenDoc
 function docIcon(t: string): string {
   const m: Record<string, string> = { invoice: '💳', quotation: '📄', purchase_order: '🛒', contract: '📜', proposal: '📝', warranty: '🛡️', delivery_note: '📦', service_report: '🔧', completion_certificate: '🏅', financial_report: '📊', receipt: '🧾', payment_voucher: '💸', journal_voucher: '📒' }
   return m[t] ?? '📄'
+}
+
+// ── Rich contract editor (Phase 26.10) ───────────────────────────────────────
+// A Word-like contentEditable editor + toolbar for contract/proposal bodies.
+// Dependency-free (native `execCommand`); the HTML is sanitized at render time by
+// `lib/erp/richtext.ts`, so only allowlisted tags/styles survive. Emits both the
+// HTML (bodyHtml) and a plain-text fallback (body).
+type ToolCmd = { cmd?: string; val?: string; label: string; en: string; fa: string; sep?: boolean }
+const TOOLBAR: ToolCmd[] = [
+  { cmd: 'bold', label: 'B', en: 'Bold', fa: 'ضخیم' },
+  { cmd: 'italic', label: 'I', en: 'Italic', fa: 'کج' },
+  { cmd: 'underline', label: 'U', en: 'Underline', fa: 'زیرخط' },
+  { sep: true, label: '', en: '', fa: '' },
+  { cmd: 'formatBlock', val: 'H1', label: 'H1', en: 'Heading 1', fa: 'عنوان ۱' },
+  { cmd: 'formatBlock', val: 'H2', label: 'H2', en: 'Heading 2', fa: 'عنوان ۲' },
+  { cmd: 'formatBlock', val: 'H3', label: 'H3', en: 'Heading 3', fa: 'عنوان ۳' },
+  { cmd: 'formatBlock', val: 'P', label: '¶', en: 'Paragraph', fa: 'پاراگراف' },
+  { sep: true, label: '', en: '', fa: '' },
+  { cmd: 'insertUnorderedList', label: '•', en: 'Bulleted list', fa: 'فهرست نقطه‌ای' },
+  { cmd: 'insertOrderedList', label: '1.', en: 'Numbered list', fa: 'فهرست شماره‌دار' },
+  { sep: true, label: '', en: '', fa: '' },
+  { cmd: 'justifyRight', label: '⇥', en: 'Align right', fa: 'راست‌چین' },
+  { cmd: 'justifyCenter', label: '↔', en: 'Center', fa: 'وسط‌چین' },
+  { cmd: 'justifyLeft', label: '⇤', en: 'Align left', fa: 'چپ‌چین' },
+  { cmd: 'justifyFull', label: '≡', en: 'Justify', fa: 'هم‌ترازی' },
+]
+
+function RichTextEditor({ rtl, resetKey, onChange }: { rtl: boolean; resetKey: number; onChange: (html: string, text: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [dir, setDir] = useState<'rtl' | 'ltr'>(rtl ? 'rtl' : 'ltr')
+
+  // Start fresh whenever a new document composition begins.
+  useEffect(() => { if (ref.current) ref.current.innerHTML = ''; setDir(rtl ? 'rtl' : 'ltr') }, [resetKey, rtl])
+
+  const emitWith = useCallback((d: 'rtl' | 'ltr') => {
+    if (!ref.current) return
+    const inner = ref.current.innerHTML.trim()
+    const html = inner && d === 'rtl' ? `<div style="direction: rtl; text-align: right">${inner}</div>` : inner
+    onChange(html, ref.current.innerText)
+  }, [onChange])
+
+  const exec = (cmd: string, val?: string) => {
+    ref.current?.focus()
+    try { document.execCommand('styleWithCSS', false, 'true') } catch { /* unsupported */ }
+    try { document.execCommand(cmd, false, val) } catch { /* unsupported */ }
+    emitWith(dir)
+  }
+  const applyFontSize = (px: string) => {
+    if (!px) return
+    ref.current?.focus()
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+    const range = sel.getRangeAt(0)
+    const span = document.createElement('span')
+    span.style.fontSize = px
+    try { range.surroundContents(span) }
+    catch { const frag = range.extractContents(); span.appendChild(frag); range.insertNode(span) }
+    sel.removeAllRanges()
+    emitWith(dir)
+  }
+  const toggleDir = () => { const nd = dir === 'rtl' ? 'ltr' : 'rtl'; setDir(nd); emitWith(nd) }
+
+  return (
+    <div className="rounded-lg border border-subtle bg-surface-2 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-1 p-1.5 border-b border-subtle">
+        {TOOLBAR.map((b, i) => b.sep
+          ? <span key={`s${i}`} className="mx-1 w-px h-5 bg-border" aria-hidden />
+          : <button key={b.label} type="button" title={rtl ? b.fa : b.en} onMouseDown={e => e.preventDefault()}
+              onClick={() => b.cmd && exec(b.cmd, b.val)}
+              className="px-2 py-1 rounded text-2xs text-text-secondary hover:bg-surface border border-subtle min-w-[26px]">{b.label}</button>)}
+        <span className="mx-1 w-px h-5 bg-border" aria-hidden />
+        <select onChange={e => { applyFontSize(e.target.value); e.currentTarget.value = '' }} defaultValue=""
+          className="form-input !py-1 !text-2xs w-auto" title={rtl ? 'اندازه فونت' : 'Font size'}>
+          <option value="">{rtl ? 'اندازه' : 'Size'}</option>
+          {['12px', '14px', '16px', '18px', '22px', '28px'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span className="mx-1 w-px h-5 bg-border" aria-hidden />
+        <button type="button" onClick={toggleDir} title={rtl ? 'جهت متن' : 'Text direction'}
+          className="px-2 py-1 rounded text-2xs text-text-secondary hover:bg-surface border border-subtle">
+          {dir === 'rtl' ? 'RTL ⟶' : '⟵ LTR'}
+        </button>
+      </div>
+      <div ref={ref} contentEditable dir={dir} onInput={() => emitWith(dir)} suppressContentEditableWarning
+        className="min-h-[180px] p-3 text-sm text-text-primary outline-none leading-7" style={{ direction: dir }} />
+    </div>
+  )
 }
 
 // ── Invoice Designer (Phase 26) ──────────────────────────────────────────────

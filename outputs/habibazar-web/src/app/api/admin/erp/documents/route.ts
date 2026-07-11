@@ -32,6 +32,7 @@ const schema = z.object({
   date: z.string().max(30).optional(),
   currency: z.string().max(8).optional(),
   body: z.string().max(8000).optional(),
+  bodyHtml: z.string().max(40000).optional(),
   lines: z.array(z.object({ description: z.string().min(1).max(300), qty: z.number(), unitPrice: z.number() })).max(200).optional(),
   meta: z.array(z.object({ label: z.string().max(80), value: z.string().max(200) })).max(20).optional(),
   templateKey: z.string().max(60).optional(),

@@ -48,6 +48,7 @@ const GROUPS: { en: string; fa: string; fields: FieldDef[] }[] = [
   {
     en: 'Branding media (URLs from Media Library)', fa: 'رسانهٔ برند (آدرس از کتابخانه رسانه)', fields: [
       { key: 'company_logo_url', en: 'Logo URL', fa: 'آدرس لوگو' },
+      { key: 'company_letterhead_url', en: 'Letterhead banner URL (full width)', fa: 'آدرس سربرگ (تمام‌عرض)' },
       { key: 'company_seal_url', en: 'Seal / stamp URL', fa: 'آدرس مهر' },
       { key: 'company_signature_url', en: 'Signature image URL', fa: 'آدرس تصویر امضا' },
       { key: 'company_ceo', en: 'CEO name', fa: 'نام مدیرعامل' },

@@ -8,6 +8,7 @@
  * loads source data + generates the QR data-URL and hands them here.
  */
 import { code39Svg } from './barcode'
+import { sanitizeRichHtml } from './richtext'
 
 export const DOC_TYPES = [
   'invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty',
@@ -27,11 +28,15 @@ export interface DocPayload {
   currency: string
   meta: DocMeta[]
   body?: string
+  /** Rich HTML body (contracts) — sanitized at render time; wins over `body`. */
+  bodyHtml?: string
 }
 
 /** Company identity/branding printed on documents (loaded from site_settings). */
 export interface DocBranding {
   logoUrl?: string
+  /** Full-width uploaded letterhead banner printed at the top of the page. */
+  letterheadUrl?: string
   sealUrl?: string
   signatureUrl?: string
   signatureTitle?: string
@@ -188,6 +193,12 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   .watermark { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
   .watermark span { font-size: 90px; font-weight: 800; letter-spacing: 8px; color: rgba(30,30,60,.06); transform: rotate(-28deg); text-transform: uppercase; white-space: nowrap; }
   .logo { max-height: 56px; max-width: 200px; margin-bottom: 8px; display: block; }
+  .letterhead { width: 100%; max-height: 150px; object-fit: contain; display: block; margin: 0 auto 20px; }
+  .body.rich { white-space: normal; }
+  .body.rich p { margin: 0 0 8px; }
+  .body.rich h1, .body.rich h2, .body.rich h3, .body.rich h4 { margin: 14px 0 6px; color: #1a1a2e; }
+  .body.rich ul, .body.rich ol { margin: 6px 0; padding-inline-start: 22px; }
+  .body.rich blockquote { margin: 8px 0; padding-inline-start: 12px; border-inline-start: 3px solid #ddd; color: #555; }
   .identity { font-size: 11px; color: #777; margin-top: 6px; line-height: 1.6; }
   .seal-sign { display: flex; gap: 24px; align-items: flex-end; }
   .seal { max-height: 90px; opacity: .9; }
@@ -226,6 +237,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   <button class="print-btn" onclick="window.print()">${L.print}</button>
   ${t.watermarkText ? `<div class="watermark"><span>${escapeHtml(t.watermarkText)}</span></div>` : ''}
   <div class="doc">
+    ${show(t.showLogo) && b.letterheadUrl ? `<img class="letterhead" src="${escapeHtml(b.letterheadUrl)}" alt="letterhead">` : ''}
     <div class="head">
       <div>
         ${show(t.showLogo) && b.logoUrl ? `<img class="logo" src="${escapeHtml(b.logoUrl)}" alt="logo">` : ''}
@@ -240,7 +252,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
       <div class="party"><div class="label">${L.to}</div><div class="name">${escapeHtml(m.partyName)}</div>${m.partyInfo ? `<div class="info">${escapeHtml(m.partyInfo)}</div>` : ''}</div>
     </div>
     ${metaRows || customRows ? `<div class="meta">${metaRows}${customRows}</div>` : ''}
-    ${p.body ? `<div class="body">${escapeHtml(p.body)}</div>` : ''}
+    ${p.bodyHtml ? `<div class="body rich" dir="${rtl ? 'rtl' : 'ltr'}">${sanitizeRichHtml(p.bodyHtml)}</div>` : p.body ? `<div class="body">${escapeHtml(p.body)}</div>` : ''}
     ${hasLines ? `<table class="items"><thead><tr><th>${L.desc}</th><th class="num">${L.qty}</th><th class="num">${L.unit}</th><th class="num">${L.amount}</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
     ${totals}
     ${t.paymentInstructions ? `<div class="terms"><strong>${L.payment}</strong><br>${escapeHtml(t.paymentInstructions)}</div>` : ''}

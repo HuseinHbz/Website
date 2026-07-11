@@ -17,7 +17,7 @@ import {
 
 /** site_settings key → DocBranding field (Phase 26 Company Profile). */
 const COMPANY_KEYS: Record<string, keyof DocBranding> = {
-  company_logo_url: 'logoUrl', company_seal_url: 'sealUrl', company_signature_url: 'signatureUrl',
+  company_logo_url: 'logoUrl', company_letterhead_url: 'letterheadUrl', company_seal_url: 'sealUrl', company_signature_url: 'signatureUrl',
   company_signature_title: 'signatureTitle', company_reg_no: 'regNo', company_national_id: 'nationalId',
   company_economic_code: 'economicCode', company_tax_no: 'taxNo', company_vat_no: 'vatNo',
   company_iban: 'iban', company_bank_name: 'bankName', company_swift: 'swift',
@@ -69,6 +69,8 @@ export interface CreateInput {
   date?: string
   currency?: string
   body?: string
+  /** Rich HTML body for contracts (Word-like editor). Sanitized at render. */
+  bodyHtml?: string
   lines?: CreateManualLine[]
   meta?: DocMeta[]
   /** Designer template applied at render time. */
@@ -110,7 +112,7 @@ export async function createDocument(input: CreateInput, userId: string): Promis
     // Manual composition.
     const lines = (input.lines ?? []).map(l => ({ description: l.description, qty: l.qty, unitPrice: l.unitPrice, lineTotal: Math.round(l.qty * l.unitPrice * 100) / 100 }))
     const total = Math.round(lines.reduce((s, l) => s + l.lineTotal, 0) * 100) / 100
-    payload = { lines, subtotal: total, discountTotal: 0, taxTotal: 0, total, currency: fallbackCurrency, meta: input.meta ?? [], body: input.body }
+    payload = { lines, subtotal: total, discountTotal: 0, taxTotal: 0, total, currency: fallbackCurrency, meta: input.meta ?? [], body: input.body, bodyHtml: input.bodyHtml }
     sourceType = null; sourceId = null
   }
 
