@@ -11,7 +11,7 @@ import { defaultCurrency } from '@/lib/erp/settings'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
-const PREFIX: Record<string, string> = { quote: 'QT', order: 'SO', invoice: 'INV', credit_note: 'CN' }
+const PREFIX: Record<string, string> = { quote: 'QT', order: 'SO', invoice: 'INV', credit_note: 'CN', debit_note: 'DN' }
 
 // GET — list documents of a type (?type=), or one document with its lines (?id=).
 export async function GET(req: NextRequest) {

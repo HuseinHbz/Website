@@ -410,6 +410,7 @@ function CurrencyView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
         </Card>
       )}
       <RevaluationSection fa={fa} toast={toast} />
+      <TaxProfilesSection fa={fa} toast={toast} />
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-text-primary">{L(fa, 'Set exchange rate', 'ثبت نرخ ارز')}</h3>
@@ -1091,5 +1092,52 @@ function StatementSection({ fa, accounts }: { fa: boolean; accounts: CoaFlat[] }
         </Card>
       )}
     </div>
+  )
+}
+
+/** Tax profiles (Phase 26.9): reusable VAT/withholding/exemption setups over the tax engine. */
+interface TaxProfileRow { id: number; code: string; nameEn: string; nameFa: string; category: string; vatRate: number; withholdingRate: number; exempt: boolean; active: boolean }
+function TaxProfilesSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [rows, setRows] = useState<TaxProfileRow[]>([])
+  const [form, setForm] = useState({ code: '', nameEn: '', nameFa: '', category: 'standard', vatRate: '9', withholdingRate: '0', exempt: false })
+  const load = useCallback(async () => { const d = await fetch('/api/admin/erp/finance/tax').then(r => r.json()); setRows(d.profiles ?? []) }, [])
+  useEffect(() => { load() }, [load])
+  async function save() {
+    if (!form.code || !form.nameEn) { toast(L(fa, 'Code and name required', 'کد و نام لازم است'), 'error'); return }
+    const r = await fetch('/api/admin/erp/finance/tax', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', code: form.code, nameEn: form.nameEn, nameFa: form.nameFa || form.nameEn, category: form.category, vatRate: Number(form.vatRate) || 0, withholdingRate: Number(form.withholdingRate) || 0, exempt: form.exempt }) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(L(fa, 'Tax profile saved', 'پروفایل مالیاتی ذخیره شد'), 'success'); setForm({ code: '', nameEn: '', nameFa: '', category: 'standard', vatRate: '9', withholdingRate: '0', exempt: false }); load() }
+    else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+  }
+  async function del(id: number) {
+    if (!confirm(L(fa, 'Delete this tax profile?', 'این پروفایل حذف شود؟'))) return
+    const r = await fetch('/api/admin/erp/finance/tax', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id }) })
+    if (r.ok) { toast(L(fa, 'Deleted', 'حذف شد'), 'success'); load() }
+  }
+  const catLabel: Record<string, [string, string]> = { standard: ['Standard', 'استاندارد'], zero_rated: ['Zero-rated', 'نرخ صفر'], exempt: ['Exempt', 'معاف'], export: ['Export', 'صادرات'], service: ['Service', 'خدمات'] }
+  return (
+    <Card className="p-4 space-y-3">
+      <h4 className="text-xs font-semibold text-text-primary">{L(fa, 'Tax profiles (VAT · withholding · exemption)', 'پروفایل‌های مالیاتی (ارزش‌افزوده · تکلیفی · معافیت)')}</h4>
+      <div className="grid md:grid-cols-7 gap-2 items-end">
+        <Input label={L(fa, 'Code', 'کد')} value={form.code} onChange={v => setForm(f => ({ ...f, code: v }))} />
+        <Input label={L(fa, 'Name', 'نام')} value={form.nameEn} onChange={v => setForm(f => ({ ...f, nameEn: v }))} />
+        <Select label={L(fa, 'Category', 'دسته')} value={form.category} onChange={v => setForm(f => ({ ...f, category: v }))} options={Object.entries(catLabel).map(([k, l]) => ({ value: k, label: L(fa, l[0], l[1]) }))} />
+        <Input label={L(fa, 'VAT %', 'ارزش‌افزوده ٪')} value={form.vatRate} onChange={v => setForm(f => ({ ...f, vatRate: v }))} />
+        <Input label={L(fa, 'WHT %', 'تکلیفی ٪')} value={form.withholdingRate} onChange={v => setForm(f => ({ ...f, withholdingRate: v }))} />
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary"><input type="checkbox" checked={form.exempt} onChange={e => setForm(f => ({ ...f, exempt: e.target.checked }))} /> {L(fa, 'Exempt', 'معاف')}</label>
+        <Btn size="sm" onClick={save}>{L(fa, 'Add', 'افزودن')}</Btn>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {rows.map(p => (
+          <div key={p.id} className="inline-flex items-center gap-2 rounded-lg border border-subtle px-3 py-1.5 text-sm">
+            <span className="font-mono text-3xs text-text-tertiary">{p.code}</span>
+            <span className="text-text-secondary">{fa ? p.nameFa : p.nameEn}</span>
+            <Badge color={p.exempt ? 'slate' : 'blue'}>{L(fa, ...(catLabel[p.category] ?? ['', '']) as [string, string])}</Badge>
+            <span className="text-3xs text-text-tertiary">VAT {p.vatRate}%{p.withholdingRate > 0 ? ` · WHT ${p.withholdingRate}%` : ''}</span>
+            <button onClick={() => del(p.id)} className="text-danger text-xs">✕</button>
+          </div>
+        ))}
+      </div>
+    </Card>
   )
 }

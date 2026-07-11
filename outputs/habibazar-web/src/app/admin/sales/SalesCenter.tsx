@@ -9,7 +9,7 @@ import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'dashboard' | 'customers' | 'quote' | 'order' | 'invoice' | 'payments'
-type DocType = 'quote' | 'order' | 'invoice' | 'credit_note'
+type DocType = 'quote' | 'order' | 'invoice' | 'credit_note' | 'debit_note'
 
 interface Customer { id?: number; code: string; name: string; email: string | null; phone: string | null; company: string | null; taxId: string | null; kind?: string; nationalId?: string | null; regNo?: string | null; economicCode?: string | null; creditLimit: number; address?: string | null; notes?: string | null; active: number | boolean; invoiced?: number; paid?: number; outstanding?: number; available?: number; overLimit?: boolean; utilizationPct?: number }
 interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number; currency?: string }
@@ -254,7 +254,7 @@ function StatementModal({ fa, customer, onClose }: { fa: boolean; customer: Cust
   useEffect(() => {
     fetch(`/api/admin/erp/sales/customers?statement=${customer.id}`).then(r => r.json()).then(setD).catch(() => {}).finally(() => setLoading(false))
   }, [customer.id])
-  const KIND: Record<string, [string, string, string]> = { invoice: ['Invoice', 'فاکتور', 'blue'], credit_note: ['Credit note', 'برگشت از فروش', 'yellow'], payment: ['Payment', 'پرداخت', 'green'] }
+  const KIND: Record<string, [string, string, string]> = { invoice: ['Invoice', 'فاکتور', 'blue'], credit_note: ['Credit note', 'برگشت از فروش', 'yellow'], debit_note: ['Debit note', 'اعلامیه بدهکار', 'indigo'], payment: ['Payment', 'پرداخت', 'green'] }
   return (
     <Modal open onClose={onClose} title={lp(`Statement — ${customer.name}`, `صورت‌حساب — ${customer.name}`)} size="lg">
       {loading ? <div className="h-40 rounded-xl bg-surface-2 animate-pulse" /> : !d ? (

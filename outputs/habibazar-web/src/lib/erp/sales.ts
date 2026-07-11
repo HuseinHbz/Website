@@ -10,7 +10,7 @@
  * on the discounted net. Document totals sum the lines.
  */
 
-export const DOC_TYPES = ['quote', 'order', 'invoice', 'credit_note'] as const
+export const DOC_TYPES = ['quote', 'order', 'invoice', 'credit_note', 'debit_note'] as const
 export type DocType = (typeof DOC_TYPES)[number]
 
 export const DOC_STATUSES = ['draft', 'sent', 'confirmed', 'partial', 'paid', 'void'] as const

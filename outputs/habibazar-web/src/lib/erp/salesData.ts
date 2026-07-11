@@ -115,15 +115,15 @@ export async function customerStatement(customerId: number) {
   if (!customer) return null
   const docs = (await pgQuery(
     `SELECT doc_type AS kind, doc_no AS ref, date, total::float AS total
-     FROM sales_documents WHERE customer_id=$1 AND doc_type IN ('invoice','credit_note') AND status<>'void'`, [customerId])) as
-    { kind: 'invoice' | 'credit_note'; ref: string; date: string; total: number }[]
+     FROM sales_documents WHERE customer_id=$1 AND doc_type IN ('invoice','credit_note','debit_note') AND status<>'void'`, [customerId])) as
+    { kind: 'invoice' | 'credit_note' | 'debit_note'; ref: string; date: string; total: number }[]
   const pays = (await pgQuery(
     `SELECT id, date, amount::float AS amount, method, reference FROM sales_payments WHERE customer_id=$1`, [customerId])) as
     { id: number; date: string; amount: number; method: string; reference: string | null }[]
   const entries: StatementEntry[] = [
-    ...docs.map(d => d.kind === 'invoice'
-      ? { date: d.date, kind: 'invoice' as const, ref: d.ref, debit: d.total, credit: 0 }
-      : { date: d.date, kind: 'credit_note' as const, ref: d.ref, debit: 0, credit: d.total }),
+    ...docs.map(d => d.kind === 'credit_note'
+      ? { date: d.date, kind: 'credit_note' as const, ref: d.ref, debit: 0, credit: d.total }
+      : { date: d.date, kind: d.kind, ref: d.ref, debit: d.total, credit: 0 }), // invoice + debit_note raise receivable
     ...pays.map(p => ({ date: p.date, kind: 'payment' as const, ref: p.reference || `${p.method.toUpperCase()}-${p.id}`, debit: 0, credit: p.amount })),
   ]
   return { customer, ...runStatement(entries) }

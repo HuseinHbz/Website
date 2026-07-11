@@ -109,7 +109,7 @@ export function salesPerformance(sales: MonthlySales[], targets: TargetRow[], fo
 // ── Customer statement (pure ledger math) ────────────────────────────────────
 export interface StatementEntry {
   date: string
-  kind: 'invoice' | 'credit_note' | 'payment'
+  kind: 'invoice' | 'credit_note' | 'debit_note' | 'payment'
   ref: string
   debit: number
   credit: number

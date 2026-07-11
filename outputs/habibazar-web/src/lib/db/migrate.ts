@@ -950,6 +950,11 @@ export async function runMigrations() {
     ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS deleted_at TEXT;
     ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS deleted_by TEXT;
     ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS delete_reason TEXT;
+    -- Phase 26.9: allow debit notes alongside credit notes.
+    DO $do$ BEGIN
+      ALTER TABLE sales_documents DROP CONSTRAINT IF EXISTS sales_documents_doc_type_check;
+      ALTER TABLE sales_documents ADD CONSTRAINT sales_documents_doc_type_check2 CHECK(doc_type IN ('quote','order','invoice','credit_note','debit_note'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $do$;
     ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
     ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS base_total NUMERIC NOT NULL DEFAULT 0;
     ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
@@ -1048,6 +1053,30 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_stmt_lines_account ON bank_statement_lines(account_id, status);
     CREATE INDEX IF NOT EXISTS idx_cheques_status ON cheques(status, due_date);
     CREATE INDEX IF NOT EXISTS idx_petty_date ON petty_cash_entries(date DESC);
+    -- Phase 26.9: tax profiles — reusable named tax setups over the pure tax
+    -- engine (VAT + withholding + exemption + category). Iran-ready seeds.
+    CREATE TABLE IF NOT EXISTS tax_profiles (
+      id SERIAL PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'standard' CHECK(category IN ('standard','zero_rated','exempt','export','service')),
+      vat_rate NUMERIC NOT NULL DEFAULT 0,
+      withholding_rate NUMERIC NOT NULL DEFAULT 0,
+      exempt BOOLEAN NOT NULL DEFAULT false,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    INSERT INTO tax_profiles (code, name_en, name_fa, category, vat_rate, withholding_rate, exempt) VALUES
+      ('STD9','Standard VAT 9%','ارزش افزوده استاندارد ۹٪','standard',9,0,false),
+      ('EXEMPT','Tax exempt','معاف از مالیات','exempt',0,0,true),
+      ('ZERO','Zero-rated','نرخ صفر','zero_rated',0,0,false),
+      ('EXPORT','Export (0%)','صادرات','export',0,0,false),
+      ('SVC9W5','Service VAT 9% + WHT 5%','خدمات ۹٪ + تکلیفی ۵٪','service',9,5,false)
+    ON CONFLICT (code) DO NOTHING;
+
     -- Seed the built-in currencies idempotently.
     INSERT INTO erp_currencies (code, name_en, name_fa, symbol_en, symbol_fa, decimals, is_base) VALUES
       ('IRR','Iranian Rial','ریال','IRR','ریال',0,true),
