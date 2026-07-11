@@ -912,6 +912,30 @@ export async function runMigrations() {
     ALTER TABLE erp_companies ADD COLUMN IF NOT EXISTS phone TEXT;
 
     -- Phase 26.4: monthly sales targets + commission config.
+    -- Phase 26.9: sales price lists (named catalogs of product prices) + a
+    -- product link on sales lines so a list can fill description + unit price.
+    CREATE TABLE IF NOT EXISTS price_lists (
+      id SERIAL PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      is_default BOOLEAN NOT NULL DEFAULT false,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS price_list_items (
+      id BIGSERIAL PRIMARY KEY,
+      price_list_id INTEGER NOT NULL REFERENCES price_lists(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      UNIQUE(price_list_id, product_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_price_list_items_list ON price_list_items(price_list_id);
+    ALTER TABLE sales_document_lines ADD COLUMN IF NOT EXISTS product_id INTEGER;
+
     CREATE TABLE IF NOT EXISTS sales_targets (
       id SERIAL PRIMARY KEY,
       period TEXT UNIQUE NOT NULL,            -- YYYY-MM

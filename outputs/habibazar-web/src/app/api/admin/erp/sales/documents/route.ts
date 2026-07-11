@@ -6,6 +6,7 @@ import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from '@/lib/erp/currencyData'
+import { clientIp } from '@/lib/api/clientIp'
 import { defaultCurrency } from '@/lib/erp/settings'
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +60,7 @@ const createSchema = z.object({
     unitPrice: z.number().min(0),
     discountPct: z.number().min(0).max(100).default(0),
     taxPct: z.number().min(0).max(100).default(0),
+    productId: z.number().int().positive().nullable().optional(),
   })).min(1).max(200),
 })
 
@@ -93,15 +95,15 @@ export async function POST(req: NextRequest) {
     }
     for (let i = 0; i < d.lines.length; i++) {
       const l = d.lines[i]
-      await pgQuery(`INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, lineTotals(l).total, i])
+      await pgQuery(`INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, lineTotals(l).total, i, l.productId ?? null])
     }
     await logAction(auth.user, d.id ? 'sales.doc.update' : 'sales.doc.create', 'sales_document', docId!, null, { docType: d.docType, total: totals.total })
     return NextResponse.json({ id: docId, total: totals.total })
   } catch (e) { return apiError(e, 'Failed to save document') }
 }
 
-const opSchema = z.object({ id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert']), toType: z.enum(DOC_TYPES).optional() })
+const opSchema = z.object({ id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return']), toType: z.enum(DOC_TYPES).optional() })
 
 // PUT — lifecycle: send/confirm/void, or convert a quote→order or order→invoice
 // (copies the lines into a new draft document that references the source).
@@ -128,6 +130,22 @@ export async function PUT(req: NextRequest) {
       await pgQuery(`UPDATE sales_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [id])
       await logAction(auth.user, 'sales.doc.convert', 'sales_document', id, null, { toType, newId: newDoc.id })
       return NextResponse.json({ id: newDoc.id, docNo })
+    }
+    if (op === 'return') {
+      // Sales return: create a credit note copying the invoice's lines,
+      // referencing the source. The original invoice is left unchanged.
+      if (src.doc_type !== 'invoice') return badRequest('Only an invoice can be returned')
+      const docNo = await nextNumber('credit_note', { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX.credit_note })
+      const cn = (await pgQuery(
+        `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
+         VALUES ('credit_note',$1,$2,to_char(now(),'YYYY-MM-DD'),'draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,${NOW}) RETURNING id`,
+        [docNo, src.customer_id, src.subtotal, src.discount_total, src.tax_total, src.total, id, `Return of ${src.doc_no}`, auth.user.id, src.currency ?? 'IRR', src.exchange_rate ?? 1, src.base_total ?? 0]))[0] as { id: number }
+      await pgQuery(
+        `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id)
+         SELECT $1, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id FROM sales_document_lines WHERE document_id=$2`,
+        [cn.id, id])
+      await logAction(auth.user, 'sales.doc.return', 'sales_document', id, null, { creditNoteId: cn.id }, clientIp(req))
+      return NextResponse.json({ id: cn.id, docNo })
     }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])

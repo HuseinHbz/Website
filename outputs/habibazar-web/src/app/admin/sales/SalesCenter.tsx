@@ -13,7 +13,7 @@ type DocType = 'quote' | 'order' | 'invoice' | 'credit_note' | 'debit_note'
 
 interface Customer { id?: number; code: string; name: string; email: string | null; phone: string | null; company: string | null; taxId: string | null; kind?: string; nationalId?: string | null; regNo?: string | null; economicCode?: string | null; creditLimit: number; address?: string | null; notes?: string | null; active: number | boolean; invoiced?: number; paid?: number; outstanding?: number; available?: number; overLimit?: boolean; utilizationPct?: number }
 interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number; currency?: string }
-interface Line { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number }
+interface Line { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number; productId?: number | null }
 interface Payment { id: number; date: string; amount: number; method: string; reference: string | null; note: string | null; customer: string; docNo: string | null }
 interface Kpis { customers: number; quotes: number; orders: number; invoiced: number; collected: number; outstanding: number; wonValue: number; taxCollected: number }
 interface Overview { kpis: Kpis; recent: DocRow[]; topCustomers: { name: string; invoiced: number }[] }
@@ -240,6 +240,7 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
         </div>
       </Modal>
       {stmtFor && <StatementModal fa={rtl} customer={stmtFor} onClose={() => setStmtFor(null)} />}
+      <PriceListManager fa={rtl} toast={toast} />
     </>
   )
 }
@@ -306,7 +307,13 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
   const [saving, setSaving] = useState(false)
   const [payFor, setPayFor] = useState<DocRow | null>(null)
   const [payAmount, setPayAmount] = useState(0)
+  const [priceLists, setPriceLists] = useState<{ id: number; code: string; nameEn: string; nameFa: string }[]>([])
+  const [plId, setPlId] = useState('')
+  const [plItems, setPlItems] = useState<{ productId: number; sku: string; nameEn: string; nameFa: string | null; unitPrice: number }[]>([])
   useEffect(() => { if (autoNew) { setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
+  useEffect(() => { fetch('/api/admin/erp/sales/pricelists').then(r => r.json()).then(d => setPriceLists(d.priceLists ?? [])).catch(() => {}) }, [])
+  useEffect(() => { if (!plId) { setPlItems([]); return } fetch(`/api/admin/erp/sales/pricelists?items=${plId}`).then(r => r.json()).then(d => setPlItems(d.items ?? [])).catch(() => {}) }, [plId])
+  function addFromPriceList(productId: number) { const it = plItems.find(x => x.productId === productId); if (!it) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn, qty: 1, unitPrice: it.unitPrice, discountPct: 0, taxPct: 9, productId: it.productId }]) }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -330,7 +337,7 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
     if (!customerId || clean.length === 0) { toast(t('sales_docInvalid'), 'error'); return }
     setSaving(true)
     try {
-      const r = await fetch('/api/admin/erp/sales/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docType, currency, customerId, date, notes, lines: clean }) })
+      const r = await fetch('/api/admin/erp/sales/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docType, currency, customerId, date, notes, lines: clean.map(l => ({ description: l.description, qty: l.qty, unitPrice: l.unitPrice, discountPct: l.discountPct, taxPct: l.taxPct, productId: l.productId ?? undefined })) }) })
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'failed')
       if (sendAfter && d.id) await fetch('/api/admin/erp/sales/documents', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id, op: 'send' }) })
       toast(t('sales_saved'), 'success'); setModal(false); reset(); load()
@@ -372,6 +379,7 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
     { id: 'toOrder', labelEn: 'To Order', labelFa: t('sales_toOrder'), icon: '→', hidden: r => !(docType === 'quote' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'order') },
     { id: 'toInvoice', labelEn: 'To Invoice', labelFa: t('sales_toInvoice'), icon: '→', hidden: r => !(docType === 'order' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'invoice') },
     { id: 'pay', labelEn: 'Record Payment', labelFa: t('sales_recordPay'), icon: '💰', hidden: r => !(docType === 'invoice' && r.status !== 'paid' && r.status !== 'void'), onClick: r => { setPayFor(r); setPayAmount(r.total - r.paid) } },
+    { id: 'return', labelEn: 'Return (credit note)', labelFa: locale === 'fa' ? 'برگشت (اعلامیه بستانکار)' : 'Return (credit note)', icon: '↩', hidden: r => !(docType === 'invoice' && r.status !== 'void'), onClick: r => op(r.id, 'return') },
     { id: 'void', labelEn: 'Void', labelFa: t('sales_void'), icon: '✕', danger: true, hidden: r => r.status === 'void', onClick: r => op(r.id, 'void') },
     { id: 'delete', labelEn: 'Delete', labelFa: locale === 'fa' ? 'حذف' : 'Delete', icon: '🗑', danger: true, hidden: r => r.paid > 0, onClick: r => del(r) },
   ]
@@ -388,6 +396,7 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
             <Select label={t('sales_fCustomer')} value={String(customerId)} onChange={v => setCustomerId(Number(v))} options={[{ value: '0', label: t('sales_selectCustomer') }, ...customers.map(c => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]} />
             <Input label={t('sales_fDate')} type="date" value={date} onChange={setDate} />
             <Select label={locale === 'fa' ? 'ارز' : 'Currency'} value={currency} onChange={setCurrency} options={['IRR', 'IRT', 'USD', 'EUR'].map(c => ({ value: c, label: c }))} />
+            {priceLists.length > 0 && <Select label={locale === 'fa' ? 'فهرست قیمت' : 'Price list'} value={plId} onChange={setPlId} options={[{ value: '', label: '—' }, ...priceLists.map(p => ({ value: String(p.id), label: locale === 'fa' ? p.nameFa : p.nameEn }))]} />}
           </div>
           <div className="space-y-2">
             <div className="grid grid-cols-12 gap-2 text-xs text-text-tertiary px-1"><span className="col-span-5">{t('sales_lDesc')}</span><span className="col-span-1 text-right">{t('sales_lQty')}</span><span className="col-span-2 text-right">{t('sales_lPrice')}</span><span className="col-span-1 text-right">{t('sales_lDisc')}</span><span className="col-span-1 text-right">{t('sales_lTax')}</span><span className="col-span-2 text-right">{t('sales_lTotal')}</span></div>
@@ -405,7 +414,15 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
                 </div>
               )
             })}
-            <button onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 0 }])} className="text-xs text-brand hover:underline">{t('sales_addLine')}</button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 0 }])} className="text-xs text-brand hover:underline">{t('sales_addLine')}</button>
+              {plId && plItems.length > 0 && (
+                <select onChange={e => { if (e.target.value) { addFromPriceList(Number(e.target.value)); e.target.value = '' } }} className="form-input !py-1.5 text-xs max-w-xs" defaultValue="">
+                  <option value="">{locale === 'fa' ? '＋ افزودن از فهرست قیمت' : '＋ Add from price list'}</option>
+                  {plItems.map(it => <option key={it.productId} value={it.productId}>{it.sku} · {locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn} — {it.unitPrice.toLocaleString()}</option>)}
+                </select>
+              )}
+            </div>
           </div>
           <div className="rounded-lg border border-subtle p-3 grid grid-cols-4 gap-2 text-sm">
             <div><p className="text-xs text-text-tertiary">{t('sales_subtotal')}</p><p className="font-medium text-text-secondary">{money(totals.sub)}</p></div>
@@ -450,6 +467,74 @@ function Payments({ t, toast }: { t: T; toast: Toast }) {
   return (
     <Card className="p-4">
       <DataTable tableId="sales-payments" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={p => String(p.id)} exportName="payments" emptyLabel={t('sales_noPayments')} />
+    </Card>
+  )
+}
+
+/** Price list management (Phase 26.9): named catalogs of product prices for sales lines. */
+function PriceListManager({ fa, toast }: { fa: boolean; toast: Toast }) {
+  const lp = (en: string, faS: string) => (fa ? faS : en)
+  interface PL { id: number; code: string; nameEn: string; nameFa: string; currency: string; itemCount: number }
+  interface Prod { id: number; sku: string; nameEn: string; nameFa: string | null }
+  interface Item { productId: number; sku: string; nameEn: string; nameFa: string | null; unitPrice: number }
+  const [lists, setLists] = useState<PL[]>([])
+  const [products, setProducts] = useState<Prod[]>([])
+  const [sel, setSel] = useState<number | null>(null)
+  const [items, setItems] = useState<Item[]>([])
+  const [nl, setNl] = useState({ code: '', nameEn: '', currency: 'IRR' })
+  const [add, setAdd] = useState({ productId: '', unitPrice: '' })
+  const load = useCallback(async () => {
+    const [l, p] = await Promise.all([
+      fetch('/api/admin/erp/sales/pricelists').then(r => r.json()),
+      fetch('/api/admin/erp/inventory/products').then(r => r.json()).catch(() => ({ products: [] })),
+    ])
+    setLists(l.priceLists ?? []); setProducts((p.products ?? []).map((x: { id: number; sku: string; nameEn: string; nameFa: string | null }) => ({ id: x.id, sku: x.sku, nameEn: x.nameEn, nameFa: x.nameFa })))
+  }, [])
+  useEffect(() => { load() }, [load])
+  const loadItems = useCallback(async (id: number) => { const d = await fetch(`/api/admin/erp/sales/pricelists?items=${id}`).then(r => r.json()); setItems(d.items ?? []) }, [])
+  useEffect(() => { if (sel) loadItems(sel) }, [sel, loadItems])
+  async function post(bodyObj: Record<string, unknown>, ok: string) {
+    const r = await fetch('/api/admin/erp/sales/pricelists', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyObj) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(ok, 'success'); load(); if (sel) loadItems(sel) } else toast(d.error || lp('Failed', 'ناموفق'), 'error')
+  }
+  return (
+    <Card className="p-4 space-y-3">
+      <h3 className="text-sm font-semibold text-text-primary">{lp('Price lists', 'فهرست‌های قیمت')}</h3>
+      <div className="grid md:grid-cols-4 gap-2 items-end">
+        <Input label={lp('Code', 'کد')} value={nl.code} onChange={v => setNl(f => ({ ...f, code: v }))} />
+        <Input label={lp('Name', 'نام')} value={nl.nameEn} onChange={v => setNl(f => ({ ...f, nameEn: v }))} />
+        <Select label={lp('Currency', 'ارز')} value={nl.currency} onChange={v => setNl(f => ({ ...f, currency: v }))} options={['IRR', 'IRT', 'USD', 'EUR'].map(c => ({ value: c, label: c }))} />
+        <Btn size="sm" onClick={() => { if (!nl.code || !nl.nameEn) { toast(lp('Code and name required', 'کد و نام لازم است'), 'error'); return } post({ action: 'save', code: nl.code, nameEn: nl.nameEn, nameFa: nl.nameEn, currency: nl.currency }, lp('Price list created', 'فهرست ساخته شد')); setNl({ code: '', nameEn: '', currency: 'IRR' }) }}>{lp('Add list', 'افزودن فهرست')}</Btn>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {lists.map(l => (
+          <button key={l.id} onClick={() => setSel(l.id)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${sel === l.id ? 'border-brand bg-brand/10' : 'border-subtle'}`}>
+            <span className="text-text-primary">{fa ? l.nameFa : l.nameEn}</span>
+            <Badge color="slate">{l.itemCount} {lp('items', 'قلم')}</Badge>
+          </button>
+        ))}
+        {lists.length === 0 && <p className="text-xs text-text-tertiary">{lp('No price lists yet.', 'هنوز فهرستی نیست.')}</p>}
+      </div>
+      {sel && (
+        <div className="border border-subtle rounded-lg p-3 space-y-2">
+          <div className="grid md:grid-cols-3 gap-2 items-end">
+            <Select label={lp('Product', 'کالا')} value={add.productId} onChange={v => setAdd(f => ({ ...f, productId: v }))} options={[{ value: '', label: '—' }, ...products.map(p => ({ value: String(p.id), label: `${p.sku} · ${fa ? (p.nameFa || p.nameEn) : p.nameEn}` }))]} />
+            <Input label={lp('Unit price', 'قیمت واحد')} value={add.unitPrice} onChange={v => setAdd(f => ({ ...f, unitPrice: v }))} />
+            <Btn size="sm" onClick={() => { if (!add.productId || !add.unitPrice) return; post({ action: 'setItem', priceListId: sel, productId: Number(add.productId), unitPrice: Number(add.unitPrice) }, lp('Price set', 'قیمت ثبت شد')); setAdd({ productId: '', unitPrice: '' }) }}>{lp('Set price', 'ثبت قیمت')}</Btn>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {items.map(it => (
+              <span key={it.productId} className="inline-flex items-center gap-2 rounded-lg border border-subtle px-3 py-1.5 text-sm">
+                <span className="text-text-secondary">{fa ? (it.nameFa || it.nameEn) : it.nameEn}</span>
+                <span className="font-semibold text-text-primary">{it.unitPrice.toLocaleString()}</span>
+                <button onClick={() => post({ action: 'setItem', priceListId: sel, productId: it.productId, unitPrice: null }, lp('Removed', 'حذف شد'))} className="text-danger text-xs">✕</button>
+              </span>
+            ))}
+            {items.length === 0 && <p className="text-xs text-text-tertiary">{lp('No products priced in this list.', 'کالایی در این فهرست قیمت‌گذاری نشده.')}</p>}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
