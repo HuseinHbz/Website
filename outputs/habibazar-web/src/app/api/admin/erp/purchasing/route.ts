@@ -10,6 +10,7 @@ import {
 } from '@/lib/erp/purchasingData'
 import { issueVendorToken, revokeVendorTokens } from '@/lib/erp/vendorPortal'
 import type { PurchaseDocType } from '@/lib/erp/purchasing'
+import { clientIp } from '@/lib/api/clientIp'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   const uid = auth.user.id
+  const ip = clientIp(req)
   try {
     switch (d.action) {
       case 'vendor.create': { const id = await createVendor(d, uid); await logAction(auth.user, 'erp.vendor.create', 'purchase_vendors', String(id), { name: d.name }); return NextResponse.json({ id }) }
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
         // Level ≥2 approvals require an elevated role (multi-level approval).
         if (d.level >= 2 && !['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'This approval level requires an administrator' }, { status: 403 })
         const status = await decideApproval(d.id, d.level, d.decision, uid, d.comment)
-        await logAction(auth.user, 'erp.purchase.approve', 'purchase_documents', String(d.id), { level: d.level, decision: d.decision })
+        await logAction(auth.user, 'erp.purchase.approve', 'purchase_documents', String(d.id), { level: d.level }, { decision: d.decision, status }, ip)
         return NextResponse.json({ ok: true, status })
       }
       case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }

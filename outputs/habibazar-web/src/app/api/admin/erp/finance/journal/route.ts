@@ -5,6 +5,7 @@ import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { assertPostable } from '@/lib/erp/accountingData'
+import { clientIp } from '@/lib/api/clientIp'
 import { entryBalanced } from '@/lib/erp/ledger'
 
 export const dynamic = 'force-dynamic'
@@ -92,19 +93,22 @@ export async function PUT(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const { id, op } = parsed.data
   try {
-    const e = (await pgQuery(`SELECT status FROM gl_journal_entries WHERE id=$1`, [id]))[0] as { status: string } | undefined
+    const e = (await pgQuery(`SELECT status, date FROM gl_journal_entries WHERE id=$1`, [id]))[0] as { status: string; date: string } | undefined
     if (!e) return badRequest('Not found')
+    const ip = clientIp(req)
     if (op === 'post') {
       if (e.status !== 'draft') return badRequest('Only draft entries can be posted')
       // Re-verify balance from the stored lines before posting.
       const lines = (await pgQuery(`SELECT debit::float AS debit, credit::float AS credit, account_id AS "accountId" FROM gl_journal_lines WHERE entry_id=$1`, [id])) as { debit: number; credit: number; accountId: number }[]
       if (!entryBalanced(lines).ok) return badRequest('Entry is not balanced')
+      const gate = await assertPostable(e.date); if (!gate.ok) return badRequest(gate.error!)
       await pgQuery(`UPDATE gl_journal_entries SET status='posted', posted_at=${NOW} WHERE id=$1`, [id])
-      await logAction(auth.user, 'gl.entry.post', 'gl_journal_entry', id)
+      await logAction(auth.user, 'gl.entry.post', 'gl_journal_entry', id, { status: e.status }, { status: 'posted' }, ip)
     } else {
       if (e.status !== 'posted') return badRequest('Only posted entries can be voided')
+      const gate = await assertPostable(e.date); if (!gate.ok) return badRequest(gate.error!)
       await pgQuery(`UPDATE gl_journal_entries SET status='void' WHERE id=$1`, [id])
-      await logAction(auth.user, 'gl.entry.void', 'gl_journal_entry', id)
+      await logAction(auth.user, 'gl.entry.void', 'gl_journal_entry', id, { status: 'posted' }, { status: 'void' }, ip)
     }
     return NextResponse.json({ ok: true })
   } catch (e) { return apiError(e, 'Operation failed') }
@@ -116,10 +120,10 @@ export async function DELETE(req: NextRequest) {
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error
   try {
-    const e = (await pgQuery(`SELECT status FROM gl_journal_entries WHERE id=$1`, [parsed.data.id]))[0] as { status: string } | undefined
+    const e = (await pgQuery(`SELECT status, entry_no AS "entryNo" FROM gl_journal_entries WHERE id=$1`, [parsed.data.id]))[0] as { status: string; entryNo: string } | undefined
     if (e?.status === 'posted') return badRequest('Void the entry before deleting')
     await pgQuery(`DELETE FROM gl_journal_entries WHERE id=$1`, [parsed.data.id])
-    await logAction(auth.user, 'gl.entry.delete', 'gl_journal_entry', parsed.data.id)
+    await logAction(auth.user, 'gl.entry.delete', 'gl_journal_entry', parsed.data.id, e ?? null, null, clientIp(req))
     return NextResponse.json({ ok: true })
   } catch (e) { return apiError(e, 'Failed to delete entry') }
 }

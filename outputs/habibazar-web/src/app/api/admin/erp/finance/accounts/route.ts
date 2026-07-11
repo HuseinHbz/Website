@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
+import { clientIp } from '@/lib/api/clientIp'
 import { ACCOUNT_TYPES } from '@/lib/erp/ledger'
 import { chartOfAccounts } from '@/lib/erp/accountingData'
 import { isCyclicParent } from '@/lib/erp/accountingCore'
@@ -53,16 +54,17 @@ export async function POST(req: NextRequest) {
       const row = (await pgQuery(
         `INSERT INTO gl_accounts (code, name_en, name_fa, type, parent_id, active) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
         [d.code, d.nameEn, d.nameFa ?? null, d.type, d.parentId ?? null, d.active ? 1 : 0]))[0] as { id: number }
-      await logAction(auth.user, 'gl.account.create', 'gl_account', row.id)
+      await logAction(auth.user, 'gl.account.create', 'gl_account', row.id, null, { code: d.code, nameEn: d.nameEn, type: d.type }, clientIp(req))
       return NextResponse.json({ id: row.id })
     }
+    const before = (await pgQuery(`SELECT code, name_en AS "nameEn", type, parent_id AS "parentId", active FROM gl_accounts WHERE id=$1`, [d.id]))[0] ?? null
     if (d.parentId != null) {
       const all = (await pgQuery(`SELECT id, code, type, parent_id AS "parentId" FROM gl_accounts`)) as unknown as { id: number; code: string; type: typeof ACCOUNT_TYPES[number]; parentId: number | null; nameEn: string }[]
       if (isCyclicParent(all.map(a => ({ ...a, nameEn: a.code })), d.id, d.parentId)) return badRequest('That parent would create a cycle in the chart of accounts')
     }
     await pgQuery(`UPDATE gl_accounts SET code=$2, name_en=$3, name_fa=$4, type=$5, parent_id=$6, active=$7 WHERE id=$1`,
       [d.id, d.code, d.nameEn, d.nameFa ?? null, d.type, d.parentId ?? null, d.active ? 1 : 0])
-    await logAction(auth.user, 'gl.account.update', 'gl_account', d.id)
+    await logAction(auth.user, 'gl.account.update', 'gl_account', d.id, before, { code: d.code, nameEn: d.nameEn, type: d.type, parentId: d.parentId ?? null, active: d.active }, clientIp(req))
     return NextResponse.json({ id: d.id })
   } catch (e) { return apiError(e, 'Failed to save account') }
 }
