@@ -233,6 +233,18 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   preview iframe) and a template selector on generation (`gen_documents.
   template_key`). Verified vs real PostgreSQL (branding + watermark on rendered
   HTML; override wins).
+  **Persian/RTL + rich contracts (Phase 26.10)**: `DocTemplateConfig.rtl` renders
+  the whole document `dir="rtl" lang="fa"` with a localized label set; **20 seeded
+  `fa-*` Persian templates** (all customizable in the designer) + `fa-contract`/
+  `fa-letterhead` (`doc_type=contract`, «بسمه تعالی» + Iranian terms). Contract
+  bodies are authored in a **Word-like `RichTextEditor`** (contentEditable +
+  bold/italic/underline, H1–H3, lists, align, font-size, RTL/LTR) → stored as
+  `DocPayload.bodyHtml`, **sanitized at render** by the pure allowlist sanitizer
+  `src/lib/erp/richtext.ts` (`sanitizeRichHtml`, 13 XSS tests — drops script/
+  handlers/`href`/`src`, keeps only re-validated inline style). A full-width
+  uploaded **letterhead banner** (`company_letterhead_url` → `DocBranding.
+  letterheadUrl`) prints atop every document. Verified vs real PostgreSQL
+  (contract rich RTL HTML + letterhead + XSS-safe round-trip).
 - **Reporting Center** (`/admin/reports`, `ReportingCenter`) — Phase 21.9 Reporting
   Platform. A fixed report catalog reads live from each module's already-verified
   data layer (no arbitrary SQL, no duplicated aggregation). Pure core
@@ -246,7 +258,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   Table + group-by Summary views, CSV export. 7 reports: trial balance, income
   statement, sales-by-customer, invoice register, inventory valuation, asset
   register, project costing. **Purchasing reports added after Phase 26.1**
-  (Purchase Register + Spend by Vendor → 9 total). Verified vs real PostgreSQL.
+  (Purchase Register + Spend by Vendor → 9 total). **Bilingual labels (Phase
+  26.10)**: `LABEL_FA`/`faLabel()` translate column + summary labels for the fixed
+  catalog (the report data was always correct; e.g. trial balance legitimately
+  filters zero-balance accounts, so an empty result on fresh books is expected,
+  not a bug). Verified vs real PostgreSQL.
 - **Enterprise Numbering Engine** (`/admin/numbering`, `NumberingCenter`) — Phase
   21.11. The single source of truth for document numbers across every module (a
   platform service, not a per-module helper). Tables `numbering_formats` (pattern
@@ -511,6 +527,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   shared by the products list and dashboard. APIs under `/api/admin/erp/inventory/*`
   (products/warehouses/moves/overview) — zod-validated, RBAC-gated, audited.
   Verified end-to-end against real PostgreSQL (FIFO/LIFO/WAVG round-trip).
+  **Opening stock (Phase 26.10)**: the product-create form takes a warehouse +
+  opening qty and writes a real `receipt` `inv_moves` row (`ref='Opening stock'`),
+  so on-hand/valuation are correct immediately (no more spurious ناموجود); stocked
+  products are selectable directly on a **sales invoice line** (`SalesCenter`
+  inventory-product picker) in addition to the price-list picker.
 - **Security Operations Center** (`/admin/soc`, `SocDashboard`) — Phase-17 SOC on
   **real** signal via `GET /api/admin/soc/overview`: aggregates failed logins,
   brute-force IPs (from `system_logs` security meta), AI prompt-injection blocks,
@@ -548,7 +569,12 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   against the workflow variables and merges its outputs back — so a `task` node
   `{action:'rule', config:{ruleKey}}` lets workflows branch on rule results.
   Verified: a workflow rule-task drives a downstream condition (gold→20% →big
-  branch; bulk→10% →small branch).
+  branch; bulk→10% →small branch). **Visual builder (Phase 26.10)**: pure
+  `src/lib/rules/builder.ts` (`parseDef`/`serializeDef`/`coerce`/`RULE_OPS_UI`,
+  round-trip tested) drives a `RuleBuilder` (Visual/JSON toggle) in `RulesCenter`
+  — condition rows (field·operator·value across 12 ops) + output rows + match
+  all/any + first/collect, emitting the exact **engine-valid JSON** `runRules`
+  runs; exotic JSON falls back to the raw textarea. Replaces the raw-JSON editors.
 - **Integration Hub** (`/admin/integration-hub`, `IntegrationHub`) — Phase-21.8
   (distinct from `/admin/integrations`, the CMS integrations catalog). Connectors
   to external systems: REST/GraphQL/Webhook (native fetch) + SMTP (nodemailer) are
@@ -750,12 +776,16 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   `docs/governance/phase23-hero-platform.md`.
 - **Hero Animation Engine** (Phase 25, `src/lib/hero/animations.ts`) — extends the
   Hero Platform (no rewrite; legacy `Hero.tsx` + its 196 framer-motion animations
-  stay the public fallback, untouched). Pure, unit-tested registry of **53 presets**
-  (+`none`) across entrance/emphasis/text/background/scroll/interactive;
+  stay the public fallback, untouched). Pure, unit-tested registry of **75 presets**
+  (+`none`) across entrance/emphasis/text/background/scroll/interactive/**orbit**;
   `resolveAnimation(a,{reduceMotion,lowEnd})` → `{className,style}` with `--hx-*`
   custom props, auto-suppressing heavy/looping under reduced-motion / low-end;
   `animationConflicts` feeds the rule engine. CSS `hx-*` keyframes/classes in
-  `globals.css` (reduced-motion guarded; JS-only presets fall back to fade).
+  `globals.css` (reduced-motion guarded; JS-only presets fall back to fade). The
+  **`orbit` category** (Phase 26.10) adds 20 network/constellation loops
+  (orbit-spin/radar-sweep/satellite/aurora/sonar/galaxy-spin/vortex …); the
+  `HeroBuilder` Animations picker shows a **looping live-preview tile** so every
+  preset previews on selection.
   `HeroConfig.animations` (per-element, optional → backward compatible) is applied
   by `HeroExperience` (public) and assigned in `HeroBuilder`'s Animations section
   (per-element preset + duration/delay/easing + live preview). Templates: 20
