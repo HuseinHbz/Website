@@ -8,7 +8,7 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
-type Tab = 'dashboard' | 'accounts' | 'journal' | 'reports' | 'currency' | 'banking'
+type Tab = 'dashboard' | 'accounts' | 'journal' | 'accounting' | 'reports' | 'currency' | 'banking'
 type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
 
 interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
@@ -48,7 +48,7 @@ export function FinanceCenter() {
       <ToastContainer />
       <PageHeader title={t('fin_title')} subtitle={t('fin_subtitle')} />
       <div className="flex gap-1 mb-6 border-b border-subtle overflow-x-auto">
-        {(['dashboard', 'accounts', 'journal', 'reports', 'currency', 'banking'] as Tab[]).map(tb => (
+        {(['dashboard', 'accounts', 'journal', 'accounting', 'reports', 'currency', 'banking'] as Tab[]).map(tb => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${tab === tb ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
             {t(`fin_tab_${tb}` as 'fin_tab_dashboard')}
@@ -58,6 +58,7 @@ export function FinanceCenter() {
       {tab === 'dashboard' && <div className="space-y-6"><Dashboard t={t} /><FinanceAiCard fa={fa} /></div>}
       {tab === 'accounts' && <Accounts t={t} fa={fa} toast={toast} />}
       {tab === 'journal' && <Journal t={t} fa={fa} toast={toast} autoNew={autoNew} onAutoNew={() => setAutoNew(false)} />}
+      {tab === 'accounting' && <AccountingView fa={fa} toast={toast} />}
       {tab === 'reports' && <ReportsView t={t} fa={fa} />}
       {tab === 'currency' && <CurrencyView fa={fa} toast={toast} />}
       {tab === 'banking' && <BankingView fa={fa} toast={toast} />}
@@ -898,5 +899,197 @@ function RevaluationSection({ fa, toast }: { fa: boolean; toast: (m: string, k?:
       )}
       <p className="text-3xs text-text-tertiary">{L(fa, 'Original documents keep their currency and rate — the delta vs already-booked revaluations posts to 1190/4900/6980. Administrator only.', 'اسناد اصلی با ارز و نرخ خود دست‌نخورده می‌مانند — فقط اختلاف نسبت به تسعیرهای قبلی روی حساب‌های ۱۱۹۰/۴۹۰۰/۶۹۸۰ ثبت می‌شود. فقط مدیر.')}</p>
     </Card>
+  )
+}
+
+// ── Accounting Core (Phase 26.9): periods · opening balance · year-end · statement ──
+interface CoaFlat { id: number; code: string; nameEn: string; nameFa: string | null; type: string }
+function AccountingView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [sec, setSec] = useState<'periods' | 'opening' | 'closing' | 'statement'>('periods')
+  const [accounts, setAccounts] = useState<CoaFlat[]>([])
+  useEffect(() => { fetch('/api/admin/erp/finance/periods?view=accounts').then(r => r.json()).then(d => setAccounts(d.flat ?? [])).catch(() => {}) }, [])
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1 flex-wrap">
+        {([['periods', 'Fiscal periods', 'دوره‌های مالی'], ['opening', 'Opening balance', 'تراز افتتاحیه'], ['closing', 'Year-end closing', 'بستن سال مالی'], ['statement', 'Account statement', 'کاردکس حساب']] as const).map(([id, en, faL]) => (
+          <button key={id} onClick={() => setSec(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${sec === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
+        ))}
+      </div>
+      {sec === 'periods' && <PeriodsSection fa={fa} toast={toast} />}
+      {sec === 'opening' && <OpeningSection fa={fa} toast={toast} accounts={accounts} />}
+      {sec === 'closing' && <ClosingSection fa={fa} toast={toast} />}
+      {sec === 'statement' && <StatementSection fa={fa} accounts={accounts} />}
+    </div>
+  )
+}
+
+interface Period { id: number; name: string; startDate: string; endDate: string; status: string; kind: string; parentId: number | null }
+function PeriodsSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [rows, setRows] = useState<Period[]>([])
+  const [form, setForm] = useState({ name: '', startDate: '', endDate: '', kind: 'period', parentId: '' })
+  const load = useCallback(async () => { const d = await fetch('/api/admin/erp/finance/periods').then(r => r.json()); setRows(d.periods ?? []) }, [])
+  useEffect(() => { load() }, [load])
+  async function post(bodyObj: Record<string, unknown>, ok: string) {
+    const r = await fetch('/api/admin/erp/finance/periods', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyObj) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { toast(ok, 'success'); load() } else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+  }
+  async function create() {
+    if (!form.name || !form.startDate || !form.endDate) { toast(L(fa, 'Fill name and dates', 'نام و تاریخ‌ها را وارد کنید'), 'error'); return }
+    await post({ action: 'period.create', name: form.name, startDate: form.startDate, endDate: form.endDate, kind: form.kind, parentId: form.parentId ? Number(form.parentId) : undefined }, L(fa, 'Period created', 'دوره ساخته شد'))
+    setForm({ name: '', startDate: '', endDate: '', kind: 'period', parentId: '' })
+  }
+  const years = rows.filter(r => r.kind === 'year')
+  const NEXT: Record<string, { to: string; en: string; fa: string }[]> = {
+    open: [{ to: 'closed', en: 'Close', fa: 'بستن' }],
+    closed: [{ to: 'open', en: 'Reopen', fa: 'بازگشایی' }, { to: 'locked', en: 'Lock', fa: 'قفل' }],
+    locked: [],
+  }
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 grid md:grid-cols-6 gap-3 items-end">
+        <Input label={L(fa, 'Name', 'نام')} value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="FY1404" />
+        <Select label={L(fa, 'Kind', 'نوع')} value={form.kind} onChange={v => setForm(f => ({ ...f, kind: v }))} options={[{ value: 'year', label: L(fa, 'Fiscal year', 'سال مالی') }, { value: 'period', label: L(fa, 'Period', 'دوره') }]} />
+        <Input label={L(fa, 'Start', 'شروع')} type="date" value={form.startDate} onChange={v => setForm(f => ({ ...f, startDate: v }))} />
+        <Input label={L(fa, 'End', 'پایان')} type="date" value={form.endDate} onChange={v => setForm(f => ({ ...f, endDate: v }))} />
+        <Select label={L(fa, 'Parent year', 'سال والد')} value={form.parentId} onChange={v => setForm(f => ({ ...f, parentId: v }))} options={[{ value: '', label: '—' }, ...years.map(y => ({ value: String(y.id), label: y.name }))]} />
+        <Btn size="sm" onClick={create}>{L(fa, 'Add period', 'افزودن')}</Btn>
+      </Card>
+      <Card className="p-4 space-y-2">
+        {rows.length === 0 && <p className="text-xs text-text-tertiary">{L(fa, 'No fiscal periods yet.', 'هنوز دوره‌ای نیست.')}</p>}
+        {rows.map(p => (
+          <div key={p.id} className={`flex flex-wrap items-center justify-between gap-2 border border-subtle rounded-lg px-3 py-2 ${p.kind === 'year' ? 'bg-surface-2' : 'ms-4'}`}>
+            <div className="flex items-center gap-2">
+              <Badge color={p.kind === 'year' ? 'indigo' : 'slate'}>{p.kind === 'year' ? L(fa, 'Year', 'سال') : L(fa, 'Period', 'دوره')}</Badge>
+              <span className="text-sm font-medium text-text-primary">{p.name}</span>
+              <span className="text-3xs text-text-tertiary font-mono">{p.startDate} → {p.endDate}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge color={p.status === 'open' ? 'green' : p.status === 'closed' ? 'yellow' : 'red'}>{p.status === 'open' ? L(fa, 'Open', 'باز') : p.status === 'closed' ? L(fa, 'Closed', 'بسته') : L(fa, 'Locked', 'قفل‌شده')}</Badge>
+              {(NEXT[p.status] || []).map(n => (
+                <Btn key={n.to} size="sm" variant="ghost" onClick={() => post({ action: 'period.transition', id: p.id, to: n.to }, L(fa, 'Updated', 'به‌روزرسانی شد'))}>{L(fa, n.en, n.fa)}</Btn>
+              ))}
+            </div>
+          </div>
+        ))}
+      </Card>
+      <p className="text-3xs text-text-tertiary">{L(fa, 'Posting a journal into a closed or locked period is rejected. Locked is permanent.', 'ثبت سند در دوره بسته یا قفل‌شده رد می‌شود. قفل دائمی است.')}</p>
+    </div>
+  )
+}
+
+function OpeningSection({ fa, toast, accounts }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void; accounts: CoaFlat[] }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [lines, setLines] = useState<{ accountId: string; amount: string }[]>([{ accountId: '', amount: '' }, { accountId: '', amount: '' }])
+  const [saving, setSaving] = useState(false)
+  async function submit() {
+    const entries = lines.filter(l => l.accountId && Number(l.amount)).map(l => ({ accountId: Number(l.accountId), amount: Number(l.amount) }))
+    if (entries.length < 2) { toast(L(fa, 'Add at least two accounts', 'حداقل دو حساب'), 'error'); return }
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/finance/periods', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'opening.post', date, entries }) })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) { toast(L(fa, 'Opening balance posted', 'تراز افتتاحیه ثبت شد'), 'success'); setLines([{ accountId: '', amount: '' }, { accountId: '', amount: '' }]) }
+      else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+    } finally { setSaving(false) }
+  }
+  const opts = [{ value: '', label: '—' }, ...accounts.map(a => ({ value: String(a.id), label: `${a.code} · ${fa ? (a.nameFa || a.nameEn) : a.nameEn}` }))]
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-end gap-3">
+        <Input label={L(fa, 'Opening date', 'تاریخ افتتاح')} type="date" value={date} onChange={setDate} />
+        <p className="text-3xs text-text-tertiary">{L(fa, 'Enter each account balance on its normal side; assets/expenses are debits, the rest credits. Must balance.', 'مانده هر حساب را در جهت طبیعی وارد کنید؛ دارایی/هزینه بدهکار، بقیه بستانکار. باید تراز شود.')}</p>
+      </div>
+      <div className="space-y-2">
+        {lines.map((l, i) => (
+          <div key={i} className="grid grid-cols-12 gap-2 items-end">
+            <div className="col-span-7"><Select label={i === 0 ? L(fa, 'Account', 'حساب') : ''} value={l.accountId} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, accountId: v } : x))} options={opts} /></div>
+            <div className="col-span-4"><Input label={i === 0 ? L(fa, 'Amount', 'مبلغ') : ''} value={l.amount} onChange={v => setLines(ls => ls.map((x, j) => j === i ? { ...x, amount: v } : x))} /></div>
+            <div className="col-span-1"><Btn size="sm" variant="ghost" onClick={() => setLines(ls => ls.filter((_, j) => j !== i))}>✕</Btn></div>
+          </div>
+        ))}
+        <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { accountId: '', amount: '' }])}>+ {L(fa, 'Add account', 'افزودن حساب')}</Btn>
+      </div>
+      <div className="flex justify-end"><Btn onClick={submit} disabled={saving}>{L(fa, 'Post opening balance', 'ثبت تراز افتتاحیه')}</Btn></div>
+    </Card>
+  )
+}
+
+function ClosingSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const [years, setYears] = useState<Period[]>([])
+  const [sel, setSel] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { fetch('/api/admin/erp/finance/periods').then(r => r.json()).then(d => setYears((d.periods ?? []).filter((p: Period) => p.kind === 'year'))).catch(() => {}) }, [])
+  async function run() {
+    if (!sel) { toast(L(fa, 'Pick a fiscal year', 'سال مالی را انتخاب کنید'), 'error'); return }
+    if (!confirm(L(fa, 'Post the year-end closing entry (revenue/expense → retained earnings)?', 'سند اختتامیه ثبت شود (درآمد/هزینه ← سود انباشته)؟'))) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/admin/erp/finance/periods', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'closing.run', fiscalPeriodId: Number(sel) }) })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) toast(L(fa, `Closed — net income ${Number(d.netIncome).toLocaleString()}`, `بسته شد — سود خالص ${Number(d.netIncome).toLocaleString()}`), 'success')
+      else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+    } finally { setBusy(false) }
+  }
+  return (
+    <Card className="p-4 space-y-3">
+      <h4 className="text-xs font-semibold text-text-primary">{L(fa, 'Year-end closing', 'بستن سال مالی')}</h4>
+      <div className="flex items-end gap-3">
+        <Select label={L(fa, 'Fiscal year', 'سال مالی')} value={sel} onChange={setSel} options={[{ value: '', label: '—' }, ...years.map(y => ({ value: String(y.id), label: `${y.name} (${y.startDate} → ${y.endDate})` }))]} />
+        <Btn onClick={run} disabled={busy}>{L(fa, 'Run closing', 'اجرای اختتامیه')}</Btn>
+      </div>
+      <p className="text-3xs text-text-tertiary">{L(fa, 'Zeroes revenue & expense accounts for the year and transfers the profit/loss to Retained Earnings (3900). Runs once per year.', 'حساب‌های درآمد و هزینه سال را صفر کرده و سود/زیان را به سود انباشته (۳۹۰۰) منتقل می‌کند. هر سال یک‌بار.')}</p>
+    </Card>
+  )
+}
+
+function StatementSection({ fa, accounts }: { fa: boolean; accounts: CoaFlat[] }) {
+  interface StLine { entryNo: string; date: string; memo: string | null; reference: string | null; debit: number; credit: number; balance: number }
+  const [accountId, setAccountId] = useState('')
+  const [range, setRange] = useState({ from: '', to: '' })
+  const [d, setD] = useState<{ account: { code: string; nameEn: string }; lines: StLine[]; totals: { debit: number; credit: number; balance: number } } | null>(null)
+  const load = useCallback(async () => {
+    if (!accountId) { setD(null); return }
+    const q = new URLSearchParams({ account: accountId })
+    if (range.from) q.set('from', range.from)
+    if (range.to) q.set('to', range.to)
+    const r = await fetch(`/api/admin/erp/finance/statement?${q}`).then(x => x.ok ? x.json() : null).catch(() => null)
+    setD(r)
+  }, [accountId, range])
+  useEffect(() => { load() }, [load])
+  const opts = [{ value: '', label: L(fa, 'Select account…', 'انتخاب حساب…') }, ...accounts.map(a => ({ value: String(a.id), label: `${a.code} · ${fa ? (a.nameFa || a.nameEn) : a.nameEn}` }))]
+  return (
+    <div className="space-y-3">
+      <Card className="p-4 flex flex-wrap items-end gap-3">
+        <Select label={L(fa, 'Account', 'حساب')} value={accountId} onChange={setAccountId} options={opts} />
+        <Input label={L(fa, 'From', 'از')} type="date" value={range.from} onChange={v => setRange(r => ({ ...r, from: v }))} />
+        <Input label={L(fa, 'To', 'تا')} type="date" value={range.to} onChange={v => setRange(r => ({ ...r, to: v }))} />
+      </Card>
+      {d && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-text-primary">{d.account.code} · {d.account.nameEn}</h4>
+            <span className={`text-sm font-bold ${d.totals.balance >= 0 ? 'text-text-primary' : 'text-danger-text'}`}>{L(fa, 'Balance', 'مانده')}: {d.totals.balance.toLocaleString()}</span>
+          </div>
+          <div className="max-h-96 overflow-y-auto space-y-1">
+            <div className="grid grid-cols-12 gap-2 text-3xs text-text-tertiary px-2">
+              <span className="col-span-2">{L(fa, 'Date', 'تاریخ')}</span><span className="col-span-3">{L(fa, 'Entry', 'سند')}</span><span className="col-span-3">{L(fa, 'Memo', 'شرح')}</span>
+              <span className="col-span-1 text-end">{L(fa, 'Debit', 'بدهکار')}</span><span className="col-span-1 text-end">{L(fa, 'Credit', 'بستانکار')}</span><span className="col-span-2 text-end">{L(fa, 'Balance', 'مانده')}</span>
+            </div>
+            {d.lines.length === 0 && <p className="text-xs text-text-tertiary p-2">{L(fa, 'No postings.', 'گردشی نیست.')}</p>}
+            {d.lines.map((l, i) => (
+              <div key={i} className="grid grid-cols-12 gap-2 items-center text-xs border border-subtle rounded-lg px-2 py-1.5">
+                <span className="col-span-2 font-mono text-text-tertiary">{l.date}</span>
+                <span className="col-span-3 font-mono text-text-secondary">{l.entryNo}</span>
+                <span className="col-span-3 text-text-secondary truncate">{l.memo || l.reference || '—'}</span>
+                <span className="col-span-1 text-end text-text-secondary">{l.debit ? l.debit.toLocaleString() : '—'}</span>
+                <span className="col-span-1 text-end text-text-secondary">{l.credit ? l.credit.toLocaleString() : '—'}</span>
+                <span className="col-span-2 text-end font-semibold text-text-primary">{l.balance.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
   )
 }

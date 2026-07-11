@@ -4,6 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
+import { assertPostable } from '@/lib/erp/accountingData'
 import { entryBalanced } from '@/lib/erp/ledger'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +64,8 @@ export async function POST(req: NextRequest) {
   try {
     const rate = await rialRateFor(d.currency)
     if (rate == null) return badRequest(`No exchange rate configured for ${d.currency} — set one in Finance → Currency`)
+    // 26.9: reject postings into a closed/locked fiscal period.
+    if (d.post) { const gate = await assertPostable(d.date); if (!gate.ok) return badRequest(gate.error!) }
     const entryNo = `JE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
     const status = d.post ? 'posted' : 'draft'
     const entry = (await pgQuery(

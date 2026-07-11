@@ -930,6 +930,17 @@ export async function runMigrations() {
       status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    -- Phase 26.9: fiscal-period lifecycle — kind (year|period), hierarchy, and
+    -- open→closed→locked with a widened status check + close/lock audit stamps.
+    ALTER TABLE gl_fiscal_periods ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'period';
+    ALTER TABLE gl_fiscal_periods ADD COLUMN IF NOT EXISTS parent_id INTEGER;
+    ALTER TABLE gl_fiscal_periods ADD COLUMN IF NOT EXISTS closed_at TEXT;
+    ALTER TABLE gl_fiscal_periods ADD COLUMN IF NOT EXISTS closed_by TEXT;
+    ALTER TABLE gl_fiscal_periods ADD COLUMN IF NOT EXISTS locked_at TEXT;
+    DO $do$ BEGIN
+      ALTER TABLE gl_fiscal_periods DROP CONSTRAINT IF EXISTS gl_fiscal_periods_status_check;
+      ALTER TABLE gl_fiscal_periods ADD CONSTRAINT gl_fiscal_periods_status_check3 CHECK(status IN ('open','closed','locked'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $do$;
 
     -- Phase 26.7: multi-currency transactions — every financial document keeps
     -- its transaction currency + the Rial exchange rate + the Rial base amount.

@@ -1495,6 +1495,7 @@ const T: Record<string, { fa: string; en: string }> = {
   fin_tab_dashboard:{ fa: 'داشبورد', en: 'Dashboard' },
   fin_tab_accounts: { fa: 'دفتر حساب‌ها', en: 'Chart of Accounts' },
   fin_tab_journal:  { fa: 'اسناد روزنامه', en: 'Journal Entries' },
+  fin_tab_accounting: { fa: 'حسابداری', en: 'Accounting' },
   fin_tab_reports:  { fa: 'گزارش‌ها', en: 'Reports' },
   fin_tab_currency: { fa: 'ارز و نرخ', en: 'Currency' },
   fin_tab_banking:  { fa: 'بانکداری', en: 'Banking' },
