@@ -372,15 +372,21 @@ function AnimRow({ rtl, label, value, onChange }: { rtl: boolean; label: string;
     <div className="border border-subtle rounded-lg p-2.5 space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-text-secondary capitalize">{label}</span>
-        {preset !== 'none' && (
-          <span key={`${label}-${preset}-${value?.durationMs}`} className={`text-3xs text-text-tertiary px-2 py-0.5 rounded bg-white/5 hx-anim hx-${preset}`}
-            style={{ ['--hx-dur' as string]: `${value?.durationMs ?? 700}ms`, ['--hx-ease' as string]: EASING_CSS[value?.easing as AnimationEasing ?? 'ease-out'], ['--hx-repeat' as string]: '1' }}>
-            {lc(rtl, 'preview', 'پیش‌نمایش')}
-          </span>
-        )}
       </div>
       <Select label="" value={preset} onChange={v => onChange(a => ({ ...a, preset: v }))} options={opts} />
       {preset !== 'none' && (
+        <>
+        {/* Live preview: the selected animation plays on loop so every preset is
+            visible the moment it is chosen (26.10). */}
+        <div className="flex items-center gap-2 rounded-lg border border-subtle px-3 py-3 overflow-hidden" style={{ background: '#0b1120' }}>
+          <span
+            key={`${label}-${preset}-${value?.durationMs}-${value?.easing}`}
+            className={`inline-block w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand/40 hx-anim hx-${preset}`}
+            style={{ ['--hx-dur' as string]: `${value?.durationMs ?? 700}ms`, ['--hx-ease' as string]: EASING_CSS[value?.easing as AnimationEasing ?? 'ease-out'], ['--hx-repeat' as string]: 'infinite' }}
+            aria-hidden
+          />
+          <span className="text-3xs text-text-tertiary">{lc(rtl, 'live preview', 'پیش‌نمایش زنده')}</span>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <NumField label={lc(rtl, 'Dur (ms)', 'مدت')} value={value?.durationMs} step={50} onChange={v => onChange(a => ({ ...a, durationMs: v }))} />
           <NumField label={lc(rtl, 'Delay', 'تأخیر')} value={value?.delayMs} step={50} onChange={v => onChange(a => ({ ...a, delayMs: v }))} />
@@ -389,6 +395,7 @@ function AnimRow({ rtl, label, value, onChange }: { rtl: boolean; label: string;
             <Select label="" value={value?.easing ?? ''} onChange={v => onChange(a => ({ ...a, easing: (v || undefined) as AnimationEasing }))} options={[{ value: '', label: '—' }, ...easings.map(e => ({ value: e, label: e }))]} />
           </div>
         </div>
+        </>
       )}
     </div>
   )

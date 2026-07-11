@@ -1097,3 +1097,44 @@ select.form-input option {
    CSS path so they always render; richer behaviour is layered by the renderer. */
 .hx-parallax, .hx-mouse-follow, .hx-spotlight, .hx-canvas-motion, .hx-lottie,
 .hx-image-sequence, .hx-timeline, .hx-svg-path-draw { animation-name: hxFade }
+
+/* Orbit / network / constellation family (Phase 26.10) */
+@keyframes hxOrbitSpin { to { transform: rotate(360deg) } }
+@keyframes hxOrbitReverse { to { transform: rotate(-360deg) } }
+@keyframes hxOrbitTilt { 0% { transform: perspective(600px) rotateX(55deg) rotate(0) } 100% { transform: perspective(600px) rotateX(55deg) rotate(360deg) } }
+@keyframes hxNodePulse { 0%,100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.09); opacity: .8 } }
+@keyframes hxNodeGlow { 0%,100% { filter: drop-shadow(0 0 2px rgba(99,102,241,.3)) } 50% { filter: drop-shadow(0 0 16px rgba(99,102,241,.85)) } }
+@keyframes hxNodeRipple { 0% { box-shadow: 0 0 0 0 rgba(99,102,241,.5) } 100% { box-shadow: 0 0 0 22px rgba(99,102,241,0) } }
+@keyframes hxConstellation { 0%,100% { opacity: 1 } 40% { opacity: .55 } 70% { opacity: .85 } }
+@keyframes hxConstellationDrift { 0%,100% { transform: translate(0,0) } 33% { transform: translate(4px,-6px) } 66% { transform: translate(-5px,3px) } }
+@keyframes hxRadarSweep { to { transform: rotate(360deg) } }
+@keyframes hxNetworkPulse { 0%,100% { opacity: .85; transform: scale(1) } 50% { opacity: 1; transform: scale(1.04) } }
+@keyframes hxSatellite { from { transform: rotate(0) translateX(52px) rotate(0) } to { transform: rotate(360deg) translateX(52px) rotate(-360deg) } }
+@keyframes hxAurora { 0%,100% { background-position: 0% 50%; filter: hue-rotate(0) } 50% { background-position: 100% 50%; filter: hue-rotate(40deg) } }
+@keyframes hxNebula { 0%,100% { transform: rotate(0) scale(1); opacity: .85 } 50% { transform: rotate(180deg) scale(1.12); opacity: 1 } }
+@keyframes hxGridPan { to { background-position: 40px 40px } }
+@keyframes hxGridGlow { 0%,100% { opacity: .5; filter: brightness(1) } 50% { opacity: 1; filter: brightness(1.4) } }
+@keyframes hxSignalPing { 0% { transform: scale(.7); opacity: .9 } 80%,100% { transform: scale(2.1); opacity: 0 } }
+@keyframes hxSonar { 0% { box-shadow: 0 0 0 0 rgba(56,189,248,.55), 0 0 0 0 rgba(56,189,248,.3) } 100% { box-shadow: 0 0 0 18px rgba(56,189,248,0), 0 0 0 34px rgba(56,189,248,0) } }
+@keyframes hxGalaxySpin { 0% { transform: rotate(0) scale(1) } 50% { transform: rotate(180deg) scale(1.05) } 100% { transform: rotate(360deg) scale(1) } }
+@keyframes hxVortex { 0%,100% { transform: rotate(0) scale(1) } 50% { transform: rotate(200deg) scale(.9) } }
+
+.hx-orbit-spin { animation-name: hxOrbitSpin }
+.hx-orbit-reverse { animation-name: hxOrbitReverse }
+.hx-orbit-tilt { animation-name: hxOrbitTilt }
+.hx-node-pulse { animation-name: hxNodePulse }
+.hx-node-glow { animation-name: hxNodeGlow }
+.hx-node-ripple { animation-name: hxNodeRipple; border-radius: 50% }
+.hx-constellation { animation-name: hxConstellation }
+.hx-constellation-drift { animation-name: hxConstellationDrift }
+.hx-radar-sweep { animation-name: hxRadarSweep }
+.hx-network-pulse { animation-name: hxNetworkPulse }
+.hx-satellite, .hx-satellite-fast { animation-name: hxSatellite }
+.hx-aurora { animation-name: hxAurora; background-size: 200% 200% }
+.hx-nebula { animation-name: hxNebula }
+.hx-grid-pan { animation-name: hxGridPan }
+.hx-grid-glow { animation-name: hxGridGlow }
+.hx-signal-ping { animation-name: hxSignalPing; border-radius: 50% }
+.hx-sonar { animation-name: hxSonar; border-radius: 50% }
+.hx-galaxy-spin { animation-name: hxGalaxySpin }
+.hx-vortex { animation-name: hxVortex }

@@ -13,7 +13,7 @@
  */
 
 export type AnimationCategory =
-  | 'entrance' | 'emphasis' | 'text' | 'background' | 'scroll' | 'interactive'
+  | 'entrance' | 'emphasis' | 'text' | 'background' | 'scroll' | 'interactive' | 'orbit'
 export type AnimationTrigger = 'load' | 'viewport' | 'scroll' | 'hover' | 'click' | 'loop'
 export type AnimationEasing =
   | 'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out'
@@ -129,6 +129,27 @@ export const ANIMATION_PRESETS: AnimationPreset[] = [
   // ── Interactive ──────────────────────────────────────────────────────────────
   p('mouse-follow', 'Mouse Follow', 'دنبال‌کردن ماوس', 'interactive', 'hover', 0, 'ease-out', { heavy: true }),
   p('spotlight', 'Spotlight', 'نورافکن', 'interactive', 'hover', 0, 'ease-out', { heavy: true }),
+  // ── Orbit / network / constellation (Phase 26.10) ──────────────────────────
+  p('orbit-spin', 'Orbit Spin', 'چرخش مداری', 'orbit', 'loop', 18000, 'linear', { looping: true }),
+  p('orbit-reverse', 'Orbit Reverse', 'چرخش معکوس', 'orbit', 'loop', 22000, 'linear', { looping: true }),
+  p('orbit-tilt', 'Orbit Tilt', 'مدار کج', 'orbit', 'loop', 16000, 'ease-in-out', { looping: true, heavy: true }),
+  p('node-pulse', 'Node Pulse', 'تپش گره', 'orbit', 'loop', 2400, 'ease-in-out', { looping: true }),
+  p('node-glow', 'Node Glow', 'درخشش گره', 'orbit', 'loop', 2800, 'ease-in-out', { looping: true }),
+  p('node-ripple', 'Node Ripple', 'موج گره', 'orbit', 'loop', 3000, 'ease-out', { looping: true }),
+  p('constellation', 'Constellation', 'صورت فلکی', 'orbit', 'loop', 4000, 'ease-in-out', { looping: true }),
+  p('constellation-drift', 'Constellation Drift', 'رانش ستاره‌ای', 'orbit', 'loop', 9000, 'ease-in-out', { looping: true, heavy: true }),
+  p('radar-sweep', 'Radar Sweep', 'جاروب رادار', 'orbit', 'loop', 4000, 'linear', { looping: true }),
+  p('network-pulse', 'Network Pulse', 'تپش شبکه', 'orbit', 'loop', 3200, 'ease-in-out', { looping: true }),
+  p('satellite', 'Satellite', 'ماهواره', 'orbit', 'loop', 12000, 'linear', { looping: true }),
+  p('satellite-fast', 'Satellite Fast', 'ماهواره سریع', 'orbit', 'loop', 6000, 'linear', { looping: true }),
+  p('aurora', 'Aurora', 'شفق', 'orbit', 'loop', 14000, 'ease-in-out', { looping: true, heavy: true }),
+  p('nebula', 'Nebula', 'سحابی', 'orbit', 'loop', 16000, 'ease-in-out', { looping: true, heavy: true }),
+  p('grid-pan', 'Grid Pan', 'حرکت شبکه', 'orbit', 'loop', 20000, 'linear', { looping: true }),
+  p('grid-glow', 'Grid Glow', 'درخشش شبکه', 'orbit', 'loop', 3600, 'ease-in-out', { looping: true }),
+  p('signal-ping', 'Signal Ping', 'پینگ سیگنال', 'orbit', 'loop', 2200, 'ease-out', { looping: true }),
+  p('sonar', 'Sonar', 'سونار', 'orbit', 'loop', 2800, 'ease-out', { looping: true }),
+  p('galaxy-spin', 'Galaxy Spin', 'چرخش کهکشان', 'orbit', 'loop', 24000, 'linear', { looping: true, heavy: true }),
+  p('vortex', 'Vortex', 'گرداب', 'orbit', 'loop', 9000, 'ease-in-out', { looping: true, heavy: true }),
 ]
 
 const BY_ID = new Map(ANIMATION_PRESETS.map(a => [a.id, a]))
