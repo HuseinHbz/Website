@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
+import { rialRateFor } from '@/lib/erp/currencyData'
 import { ASSET_TYPES, ASSET_STATUSES } from '@/lib/erp/assets'
 import { DEPRECIATION_METHODS } from '@/lib/erp/depreciation'
 import { loadAssets, assetKpisFrom } from '@/lib/erp/assetData'
@@ -77,8 +78,8 @@ export async function POST(req: NextRequest) {
     const d = parsed.data
     const ph = values(d).map((_, i) => `$${i + 1}`).join(',')
     const result = (await pgQuery(
-      `INSERT INTO assets (${COLS}, owner_id) VALUES (${ph}, $${values(d).length + 1}) RETURNING id`,
-      [...values(d), auth.user.id],
+      `INSERT INTO assets (${COLS}, owner_id, exchange_rate) VALUES (${ph}, $${values(d).length + 1}, $${values(d).length + 2}) RETURNING id`,
+      [...values(d), auth.user.id, (await rialRateFor(d.currency)) ?? 1],
     ))[0] as { id: number }
     await pgQuery(
       `INSERT INTO asset_activity (asset_id, action, detail, user_id) VALUES ($1,'created',$2,$3)`,
@@ -97,11 +98,13 @@ export async function PUT(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     if (!d.id) return badRequest('id required')
-    const existing = (await pgQuery(`SELECT id, status FROM assets WHERE id=$1`, [d.id]))[0] as { id: number; status: string } | undefined
+    const existing = (await pgQuery(`SELECT id, status, currency FROM assets WHERE id=$1`, [d.id]))[0] as { id: number; status: string; currency: string | null } | undefined
     if (!existing) return badRequest('asset not found')
+    // Original registration rate is immutable; recapture only on a currency change.
+    const rateSql = existing.currency !== d.currency ? `, exchange_rate=${(await rialRateFor(d.currency)) ?? 1}` : ''
     const cols = COLS.split(',').map((c, i) => `${c.trim()}=$${i + 2}`).join(', ')
     await pgQuery(
-      `UPDATE assets SET ${cols}, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
+      `UPDATE assets SET ${cols}${rateSql}, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
       [d.id, ...values(d)],
     )
     if (existing.status !== d.status) {

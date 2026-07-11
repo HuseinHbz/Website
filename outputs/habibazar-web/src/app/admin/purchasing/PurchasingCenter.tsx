@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
+import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 import type { PurchasingChartsData } from './PurchasingCharts'
@@ -96,16 +97,18 @@ function Kpi({ label, value, tone }: { label: string; value: string | number; to
 }
 
 function Dashboard({ rtl }: { rtl: boolean }) {
+  const { money: dmoney } = useDisplayCurrency()
   const [d, setD] = useState<{ kpis: { openOrders: number; ordersValue: number; pendingApproval: number; payables: number; vendors: number }; topVendors: { name: string; score: number; grade: string }[] } | null>(null)
   useEffect(() => { fetch('/api/admin/erp/purchasing?view=overview').then(r => r.json()).then(setD).catch(() => {}) }, [])
   const k = d?.kpis
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><CurrencyPicker fa={rtl} /></div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Kpi label={lc(rtl, 'Open orders', 'سفارش باز')} value={k?.openOrders ?? 0} />
-        <Kpi label={lc(rtl, 'Orders value', 'ارزش سفارش')} value={money(k?.ordersValue ?? 0)} />
+        <Kpi label={lc(rtl, 'Orders value', 'ارزش سفارش')} value={dmoney(k?.ordersValue ?? 0)} />
         <Kpi label={lc(rtl, 'Pending approval', 'در انتظار تأیید')} value={k?.pendingApproval ?? 0} tone="warn" />
-        <Kpi label={lc(rtl, 'Payables', 'بدهی')} value={money(k?.payables ?? 0)} tone="warn" />
+        <Kpi label={lc(rtl, 'Payables', 'بدهی')} value={dmoney(k?.payables ?? 0)} tone="warn" />
         <Kpi label={lc(rtl, 'Active vendors', 'تأمین‌کننده فعال')} value={k?.vendors ?? 0} tone="ok" />
       </div>
       <Card className="p-5">

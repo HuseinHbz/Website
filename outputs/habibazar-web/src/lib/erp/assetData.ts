@@ -13,7 +13,9 @@ export interface AssetRow {
   manufacturer: string | null; serial: string | null; barcode: string | null; vendor: string | null
   status: string; location: string | null; department: string | null; employee: string | null
   costCenter: string | null; project: string | null; assignedTo: string | null
-  purchaseDate: string | null; purchasePrice: number; residualValue: number
+  purchaseDate: string | null; purchasePrice: number
+  currency: string
+  exchangeRate: number; residualValue: number
   usefulLifeYears: number; depreciationMethod: DepreciationMethod
   warrantyExpiry: string | null; insurancePolicy: string | null; insuranceExpiry: string | null
   contractRef: string | null; calibrationDue: string | null
@@ -35,6 +37,7 @@ const SELECT = `
   SELECT id, name, type, category, model, manufacturer, serial, barcode, vendor, status,
          location, department, employee, cost_center AS "costCenter", project, assigned_to AS "assignedTo",
          purchase_date AS "purchaseDate", purchase_price::float AS "purchasePrice",
+         currency, exchange_rate::float AS "exchangeRate",
          residual_value::float AS "residualValue", useful_life_years::float AS "usefulLifeYears",
          depreciation_method AS "depreciationMethod", warranty_expiry AS "warrantyExpiry",
          insurance_policy AS "insurancePolicy", insurance_expiry AS "insuranceExpiry",
@@ -44,8 +47,12 @@ const SELECT = `
   FROM assets`
 
 function enrich(a: AssetRow, openMaint: number): EnrichedAsset {
+  // 26.8: depreciate on the Rial base (original price × the immutable
+  // registration rate) so multi-currency assets aggregate correctly; the
+  // stored original price/currency are never touched.
+  const rate = Number(a.exchangeRate) || 1
   const dep = depreciate({
-    purchasePrice: a.purchasePrice, residualValue: a.residualValue,
+    purchasePrice: a.purchasePrice * rate, residualValue: a.residualValue * rate,
     usefulLifeYears: a.usefulLifeYears, method: a.depreciationMethod,
     ageYears: ageInYears(a.purchaseDate),
   })

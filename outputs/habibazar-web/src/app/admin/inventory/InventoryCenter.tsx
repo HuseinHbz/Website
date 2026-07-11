@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { fmtMoney } from '@/lib/format'
+import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -71,6 +72,7 @@ type Toast = ReturnType<typeof useToast>['toast']
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({ t, fa }: { t: T; fa: boolean }) {
+  const { money: dmoney } = useDisplayCurrency()
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => {
@@ -85,10 +87,11 @@ function Dashboard({ t, fa }: { t: T; fa: boolean }) {
   const maxWh = Math.max(1, ...data.byWarehouse.map(w => w.onHand))
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><CurrencyPicker fa={fa} /></div>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <Kpi label={t('inv_kpiProducts')} value={k.totalProducts.toLocaleString()} icon="📦" />
         <Kpi label={t('inv_kpiOnHand')} value={k.totalOnHand.toLocaleString()} icon="🔢" />
-        <Kpi label={t('inv_kpiValue')} value={money(k.totalValue)} icon="💰" tone="ok" />
+        <Kpi label={t('inv_kpiValue')} value={dmoney(k.totalValue)} icon="💰" tone="ok" />
         <Kpi label={t('inv_kpiOut')} value={String(k.outOfStock)} icon="⛔" tone={k.outOfStock ? 'bad' : undefined} />
         <Kpi label={t('inv_kpiReorder')} value={String(k.needReorder)} icon="🔻" tone={k.needReorder ? 'warn' : undefined} />
         <Kpi label={t('inv_kpiOverstock')} value={String(k.overstock)} icon="🔺" />

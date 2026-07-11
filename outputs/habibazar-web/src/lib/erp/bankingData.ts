@@ -127,6 +127,9 @@ export async function cashFlow(months = 12) {
   const payments = await pgQuery<{ date: string; amount: number }>(`SELECT date, amount::float AS amount FROM purchase_payments`)
   const series = cashFlowSeries(receipts, payments, { months })
   const accounts = (await listAccounts()) as { id: number; name: string; currency: string; balance: number }[]
-  const bankBalance = accounts.reduce((s, a) => s + num(a.balance), 0)
-  return { ...series, accounts: accounts.map(a => ({ id: a.id, name: a.name, currency: a.currency, balance: num(a.balance) })), bankBalance }
+  // 26.8: consolidate FX accounts in the Rial base (per-account balances stay original).
+  const { rialRateFor } = await import('./currencyData')
+  let bankBalance = 0
+  for (const a of accounts) bankBalance += num(a.balance) * ((await rialRateFor(a.currency)) ?? 1)
+  return { ...series, accounts: accounts.map(a => ({ id: a.id, name: a.name, currency: a.currency, balance: num(a.balance) })), bankBalance: Math.round(bankBalance) }
 }

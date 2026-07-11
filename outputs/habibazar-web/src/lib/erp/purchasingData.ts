@@ -53,9 +53,9 @@ export async function evaluateVendor(vendorId: number, scores: { quality: number
 }
 
 export async function vendorPosition(vendorId: number) {
-  const inv = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(total),0) AS t FROM purchase_documents WHERE vendor_id=$1 AND doc_type='invoice' AND status NOT IN ('void','draft')`, [vendorId]))[0]?.t)
-  const paid = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(amount),0) AS t FROM purchase_payments WHERE vendor_id=$1`, [vendorId]))[0]?.t)
-  const cn = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(total),0) AS t FROM purchase_documents WHERE vendor_id=$1 AND doc_type='credit_note' AND status NOT IN ('void','draft')`, [vendorId]))[0]?.t)
+  const inv = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(total*exchange_rate),0) AS t FROM purchase_documents WHERE vendor_id=$1 AND doc_type='invoice' AND status NOT IN ('void','draft')`, [vendorId]))[0]?.t)
+  const paid = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(amount*exchange_rate),0) AS t FROM purchase_payments WHERE vendor_id=$1`, [vendorId]))[0]?.t)
+  const cn = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(total*exchange_rate),0) AS t FROM purchase_documents WHERE vendor_id=$1 AND doc_type='credit_note' AND status NOT IN ('void','draft')`, [vendorId]))[0]?.t)
   return vendorPayable({ invoicedTotal: inv, paidTotal: paid, creditNotesTotal: cn })
 }
 
@@ -147,8 +147,8 @@ export async function receiveDocument(
   docId: number, warehouseId: number,
   linesIn?: { lineId: number; qty: number }[], userId?: string,
 ): Promise<{ ok: boolean; error?: string; received: number; status?: string }> {
-  const doc = (await pgQuery<{ doc_type: string; status: string; doc_no: string | null }>(
-    `SELECT doc_type, status, doc_no FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  const doc = (await pgQuery<{ doc_type: string; status: string; doc_no: string | null; exchange_rate: number }>(
+    `SELECT doc_type, status, doc_no, exchange_rate::float AS exchange_rate FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!doc) return { ok: false, error: 'Document not found', received: 0 }
   if (doc.doc_type !== 'receipt') return { ok: false, error: 'Only goods-receipt (GRN) documents can be received', received: 0 }
   if (['void', 'rejected'].includes(doc.status)) return { ok: false, error: 'Document is not receivable', received: 0 }
@@ -165,7 +165,9 @@ export async function receiveDocument(
     await pgQuery(
       `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
        VALUES ($1,$2,'receipt',$3,$4,$5,$6,${NOW})`,
-      [l.product_id, warehouseId, take, num(l.unit_price), `GRN ${doc.doc_no ?? docId}`, userId ?? null])
+      // 26.8: stock ledger costs are kept in the Rial base (line price × the
+      // document's registration rate) so FIFO/LIFO/WAVG valuation is uniform.
+      [l.product_id, warehouseId, take, num(l.unit_price) * (num(doc.exchange_rate) || 1), `GRN ${doc.doc_no ?? docId}`, userId ?? null])
     await pgQuery(`UPDATE purchase_document_lines SET received_qty = received_qty + $2 WHERE id=$1`, [l.id, take])
     received++
   }
@@ -266,7 +268,7 @@ import { purchaseAnalytics, type PurchaseDocFact } from './purchasing'
 /** Purchasing analytics — one query, the pure engine does the aggregation. */
 export async function analytics(months = 12) {
   const rows = await pgQuery<{ doc_type: string; status: string; total: number; date: string; vendor_name: string | null }>(
-    `SELECT d.doc_type, d.status, d.total, d.date, v.name AS vendor_name
+    `SELECT d.doc_type, d.status, (d.total*d.exchange_rate) AS total, d.date, v.name AS vendor_name
      FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id = d.vendor_id`)
   const facts: PurchaseDocFact[] = rows.map(r => ({
     docType: r.doc_type as PurchaseDocFact['docType'], status: r.status,
@@ -277,9 +279,9 @@ export async function analytics(months = 12) {
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export async function overview() {
-  const orders = (await pgQuery<{ status: string; total: number }>(`SELECT status, total FROM purchase_documents WHERE doc_type='order'`)).map(o => ({ status: o.status as PurchaseStatus, total: num(o.total) }))
+  const orders = (await pgQuery<{ status: string; total: number }>(`SELECT status, (total*exchange_rate) AS total FROM purchase_documents WHERE doc_type='order'`)).map(o => ({ status: o.status as PurchaseStatus, total: num(o.total) }))
   const pendingApproval = num((await pgQuery<{ c: number }>(`SELECT COUNT(*)::int AS c FROM purchase_documents WHERE status='submitted'`))[0]?.c)
-  const payables = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(total-paid_total),0) AS t FROM purchase_documents WHERE doc_type='invoice' AND status IN ('confirmed','partial')`))[0]?.t)
+  const payables = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM((total-paid_total)*exchange_rate),0) AS t FROM purchase_documents WHERE doc_type='invoice' AND status IN ('confirmed','partial')`))[0]?.t)
   const vendors = num((await pgQuery<{ c: number }>(`SELECT COUNT(*)::int AS c FROM purchase_vendors WHERE active=true`))[0]?.c)
   const kpis = purchaseKpis({ orders, pendingApproval, payables, vendors })
   const topVendors = await pgQuery(`SELECT name, score, grade FROM purchase_vendors WHERE active=true ORDER BY score DESC LIMIT 5`)

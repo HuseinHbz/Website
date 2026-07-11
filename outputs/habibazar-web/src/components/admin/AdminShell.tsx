@@ -9,6 +9,7 @@ import { CommandPalette } from './CommandPalette'
 import { Breadcrumb } from './Breadcrumb'
 import { AdminLocaleProvider } from '@/lib/admin/locale'
 import { NavPrefsProvider } from '@/lib/admin/navPrefs'
+import { CurrencyDisplayProvider } from '@/lib/admin/currencyDisplay'
 import type { AdminUser } from '@/lib/admin/auth'
 
 interface Props {
@@ -115,8 +116,10 @@ export function AdminShell({ user, title, children }: Props) {
         />
         <main id="admin-main" className="flex-1 overflow-auto p-4 lg:p-6">
           <AdminLocaleProvider locale={locale}>
-            <Breadcrumb locale={locale} />
-            {children}
+            <CurrencyDisplayProvider userId={user.id}>
+              <Breadcrumb locale={locale} />
+              {children}
+            </CurrencyDisplayProvider>
           </AdminLocaleProvider>
         </main>
       </div>

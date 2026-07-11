@@ -948,6 +948,8 @@ export async function runMigrations() {
     ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
     ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
     ALTER TABLE assets ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
+    -- 26.8: the Rial rate captured at registration (original info immutable).
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
 
     -- Phase 26.7: global ERP configuration (currency defaults, formatting).
     CREATE TABLE IF NOT EXISTS erp_settings (
@@ -1111,6 +1113,17 @@ export async function runMigrations() {
     INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
       SELECT '2150', 'Due To Affiliates', 'پرداختنی به شرکت‌های گروه', 'liability', 1
       WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='2150');
+
+    -- Phase 26.8: currency revaluation accounts (idempotent seed).
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '1190', 'FX Revaluation Adjustment', 'تعدیل تسعیر ارز', 'asset', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='1190');
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '4900', 'Currency Gain', 'سود تسعیر ارز', 'revenue', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='4900');
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '6980', 'Currency Loss', 'زیان تسعیر ارز', 'expense', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='6980');
 
     -- Enterprise Inventory (Phase 21 ERP, Module 4). Multi-warehouse stock with
     -- bin locations, lot/serial tracking, a full move ledger and FIFO/LIFO/WAVG

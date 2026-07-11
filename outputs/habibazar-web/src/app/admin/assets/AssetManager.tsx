@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { fmtMoney } from '@/lib/format'
+import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -64,6 +65,7 @@ type T = ReturnType<typeof useT>
 type Toast = ReturnType<typeof useToast>['toast']
 
 function Dashboard({ t }: { t: T }) {
+  const { money: dmoney } = useDisplayCurrency()
   const [d, setD] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/assets/overview'); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [])
@@ -74,12 +76,13 @@ function Dashboard({ t }: { t: T }) {
   const maxType = Math.max(1, ...d.byType.map(x => x.count))
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><CurrencyPicker /></div>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <Kpi label={t('am_kTotal')} value={String(k.total)} icon="🖥️" />
         <Kpi label={t('am_kActive')} value={String(k.active)} icon="✅" tone="ok" />
-        <Kpi label={t('am_kCost')} value={money(k.totalCost)} icon="💵" />
-        <Kpi label={t('am_kBook')} value={money(k.totalBookValue)} icon="📉" tone="ok" />
-        <Kpi label={t('am_kDep')} value={money(k.totalDepreciation)} icon="➖" />
+        <Kpi label={t('am_kCost')} value={dmoney(k.totalCost)} icon="💵" />
+        <Kpi label={t('am_kBook')} value={dmoney(k.totalBookValue)} icon="📉" tone="ok" />
+        <Kpi label={t('am_kDep')} value={dmoney(k.totalDepreciation)} icon="➖" />
         <Kpi label={t('am_kOpenMaint')} value={String(k.openMaintenance)} icon="🔧" tone={k.openMaintenance ? 'warn' : undefined} />
         <Kpi label={t('am_kWarrantyExp')} value={String(k.warrantyExpiring)} icon="⏳" tone={k.warrantyExpiring ? 'warn' : undefined} />
         <Kpi label={t('am_kWarrantyExpired')} value={String(k.warrantyExpired)} icon="⛔" tone={k.warrantyExpired ? 'bad' : undefined} />

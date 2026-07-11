@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { fmtMoney } from '@/lib/format'
+import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, Btn } from '@/components/admin/ui'
@@ -24,6 +25,7 @@ const money = (n: number | null | undefined) => fmtMoney(n, { signed: true })
 function num(n: number | undefined | null): string { return (n ?? 0).toLocaleString() }
 
 export function ExecutiveDashboard() {
+  const { money: dmoney } = useDisplayCurrency()
   const t = useT()
   const [ov, setOv] = useState<Overview | null>(null)
   const [tr, setTr] = useState<Traffic | null>(null)
@@ -67,12 +69,13 @@ export function ExecutiveDashboard() {
       )}
 
       {/* Hero KPIs */}
+      <div className="flex justify-end"><CurrencyPicker /></div>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Hero label={t('dash_netIncome')} value={money(f?.netIncome)} icon="💰" href="/admin/finance" tone={(f?.netIncome ?? 0) >= 0 ? 'ok' : 'bad'} />
-        <Hero label={t('dash_cash')} value={money(f?.cash)} icon="🏦" href="/admin/finance" />
-        <Hero label={t('dash_invValue')} value={money(inv?.totalValue)} icon="📦" href="/admin/inventory" />
-        <Hero label={t('dash_assetValue')} value={money(a?.totalBookValue)} icon="🖥️" href="/admin/assets" />
-        <Hero label={t('dash_pipeline')} value={money(crm?.openValue)} icon="📇" href="/admin/crm" />
+        <Hero label={t('dash_netIncome')} value={dmoney(f?.netIncome ?? 0)} icon="💰" href="/admin/finance" tone={(f?.netIncome ?? 0) >= 0 ? 'ok' : 'bad'} />
+        <Hero label={t('dash_cash')} value={dmoney(f?.cash ?? 0)} icon="🏦" href="/admin/finance" />
+        <Hero label={t('dash_invValue')} value={dmoney(inv?.totalValue ?? 0)} icon="📦" href="/admin/inventory" />
+        <Hero label={t('dash_assetValue')} value={dmoney(a?.totalBookValue ?? 0)} icon="🖥️" href="/admin/assets" />
+        <Hero label={t('dash_pipeline')} value={dmoney(crm?.openValue ?? 0)} icon="📇" href="/admin/crm" />
         <Hero label={t('dash_aiCalls')} value={num(ai?.totalCalls)} icon="✨" href="/admin/ai-analytics" />
       </div>
 

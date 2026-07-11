@@ -455,6 +455,27 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   module grid (never blank); System workspace links Company/Currency/Document/
   Security/Audit pages. Live-PG verified (10 round-trip tests incl. IRR/IRT/
   USD/EUR invoices).
+- **Phase 26.8 — Multi-Currency Conversion + Revaluation Engine** (report:
+  `docs/governance/phase26.8-multi-currency-engine-report.md`). **NO DATA
+  MUTATION**: documents keep original currency/amount/registration-rate;
+  conversion is display-time only. `formatMoney(amount, source, target,
+  rates)` + `convertFromBase` in `lib/format.ts` (mandate-exact tests);
+  **CurrencyDisplayProvider/useDisplayCurrency/CurrencyPicker**
+  (`lib/admin/currencyDisplay.tsx`, per-user localStorage pref, mounted in
+  AdminShell) drive dynamic KPIs on the 6 ERP dashboards (Finance/Sales/
+  Purchasing/Inventory/Assets/Executive). KPI aggregates are Rial-base
+  (`SUM(total×exchange_rate)`, legacy rate=1 unchanged) across sales/
+  purchasing/credit/payables; assets gained an immutable registration
+  `exchange_rate` (book value depreciates on the Rial base); GRN receipts
+  write Rial-base `unit_cost`; consolidated bank cash converts per-account.
+  **Revaluation Engine** (`erp/revaluation.ts` pure + `revaluationData.ts`):
+  live FX positions (assets + open AR/AP) vs booked rates → delta-only
+  posted entry on seeded 1190/4900/6980 (gain: Dr 1190/Cr 4900; loss:
+  Dr 6980/Cr 1190; payables invert; cumulative — re-runs book nothing),
+  admin-gated API + Finance→Currency Revaluation section. Reports: Currency
+  Exposure + Currency Gain/Loss (11 total). setRate audits old+new rate.
+  Live-PG verified: 2000-USD asset → USD/IRT/IRR/EUR views; 5000-USD invoice
+  immutable through a rate change; 3.5B gain booked once + 700M incremental.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

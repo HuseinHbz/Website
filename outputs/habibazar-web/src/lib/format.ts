@@ -59,3 +59,30 @@ export function fmtMoney(n: number | null | undefined, opts: MoneyOptions = {}):
   const { currency, ...rest } = opts
   return formatCurrency(n, currency, rest)
 }
+
+// ── Universal money formatter (Phase 26.8) ───────────────────────────────────
+import { convert as convertCurrency, type RateMap } from '@/lib/erp/currency'
+
+/**
+ * THE cross-currency formatter (Task 3): converts `amount` from its source
+ * currency to the target via the Rial base using the supplied rate map (code →
+ * Rial per unit; IRR=1 and IRT=10 are built in), then formats with the
+ * target's symbol. Pure — usable on client and server. Source documents are
+ * never mutated; this is display-time conversion only.
+ */
+export function formatMoney(
+  amount: number | null | undefined,
+  sourceCurrency: CurrencyCode,
+  targetCurrency: CurrencyCode,
+  rates: RateMap = {},
+  opts: Omit<MoneyOptions, 'currency'> = {},
+): string {
+  const v = convertCurrency(amount ?? 0, sourceCurrency, targetCurrency, rates)
+  const max = targetCurrency === 'IRR' || targetCurrency === 'IRT' ? 0 : 2
+  return formatCurrency(v, targetCurrency, { max, ...opts })
+}
+
+/** Convert a Rial-base amount to the target display currency (no formatting). */
+export function convertFromBase(rialAmount: number, targetCurrency: CurrencyCode, rates: RateMap = {}): number {
+  return convertCurrency(rialAmount, 'IRR', targetCurrency, rates)
+}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fmtMoney, setDefaultCurrency } from '@/lib/format'
+import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -67,6 +68,7 @@ type T = ReturnType<typeof useT>
 type Toast = ReturnType<typeof useToast>['toast']
 
 function Dashboard({ t }: { t: T }) {
+  const { money: dmoney } = useDisplayCurrency()
   const [d, setD] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/finance/overview'); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [])
@@ -76,14 +78,15 @@ function Dashboard({ t }: { t: T }) {
   const k = d.kpis
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><CurrencyPicker /></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label={t('fin_kAssets')} value={money(k.totalAssets)} icon="🏦" />
-        <Kpi label={t('fin_kLiabilities')} value={money(k.totalLiabilities)} icon="📕" />
-        <Kpi label={t('fin_kEquity')} value={money(k.totalEquity)} icon="📗" tone="ok" />
-        <Kpi label={t('fin_kCash')} value={money(k.cash)} icon="💵" />
-        <Kpi label={t('fin_kRevenue')} value={money(k.revenue)} icon="📈" tone="ok" />
-        <Kpi label={t('fin_kExpenses')} value={money(k.expenses)} icon="📉" />
-        <Kpi label={t('fin_kNetIncome')} value={money(k.netIncome)} icon="💰" tone={k.netIncome >= 0 ? 'ok' : 'bad'} />
+        <Kpi label={t('fin_kAssets')} value={dmoney(k.totalAssets)} icon="🏦" />
+        <Kpi label={t('fin_kLiabilities')} value={dmoney(k.totalLiabilities)} icon="📕" />
+        <Kpi label={t('fin_kEquity')} value={dmoney(k.totalEquity)} icon="📗" tone="ok" />
+        <Kpi label={t('fin_kCash')} value={dmoney(k.cash)} icon="💵" />
+        <Kpi label={t('fin_kRevenue')} value={dmoney(k.revenue)} icon="📈" tone="ok" />
+        <Kpi label={t('fin_kExpenses')} value={dmoney(k.expenses)} icon="📉" />
+        <Kpi label={t('fin_kNetIncome')} value={dmoney(k.netIncome)} icon="💰" tone={k.netIncome >= 0 ? 'ok' : 'bad'} />
         <Kpi label={t('fin_kEntries')} value={`${d.byStatus.posted ?? 0} / ${d.byStatus.draft ?? 0}`} icon="🧾" />
       </div>
       <div className="grid lg:grid-cols-2 gap-4">
@@ -405,6 +408,7 @@ function CurrencyView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
           <p className="w-full text-3xs text-text-tertiary">{L(fa, 'IRR is the base (1 Toman = 10 Rial); USD/EUR convert via the daily rates below. All KPIs and documents follow this configuration.', 'ریال مبناست (۱ تومان = ۱۰ ریال)؛ دلار/یورو با نرخ روزانه زیر تبدیل می‌شوند. همه KPIها و اسناد از همین پیکربندی پیروی می‌کنند.')}</p>
         </Card>
       )}
+      <RevaluationSection fa={fa} toast={toast} />
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-text-primary">{L(fa, 'Set exchange rate', 'ثبت نرخ ارز')}</h3>
@@ -828,5 +832,71 @@ function IntercompanyModal({ fa, companies, onClose, onDone }: { fa: boolean; co
         </div>
       </div>
     </Modal>
+  )
+}
+
+/** Currency revaluation (Phase 26.8): FX exposure + book the unrealized gain/loss. */
+function RevaluationSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  interface Pos { key: string; label: string; kind: string; currency: string; amountForeign: number; bookedRate: number; currentRate: number; bookedValue: number; currentValue: number; gainLoss: number }
+  interface Prev { positions: Pos[]; exposure: { currency: string; amountForeign: number; currentValue: number; gainLoss: number; positions: number }[]; totalGain: number; totalLoss: number; net: number; alreadyBooked: number; deltaToBook: number; history: { entryNo: string; date: string; gain: number; loss: number }[] }
+  const [d, setD] = useState<Prev | null>(null)
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(async () => {
+    const r = await fetch('/api/admin/erp/finance/revaluation').then(x => x.ok ? x.json() : null).catch(() => null)
+    if (r) setD(r)
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function book() {
+    if (!confirm(L(fa, 'Book the revaluation delta as a posted journal entry?', 'اختلاف تسعیر به‌صورت سند قطعی ثبت شود؟'))) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/admin/erp/finance/revaluation', { method: 'POST' })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok) { toast(L(fa, `Booked ${j.entryNo}`, `سند ${j.entryNo} ثبت شد`), 'success'); load() }
+      else toast(j.error || L(fa, 'Failed', 'ناموفق'), 'error')
+    } finally { setBusy(false) }
+  }
+  if (!d) return null
+  const kindFa: Record<string, string> = { asset: 'دارایی', receivable: 'دریافتنی', payable: 'پرداختنی' }
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-xs font-semibold text-text-primary">{L(fa, 'Currency revaluation — unrealized FX gain/loss', 'تسعیر ارز — سود/زیان شناسایی‌نشده')}</h4>
+        <Btn size="sm" onClick={book} disabled={busy || d.deltaToBook === 0}>{L(fa, 'Book revaluation entry', 'ثبت سند تسعیر')}</Btn>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {([
+          [L(fa, 'Unrealized gain', 'سود شناسایی‌نشده'), d.totalGain, d.totalGain > 0],
+          [L(fa, 'Unrealized loss', 'زیان شناسایی‌نشده'), d.totalLoss, false],
+          [L(fa, 'Already booked', 'ثبت‌شده قبلی'), d.alreadyBooked, true],
+          [L(fa, 'Delta to book', 'قابل ثبت'), d.deltaToBook, d.deltaToBook >= 0],
+        ] as const).map(([label, v, ok]) => (
+          <div key={label} className={`rounded-xl p-3 bg-surface-2 border ${ok ? 'border-success/40' : 'border-danger/40'}`}>
+            <p className="text-xs text-text-tertiary">{label}</p><p className="text-lg font-bold text-text-primary">{Number(v).toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+      {d.positions.length === 0 ? (
+        <p className="text-xs text-text-tertiary">{L(fa, 'No open foreign-currency positions (assets, receivables, payables in USD/EUR/AED).', 'موقعیت ارزی بازی وجود ندارد (دارایی/دریافتنی/پرداختنی دلاری، یورویی یا درهمی).')}</p>
+      ) : (
+        <div className="max-h-64 overflow-y-auto space-y-1">
+          {d.positions.map(p => (
+            <div key={p.key} className="grid grid-cols-12 items-center gap-2 text-xs border border-subtle rounded-lg px-2 py-1.5">
+              <span className="col-span-3 text-text-primary truncate">{p.label}</span>
+              <span className="col-span-2"><Badge color={p.kind === 'payable' ? 'yellow' : 'blue'}>{fa ? (kindFa[p.kind] || p.kind) : p.kind}</Badge></span>
+              <span className="col-span-2 font-mono text-text-secondary">{p.amountForeign.toLocaleString()} {p.currency}</span>
+              <span className="col-span-2 text-text-tertiary">{p.bookedRate.toLocaleString()} → {p.currentRate.toLocaleString()}</span>
+              <span className={`col-span-3 text-end font-semibold ${p.gainLoss >= 0 ? 'text-success-text' : 'text-danger-text'}`}>{p.gainLoss.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {d.history.length > 0 && (
+        <div className="text-3xs text-text-tertiary">
+          {L(fa, 'Booked entries:', 'اسناد ثبت‌شده:')} {d.history.map(h => `${h.entryNo} (${(h.gain - h.loss).toLocaleString()})`).join(' · ')}
+        </div>
+      )}
+      <p className="text-3xs text-text-tertiary">{L(fa, 'Original documents keep their currency and rate — the delta vs already-booked revaluations posts to 1190/4900/6980. Administrator only.', 'اسناد اصلی با ارز و نرخ خود دست‌نخورده می‌مانند — فقط اختلاف نسبت به تسعیرهای قبلی روی حساب‌های ۱۱۹۰/۴۹۰۰/۶۹۸۰ ثبت می‌شود. فقط مدیر.')}</p>
+    </Card>
   )
 }

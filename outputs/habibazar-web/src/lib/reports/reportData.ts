@@ -33,6 +33,8 @@ export const REPORTS: ReportDef[] = [
   { id: 'inv_valuation', module: 'inventory', nameEn: 'Inventory Valuation', nameFa: 'ارزش‌گذاری انبار', groupField: 'category', measureField: 'value' },
   { id: 'assets_register', module: 'assets', nameEn: 'Asset Register', nameFa: 'دفتر دارایی‌ها', groupField: 'category', measureField: 'bookValue' },
   { id: 'projects_costing', module: 'projects', nameEn: 'Project Costing', nameFa: 'هزینه‌یابی پروژه', groupField: 'name', measureField: 'profit' },
+  { id: 'currency_exposure', module: 'financial', nameEn: 'Currency Exposure', nameFa: 'پوشش ارزی', groupField: 'currency', measureField: 'gainLoss' },
+  { id: 'currency_gain_loss', module: 'financial', nameEn: 'Currency Gain/Loss (Exchange Differences)', nameFa: 'سود/زیان تسعیر ارز', groupField: 'date', measureField: 'net' },
 ]
 
 export interface ReportOutput { columns: Column[]; rows: Row[]; summary: { label: string; value: number }[] }
@@ -69,6 +71,29 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Customer' }, { key: 'invoiced', label: 'Invoiced' }, { key: 'paid', label: 'Paid' }, { key: 'outstanding', label: 'Outstanding' }],
         rows,
         summary: [{ label: 'Invoiced', value: money(c.reduce((s, x) => s + x.invoiced, 0)) }, { label: 'Outstanding', value: money(c.reduce((s, x) => s + x.outstanding, 0)) }],
+      }
+    }
+    case 'currency_exposure': {
+      const { previewRevaluation } = await import('@/lib/erp/revaluationData')
+      const p = await previewRevaluation()
+      const rows: Row[] = p.positions.map(x => ({ position: x.label, kind: x.kind, currency: x.currency, amountForeign: x.amountForeign, bookedRate: x.bookedRate, currentRate: x.currentRate, bookedValue: x.bookedValue, currentValue: x.currentValue, gainLoss: x.gainLoss }))
+      return {
+        columns: [{ key: 'position', label: 'Position' }, { key: 'kind', label: 'Kind' }, { key: 'currency', label: 'Currency' }, { key: 'amountForeign', label: 'Foreign amount' }, { key: 'bookedRate', label: 'Booked rate' }, { key: 'currentRate', label: 'Current rate' }, { key: 'bookedValue', label: 'Booked (IRR)' }, { key: 'currentValue', label: 'Current (IRR)' }, { key: 'gainLoss', label: 'Unrealized G/L (IRR)' }],
+        rows,
+        summary: [{ label: 'Unrealized gain', value: p.totalGain }, { label: 'Unrealized loss', value: p.totalLoss }, { label: 'Net', value: p.net }, { label: 'Already booked', value: p.alreadyBooked }],
+      }
+    }
+    case 'currency_gain_loss': {
+      const { revaluationHistory } = await import('@/lib/erp/revaluationData')
+      const h = (await revaluationHistory(200)) as { entryNo: string; date: string; memo: string | null; gain: number; loss: number }[]
+      const rows: Row[] = h.map(x => ({ entryNo: x.entryNo, date: x.date, memo: x.memo ?? '', gain: x.gain, loss: x.loss, net: Math.round(x.gain - x.loss) }))
+      return {
+        columns: [{ key: 'entryNo', label: 'Entry' }, { key: 'date', label: 'Date' }, { key: 'memo', label: 'Memo' }, { key: 'gain', label: 'Gain (IRR)' }, { key: 'loss', label: 'Loss (IRR)' }, { key: 'net', label: 'Net (IRR)' }],
+        rows,
+        summary: [
+          { label: 'Total gain', value: rows.reduce((s2, r) => s2 + Number(r.gain), 0) },
+          { label: 'Total loss', value: rows.reduce((s2, r) => s2 + Number(r.loss), 0) },
+        ],
       }
     }
     case 'purchase_register': {

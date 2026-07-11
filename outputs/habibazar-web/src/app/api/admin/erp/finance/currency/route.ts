@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
-import { listCurrencies, latestRates, rateHistory, setRate } from '@/lib/erp/currencyData'
+import { listCurrencies, latestRates, rateHistory, setRate, rialRateFor } from '@/lib/erp/currencyData'
 import { convert } from '@/lib/erp/currency'
 
 export const dynamic = 'force-dynamic'
@@ -41,8 +41,9 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {
+    const prev = await rialRateFor(d.code.toUpperCase())
     await setRate(d.code.toUpperCase(), d.rateDate, d.baseRate, auth.user.id)
-    await logAction(auth.user, 'erp.currency.setRate', 'erp_exchange_rates', d.code, { rateDate: d.rateDate, baseRate: d.baseRate })
+    await logAction(auth.user, 'erp.currency.setRate', 'erp_exchange_rates', d.code, { rateDate: d.rateDate, oldRate: prev, newRate: d.baseRate })
     return NextResponse.json({ ok: true })
   } catch (e) { return apiError(e, 'Failed to set rate') }
 }

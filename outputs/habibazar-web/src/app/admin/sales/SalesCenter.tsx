@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fmtMoney } from '@/lib/format'
+import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -52,6 +53,7 @@ type T = ReturnType<typeof useT>
 type Toast = ReturnType<typeof useToast>['toast']
 
 function Dashboard({ t }: { t: T }) {
+  const { money: dmoney } = useDisplayCurrency()
   const [d, setD] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/sales/overview'); if (r.ok) setD(await r.json()) } finally { setLoading(false) } }, [])
@@ -62,22 +64,23 @@ function Dashboard({ t }: { t: T }) {
   const maxTop = Math.max(1, ...d.topCustomers.map(c => c.invoiced))
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><CurrencyPicker /></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi label={t('sales_kCustomers')} value={String(k.customers)} icon="👥" />
         <Kpi label={t('sales_kQuotes')} value={String(k.quotes)} icon="📄" />
         <Kpi label={t('sales_kOrders')} value={String(k.orders)} icon="🧾" />
-        <Kpi label={t('sales_kWon')} value={money(k.wonValue)} icon="🏆" tone="ok" />
-        <Kpi label={t('sales_kInvoiced')} value={money(k.invoiced)} icon="💳" />
-        <Kpi label={t('sales_kCollected')} value={money(k.collected)} icon="💰" tone="ok" />
-        <Kpi label={t('sales_kOutstanding')} value={money(k.outstanding)} icon="⏳" tone={k.outstanding > 0 ? 'warn' : undefined} />
-        <Kpi label={t('sales_kTax')} value={money(k.taxCollected)} icon="🧮" />
+        <Kpi label={t('sales_kWon')} value={dmoney(k.wonValue)} icon="🏆" tone="ok" />
+        <Kpi label={t('sales_kInvoiced')} value={dmoney(k.invoiced)} icon="💳" />
+        <Kpi label={t('sales_kCollected')} value={dmoney(k.collected)} icon="💰" tone="ok" />
+        <Kpi label={t('sales_kOutstanding')} value={dmoney(k.outstanding)} icon="⏳" tone={k.outstanding > 0 ? 'warn' : undefined} />
+        <Kpi label={t('sales_kTax')} value={dmoney(k.taxCollected)} icon="🧮" />
       </div>
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-text-primary mb-3">{t('sales_topCustomers')}</h3>
           {d.topCustomers.length === 0 ? <p className="text-xs text-text-tertiary">{t('sales_empty')}</p> : (
             <div className="space-y-3">{d.topCustomers.map(c => (
-              <div key={c.name}><div className="flex justify-between text-xs mb-1"><span className="text-text-secondary">{c.name}</span><span className="text-text-tertiary">{money(c.invoiced)}</span></div><div className="h-2 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${(c.invoiced / maxTop) * 100}%` }} /></div></div>
+              <div key={c.name}><div className="flex justify-between text-xs mb-1"><span className="text-text-secondary">{c.name}</span><span className="text-text-tertiary">{dmoney(c.invoiced)}</span></div><div className="h-2 rounded-full bg-sunken overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${(c.invoiced / maxTop) * 100}%` }} /></div></div>
             ))}</div>
           )}
         </Card>
