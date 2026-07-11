@@ -66,6 +66,8 @@ export interface DocTemplateConfig {
   showQr?: boolean
   /** Code 39 barcode of the document number (opt-in). */
   showBarcode?: boolean
+  /** Render right-to-left with Persian labels (Iranian invoice templates). */
+  rtl?: boolean
   customFields?: { label: string; value: string }[]
 }
 
@@ -143,10 +145,15 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   const t = m.template ?? {}
   const accent = safeAccent(t.accentColor)
   const show = (v: boolean | undefined) => v !== false
+  // 26.10: Persian (RTL) invoice templates — direction + localized labels.
+  const rtl = t.rtl === true
+  const L = rtl
+    ? { to: 'گیرنده', subtotal: 'جمع جزء', discount: 'تخفیف', tax: 'مالیات', total: 'جمع کل', desc: 'شرح', qty: 'تعداد', unit: 'قیمت واحد', amount: 'مبلغ', payment: 'شرایط پرداخت', terms: 'شرایط و ضوابط', verify: 'کد تأیید', print: 'چاپ / ذخیره PDF', reg: 'شماره ثبت', nid: 'شناسه ملی', eco: 'کد اقتصادی', taxno: 'شماره مالیاتی', vat: 'شماره ارزش افزوده' }
+    : { to: 'To', subtotal: 'Subtotal', discount: 'Discount', tax: 'Tax', total: 'Total', desc: 'Description', qty: 'Qty', unit: 'Unit price', amount: 'Amount', payment: 'Payment', terms: 'Terms &amp; Conditions', verify: 'Verify', print: 'Print / Save PDF', reg: 'Reg. no', nid: 'National ID', eco: 'Economic code', taxno: 'Tax no', vat: 'VAT no' }
   const idLine = (label: string, v?: string) => (v ? `<div>${escapeHtml(label)}: ${escapeHtml(v)}</div>` : '')
   const identity = [
-    idLine('Reg. no', b.regNo), idLine('National ID', b.nationalId), idLine('Economic code', b.economicCode),
-    idLine('Tax no', b.taxNo), idLine('VAT no', b.vatNo),
+    idLine(L.reg, b.regNo), idLine(L.nid, b.nationalId), idLine(L.eco, b.economicCode),
+    idLine(L.taxno, b.taxNo), idLine(L.vat, b.vatNo),
   ].join('')
   const contactBits = [b.phone, b.email, b.website, b.address, b.postalCode ? `Postal ${b.postalCode}` : '']
     .filter(Boolean).map(x => escapeHtml(String(x))).join(' · ')
@@ -165,14 +172,14 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   const metaRows = p.meta.map(x => `<div class="meta-row"><span>${escapeHtml(x.label)}</span><strong>${escapeHtml(x.value)}</strong></div>`).join('')
   const totals = hasLines ? `
     <table class="totals">
-      <tr><td>Subtotal</td><td class="num">${money(p.subtotal, p.currency)}</td></tr>
-      ${p.discountTotal ? `<tr><td>Discount</td><td class="num">-${money(p.discountTotal, p.currency)}</td></tr>` : ''}
-      ${p.taxTotal ? `<tr><td>Tax</td><td class="num">${money(p.taxTotal, p.currency)}</td></tr>` : ''}
-      <tr class="grand"><td>Total</td><td class="num">${money(p.total, p.currency)}</td></tr>
+      <tr><td>${L.subtotal}</td><td class="num">${money(p.subtotal, p.currency)}</td></tr>
+      ${p.discountTotal ? `<tr><td>${L.discount}</td><td class="num">-${money(p.discountTotal, p.currency)}</td></tr>` : ''}
+      ${p.taxTotal ? `<tr><td>${L.tax}</td><td class="num">${money(p.taxTotal, p.currency)}</td></tr>` : ''}
+      <tr class="grand"><td>${L.total}</td><td class="num">${money(p.total, p.currency)}</td></tr>
     </table>` : ''
 
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="${rtl ? 'fa' : 'en'}" dir="${rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(m.title)} ${escapeHtml(m.number)}</title>
 <style>
   * { box-sizing: border-box; }
@@ -216,7 +223,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   @media print { .print-btn { display: none; } body { padding: 0; } }
 </style></head>
 <body>
-  <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+  <button class="print-btn" onclick="window.print()">${L.print}</button>
   ${t.watermarkText ? `<div class="watermark"><span>${escapeHtml(t.watermarkText)}</span></div>` : ''}
   <div class="doc">
     <div class="head">
@@ -230,16 +237,16 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
     </div>
     ${t.headerNote ? `<div class="body">${escapeHtml(t.headerNote)}</div>` : ''}
     <div class="parties">
-      <div class="party"><div class="label">To</div><div class="name">${escapeHtml(m.partyName)}</div>${m.partyInfo ? `<div class="info">${escapeHtml(m.partyInfo)}</div>` : ''}</div>
+      <div class="party"><div class="label">${L.to}</div><div class="name">${escapeHtml(m.partyName)}</div>${m.partyInfo ? `<div class="info">${escapeHtml(m.partyInfo)}</div>` : ''}</div>
     </div>
     ${metaRows || customRows ? `<div class="meta">${metaRows}${customRows}</div>` : ''}
     ${p.body ? `<div class="body">${escapeHtml(p.body)}</div>` : ''}
-    ${hasLines ? `<table class="items"><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+    ${hasLines ? `<table class="items"><thead><tr><th>${L.desc}</th><th class="num">${L.qty}</th><th class="num">${L.unit}</th><th class="num">${L.amount}</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
     ${totals}
-    ${t.paymentInstructions ? `<div class="terms"><strong>Payment</strong><br>${escapeHtml(t.paymentInstructions)}</div>` : ''}
-    ${t.terms ? `<div class="terms"><strong>Terms &amp; Conditions</strong><br>${escapeHtml(t.terms)}</div>` : ''}
+    ${t.paymentInstructions ? `<div class="terms"><strong>${L.payment}</strong><br>${escapeHtml(t.paymentInstructions)}</div>` : ''}
+    ${t.terms ? `<div class="terms"><strong>${L.terms}</strong><br>${escapeHtml(t.terms)}</div>` : ''}
     <div class="foot">
-      ${show(t.showQr) ? `<div class="verify"><img src="${qrDataUrl}" alt="verify"><br>Verify: ${escapeHtml(m.verifyCode)}<br>${escapeHtml(m.verifyUrl)}</div>` : '<div></div>'}
+      ${show(t.showQr) ? `<div class="verify"><img src="${qrDataUrl}" alt="verify"><br>${L.verify}: ${escapeHtml(m.verifyCode)}<br>${escapeHtml(m.verifyUrl)}</div>` : '<div></div>'}
       <div class="seal-sign">
         ${show(t.showSeal) && b.sealUrl ? `<img class="seal" src="${escapeHtml(b.sealUrl)}" alt="seal">` : ''}
         <div class="sign">

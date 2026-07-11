@@ -228,7 +228,7 @@ type Toast2 = ReturnType<typeof useToast>['toast']
 interface TplConfig {
   variant?: string; accentColor?: string; watermarkText?: string; headerNote?: string
   terms?: string; paymentInstructions?: string; footerNote?: string
-  showLogo?: boolean; showSeal?: boolean; showSignature?: boolean; showQr?: boolean; showBarcode?: boolean
+  showLogo?: boolean; showSeal?: boolean; showSignature?: boolean; showQr?: boolean; showBarcode?: boolean; rtl?: boolean
   customFields?: { label: string; value: string }[]
 }
 const L2 = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
@@ -276,7 +276,7 @@ function InvoiceDesigner({ rtl, toast, templates, onTemplatesChange }: { rtl: bo
   const set = (patch: Partial<TplConfig>) => setCfg(c => ({ ...c, ...patch }))
   const toggles: [keyof TplConfig, string, string, boolean][] = [
     ['showLogo', 'Logo', 'لوگو', true], ['showSeal', 'Seal', 'مهر', true], ['showSignature', 'Signature', 'امضا', true], ['showQr', 'QR verify', 'کیو‌آر', true],
-    ['showBarcode', 'Barcode (doc no)', 'بارکد شماره سند', false],
+    ['showBarcode', 'Barcode (doc no)', 'بارکد شماره سند', false], ['rtl', 'Persian / RTL', 'فارسی / راست‌چین', false],
   ]
 
   return (

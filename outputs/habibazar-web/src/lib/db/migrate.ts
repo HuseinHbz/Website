@@ -648,6 +648,30 @@ export async function runMigrations() {
       ('ir-unofficial','Iranian Unofficial (غیررسمی)','غیررسمی ایرانی','invoice','{"variant": "غیررسمی", "accentColor": "#57534e", "watermarkText": "غیر رسمی", "showLogo": true, "showSeal": false, "showSignature": true, "showQr": true}')
     ON CONFLICT (key) DO NOTHING;
 
+    -- Phase 26.10: 20 Persian (RTL) invoice templates.
+    INSERT INTO doc_templates (key, name_en, name_fa, doc_type, config) VALUES
+      ('fa-official','Iranian Official','فاکتور رسمی','invoice','{"variant": "فاکتور رسمی", "accentColor": "#166534", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "این صورتحساب مطابق ماده ۱۹ قانون مالیات بر ارزش افزوده صادر شده است.", "rtl": true}'),
+      ('fa-tax','Iranian Tax','فاکتور مالیاتی','invoice','{"variant": "صورتحساب مالیاتی", "accentColor": "#0d9488", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "showBarcode": true, "rtl": true}'),
+      ('fa-unofficial','Iranian Unofficial','فاکتور غیررسمی','invoice','{"variant": "غیررسمی", "accentColor": "#57534e", "watermarkText": "غیر رسمی", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-proforma','Iranian Pro-forma','پیش‌فاکتور','invoice','{"variant": "پیش‌فاکتور", "accentColor": "#7c3aed", "watermarkText": "پیش‌فاکتور", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-service','Iranian Service','فاکتور خدمات','invoice','{"variant": "خدمات", "accentColor": "#4f46e5", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-retail','Iranian Retail','فاکتور فروشگاهی','invoice','{"variant": "خرده‌فروشی", "accentColor": "#dc2626", "showLogo": true, "showQr": true, "showBarcode": true, "footerNote": "کالای فروخته‌شده تا ۷ روز با ارائه فاکتور قابل تعویض است.", "rtl": true}'),
+      ('fa-corporate','Iranian Corporate','فاکتور سازمانی','invoice','{"variant": "سازمانی", "accentColor": "#111827", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-blue','Iranian Blue','فاکتور آبی','invoice','{"variant": "رسمی", "accentColor": "#1d4ed8", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-green','Iranian Green','فاکتور سبز','invoice','{"variant": "رسمی", "accentColor": "#15803d", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-minimal','Iranian Minimal','فاکتور مینیمال','invoice','{"variant": "ساده", "accentColor": "#404040", "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-classic','Iranian Classic','فاکتور کلاسیک','invoice','{"variant": "کلاسیک", "accentColor": "#7c2d12", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-modern','Iranian Modern','فاکتور مدرن','invoice','{"variant": "مدرن", "accentColor": "#0f766e", "showLogo": true, "showSignature": true, "showQr": true, "showBarcode": true, "rtl": true}'),
+      ('fa-gold','Iranian Gold','فاکتور طلایی','invoice','{"variant": "ویژه", "accentColor": "#b45309", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-contract','Iranian Contract','فاکتور قراردادی','invoice','{"variant": "قراردادی", "accentColor": "#155e75", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "paymentInstructions": "واریز به شماره شبا زیر با درج شماره فاکتور در توضیحات.", "rtl": true}'),
+      ('fa-vat','Iranian VAT','فاکتور ارزش افزوده','invoice','{"variant": "ارزش افزوده ۹٪", "accentColor": "#065f46", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-export','Iranian Export','فاکتور صادراتی','invoice','{"variant": "صادراتی", "accentColor": "#0369a1", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-compact','Iranian Compact','فاکتور فشرده','invoice','{"variant": "فشرده", "accentColor": "#525252", "showLogo": true, "showBarcode": true, "rtl": true}'),
+      ('fa-elegant','Iranian Elegant','فاکتور شیک','invoice','{"variant": "ویژه", "accentColor": "#9d174d", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('fa-industrial','Iranian Industrial','فاکتور صنعتی','invoice','{"variant": "صنعتی", "accentColor": "#374151", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "showBarcode": true, "rtl": true}'),
+      ('fa-clinic','Iranian Clinic','فاکتور مطب/کلینیک','invoice','{"variant": "خدمات درمانی", "accentColor": "#0e7490", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}')
+    ON CONFLICT (key) DO NOTHING;
+
     -- Enterprise Project Management (Phase 21 ERP, Module 6). Projects with
     -- tasks (Kanban/Gantt), milestones and timesheets.
     CREATE TABLE IF NOT EXISTS pm_projects (

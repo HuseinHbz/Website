@@ -34,6 +34,7 @@ const configSchema = z.object({
   showSignature: z.boolean().optional(),
   showQr: z.boolean().optional(),
   showBarcode: z.boolean().optional(),
+  rtl: z.boolean().optional(),
   customFields: z.array(z.object({ label: z.string().max(60), value: z.string().max(200) })).max(12).optional(),
 }).strict()
 
