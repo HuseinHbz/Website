@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
+import { rialRateFor } from '@/lib/erp/currencyData'
 import { logAction } from '@/lib/admin/audit'
 import { invoiceStatus } from '@/lib/erp/sales'
 
@@ -33,6 +34,7 @@ const schema = z.object({
   method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']).default('cash'),
   reference: z.string().max(120).optional(),
   note: z.string().max(500).optional(),
+  currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).default('IRR'),
 })
 
 // POST — record a payment. If it targets an invoice, recompute its paid status.
@@ -43,10 +45,11 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {
+    const rate = (await rialRateFor(d.currency)) ?? 1
     const row = (await pgQuery(
-      `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [d.customerId, d.documentId ?? null, d.date, d.amount, d.method, d.reference ?? null, d.note ?? null, auth.user.id]))[0] as { id: number }
+      `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by, currency, exchange_rate)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      [d.customerId, d.documentId ?? null, d.date, d.amount, d.method, d.reference ?? null, d.note ?? null, auth.user.id, d.currency, rate]))[0] as { id: number }
 
     if (d.documentId) {
       const doc = (await pgQuery(`SELECT total::float AS total, doc_type AS "docType" FROM sales_documents WHERE id=$1`, [d.documentId]))[0] as { total: number; docType: string } | undefined

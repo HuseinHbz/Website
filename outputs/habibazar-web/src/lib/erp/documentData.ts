@@ -7,6 +7,7 @@
 import { randomBytes } from 'crypto'
 import QRCode from 'qrcode'
 import { pgQuery } from '@/lib/db'
+import { defaultCurrency } from './settings'
 import { SITE } from '@/lib/site'
 import { nextNumber } from '@/lib/numbering/integrate'
 import {
@@ -21,7 +22,7 @@ const COMPANY_KEYS: Record<string, keyof DocBranding> = {
   company_economic_code: 'economicCode', company_tax_no: 'taxNo', company_vat_no: 'vatNo',
   company_iban: 'iban', company_bank_name: 'bankName', company_swift: 'swift',
   company_address: 'address', company_postal_code: 'postalCode', company_phone: 'phone',
-  company_email: 'email', company_website: 'website',
+  company_email: 'email', company_website: 'website', company_ceo: 'ceoName',
 }
 
 /** Load the company profile (branding block) from site_settings. Never throws. */
@@ -53,6 +54,7 @@ export async function loadTemplateConfig(key: string): Promise<DocTemplateConfig
 const PREFIX: Record<string, string> = {
   invoice: 'INV', quotation: 'QT', purchase_order: 'PO', contract: 'CT', proposal: 'PR',
   warranty: 'WR', delivery_note: 'DN', service_report: 'SR', completion_certificate: 'CC', financial_report: 'FR',
+  receipt: 'RC', payment_voucher: 'PV', journal_voucher: 'JV',
 }
 
 export interface CreateManualLine { description: string; qty: number; unitPrice: number }
@@ -78,6 +80,7 @@ export async function createDocument(input: CreateInput, userId: string): Promis
   let payload: DocPayload
   let partyName = input.partyName ?? ''
   let partyInfo = input.partyInfo ?? ''
+  const fallbackCurrency = input.currency ?? await defaultCurrency()
   let sourceType: string | null = input.sourceType ?? null
   let sourceId: number | null = input.sourceId ?? null
 
@@ -102,12 +105,12 @@ export async function createDocument(input: CreateInput, userId: string): Promis
       : [doc.regNo ? `Reg. no: ${doc.regNo}` : '', doc.nationalId ? `National ID: ${doc.nationalId}` : '',
          doc.economicCode ? `Economic code: ${doc.economicCode}` : '', doc.taxId ? `Tax no: ${doc.taxId}` : '']
     partyInfo = [...legal, doc.address, doc.email, doc.phone].filter(Boolean).join('\n')
-    payload = buildSalesPayload(lines, input.currency ?? 'USD', [{ label: 'Reference', value: doc.docNo }])
+    payload = buildSalesPayload(lines, fallbackCurrency, [{ label: 'Reference', value: doc.docNo }])
   } else {
     // Manual composition.
     const lines = (input.lines ?? []).map(l => ({ description: l.description, qty: l.qty, unitPrice: l.unitPrice, lineTotal: Math.round(l.qty * l.unitPrice * 100) / 100 }))
     const total = Math.round(lines.reduce((s, l) => s + l.lineTotal, 0) * 100) / 100
-    payload = { lines, subtotal: total, discountTotal: 0, taxTotal: 0, total, currency: input.currency ?? 'USD', meta: input.meta ?? [], body: input.body }
+    payload = { lines, subtotal: total, discountTotal: 0, taxTotal: 0, total, currency: fallbackCurrency, meta: input.meta ?? [], body: input.body }
     sourceType = null; sourceId = null
   }
 

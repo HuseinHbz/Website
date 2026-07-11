@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fmtMoney } from '@/lib/format'
+import { fmtMoney, setDefaultCurrency } from '@/lib/format'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -35,6 +35,13 @@ export function FinanceCenter() {
   const fa = useAdminLocale() === 'fa'
   const { toast, ToastContainer } = useToast()
   const [tab, setTab] = useState<Tab>('dashboard')
+  const [autoNew, setAutoNew] = useState(false)
+  // Quick-action deep link (?new=journal) + tab deep link (?tab=currency…).
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    if (sp.get('new') === 'journal') { setTab('journal'); setAutoNew(true) }
+    else if (sp.get('tab')) setTab(sp.get('tab') as Tab)
+  }, [])
   return (
     <>
       <ToastContainer />
@@ -49,7 +56,7 @@ export function FinanceCenter() {
       </div>
       {tab === 'dashboard' && <div className="space-y-6"><Dashboard t={t} /><FinanceAiCard fa={fa} /></div>}
       {tab === 'accounts' && <Accounts t={t} fa={fa} toast={toast} />}
-      {tab === 'journal' && <Journal t={t} fa={fa} toast={toast} />}
+      {tab === 'journal' && <Journal t={t} fa={fa} toast={toast} autoNew={autoNew} onAutoNew={() => setAutoNew(false)} />}
       {tab === 'reports' && <ReportsView t={t} fa={fa} />}
       {tab === 'currency' && <CurrencyView fa={fa} toast={toast} />}
       {tab === 'banking' && <BankingView fa={fa} toast={toast} />}
@@ -174,12 +181,14 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
 }
 
 // ── Journal Entries ──────────────────────────────────────────────────────────
-function Journal({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
+function Journal({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boolean; toast: Toast; autoNew?: boolean; onAutoNew?: () => void }) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
+  useEffect(() => { if (autoNew) { setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [currency, setCurrency] = useState('IRR')
   const [memo, setMemo] = useState('')
   const [lines, setLines] = useState<Line[]>([{ accountId: 0, debit: 0, credit: 0 }, { accountId: 0, debit: 0, credit: 0 }])
   const [saving, setSaving] = useState(false)
@@ -205,7 +214,7 @@ function Journal({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
     if (clean.length < 2 || !balanced) { toast(t('fin_mustBalance'), 'error'); return }
     setSaving(true)
     try {
-      const r = await fetch('/api/admin/erp/finance/journal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, memo, post, lines: clean }) })
+      const r = await fetch('/api/admin/erp/finance/journal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, currency, memo, post, lines: clean }) })
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'failed')
       toast(post ? t('fin_posted') : t('fin_savedDraft'), 'success'); setModal(false); reset(); load()
     } catch (e) { toast(e instanceof Error ? e.message : t('fin_saveFail'), 'error') } finally { setSaving(false) }
@@ -238,6 +247,7 @@ function Journal({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label={t('fin_fDate')} type="date" value={date} onChange={setDate} />
+            <Select label={fa ? 'ارز' : 'Currency'} value={currency} onChange={setCurrency} options={['IRR', 'IRT', 'USD', 'EUR'].map(c => ({ value: c, label: c }))} />
             <Input label={t('fin_fMemo')} value={memo} onChange={setMemo} />
           </div>
           <div className="space-y-2">
@@ -351,12 +361,20 @@ function CurrencyView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
   const [rows, setRows] = useState<CurRow[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ code: 'USD', rateDate: new Date().toISOString().slice(0, 10), baseRate: '' })
-  const [conv, setConv] = useState({ amount: '1', from: 'USD', to: 'IRT', result: '' })
+  const [conv, setConv] = useState({ amount: '1', from: 'IRT', to: 'IRR', result: '' })
+  const [cfg, setCfg] = useState<{ defaultCurrency: string; displayCurrency: string; decimalPrecision: number; supportedCurrencies: string[] } | null>(null)
   const load = useCallback(async () => {
     setLoading(true)
     try { const d = await fetch('/api/admin/erp/finance/currency').then(r => r.json()); setRows(d.currencies ?? []) } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
+  useEffect(() => { fetch('/api/admin/erp/settings').then(r => r.json()).then(setCfg).catch(() => {}) }, [])
+  async function saveCfg(patch: Record<string, unknown>) {
+    const r = await fetch('/api/admin/erp/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) { setCfg(c => c ? { ...c, ...d } : c); setDefaultCurrency(d.displayCurrency || d.defaultCurrency, d.decimalPrecision); toast(L(fa, 'Currency settings saved', 'تنظیمات ارز ذخیره شد'), 'success') }
+    else toast(d.error || L(fa, 'Failed', 'ناموفق'), 'error')
+  }
 
   async function saveRate() {
     if (!form.baseRate) { toast(L(fa, 'Enter a rate', 'نرخ را وارد کنید'), 'error'); return }
@@ -378,6 +396,15 @@ function CurrencyView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
   ]
   return (
     <div className="space-y-4">
+      {cfg && (
+        <Card className="p-4 flex flex-wrap items-end gap-3">
+          <h4 className="w-full text-xs font-semibold text-text-primary">{L(fa, 'Global currency configuration', 'پیکربندی سراسری ارز')}</h4>
+          <Select label={L(fa, 'Default transaction currency', 'ارز پیش‌فرض اسناد')} value={cfg.defaultCurrency} onChange={v => saveCfg({ defaultCurrency: v })} options={(cfg.supportedCurrencies ?? ['IRR', 'IRT', 'USD', 'EUR']).map(c => ({ value: c, label: c }))} />
+          <Select label={L(fa, 'Display currency (dashboards)', 'ارز نمایش (داشبوردها)')} value={cfg.displayCurrency} onChange={v => saveCfg({ displayCurrency: v })} options={(cfg.supportedCurrencies ?? ['IRR', 'IRT', 'USD', 'EUR']).map(c => ({ value: c, label: c }))} />
+          <Select label={L(fa, 'Decimals', 'اعشار')} value={String(cfg.decimalPrecision)} onChange={v => saveCfg({ decimalPrecision: Number(v) })} options={['0', '1', '2', '3', '4'].map(x => ({ value: x, label: x }))} />
+          <p className="w-full text-3xs text-text-tertiary">{L(fa, 'IRR is the base (1 Toman = 10 Rial); USD/EUR convert via the daily rates below. All KPIs and documents follow this configuration.', 'ریال مبناست (۱ تومان = ۱۰ ریال)؛ دلار/یورو با نرخ روزانه زیر تبدیل می‌شوند. همه KPIها و اسناد از همین پیکربندی پیروی می‌کنند.')}</p>
+        </Card>
+      )}
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-text-primary">{L(fa, 'Set exchange rate', 'ثبت نرخ ارز')}</h3>

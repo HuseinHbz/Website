@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
+import { rialRateFor } from '@/lib/erp/currencyData'
 import { entryBalanced } from '@/lib/erp/ledger'
 
 export const dynamic = 'force-dynamic'
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
 }
 
 const createSchema = z.object({
+  currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).default('IRR'),
   date: z.string().min(1).max(30),
   memo: z.string().max(500).optional(),
   reference: z.string().max(120).optional(),
@@ -59,12 +61,14 @@ export async function POST(req: NextRequest) {
   const check = entryBalanced(d.lines)
   if (!check.ok) return badRequest(`Unbalanced entry: ${check.reason}`)
   try {
+    const rate = await rialRateFor(d.currency)
+    if (rate == null) return badRequest(`No exchange rate configured for ${d.currency} — set one in Finance → Currency`)
     const entryNo = `JE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
     const status = d.post ? 'posted' : 'draft'
     const entry = (await pgQuery(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, posted_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,${d.post ? NOW : 'NULL'}) RETURNING id`,
-      [entryNo, d.date, d.memo ?? null, d.reference ?? null, status, check.totalDebit, auth.user.id, d.companyId ?? null]))[0] as { id: number }
+      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, currency, exchange_rate, posted_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,${d.post ? NOW : 'NULL'}) RETURNING id`,
+      [entryNo, d.date, d.memo ?? null, d.reference ?? null, status, check.totalDebit, auth.user.id, d.companyId ?? null, d.currency, rate]))[0] as { id: number }
     for (let i = 0; i < d.lines.length; i++) {
       const l = d.lines[i]
       await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,

@@ -29,6 +29,7 @@ const schema = z.object({
   assignedTo: z.string().trim().max(200).optional().nullable(),
   purchaseDate: z.string().trim().max(30).optional().nullable(),
   purchasePrice: z.number().min(0).default(0),
+  currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).default('IRR'),
   residualValue: z.number().min(0).default(0),
   usefulLifeYears: z.number().min(0).max(100).default(0),
   depreciationMethod: z.enum(DEPRECIATION_METHODS).default('none'),
@@ -54,7 +55,7 @@ export async function GET() {
 const COLS = `name, type, category, model, manufacturer, serial, barcode, vendor, status, location,
   department, employee, cost_center, project, assigned_to, purchase_date, purchase_price, residual_value,
   useful_life_years, depreciation_method, warranty_expiry, insurance_policy, insurance_expiry,
-  contract_ref, calibration_due, gps_lat, gps_lng, notes`
+  contract_ref, calibration_due, gps_lat, gps_lng, notes, currency`
 
 function values(d: z.infer<typeof schema>) {
   return [
@@ -63,7 +64,7 @@ function values(d: z.infer<typeof schema>) {
     d.employee ?? null, d.costCenter ?? null, d.project ?? null, d.assignedTo ?? null,
     d.purchaseDate ?? null, d.purchasePrice, d.residualValue, d.usefulLifeYears, d.depreciationMethod,
     d.warrantyExpiry ?? null, d.insurancePolicy ?? null, d.insuranceExpiry ?? null, d.contractRef ?? null,
-    d.calibrationDue ?? null, d.gpsLat ?? null, d.gpsLng ?? null, d.notes ?? null,
+    d.calibrationDue ?? null, d.gpsLat ?? null, d.gpsLng ?? null, d.notes ?? null, d.currency,
   ]
 }
 

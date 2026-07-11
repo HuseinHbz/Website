@@ -622,7 +622,30 @@ export async function runMigrations() {
       ('official-invoice','Official Invoice','فاکتور رسمی','invoice','{"variant":"Official","showLogo":true,"showSeal":true,"showSignature":true,"showQr":true}'),
       ('unofficial-invoice','Unofficial Invoice','فاکتور غیررسمی','invoice','{"variant":"Unofficial","watermarkText":"UNOFFICIAL","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}'),
       ('tax-invoice','Tax Invoice','فاکتور مالیاتی','invoice','{"variant":"Tax Invoice","showLogo":true,"showSeal":true,"showSignature":true,"showQr":true}'),
-      ('service-invoice','Service Invoice','فاکتور خدمات','invoice','{"variant":"Service","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}')
+      ('service-invoice','Service Invoice','فاکتور خدمات','invoice','{"variant":"Service","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}'),
+      -- Phase 26.7: Enterprise Invoice Template Center — 20 curated templates
+      -- across Professional / Corporate / Minimal / Retail / International /
+      -- Iranian-Accounting categories (idempotent seed; designer-editable).
+      ('pro-classic','Professional Classic','حرفه‌ای کلاسیک','invoice','{"variant": "Professional", "accentColor": "#1e3a8a", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true}'),
+      ('pro-modern','Professional Modern','حرفه‌ای مدرن','invoice','{"variant": "Professional", "accentColor": "#0f766e", "showLogo": true, "showSignature": true, "showQr": true, "showBarcode": true}'),
+      ('pro-detailed','Professional Detailed','حرفه‌ای تفصیلی','invoice','{"variant": "Professional", "accentColor": "#334155", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "Payment due within 30 days of the invoice date."}'),
+      ('pro-service','Professional Service','حرفه‌ای خدمات','invoice','{"variant": "Service", "accentColor": "#4f46e5", "showLogo": true, "showSignature": true, "showQr": true}'),
+      ('corp-executive','Corporate Executive','سازمانی مدیریتی','invoice','{"variant": "Corporate", "accentColor": "#111827", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "footerNote": "This document is issued electronically and is valid without a handwritten signature."}'),
+      ('corp-blue','Corporate Blue','سازمانی آبی','invoice','{"variant": "Corporate", "accentColor": "#1d4ed8", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true}'),
+      ('corp-contract','Corporate Contract Billing','سازمانی قراردادی','invoice','{"variant": "Contract Billing", "accentColor": "#155e75", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "paymentInstructions": "Bank transfer to the account below; quote the invoice number as the payment reference."}'),
+      ('corp-proforma','Corporate Pro-forma','سازمانی پیش‌فاکتور','invoice','{"variant": "Pro-forma", "accentColor": "#7c3aed", "watermarkText": "PRO-FORMA", "showLogo": true, "showSignature": true, "showQr": true}'),
+      ('min-clean','Minimal Clean','مینیمال ساده','invoice','{"variant": "Minimal", "accentColor": "#404040", "showLogo": false, "showSeal": false, "showSignature": true, "showQr": true}'),
+      ('min-mono','Minimal Mono','مینیمال تک‌رنگ','invoice','{"variant": "Minimal", "accentColor": "#171717", "showLogo": false, "showSeal": false, "showSignature": false, "showQr": true}'),
+      ('min-compact','Minimal Compact','مینیمال فشرده','invoice','{"variant": "Compact", "accentColor": "#525252", "showLogo": true, "showSeal": false, "showSignature": false, "showQr": false, "showBarcode": true}'),
+      ('retail-pos','Retail POS','خرده‌فروشی صندوق','invoice','{"variant": "Retail", "accentColor": "#dc2626", "showLogo": true, "showSeal": false, "showSignature": false, "showQr": true, "showBarcode": true}'),
+      ('retail-store','Retail Store','خرده‌فروشی فروشگاهی','invoice','{"variant": "Retail", "accentColor": "#ea580c", "showLogo": true, "showSignature": false, "showQr": true, "showBarcode": true, "footerNote": "Goods may be exchanged within 7 days with this receipt."}'),
+      ('retail-online','Retail Online Order','خرده‌فروشی آنلاین','invoice','{"variant": "Online Order", "accentColor": "#db2777", "showLogo": true, "showSignature": false, "showQr": true, "showBarcode": true}'),
+      ('intl-export','International Export','بین‌المللی صادراتی','invoice','{"variant": "Export Invoice", "accentColor": "#0369a1", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "Incoterms and governing law as agreed in the underlying contract."}'),
+      ('intl-usd','International (USD)','بین‌المللی دلاری','invoice','{"variant": "Commercial Invoice", "accentColor": "#047857", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "paymentInstructions": "SWIFT transfer to the account below. All bank charges are on the buyer."}'),
+      ('intl-eur','International (EUR)','بین‌المللی یورویی','invoice','{"variant": "Commercial Invoice", "accentColor": "#4338ca", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true}'),
+      ('ir-official','Iranian Official (رسمی)','رسمی ایرانی','invoice','{"variant": "فاکتور رسمی", "accentColor": "#166534", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "این صورتحساب مطابق نمونه سازمان امور مالیاتی صادر شده است."}'),
+      ('ir-tax','Iranian VAT (مالیاتی)','مالیاتی ایرانی','invoice','{"variant": "صورتحساب مالیاتی", "accentColor": "#0d9488", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "showBarcode": true}'),
+      ('ir-unofficial','Iranian Unofficial (غیررسمی)','غیررسمی ایرانی','invoice','{"variant": "غیررسمی", "accentColor": "#57534e", "watermarkText": "غیر رسمی", "showLogo": true, "showSeal": false, "showSignature": true, "showQr": true}')
     ON CONFLICT (key) DO NOTHING;
 
     -- Enterprise Project Management (Phase 21 ERP, Module 6). Projects with
@@ -908,6 +931,37 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- Phase 26.7: multi-currency transactions — every financial document keeps
+    -- its transaction currency + the Rial exchange rate + the Rial base amount.
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
+    -- Phase 26.7: soft delete with an audit trail (deleted docs also become
+    -- 'void' so every existing aggregate keeps excluding them unchanged).
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS deleted_at TEXT;
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS delete_reason TEXT;
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS base_total NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS base_total NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE sales_payments ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
+    ALTER TABLE sales_payments ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
+    ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
+    ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
+
+    -- Phase 26.7: global ERP configuration (currency defaults, formatting).
+    CREATE TABLE IF NOT EXISTS erp_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    INSERT INTO erp_settings (key, value) VALUES
+      ('default_currency', 'IRR'),
+      ('display_currency', 'IRR'),
+      ('decimal_precision', '0'),
+      ('number_format', 'standard')
+    ON CONFLICT (key) DO NOTHING;
+
     -- Phase 26: multi-currency (base = Iranian Rial; Toman is a display unit).
     CREATE TABLE IF NOT EXISTS erp_currencies (
       code TEXT PRIMARY KEY,
@@ -1015,6 +1069,8 @@ export async function runMigrations() {
       posted_at TEXT
     );
     ALTER TABLE gl_journal_entries ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE gl_journal_entries ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IRR';
+    ALTER TABLE gl_journal_entries ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
     CREATE INDEX IF NOT EXISTS idx_gl_entries_company ON gl_journal_entries(company_id);
 
     CREATE TABLE IF NOT EXISTS gl_journal_lines (

@@ -6,7 +6,7 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
-const DOC_TYPES = ['invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty', 'delivery_note', 'service_report', 'completion_certificate', 'financial_report'] as const
+const DOC_TYPES = ['invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty', 'delivery_note', 'service_report', 'completion_certificate', 'financial_report', 'receipt', 'payment_voucher', 'journal_voucher'] as const
 type DocType = (typeof DOC_TYPES)[number]
 const SALES_TYPES: DocType[] = ['invoice', 'quotation']
 
@@ -22,6 +22,10 @@ export function DocumentCenter() {
   const rtl = locale === 'fa'
   const { toast, ToastContainer } = useToast()
   const [view, setView] = useState<'documents' | 'designer'>('documents')
+  // Deep link (?view=designer) from System → Document Settings.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('view') === 'designer') setView('designer')
+  }, [])
   const [docs, setDocs] = useState<GenDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -215,7 +219,7 @@ function EmailDocModal({ rtl, doc, onClose, toast }: { rtl: boolean; doc: GenDoc
 }
 
 function docIcon(t: string): string {
-  const m: Record<string, string> = { invoice: '💳', quotation: '📄', purchase_order: '🛒', contract: '📜', proposal: '📝', warranty: '🛡️', delivery_note: '📦', service_report: '🔧', completion_certificate: '🏅', financial_report: '📊' }
+  const m: Record<string, string> = { invoice: '💳', quotation: '📄', purchase_order: '🛒', contract: '📜', proposal: '📝', warranty: '🛡️', delivery_note: '📦', service_report: '🔧', completion_certificate: '🏅', financial_report: '📊', receipt: '🧾', payment_voucher: '💸', journal_voucher: '📒' }
   return m[t] ?? '📄'
 }
 

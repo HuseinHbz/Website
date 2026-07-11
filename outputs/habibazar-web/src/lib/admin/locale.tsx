@@ -1399,6 +1399,9 @@ const T: Record<string, { fa: string; en: string }> = {
   doc_confirmVoid:{ fa: 'این سند ابطال شود؟', en: 'Void this document?' },
   // types
   doc_t_invoice:  { fa: 'فاکتور', en: 'Invoice' },
+  doc_t_receipt:  { fa: 'رسید دریافت', en: 'Receipt' },
+  doc_t_payment_voucher: { fa: 'سند پرداخت', en: 'Payment Voucher' },
+  doc_t_journal_voucher: { fa: 'سند حسابداری', en: 'Journal Voucher' },
   doc_t_quotation:{ fa: 'پیش‌فاکتور', en: 'Quotation' },
   doc_t_purchase_order: { fa: 'سفارش خرید', en: 'Purchase Order' },
   doc_t_contract: { fa: 'قرارداد', en: 'Contract' },

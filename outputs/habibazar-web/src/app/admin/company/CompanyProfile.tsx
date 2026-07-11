@@ -50,6 +50,7 @@ const GROUPS: { en: string; fa: string; fields: FieldDef[] }[] = [
       { key: 'company_logo_url', en: 'Logo URL', fa: 'آدرس لوگو' },
       { key: 'company_seal_url', en: 'Seal / stamp URL', fa: 'آدرس مهر' },
       { key: 'company_signature_url', en: 'Signature image URL', fa: 'آدرس تصویر امضا' },
+      { key: 'company_ceo', en: 'CEO name', fa: 'نام مدیرعامل' },
       { key: 'company_signature_title', en: 'Signature title (e.g. CEO)', fa: 'عنوان امضا (مثلاً مدیرعامل)' },
     ],
   },

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { setDefaultCurrency } from '@/lib/format'
 import { usePathname } from 'next/navigation'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
@@ -17,6 +18,12 @@ interface Props {
 }
 
 export function AdminShell({ user, title, children }: Props) {
+  // Currency formatting standard (26.7): configure fmtMoney from ERP settings.
+  useEffect(() => {
+    fetch('/api/admin/erp/settings').then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setDefaultCurrency(d.displayCurrency || d.defaultCurrency, d.decimalPrecision) })
+      .catch(() => {})
+  }, [])
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)

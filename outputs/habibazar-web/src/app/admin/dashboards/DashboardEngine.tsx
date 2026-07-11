@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, Btn, Badge, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import Link from 'next/link'
 import { workspaceById } from '@/lib/admin/workspaces'
 
 const WidgetChart = dynamic(() => import('./WidgetChart'), { ssr: false, loading: () => <div className="h-[180px] animate-pulse bg-white/[0.03] rounded" /> })
@@ -230,7 +231,19 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
           {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 rounded-2xl bg-white/[0.03] animate-pulse" />)}
         </div>
       ) : layout.length === 0 ? (
-        <Card className="p-10 text-center"><p className="text-sm text-text-tertiary">{t('dash_empty')}</p></Card>
+        // 26.7: workspaces without widgets (e.g. System Administration) show
+        // their real module grid instead of a blank page — never an empty screen.
+        <Card className="p-6">
+          <p className="text-sm text-text-tertiary mb-4">{t('dash_empty')}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {(workspaceById(workspace)?.groups ?? []).flatMap(g => g.items).map(it => (
+              <Link key={it.href} href={it.href} className="rounded-xl p-4 bg-surface-2 border border-subtle hover:border-brand/50 transition-colors">
+                <div className="text-lg mb-1" aria-hidden>{it.icon}</div>
+                <div className="text-xs font-medium text-text-secondary">{locale === 'fa' ? it.labelFa : it.labelEn}</div>
+              </Link>
+            ))}
+          </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {layout.map(entry => {

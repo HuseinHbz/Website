@@ -39,6 +39,11 @@ export function InventoryCenter() {
   const fa = useAdminLocale() === 'fa'
   const { toast, ToastContainer } = useToast()
   const [tab, setTab] = useState<Tab>('dashboard')
+  const [autoNew, setAutoNew] = useState(false)
+  // Quick-action deep link (?new=product).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('new') === 'product') { setTab('products'); setAutoNew(true) }
+  }, [])
 
   return (
     <>
@@ -54,7 +59,7 @@ export function InventoryCenter() {
       </div>
 
       {tab === 'dashboard' && <Dashboard t={t} fa={fa} />}
-      {tab === 'products' && <Products t={t} fa={fa} toast={toast} />}
+      {tab === 'products' && <Products t={t} fa={fa} toast={toast} autoNew={autoNew} onAutoNew={() => setAutoNew(false)} />}
       {tab === 'warehouses' && <Warehouses t={t} fa={fa} toast={toast} />}
       {tab === 'moves' && <Moves t={t} fa={fa} toast={toast} />}
     </>
@@ -160,10 +165,11 @@ function Kpi({ label, value, icon, tone }: { label: string; value: string; icon:
 }
 
 // ── Products ─────────────────────────────────────────────────────────────────
-function Products({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
+function Products({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boolean; toast: Toast; autoNew?: boolean; onAutoNew?: () => void }) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
+  useEffect(() => { if (autoNew) { setEditing(EMPTY_PRODUCT); setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
   const [editing, setEditing] = useState<Product>(EMPTY_PRODUCT)
   const [saving, setSaving] = useState(false)
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import {
-  visibleWorkspaces, visibleGroups, workspaceForPath, workspaceHome,
+  visibleWorkspaces, visibleGroups, workspaceForPath, workspaceHome, resolveActiveHref,
   quickActionsFor, allNavItems, type WsItem,
 } from '@/lib/admin/workspaces'
 import { useNavPrefs } from '@/lib/admin/navPrefs'
@@ -90,6 +90,15 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
   const favItems = favorites.map(h => itemByHref.get(h)).filter(Boolean) as WsItem[]
   const recentItems = recents.map(h => itemByHref.get(h)).filter(Boolean) as WsItem[]
 
+  // Navigation Resolver Engine: pick the single active href across everything
+  // the sidebar renders (nav groups, favorites, recents, quick actions).
+  const activeHref = useMemo(() => resolveActiveHref(pathname, [
+    ...groups.flatMap(g => g.items.map(i => i.href)),
+    ...favItems.map(i => i.href),
+    ...recentItems.map(i => i.href),
+    ...quickActions.map(a => a.href),
+  ]), [pathname, groups, favItems, recentItems, quickActions])
+
   const desktopPos = isRTL
     ? `lg:right-0 lg:left-auto lg:${collapsed ? 'w-16' : 'w-60'}`
     : `lg:left-0 lg:right-auto lg:${collapsed ? 'w-16' : 'w-60'}`
@@ -97,7 +106,8 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
   const borderSide = isRTL ? 'border-l' : 'border-r'
 
   const NavLink = ({ item, star = true }: { item: WsItem; star?: boolean }) => {
-    const active = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
+    // One winner per render: exact match beats nested; action links (?new=) never activate.
+    const active = item.href === activeHref
     const label = locale === 'fa' ? item.labelFa : item.labelEn
     return (
       <div className="group/nav flex items-center">

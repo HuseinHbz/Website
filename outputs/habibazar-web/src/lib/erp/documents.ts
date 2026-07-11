@@ -12,6 +12,7 @@ import { code39Svg } from './barcode'
 export const DOC_TYPES = [
   'invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty',
   'delivery_note', 'service_report', 'completion_certificate', 'financial_report',
+  'receipt', 'payment_voucher', 'journal_voucher',
 ] as const
 export type GenDocType = (typeof DOC_TYPES)[number]
 
@@ -47,6 +48,7 @@ export interface DocBranding {
   phone?: string
   email?: string
   website?: string
+  ceoName?: string
 }
 
 /** Designer-controlled presentation config (persisted per template). */
@@ -96,14 +98,20 @@ export function escapeHtml(s: string): string {
 }
 
 function round2(n: number): number { return Math.round(n * 100) / 100 }
-export function money(n: number, currency = 'USD'): string {
-  const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'IRR' ? '﷼' : ''
-  return `${sym}${(n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+/** Currency formatting standard (26.7): Rial/Toman suffix, $/€ prefix, no decimals for IRR/IRT. */
+export function money(n: number, currency = 'IRR'): string {
+  const zero = currency === 'IRR' || currency === 'IRT'
+  const num = (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: zero ? 0 : 2, maximumFractionDigits: zero ? 0 : 2 })
+  if (currency === 'USD') return `$${num}`
+  if (currency === 'EUR') return `€${num}`
+  if (currency === 'IRR') return `${num} ریال`
+  if (currency === 'IRT') return `${num} تومان`
+  return `${num} ${currency}`
 }
 
 interface SalesLine { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number }
 /** Build a document payload from a sales document's lines (invoice/quote/order). */
-export function buildSalesPayload(lines: SalesLine[], currency = 'USD', meta: DocMeta[] = []): DocPayload {
+export function buildSalesPayload(lines: SalesLine[], currency = 'IRR', meta: DocMeta[] = []): DocPayload {
   let subtotal = 0, discountTotal = 0, taxTotal = 0, total = 0
   const out: DocLine[] = lines.map(l => {
     const gross = round2(l.qty * l.unitPrice)
@@ -121,6 +129,7 @@ const TITLES: Record<GenDocType, string> = {
   invoice: 'INVOICE', quotation: 'QUOTATION', purchase_order: 'PURCHASE ORDER', contract: 'CONTRACT',
   proposal: 'PROPOSAL', warranty: 'WARRANTY CERTIFICATE', delivery_note: 'DELIVERY NOTE',
   service_report: 'SERVICE REPORT', completion_certificate: 'CERTIFICATE OF COMPLETION', financial_report: 'FINANCIAL REPORT',
+  receipt: 'RECEIPT', payment_voucher: 'PAYMENT VOUCHER', journal_voucher: 'JOURNAL VOUCHER',
 }
 export function defaultTitle(type: GenDocType): string { return TITLES[type] ?? 'DOCUMENT' }
 
@@ -234,7 +243,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
       <div class="seal-sign">
         ${show(t.showSeal) && b.sealUrl ? `<img class="seal" src="${escapeHtml(b.sealUrl)}" alt="seal">` : ''}
         <div class="sign">
-          ${show(t.showSignature) && b.signatureUrl ? `<img class="sig-img" src="${escapeHtml(b.signatureUrl)}" alt="signature"><div style="border-top:1px solid #999;width:180px;padding-top:6px">${escapeHtml(b.signatureTitle || 'Authorized signature')}</div>` : `<div class="line"></div>${escapeHtml(b.signatureTitle || 'Authorized signature')}`}
+          ${show(t.showSignature) && b.signatureUrl ? `<img class="sig-img" src="${escapeHtml(b.signatureUrl)}" alt="signature"><div style="border-top:1px solid #999;width:180px;padding-top:6px">${escapeHtml(b.signatureTitle || b.ceoName || 'Authorized signature')}</div>` : `<div class="line"></div>${escapeHtml(b.signatureTitle || b.ceoName || 'Authorized signature')}`}
         </div>
       </div>
     </div>

@@ -432,6 +432,29 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   payment ledgers) + deterministic 6-month sales/spend series with trend
   forecasts injected into the finance-AI snapshot (reuses `forecastSales`).
   All engines pure+unit-tested; every sub-phase live-PG round-trip verified.
+- **Phase 26.7 — ERP Final UX & Currency Architecture** (report:
+  `docs/governance/phase26.7-erp-ux-currency-report.md`). **Navigation Resolver
+  Engine** (`workspaces.ts`: `hrefPath`/`hrefMatches`/`resolveActiveHref` —
+  exact > longest boundary match, ONE active item; quick actions carry unique
+  `?new=` route identities and the ERP ones deep-link into the create modal of
+  Sales/Inventory/Finance; 10 regression tests). **Currency**: `erp_settings`
+  (default/display currency, precision — seeded IRR) + `/api/admin/erp/settings`
+  + `lib/erp/settings.ts`; `formatCurrency()`/`fmtMoney` in `lib/format.ts` is
+  THE money-formatting standard (ریال/تومان suffix, $/€ prefix), configured by
+  AdminShell from settings — no hardcoded $. **Multi-currency transactions**:
+  `currency`/`exchange_rate`/`base_total` on sales+purchase documents,
+  `currency`/`exchange_rate` on journal entries + both payment ledgers,
+  `currency` on assets; `rialRateFor()` (IRR=1, IRT=10, USD/EUR via
+  `erp_exchange_rates`, null→API rejects) + currency selects in the doc forms.
+  **Sales soft delete**: `deleted_at/deleted_by/delete_reason` + status='void'
+  (aggregates unchanged), reason-prompting Delete action, admin-roles only.
+  **Template Center**: 24 seeded invoice templates (Professional/Corporate/
+  Minimal/Retail/International/Iranian-Accounting) + `company_ceo` branding +
+  new gen doc types receipt/payment_voucher/journal_voucher (RC/PV/JV).
+  **System Management**: dashboards with no widgets render the workspace's
+  module grid (never blank); System workspace links Company/Currency/Document/
+  Security/Audit pages. Live-PG verified (10 round-trip tests incl. IRR/IRT/
+  USD/EUR invoices).
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

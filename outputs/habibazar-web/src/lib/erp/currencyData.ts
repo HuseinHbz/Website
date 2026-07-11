@@ -50,3 +50,17 @@ export async function setRate(code: string, rateDate: string, baseRate: number, 
      ON CONFLICT (code, rate_date) DO UPDATE SET base_rate=EXCLUDED.base_rate`,
     [code, rateDate, baseRate, userId ?? null])
 }
+
+/**
+ * Rial rate of one unit of `code` (Phase 26.7 — multi-currency transactions).
+ * IRR=1 and IRT=10 are exact; other codes use the latest configured daily
+ * rate. Returns null when no rate exists so callers can reject honestly
+ * instead of silently booking a 1:1 conversion.
+ */
+export async function rialRateFor(code: string): Promise<number | null> {
+  if (code === 'IRR') return 1
+  if (code === 'IRT') return 10
+  const row = (await pgQuery<{ base_rate: number }>(
+    `SELECT base_rate FROM erp_exchange_rates WHERE code=$1 ORDER BY rate_date DESC LIMIT 1`, [code]))[0]
+  return row ? Number(row.base_rate) : null
+}

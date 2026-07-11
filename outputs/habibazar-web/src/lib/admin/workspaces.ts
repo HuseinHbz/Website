@@ -36,7 +36,7 @@ export const WORKSPACES: Workspace[] = [
     descEn: 'Business KPIs, alerts and global search', descFa: 'شاخص‌های کلیدی، هشدارها و جستجوی سراسری',
     groups: [{ en: 'Overview', fa: 'خلاصه', items: [
       { labelEn: 'Executive Dashboard', labelFa: 'داشبورد اجرایی', href: '/admin', icon: '◈' },
-      { labelEn: 'Global Search', labelFa: 'جستجوی سراسری', href: '/admin/search', icon: '🔍' },
+      { labelEn: 'Global Search', labelFa: 'جستجوی سراسری', href: '/admin/search?focus=1', icon: '🔍' },
       { labelEn: 'Website Analytics', labelFa: 'آنالیتیکس سایت', href: '/admin/dashboard', icon: '◉' },
     ] }],
   },
@@ -188,6 +188,11 @@ export const WORKSPACES: Workspace[] = [
     groups: [
       { en: 'Platform', fa: 'پلتفرم', items: [
         { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
+        { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت (اسناد)', href: '/admin/company', icon: '🏢' },
+        { labelEn: 'Currency Settings', labelFa: 'تنظیمات ارز', href: '/admin/finance?tab=currency', icon: '💱' },
+        { labelEn: 'Document Settings', labelFa: 'تنظیمات اسناد', href: '/admin/documents?view=designer', icon: '📑' },
+        { labelEn: 'Security Settings', labelFa: 'تنظیمات امنیت', href: '/admin/security', icon: '🔐' },
+        { labelEn: 'Audit & Logs', labelFa: 'ممیزی و لاگ‌ها', href: '/admin/logs-monitoring', icon: '📋' },
         { labelEn: 'Feature Flags', labelFa: 'پرچم‌های ویژگی', href: '/admin/flags', icon: '🚩' },
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
         { labelEn: 'Design System', labelFa: 'سیستم طراحی', href: '/admin/design-system', icon: '🎨' },
@@ -203,6 +208,33 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
 ]
+
+
+// ── Navigation Resolver Engine (Phase 26.7) ──────────────────────────────────
+/** Strip the query/hash so hrefs with a `?new=` action never match a pathname. */
+export function hrefPath(href: string): string {
+  const q = href.search(/[?#]/)
+  return q === -1 ? href : href.slice(0, q)
+}
+/** True when `pathname` equals `href` or is nested under it at a path boundary. */
+export function hrefMatches(pathname: string, href: string): boolean {
+  const h = hrefPath(href)
+  if (h.includes('?') || href !== h) return pathname === href // action links: exact only (never true for a pathname)
+  return pathname === h || (h !== '/admin' && pathname.startsWith(h + '/'))
+}
+/**
+ * Resolve the ONE active href among candidates: exact match wins, else the
+ * longest nested (boundary) match. Guarantees a unique active nav item even
+ * when several candidates share a prefix or an href is duplicated.
+ */
+export function resolveActiveHref(pathname: string, hrefs: string[]): string | null {
+  let best: string | null = null
+  for (const href of hrefs) {
+    if (hrefPath(href) === pathname) return href // exact always wins
+    if (hrefMatches(pathname, href) && (best === null || hrefPath(href).length > hrefPath(best).length)) best = href
+  }
+  return best
+}
 
 /** The workspace that owns a path (longest-matching href; first workspace wins ties). */
 export function workspaceForPath(pathname: string): Workspace {
@@ -263,25 +295,25 @@ export function visibleGroups(role: string, ws: Workspace): WsGroup[] {
 // ── Quick actions (contextual, permission-aware; real navigations) ───────────
 export interface QuickAction { labelEn: string; labelFa: string; href: string; icon: string; requires?: WorkspaceRequire }
 export const QUICK_ACTIONS: Record<string, QuickAction[]> = {
-  executive: [{ labelEn: 'Global Search', labelFa: 'جستجوی سراسری', href: '/admin/search', icon: '🔍' }],
+  executive: [{ labelEn: 'Global Search', labelFa: 'جستجوی سراسری', href: '/admin/search?focus=1', icon: '🔍' }],
   brand: [
-    { labelEn: 'New Case Study', labelFa: 'مطالعهٔ موردی جدید', href: '/admin/projects', icon: '＋' },
-    { labelEn: 'New Content', labelFa: 'محتوای جدید', href: '/admin/content', icon: '✍️' },
+    { labelEn: 'New Case Study', labelFa: 'مطالعهٔ موردی جدید', href: '/admin/projects?new=1', icon: '＋' },
+    { labelEn: 'New Content', labelFa: 'محتوای جدید', href: '/admin/content?new=1', icon: '✍️' },
   ],
-  content: [{ labelEn: 'New Article', labelFa: 'مقالهٔ جدید', href: '/admin/blog', icon: '＋' }],
-  crm: [{ labelEn: 'New Lead', labelFa: 'سرنخ جدید', href: '/admin/crm', icon: '＋' }],
+  content: [{ labelEn: 'New Article', labelFa: 'مقالهٔ جدید', href: '/admin/blog?new=1', icon: '＋' }],
+  crm: [{ labelEn: 'New Lead', labelFa: 'سرنخ جدید', href: '/admin/crm?new=1', icon: '＋' }],
   erp: [
-    { labelEn: 'New Invoice', labelFa: 'فاکتور جدید', href: '/admin/sales', icon: '🧾', requires: 'edit' },
-    { labelEn: 'New Product', labelFa: 'کالای جدید', href: '/admin/inventory', icon: '📦', requires: 'edit' },
-    { labelEn: 'New Journal Entry', labelFa: 'سند حسابداری جدید', href: '/admin/finance', icon: '💰', requires: 'edit' },
+    { labelEn: 'New Invoice', labelFa: 'فاکتور جدید', href: '/admin/sales?new=invoice', icon: '🧾', requires: 'edit' },
+    { labelEn: 'New Product', labelFa: 'کالای جدید', href: '/admin/inventory?new=product', icon: '📦', requires: 'edit' },
+    { labelEn: 'New Journal Entry', labelFa: 'سند حسابداری جدید', href: '/admin/finance?new=journal', icon: '💰', requires: 'edit' },
   ],
   ai: [
-    { labelEn: 'New Prompt', labelFa: 'پرامپت جدید', href: '/admin/ai-prompts', icon: '＋' },
-    { labelEn: 'New Agent', labelFa: 'دستیار جدید', href: '/admin/ai-agents', icon: '✨' },
+    { labelEn: 'New Prompt', labelFa: 'پرامپت جدید', href: '/admin/ai-prompts?new=1', icon: '＋' },
+    { labelEn: 'New Agent', labelFa: 'دستیار جدید', href: '/admin/ai-agents?new=1', icon: '✨' },
   ],
-  operations: [{ labelEn: 'Open Ops Center', labelFa: 'مرکز عملیات', href: '/admin/operations', icon: '🖥️' }],
-  security: [{ labelEn: 'New User', labelFa: 'کاربر جدید', href: '/admin/users', icon: '＋', requires: 'manage_users' }],
-  system: [{ labelEn: 'Numbering Format', labelFa: 'قالب شماره‌گذاری', href: '/admin/numbering', icon: '🔢', requires: 'manage_settings' }],
+  operations: [{ labelEn: 'Open Ops Center', labelFa: 'مرکز عملیات', href: '/admin/operations?focus=1', icon: '🖥️' }],
+  security: [{ labelEn: 'New User', labelFa: 'کاربر جدید', href: '/admin/users?new=1', icon: '＋', requires: 'manage_users' }],
+  system: [{ labelEn: 'Numbering Format', labelFa: 'قالب شماره‌گذاری', href: '/admin/numbering?tab=formats', icon: '🔢', requires: 'manage_settings' }],
 }
 export function quickActionsFor(role: string, workspaceId: string): QuickAction[] {
   return (QUICK_ACTIONS[workspaceId] ?? []).filter(a => !a.requires || roleCan(role, a.requires))

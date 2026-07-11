@@ -4,6 +4,7 @@
  */
 import { pgQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
+import { rialRateFor } from './currencyData'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
@@ -79,22 +80,24 @@ export async function saveDocument(input: {
   department?: string; budget?: number; sourceId?: number; note?: string; priority?: string; lines: LineRow[]
 }, userId?: string): Promise<number> {
   const totals = documentTotals(input.lines)
+  const rate = (await rialRateFor(input.currency ?? 'IRR')) ?? 1
+  const baseTotal = Math.round(totals.total * rate * 100) / 100
   if (input.id) {
     await pgQuery(
       `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
-        note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), updated_at=${NOW} WHERE id=$1`,
+        note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), exchange_rate=$13, base_total=$14, updated_at=${NOW} WHERE id=$1`,
       [input.id, input.vendorId ?? null, input.date, input.currency ?? null, input.department ?? null, input.budget ?? 0,
-       input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null])
+       input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null, rate, baseTotal])
     await pgQuery(`DELETE FROM purchase_document_lines WHERE document_id=$1`, [input.id])
     await insertLines(input.id, input.lines)
     return input.id
   }
   const docNo = await nextNumber(`purchase_${input.docType}`, { legacyPrefix: input.docType.toUpperCase().slice(0, 3) })
   const row = (await pgQuery<{ id: number }>(
-    `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW},${NOW}) RETURNING id`,
+    `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,exchange_rate,base_total,created_at,updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,${NOW},${NOW}) RETURNING id`,
     [docNo, input.docType, input.vendorId ?? null, input.date, input.currency ?? 'IRR', input.department ?? null, input.budget ?? 0,
-     input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null]))[0]
+     input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null, rate, baseTotal]))[0]
   await insertLines(row.id, input.lines)
   return row.id
 }
@@ -199,9 +202,10 @@ export async function decideApproval(id: number, level: number, decision: 'appro
 }
 
 /** Record a payment against a purchase invoice and recompute its settle status. */
-export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string) {
-  await pgQuery(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,${NOW})`,
-    [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null])
+export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR') {
+  const rate = (await rialRateFor(currency)) ?? 1
+  await pgQuery(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW})`,
+    [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate])
   const d = (await pgQuery<{ total: number }>(`SELECT total FROM purchase_documents WHERE id=$1`, [documentId]))[0]
   const paid = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(amount),0) AS t FROM purchase_payments WHERE document_id=$1`, [documentId]))[0]?.t)
   const status = purchaseInvoiceStatus(num(d.total), paid)

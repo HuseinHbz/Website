@@ -11,7 +11,7 @@ type Tab = 'dashboard' | 'customers' | 'quote' | 'order' | 'invoice' | 'payments
 type DocType = 'quote' | 'order' | 'invoice' | 'credit_note'
 
 interface Customer { id?: number; code: string; name: string; email: string | null; phone: string | null; company: string | null; taxId: string | null; kind?: string; nationalId?: string | null; regNo?: string | null; economicCode?: string | null; creditLimit: number; address?: string | null; notes?: string | null; active: number | boolean; invoiced?: number; paid?: number; outstanding?: number; available?: number; overLimit?: boolean; utilizationPct?: number }
-interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number }
+interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number; currency?: string }
 interface Line { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number }
 interface Payment { id: number; date: string; amount: number; method: string; reference: string | null; note: string | null; customer: string; docNo: string | null }
 interface Kpis { customers: number; quotes: number; orders: number; invoiced: number; collected: number; outstanding: number; wonValue: number; taxCollected: number }
@@ -25,6 +25,11 @@ export function SalesCenter() {
   const t = useT()
   const { toast, ToastContainer } = useToast()
   const [tab, setTab] = useState<Tab>('dashboard')
+  const [autoNew, setAutoNew] = useState(false)
+  // Quick-action deep link (?new=invoice): unique route identity for 'New Invoice'.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('new') === 'invoice') { setTab('invoice'); setAutoNew(true) }
+  }, [])
   return (
     <>
       <ToastContainer />
@@ -38,7 +43,7 @@ export function SalesCenter() {
       </div>
       {tab === 'dashboard' && <Dashboard t={t} />}
       {tab === 'customers' && <Customers t={t} toast={toast} />}
-      {(tab === 'quote' || tab === 'order' || tab === 'invoice') && <Documents key={tab} t={t} toast={toast} docType={tab} />}
+      {(tab === 'quote' || tab === 'order' || tab === 'invoice') && <Documents key={tab} t={t} toast={toast} docType={tab} autoNew={tab === 'invoice' && autoNew} onAutoNew={() => setAutoNew(false)} />}
       {tab === 'payments' && <Payments t={t} toast={toast} />}
     </>
   )
@@ -284,7 +289,7 @@ function StatementModal({ fa, customer, onClose }: { fa: boolean; customer: Cust
 }
 
 // ── Documents (quote / order / invoice) ──────────────────────────────────────
-function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote' | 'order' | 'invoice' }) {
+function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; toast: Toast; docType: 'quote' | 'order' | 'invoice'; autoNew?: boolean; onAutoNew?: () => void }) {
   const locale = useAdminLocale()
   const [rows, setRows] = useState<DocRow[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -292,11 +297,13 @@ function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote'
   const [modal, setModal] = useState(false)
   const [customerId, setCustomerId] = useState(0)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [currency, setCurrency] = useState('IRR')
   const [notes, setNotes] = useState('')
   const [lines, setLines] = useState<Line[]>([{ description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 0 }])
   const [saving, setSaving] = useState(false)
   const [payFor, setPayFor] = useState<DocRow | null>(null)
   const [payAmount, setPayAmount] = useState(0)
+  useEffect(() => { if (autoNew) { setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -320,7 +327,7 @@ function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote'
     if (!customerId || clean.length === 0) { toast(t('sales_docInvalid'), 'error'); return }
     setSaving(true)
     try {
-      const r = await fetch('/api/admin/erp/sales/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docType, customerId, date, notes, lines: clean }) })
+      const r = await fetch('/api/admin/erp/sales/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docType, currency, customerId, date, notes, lines: clean }) })
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'failed')
       if (sendAfter && d.id) await fetch('/api/admin/erp/sales/documents', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id, op: 'send' }) })
       toast(t('sales_saved'), 'success'); setModal(false); reset(); load()
@@ -346,14 +353,24 @@ function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote'
     { key: 'customerName', labelEn: 'Customer', labelFa: t('sales_cCustomer'), render: r => <span className="text-text-secondary">{r.customerName}</span> },
     { key: 'date', labelEn: 'Date', labelFa: t('sales_cDate'), type: 'date', render: r => <span className="text-text-tertiary text-xs">{r.date}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('sales_cStatus'), type: 'enum', options: ['draft', 'sent', 'confirmed', 'partial', 'paid', 'void'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: r => <Badge color={STATUS_COLOR[r.status]}>{t(`sales_st_${r.status}` as 'sales_st_draft')}</Badge> },
-    { key: 'total', labelEn: 'Total', labelFa: t('sales_cTotal'), type: 'number', numeric: true, render: r => <span className="text-text-secondary text-xs">{money(r.total)}{docType === 'invoice' && r.paid > 0 && <span className="text-text-tertiary"> ({money(r.paid)})</span>}</span> },
+    { key: 'total', labelEn: 'Total', labelFa: t('sales_cTotal'), type: 'number', numeric: true, render: r => <span className="text-text-secondary text-xs">{fmtMoney(r.total, { max: 2, currency: r.currency })}{docType === 'invoice' && r.paid > 0 && <span className="text-text-tertiary"> ({fmtMoney(r.paid, { max: 2, currency: r.currency })})</span>}</span> },
   ]
+  // Soft delete (super_admin/administrator; the server enforces RBAC).
+  async function del(r: DocRow) {
+    const reason = window.prompt(locale === 'fa' ? `دلیل حذف ${r.docNo}؟` : `Reason for deleting ${r.docNo}?`)
+    if (reason === null) return
+    const res = await fetch('/api/admin/erp/sales/documents', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id, reason: reason.trim() || undefined }) })
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) { toast(locale === 'fa' ? 'سند حذف شد' : 'Document deleted', 'success'); load() }
+    else toast(d.error || (locale === 'fa' ? 'حذف ناموفق — نیازمند نقش مدیر' : 'Delete failed — requires an admin role'), 'error')
+  }
   const rowActions: RowAction<DocRow>[] = [
     { id: 'send', labelEn: 'Send', labelFa: t('sales_send'), icon: '➤', hidden: r => r.status !== 'draft', onClick: r => op(r.id, 'send') },
     { id: 'toOrder', labelEn: 'To Order', labelFa: t('sales_toOrder'), icon: '→', hidden: r => !(docType === 'quote' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'order') },
     { id: 'toInvoice', labelEn: 'To Invoice', labelFa: t('sales_toInvoice'), icon: '→', hidden: r => !(docType === 'order' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'invoice') },
     { id: 'pay', labelEn: 'Record Payment', labelFa: t('sales_recordPay'), icon: '💰', hidden: r => !(docType === 'invoice' && r.status !== 'paid' && r.status !== 'void'), onClick: r => { setPayFor(r); setPayAmount(r.total - r.paid) } },
     { id: 'void', labelEn: 'Void', labelFa: t('sales_void'), icon: '✕', danger: true, hidden: r => r.status === 'void', onClick: r => op(r.id, 'void') },
+    { id: 'delete', labelEn: 'Delete', labelFa: locale === 'fa' ? 'حذف' : 'Delete', icon: '🗑', danger: true, hidden: r => r.paid > 0, onClick: r => del(r) },
   ]
   return (
     <>
@@ -367,6 +384,7 @@ function Documents({ t, toast, docType }: { t: T; toast: Toast; docType: 'quote'
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('sales_fCustomer')} value={String(customerId)} onChange={v => setCustomerId(Number(v))} options={[{ value: '0', label: t('sales_selectCustomer') }, ...customers.map(c => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))]} />
             <Input label={t('sales_fDate')} type="date" value={date} onChange={setDate} />
+            <Select label={locale === 'fa' ? 'ارز' : 'Currency'} value={currency} onChange={setCurrency} options={['IRR', 'IRT', 'USD', 'EUR'].map(c => ({ value: c, label: c }))} />
           </div>
           <div className="space-y-2">
             <div className="grid grid-cols-12 gap-2 text-xs text-text-tertiary px-1"><span className="col-span-5">{t('sales_lDesc')}</span><span className="col-span-1 text-right">{t('sales_lQty')}</span><span className="col-span-2 text-right">{t('sales_lPrice')}</span><span className="col-span-1 text-right">{t('sales_lDisc')}</span><span className="col-span-1 text-right">{t('sales_lTax')}</span><span className="col-span-2 text-right">{t('sales_lTotal')}</span></div>

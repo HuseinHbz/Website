@@ -54,7 +54,7 @@ export async function salesOverview() {
     pgQuery(`SELECT COALESCE(SUM(total),0)::float AS v FROM sales_documents WHERE doc_type='order' AND status<>'void'`, []),
     pgQuery(
       `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.date, d.status, d.total::float AS total, c.name AS "customer"
-       FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id ORDER BY d.created_at DESC LIMIT 12`, []),
+       FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.deleted_at IS NULL ORDER BY d.created_at DESC LIMIT 12`, []),
     pgQuery(
       `SELECT c.name, COALESCE(SUM(CASE WHEN d.doc_type='invoice' AND d.status<>'void' THEN d.total ELSE 0 END),0)::float AS invoiced
        FROM sales_customers c LEFT JOIN sales_documents d ON d.customer_id=c.id

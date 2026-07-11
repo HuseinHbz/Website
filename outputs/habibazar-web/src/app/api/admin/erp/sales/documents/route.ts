@@ -5,6 +5,8 @@ import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
 import { nextNumber } from '@/lib/numbering/integrate'
+import { rialRateFor } from '@/lib/erp/currencyData'
+import { defaultCurrency } from '@/lib/erp/settings'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -21,8 +23,8 @@ export async function GET(req: NextRequest) {
       const doc = (await pgQuery(
         `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.customer_id AS "customerId", d.date, d.due_date AS "dueDate",
                 d.status, d.subtotal::float AS subtotal, d.discount_total::float AS "discountTotal", d.tax_total::float AS "taxTotal",
-                d.total::float AS total, d.notes, c.name AS "customerName"
-         FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.id=$1`, [id]))[0]
+                d.total::float AS total, d.notes, d.currency, d.exchange_rate::float AS "exchangeRate", d.base_total::float AS "baseTotal", c.name AS "customerName"
+         FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.id=$1 AND d.deleted_at IS NULL`, [id]))[0]
       if (!doc) return badRequest('Not found')
       const lines = await pgQuery(
         `SELECT id, description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct", line_total::float AS "lineTotal"
@@ -33,10 +35,10 @@ export async function GET(req: NextRequest) {
     const type = req.nextUrl.searchParams.get('type')
     const rows = await pgQuery(
       `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.date, d.due_date AS "dueDate", d.status,
-              d.total::float AS total, c.name AS "customerName",
+              d.total::float AS total, d.currency, c.name AS "customerName",
               COALESCE((SELECT SUM(amount) FROM sales_payments p WHERE p.document_id=d.id),0)::float AS paid
        FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id
-       ${type ? 'WHERE d.doc_type=$1' : ''}
+       WHERE d.deleted_at IS NULL ${type ? 'AND d.doc_type=$1' : ''}
        ORDER BY d.date DESC, d.id DESC LIMIT 300`, type ? [type] : [])
     return NextResponse.json({ documents: rows })
   } catch (e) { return apiError(e, 'Failed to load documents') }
@@ -50,6 +52,7 @@ const createSchema = z.object({
   dueDate: z.string().max(30).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
   sourceId: z.number().int().positive().optional(),
+  currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).optional(),
   lines: z.array(z.object({
     description: z.string().min(1).max(300),
     qty: z.number().positive(),
@@ -67,21 +70,25 @@ export async function POST(req: NextRequest) {
   const d = parsed.data
   const totals = documentTotals(d.lines)
   try {
+    const currency = d.currency ?? await defaultCurrency()
+    const rate = await rialRateFor(currency)
+    if (rate == null) return badRequest(`No exchange rate configured for ${currency} — set one in Finance → Currency`)
+    const baseTotal = Math.round(totals.total * rate * 100) / 100
     let docId = d.id
     if (docId) {
       const cur = (await pgQuery(`SELECT status FROM sales_documents WHERE id=$1`, [docId]))[0] as { status: string } | undefined
       if (!cur) return badRequest('Not found')
       if (cur.status !== 'draft') return badRequest('Only draft documents can be edited')
       await pgQuery(
-        `UPDATE sales_documents SET customer_id=$2, date=$3, due_date=$4, notes=$5, subtotal=$6, discount_total=$7, tax_total=$8, total=$9, updated_at=${NOW} WHERE id=$1`,
-        [docId, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total])
+        `UPDATE sales_documents SET customer_id=$2, date=$3, due_date=$4, notes=$5, subtotal=$6, discount_total=$7, tax_total=$8, total=$9, currency=$10, exchange_rate=$11, base_total=$12, updated_at=${NOW} WHERE id=$1`,
+        [docId, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, currency, rate, baseTotal])
       await pgQuery(`DELETE FROM sales_document_lines WHERE document_id=$1`, [docId])
     } else {
       const docNo = await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
       const row = (await pgQuery(
-        `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, updated_at)
-         VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,${NOW}) RETURNING id`,
-        [d.docType, docNo, d.customerId, d.date, d.dueDate ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, d.sourceId ?? null, d.notes ?? null, auth.user.id]))[0] as { id: number }
+        `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
+         VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW}) RETURNING id`,
+        [d.docType, docNo, d.customerId, d.date, d.dueDate ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, d.sourceId ?? null, d.notes ?? null, auth.user.id, currency, rate, baseTotal]))[0] as { id: number }
       docId = row.id
     }
     for (let i = 0; i < d.lines.length; i++) {
@@ -129,16 +136,23 @@ export async function PUT(req: NextRequest) {
   } catch (e) { return apiError(e, 'Operation failed') }
 }
 
+// Soft delete (Phase 26.7): super_admin/administrator only (canDo 'delete'
+// excludes editors). Records who/when/why; the row stays for the audit trail
+// and is voided so every financial aggregate keeps excluding it.
 export async function DELETE(req: NextRequest) {
   const auth = await requireAdmin('delete')
   if ('error' in auth) return auth.error
-  const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
+  const parsed = await readJson(req, z.object({ id: z.number().int().positive(), reason: z.string().max(500).optional() }))
   if ('error' in parsed) return parsed.error
   try {
     const paid = (await pgQuery(`SELECT 1 FROM sales_payments WHERE document_id=$1 LIMIT 1`, [parsed.data.id]))[0]
     if (paid) return badRequest('Document has payments; void it instead')
-    await pgQuery(`DELETE FROM sales_documents WHERE id=$1`, [parsed.data.id])
-    await logAction(auth.user, 'sales.doc.delete', 'sales_document', parsed.data.id)
+    const row = (await pgQuery(
+      `UPDATE sales_documents SET deleted_at=${NOW}, deleted_by=$2, delete_reason=$3, status='void', updated_at=${NOW}
+       WHERE id=$1 AND deleted_at IS NULL RETURNING id`,
+      [parsed.data.id, auth.user.id, parsed.data.reason ?? null]))[0]
+    if (!row) return badRequest('Not found or already deleted')
+    await logAction(auth.user, 'sales.doc.delete', 'sales_document', parsed.data.id, null, { soft: true, reason: parsed.data.reason ?? '' })
     return NextResponse.json({ ok: true })
   } catch (e) { return apiError(e, 'Failed to delete document') }
 }
