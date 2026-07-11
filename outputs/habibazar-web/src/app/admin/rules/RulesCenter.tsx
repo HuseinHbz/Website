@@ -5,6 +5,7 @@ import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { parseDef, serializeDef, RULE_OPS_UI, type RuleNode } from '@/lib/rules/builder'
 
 interface Rule { id: number; key: string; nameEn: string; nameFa: string | null; category: string; description: string | null; currentVersion: number; activeVersion: number; status: string }
 interface Version { id: number; version: number; definition: string; note: string | null; createdAt: string }
@@ -90,7 +91,7 @@ export function RulesCenter() {
         <div className="grid lg:grid-cols-2 gap-4">
           <Card className="p-5">
             <h3 className="text-sm font-semibold text-text-primary mb-3">{t('rule_definition')}</h3>
-            <textarea value={newDef} onChange={e => setNewDef(e.target.value)} rows={16} spellCheck={false} className="w-full font-mono text-xs bg-background border border-border rounded-lg p-3 text-text-primary" />
+            <RuleBuilder fa={fa} value={newDef} onChange={setNewDef} />
             <div className="mt-3"><Btn size="sm" onClick={() => op({ id: detail.id, op: 'newVersion', definition: newDef }, t('rule_versionAdded'))}>{t('rule_saveVersion')}</Btn></div>
           </Card>
           <Card className="p-5">
@@ -155,10 +156,69 @@ export function RulesCenter() {
           <div className="grid grid-cols-2 gap-4"><Input label={t('rule_fKey')} value={draft.key} onChange={v => setDraft(s => ({ ...s, key: v }))} placeholder="discount-policy" /><Select label={t('rule_fCategory')} value={draft.category} onChange={v => setDraft(s => ({ ...s, category: v }))} options={CATEGORIES.map(x => ({ value: x, label: t(`rule_cat_${x}` as 'rule_cat_general') }))} /></div>
           <div className="grid grid-cols-2 gap-4"><Input label={t('rule_fNameEn')} value={draft.nameEn} onChange={v => setDraft(s => ({ ...s, nameEn: v }))} /><Input label={t('rule_fNameFa')} value={draft.nameFa} onChange={v => setDraft(s => ({ ...s, nameFa: v }))} /></div>
           <Input label={t('rule_fDescription')} value={draft.description} onChange={v => setDraft(s => ({ ...s, description: v }))} />
-          <div><label className="form-label">{t('rule_definition')}</label><textarea value={draft.definition} onChange={e => setDraft(s => ({ ...s, definition: e.target.value }))} rows={10} spellCheck={false} className="w-full font-mono text-xs bg-background border border-border rounded-lg p-3 text-text-primary" /></div>
+          <div><label className="form-label">{t('rule_definition')}</label><RuleBuilder fa={fa} value={draft.definition} onChange={v => setDraft(s => ({ ...s, definition: v }))} /></div>
           <div className="flex gap-3"><Btn onClick={create} disabled={saving}>{saving ? t('rule_saving') : t('rule_create')}</Btn><Btn variant="secondary" onClick={() => setCreateOpen(false)}>{t('rule_cancel')}</Btn></div>
         </div>
       </Modal>
     </>
+  )
+}
+
+// ── Visual rule builder (Phase 26.10) — edit conditions/outputs, emit the JSON ──
+export function RuleBuilder({ fa, value, onChange }: { fa: boolean; value: string; onChange: (json: string) => void }) {
+  const lp = (en: string, faS: string) => (fa ? faS : en)
+  const [mode, setMode] = useState<'visual' | 'json'>('visual')
+  const model = useMemo(() => parseDef(value), [value])
+  function update(next: { mode: string; rules: RuleNode[] }) { onChange(serializeDef(next)) }
+  if (mode === 'json' || !model) {
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-end gap-1">
+          {model && <button type="button" onClick={() => setMode('visual')} className="text-xs px-2 py-1 rounded border border-border text-text-secondary">{lp('Visual', 'بصری')}</button>}
+        </div>
+        <textarea value={value} onChange={e => onChange(e.target.value)} rows={14} spellCheck={false} className="w-full font-mono text-xs bg-background border border-border rounded-lg p-3 text-text-primary" />
+        {!model && <p className="text-3xs text-danger-text">{lp('Invalid JSON — fix it to switch to the visual builder.', 'JSON نامعتبر — برای حالت بصری اصلاحش کنید.')}</p>}
+      </div>
+    )
+  }
+  const rules = model.rules
+  const setRules = (fn: (r: RuleNode[]) => RuleNode[]) => update({ ...model, rules: fn(rules) })
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Select label="" value={model.mode} onChange={v => update({ ...model, mode: v })} options={[{ value: 'first', label: lp('First match wins', 'اولین تطبیق') }, { value: 'collect', label: lp('Collect all matches', 'جمع همه') }]} />
+        <button type="button" onClick={() => setMode('json')} className="text-xs px-2 py-1 rounded border border-border text-text-secondary">JSON</button>
+      </div>
+      {rules.map((r, ri) => (
+        <div key={ri} className="border border-subtle rounded-lg p-3 space-y-2">
+          <div className="grid grid-cols-12 gap-2 items-end">
+            <div className="col-span-5"><Input label={lp('Rule id', 'شناسه قانون')} value={r.id} onChange={v => setRules(rs => rs.map((x, j) => j === ri ? { ...x, id: v } : x))} /></div>
+            <div className="col-span-3"><Input label={lp('Priority', 'اولویت')} value={String(r.priority)} onChange={v => setRules(rs => rs.map((x, j) => j === ri ? { ...x, priority: Number(v) || 0 } : x))} /></div>
+            <div className="col-span-3"><Select label={lp('Match', 'تطبیق')} value={r.match} onChange={v => setRules(rs => rs.map((x, j) => j === ri ? { ...x, match: v as 'all' | 'any' } : x))} options={[{ value: 'all', label: lp('All', 'همه') }, { value: 'any', label: lp('Any', 'هر')}]} /></div>
+            <div className="col-span-1"><Btn size="sm" variant="ghost" onClick={() => setRules(rs => rs.filter((_, j) => j !== ri))}>✕</Btn></div>
+          </div>
+          <p className="text-3xs text-text-tertiary">{lp('Conditions (when):', 'شرط‌ها (اگر):')}</p>
+          {r.conditions.map((c, ci) => (
+            <div key={ci} className="grid grid-cols-12 gap-2 items-center">
+              <input value={c.field} onChange={e => setRules(rs => rs.map((x, j) => j === ri ? { ...x, conditions: x.conditions.map((y, k) => k === ci ? { ...y, field: e.target.value } : y) } : x))} placeholder={lp('field (e.g. amount)', 'فیلد (مثلاً amount)')} className="form-input col-span-5 !py-1.5 text-xs" />
+              <select value={c.op} onChange={e => setRules(rs => rs.map((x, j) => j === ri ? { ...x, conditions: x.conditions.map((y, k) => k === ci ? { ...y, op: e.target.value } : y) } : x))} className="form-input col-span-3 !py-1.5 text-xs">{RULE_OPS_UI.map(o => <option key={o} value={o}>{o}</option>)}</select>
+              <input value={c.value} disabled={c.op === 'truthy' || c.op === 'falsy'} onChange={e => setRules(rs => rs.map((x, j) => j === ri ? { ...x, conditions: x.conditions.map((y, k) => k === ci ? { ...y, value: e.target.value } : y) } : x))} placeholder={lp('value', 'مقدار')} className="form-input col-span-3 !py-1.5 text-xs" />
+              <button onClick={() => setRules(rs => rs.map((x, j) => j === ri ? { ...x, conditions: x.conditions.filter((_, k) => k !== ci) } : x))} className="col-span-1 text-xs text-danger">✕</button>
+            </div>
+          ))}
+          <button onClick={() => setRules(rs => rs.map((x, j) => j === ri ? { ...x, conditions: [...x.conditions, { field: '', op: 'eq', value: '' }] } : x))} className="text-xs text-brand hover:underline">＋ {lp('condition', 'شرط')}</button>
+          <p className="text-3xs text-text-tertiary">{lp('Outputs (then):', 'خروجی‌ها (آنگاه):')}</p>
+          {r.outputs.map((o, oi) => (
+            <div key={oi} className="grid grid-cols-12 gap-2 items-center">
+              <input value={o.k} onChange={e => setRules(rs => rs.map((x, j) => j === ri ? { ...x, outputs: x.outputs.map((y, k) => k === oi ? { ...y, k: e.target.value } : y) } : x))} placeholder={lp('key (e.g. discountPct)', 'کلید (مثلاً discountPct)')} className="form-input col-span-5 !py-1.5 text-xs" />
+              <input value={o.v} onChange={e => setRules(rs => rs.map((x, j) => j === ri ? { ...x, outputs: x.outputs.map((y, k) => k === oi ? { ...y, v: e.target.value } : y) } : x))} placeholder={lp('value', 'مقدار')} className="form-input col-span-6 !py-1.5 text-xs" />
+              <button onClick={() => setRules(rs => rs.map((x, j) => j === ri ? { ...x, outputs: x.outputs.filter((_, k) => k !== oi) } : x))} className="col-span-1 text-xs text-danger">✕</button>
+            </div>
+          ))}
+          <button onClick={() => setRules(rs => rs.map((x, j) => j === ri ? { ...x, outputs: [...x.outputs, { k: '', v: '' }] } : x))} className="text-xs text-brand hover:underline">＋ {lp('output', 'خروجی')}</button>
+        </div>
+      ))}
+      <Btn size="sm" variant="secondary" onClick={() => setRules(rs => [...rs, { id: `rule-${rs.length + 1}`, priority: 0, match: 'all', conditions: [], outputs: [] }])}>＋ {lp('Add rule', 'افزودن قانون')}</Btn>
+    </div>
   )
 }
