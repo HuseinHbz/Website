@@ -22,6 +22,25 @@ const fmt = (v: unknown) => {
   if (typeof v === 'number') return v.toLocaleString(undefined, { maximumFractionDigits: 2 })
   return v == null || v === '' ? '—' : String(v)
 }
+// Bilingual dictionary for report column + summary labels (26.10): the report
+// data layer emits stable English labels; this maps them to Persian for RTL.
+const LABEL_FA: Record<string, string> = {
+  'Account': 'حساب', 'Code': 'کد', 'Type': 'نوع', 'Debit': 'بدهکار', 'Credit': 'بستانکار',
+  'Kind': 'نوع', 'Amount': 'مبلغ', 'Customer': 'مشتری', 'Invoiced': 'فاکتورشده', 'Paid': 'پرداختی',
+  'Outstanding': 'مانده', 'No.': 'شماره', 'Date': 'تاریخ', 'Vendor': 'تأمین‌کننده', 'Total': 'جمع',
+  'Status': 'وضعیت', 'SKU': 'کد کالا', 'Product': 'کالا', 'On hand': 'موجودی', 'Value': 'ارزش',
+  'Category': 'دسته', 'Asset': 'دارایی', 'Book value': 'ارزش دفتری', 'Project': 'پروژه', 'Cost': 'بهای تمام‌شده',
+  'Revenue': 'درآمد', 'Profit': 'سود', 'Position': 'موقعیت', 'Currency': 'ارز', 'Grade': 'درجه',
+  'Foreign amount': 'مبلغ ارزی', 'Booked rate': 'نرخ ثبت', 'Current rate': 'نرخ روز', 'Memo': 'شرح',
+  'Booked (IRR)': 'ثبت‌شده (ریال)', 'Current (IRR)': 'روز (ریال)', 'Unrealized G/L (IRR)': 'سود/زیان تحقق‌نیافته (ریال)',
+  'Entry': 'سند', 'Gain (IRR)': 'سود (ریال)', 'Loss (IRR)': 'زیان (ریال)', 'Net (IRR)': 'خالص (ریال)',
+  'Expenses': 'هزینه‌ها', 'Net income': 'سود خالص', 'Budget': 'بودجه', 'Spend': 'هزینه', 'Committed spend': 'هزینه تعهدشده',
+  'Warranty': 'گارانتی', 'Avg cost': 'میانگین بها', 'Documents': 'اسناد', 'Products': 'کالاها', 'Vendors': 'تأمین‌کنندگان',
+  'Invoices': 'فاکتورها', 'Assets': 'دارایی‌ها', 'Net': 'خالص', 'Total value': 'ارزش کل',
+  'Total debit': 'جمع بدهکار', 'Total credit': 'جمع بستانکار', 'Total gain': 'جمع سود', 'Total loss': 'جمع زیان',
+  'Unrealized gain': 'سود تحقق‌نیافته', 'Unrealized loss': 'زیان تحقق‌نیافته', 'Already booked': 'ثبت‌شده قبلی',
+}
+const faLabel = (label: string) => LABEL_FA[label] ?? label
 
 export function ReportingCenter() {
   const t = useT()
@@ -111,7 +130,7 @@ export function ReportingCenter() {
 
           {result.summary.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {result.summary.map(s => <StatCard key={s.label} label={s.label} value={fmt(s.value)} />)}
+              {result.summary.map(s => <StatCard key={s.label} label={locale === 'fa' ? faLabel(s.label) : s.label} value={fmt(s.value)} />)}
             </div>
           )}
 
@@ -119,7 +138,7 @@ export function ReportingCenter() {
             <Card className="p-4">
               <DataTable
                 tableId={`report-${result.def.id ?? 'result'}`}
-                columns={result.columns.map(c => ({ key: c.key, labelEn: c.label, labelFa: c.label, numeric: typeof result.rows[0]?.[c.key] === 'number', render: (row: DTRow) => fmt(row[c.key]) })) as DTColumn<DTRow>[]}
+                columns={result.columns.map(c => ({ key: c.key, labelEn: c.label, labelFa: faLabel(c.label), numeric: typeof result.rows[0]?.[c.key] === 'number', render: (row: DTRow) => fmt(row[c.key]) })) as DTColumn<DTRow>[]}
                 rows={result.rows as DTRow[]}
                 locale={locale}
                 exportName={`report-${result.def.id ?? 'result'}`}

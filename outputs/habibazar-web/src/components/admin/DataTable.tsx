@@ -558,17 +558,38 @@ function ColumnFilterInput<T extends object>({ col, value, onChange, isRTL }: { 
 }
 
 function RowActionsMenu<T extends object>({ row, actions, isRTL }: { row: T; actions: RowAction<T>[]; isRTL: boolean }) {
-  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  // Position the menu with `position: fixed` from the button's viewport rect so
+  // it escapes the table's `overflow-auto` clip (previously it was hidden and
+  // needed scrolling). Flips up/left when near the viewport edge.
+  const openMenu = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect()
+    if (!r) return
+    const W = 176, H = Math.min(actions.length * 32 + 8, 320)
+    let top = r.bottom + 4
+    if (top + H > window.innerHeight - 8) top = Math.max(8, r.top - H - 4)
+    let left = isRTL ? r.right - W : r.left
+    left = Math.max(8, Math.min(left, window.innerWidth - W - 8))
+    setPos({ top, left })
+  }, [actions.length, isRTL])
+  useEffect(() => {
+    if (!pos) return
+    const close = () => setPos(null)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) }
+  }, [pos])
   if (actions.length === 0) return null
   return (
-    <div className="relative inline-block">
-      <button onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={lc(isRTL, 'Row actions', 'عملیات ردیف')} className="px-2 py-1 rounded hover:bg-white/10 text-text-tertiary">⋯</button>
-      {open && (
+    <div className="inline-block">
+      <button ref={btnRef} onClick={() => (pos ? setPos(null) : openMenu())} aria-haspopup="menu" aria-expanded={!!pos} aria-label={lc(isRTL, 'Row actions', 'عملیات ردیف')} className="px-2 py-1 rounded hover:bg-white/10 text-text-tertiary">⋯</button>
+      {pos && (
         <>
-          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div role="menu" className="absolute z-30 mt-1 end-0 w-40 rounded-lg bg-surface border border-border shadow-2xl py-1 text-xs">
+          <div className="fixed inset-0 z-[60]" onClick={() => setPos(null)} />
+          <div role="menu" style={{ position: 'fixed', top: pos.top, left: pos.left, width: 176 }} className="z-[61] rounded-lg bg-surface border border-border shadow-2xl py-1 text-xs max-h-80 overflow-y-auto">
             {actions.map(a => (
-              <button key={a.id} role="menuitem" onClick={() => { setOpen(false); a.onClick(row) }}
+              <button key={a.id} role="menuitem" onClick={() => { setPos(null); a.onClick(row) }}
                 className={`w-full text-start px-3 py-1.5 hover:bg-white/5 ${a.danger ? 'text-danger-text' : 'text-text-secondary hover:text-text-primary'}`}>
                 {a.icon ? `${a.icon} ` : ''}{isRTL ? a.labelFa : a.labelEn}
               </button>

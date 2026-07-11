@@ -311,7 +311,10 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
   const [plId, setPlId] = useState('')
   const [plItems, setPlItems] = useState<{ productId: number; sku: string; nameEn: string; nameFa: string | null; unitPrice: number }[]>([])
   useEffect(() => { if (autoNew) { setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
+  const [invProducts, setInvProducts] = useState<{ id: number; sku: string; nameEn: string; nameFa: string | null; price: number }[]>([])
   useEffect(() => { fetch('/api/admin/erp/sales/pricelists').then(r => r.json()).then(d => setPriceLists(d.priceLists ?? [])).catch(() => {}) }, [])
+  useEffect(() => { fetch('/api/admin/erp/inventory/products').then(r => r.json()).then(d => setInvProducts((d.products ?? []).filter((p: { active: number | boolean }) => p.active !== 0).map((p: { id: number; sku: string; nameEn: string; nameFa: string | null; price: number }) => ({ id: p.id, sku: p.sku, nameEn: p.nameEn, nameFa: p.nameFa, price: p.price })))).catch(() => {}) }, [])
+  function addProduct(productId: number) { const p = invProducts.find(x => x.id === productId); if (!p) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: 9, productId: p.id }]) }
   useEffect(() => { if (!plId) { setPlItems([]); return } fetch(`/api/admin/erp/sales/pricelists?items=${plId}`).then(r => r.json()).then(d => setPlItems(d.items ?? [])).catch(() => {}) }, [plId])
   function addFromPriceList(productId: number) { const it = plItems.find(x => x.productId === productId); if (!it) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn, qty: 1, unitPrice: it.unitPrice, discountPct: 0, taxPct: 9, productId: it.productId }]) }
 
@@ -420,6 +423,12 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
                 <select onChange={e => { if (e.target.value) { addFromPriceList(Number(e.target.value)); e.target.value = '' } }} className="form-input !py-1.5 text-xs max-w-xs" defaultValue="">
                   <option value="">{locale === 'fa' ? '＋ افزودن از فهرست قیمت' : '＋ Add from price list'}</option>
                   {plItems.map(it => <option key={it.productId} value={it.productId}>{it.sku} · {locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn} — {it.unitPrice.toLocaleString()}</option>)}
+                </select>
+              )}
+              {invProducts.length > 0 && (
+                <select onChange={e => { if (e.target.value) { addProduct(Number(e.target.value)); e.target.value = '' } }} className="form-input !py-1.5 text-xs max-w-xs" defaultValue="">
+                  <option value="">{locale === 'fa' ? '＋ افزودن کالای انبار' : '＋ Add inventory product'}</option>
+                  {invProducts.map(p => <option key={p.id} value={p.id}>{p.sku} · {locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn} — {p.price.toLocaleString()}</option>)}
                 </select>
               )}
             </div>

@@ -60,9 +60,14 @@ export function WorkflowManager() {
 
   function set<K extends keyof Workflow>(k: K, v: Workflow[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
+  // Normalise any text to a valid workflow key (lowercase, only a-z0-9._-).
+  const slugify = (v: string) => v.toLowerCase().trim().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
   async function save() {
     // client-side JSON sanity before hitting the API (which fully validates)
     try { JSON.parse(editing.definition) } catch { toast(t('wf_jsonInvalid'), 'error'); return }
+    // Auto-derive/repair the key so a name with spaces or Persian never 400s.
+    const key = slugify(editing.key) || slugify(editing.nameEn) || `wf-${Date.now().toString(36)}`
+    if (key !== editing.key) editing.key = key
     setSaving(true)
     try {
       const r = await fetch('/api/admin/workflows', {
@@ -147,7 +152,7 @@ export function WorkflowManager() {
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('wf_editWorkflow') : t('wf_newWorkflow')} size="xl">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label={t('wf_keyL')} value={editing.key} onChange={(v) => set('key', v)} placeholder="expense-approval" />
+            <Input label={t('wf_keyL')} value={editing.key} onChange={(v) => set('key', v.toLowerCase().replace(/[^a-z0-9._-]+/g, '-'))} placeholder="expense-approval" />
             <Select label={t('wf_statusL')} value={editing.status} onChange={(v) => set('status', v as Status)} options={STATUSES.map((s) => ({ value: s, label: s }))} />
           </div>
           <div className="grid grid-cols-2 gap-4">

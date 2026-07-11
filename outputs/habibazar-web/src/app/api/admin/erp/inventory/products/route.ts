@@ -37,6 +37,8 @@ const schema = z.object({
   maxStock: z.number().min(0).default(0),
   safetyStock: z.number().min(0).default(0),
   active: z.boolean().default(true),
+  openingWarehouseId: z.number().int().positive().optional(),
+  openingQty: z.number().min(0).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -56,7 +58,15 @@ export async function POST(req: NextRequest) {
         [d.sku, d.barcode ?? null, d.nameEn, d.nameFa ?? null, d.category, d.unit, d.cost, d.price,
          d.trackLot ? 1 : 0, d.trackSerial ? 1 : 0, d.valuationMethod, d.reorderPoint, d.minStock, d.maxStock, d.safetyStock, d.active ? 1 : 0],
       ))[0] as { id: number }
-      await logAction(auth.user, 'inv.product.create', 'inv_product', row.id, null, { sku: d.sku })
+      // 26.10: opening stock — receive the initial quantity into the chosen
+      // warehouse so a newly-defined product isn't immediately 'out of stock'.
+      if (d.openingWarehouseId && (d.openingQty ?? 0) > 0) {
+        await pgQuery(
+          `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+           VALUES ($1,$2,'receipt',$3,$4,'Opening stock',$5, to_char(now(),'YYYY-MM-DD HH24:MI:SS'))`,
+          [row.id, d.openingWarehouseId, d.openingQty, d.cost, auth.user.id])
+      }
+      await logAction(auth.user, 'inv.product.create', 'inv_product', row.id, null, { sku: d.sku, openingQty: d.openingQty ?? 0 })
       return NextResponse.json({ id: row.id })
     }
     await pgQuery(

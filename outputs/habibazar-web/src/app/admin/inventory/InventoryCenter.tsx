@@ -175,6 +175,9 @@ function Products({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: bool
   useEffect(() => { if (autoNew) { setEditing(EMPTY_PRODUCT); setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
   const [editing, setEditing] = useState<Product>(EMPTY_PRODUCT)
   const [saving, setSaving] = useState(false)
+  const [warehouses, setWarehouses] = useState<{ id: number; code: string; nameEn: string; nameFa: string | null }[]>([])
+  const [opening, setOpening] = useState({ warehouseId: '', qty: '' })
+  useEffect(() => { fetch('/api/admin/erp/inventory/warehouses').then(r => r.json()).then(d => setWarehouses(d.warehouses ?? [])).catch(() => {}) }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -189,10 +192,11 @@ function Products({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: bool
     if (!editing.sku.trim() || !editing.nameEn.trim()) return
     setSaving(true)
     try {
-      const r = await fetch('/api/admin/erp/inventory/products', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...editing, active: !!editing.active }) })
+      const openingPayload = (!editing.id && opening.warehouseId && Number(opening.qty) > 0) ? { openingWarehouseId: Number(opening.warehouseId), openingQty: Number(opening.qty) } : {}
+      const r = await fetch('/api/admin/erp/inventory/products', { method: editing.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...editing, active: !!editing.active, ...openingPayload }) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'failed')
-      toast(t('inv_saved'), 'success'); setModal(false); load()
+      toast(t('inv_saved'), 'success'); setModal(false); setOpening({ warehouseId: '', qty: '' }); load()
     } catch (e) { toast(e instanceof Error ? e.message : t('inv_saveFail'), 'error') } finally { setSaving(false) }
   }
   async function del(id: number) {
@@ -217,7 +221,7 @@ function Products({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: bool
 
   return (
     <>
-      <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY_PRODUCT); setModal(true) }}>{t('inv_newProduct')}</Btn></div>
+      <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing(EMPTY_PRODUCT); setOpening({ warehouseId: '', qty: '' }); setModal(true) }}>{t('inv_newProduct')}</Btn></div>
       <Card className="p-4">
         <DataTable tableId="inventory-products" columns={productColumns} rows={products} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={p => String(p.id)} rowActions={productActions} exportName="products" emptyLabel={t('inv_noProducts')} />
       </Card>
@@ -245,6 +249,12 @@ function Products({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: bool
             <Input label={t('inv_fMax')} type="number" value={String(editing.maxStock)} onChange={v => set('maxStock', Number(v) || 0)} />
             <Input label={t('inv_fSafety')} type="number" value={String(editing.safetyStock)} onChange={v => set('safetyStock', Number(v) || 0)} />
           </div>
+          {!editing.id && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-subtle p-3">
+              <Select label={fa ? 'انبار موجودی اولیه' : 'Opening warehouse'} value={opening.warehouseId} onChange={v => setOpening(o => ({ ...o, warehouseId: v }))} options={[{ value: '', label: fa ? '— بدون موجودی اولیه —' : '— no opening stock —' }, ...warehouses.map(w => ({ value: String(w.id), label: `${w.code} — ${fa ? (w.nameFa || w.nameEn) : w.nameEn}` }))]} />
+              <Input label={fa ? 'تعداد موجودی اولیه' : 'Opening quantity'} type="number" value={opening.qty} onChange={v => setOpening(o => ({ ...o, qty: v }))} />
+            </div>
+          )}
           <div className="flex gap-6">
             <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={!!editing.trackLot} onChange={e => set('trackLot', e.target.checked)} /> {t('inv_fTrackLot')}</label>
             <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={!!editing.trackSerial} onChange={e => set('trackSerial', e.target.checked)} /> {t('inv_fTrackSerial')}</label>
