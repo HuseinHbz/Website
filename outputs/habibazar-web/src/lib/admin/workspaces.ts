@@ -250,10 +250,18 @@ export function hrefMatches(pathname: string, href: string): boolean {
  * longest nested (boundary) match. Guarantees a unique active nav item even
  * when several candidates share a prefix or an href is duplicated.
  */
-export function resolveActiveHref(pathname: string, hrefs: string[]): string | null {
+export function resolveActiveHref(pathname: string, hrefs: string[], activeTab?: string | null): string | null {
+  // Tabbed nav (`?tab=`): the item whose tab matches the current URL wins, so
+  // sibling tabs of the same page don't all light up (or collapse to the first).
+  if (activeTab) {
+    for (const href of hrefs) {
+      const qi = href.indexOf('?')
+      if (qi >= 0 && href.slice(0, qi) === pathname && href.slice(qi + 1) === `tab=${activeTab}`) return href
+    }
+  }
   let best: string | null = null
   for (const href of hrefs) {
-    if (hrefPath(href) === pathname) return href // exact always wins
+    if (hrefPath(href) === pathname) return href // exact pathname match (first tab = default when no ?tab=)
     if (hrefMatches(pathname, href) && (best === null || hrefPath(href).length > hrefPath(best).length)) best = href
   }
   return best

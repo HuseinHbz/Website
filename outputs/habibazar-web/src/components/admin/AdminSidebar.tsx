@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   visibleWorkspaces, visibleGroups, workspaceForPath, workspaceHome, resolveActiveHref,
@@ -22,6 +22,8 @@ interface Props {
 
 export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenCmd, mobileOpen = false, onMobileClose }: Props) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const activeTab = searchParams?.get('tab') ?? null
   const router = useRouter()
   const ws = workspaceForPath(pathname)
   const [switcherOpen, setSwitcherOpen] = useState(false)
@@ -97,7 +99,7 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
     ...favItems.map(i => i.href),
     ...recentItems.map(i => i.href),
     ...quickActions.map(a => a.href),
-  ]), [pathname, groups, favItems, recentItems, quickActions])
+  ], activeTab), [pathname, activeTab, groups, favItems, recentItems, quickActions])
 
   const desktopPos = isRTL
     ? `lg:right-0 lg:left-auto lg:${collapsed ? 'w-16' : 'w-60'}`

@@ -453,7 +453,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   Engine** (`workspaces.ts`: `hrefPath`/`hrefMatches`/`resolveActiveHref` —
   exact > longest boundary match, ONE active item; quick actions carry unique
   `?new=` route identities and the ERP ones deep-link into the create modal of
-  Sales/Inventory/Finance; 10 regression tests). **Currency**: `erp_settings`
+  Sales/Inventory/Finance; 11 regression tests). **Tab-aware active state
+  (Phase 26.15)**: `resolveActiveHref(pathname, hrefs, activeTab?)` + `AdminSidebar`
+  reading `useSearchParams().get('tab')` so the `?tab=` items added by 26.11–26.14
+  (Financial Intelligence / Approvals / BI / Treasury) light up the current tab
+  instead of all collapsing onto the first. **Currency**: `erp_settings`
   (default/display currency, precision — seeded IRR) + `/api/admin/erp/settings`
   + `lib/erp/settings.ts`; `formatCurrency()`/`fmtMoney` in `lib/format.ts` is
   THE money-formatting standard (ریال/تومان suffix, $/€ prefix), configured by
@@ -613,6 +617,19 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   **purchase cycle** (Supplier→PR→approve→PO→GRN→receive→Invoice→Payment→GL).
   Honest boundaries: server-side PDF stays print-HTML→Save-as-PDF (no heavy dep);
   time-based escalation + arbitrary-SQL report builder intentionally not added.
+- **Phase 26.15 — Enterprise Refinement & Perfection** (audit-first, no rewrite;
+  report: `docs/governance/phase26.15-enterprise-refinement-report.md`). Audited
+  the 20 requested UX/workflow modules against SAP B1/D365/NetSuite/Odoo and
+  confirmed almost all already ship from 26.0–26.14 (reused, not rebuilt). Two
+  genuine gaps fixed with live-PG verification: **(A)** tab-aware sidebar active
+  state — `?tab=` items no longer all collapse onto the first (see Navigation
+  Resolver Engine, 26.7); **(B)** `ProductSearchPicker` — the sales invoice line
+  now does a server-limited debounced search instead of preloading the whole
+  catalog (see Sales Center opening-stock note). Carried the latent AR fix
+  (`sales_documents.paid_total` never existed → AR computed from `sales_payments`).
+  No regression: TS 0 · ESLint 0 · 469 unit tests · 7 audits 0 · build clean.
+  Deliberately NOT done (would break no-rewrite/no-heavy-dep): `.docx` export and
+  a pixel-zoom canvas rewrite.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`
@@ -629,6 +646,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   so on-hand/valuation are correct immediately (no more spurious ناموجود); stocked
   products are selectable directly on a **sales invoice line** (`SalesCenter`
   inventory-product picker) in addition to the price-list picker.
+  **Enterprise product picker (Phase 26.15)**: the invoice line no longer preloads
+  the whole catalog into a `<select>` — a debounced `ProductSearchPicker` queries a
+  **server-limited** `GET /api/admin/erp/inventory/products?picker=1&q=` branch
+  (SKU/barcode/name ILIKE, `active=1`, `LIMIT 25`), so lookups stay O(query) and the
+  full-catalog path (dashboard) is untouched. Live-PG verified.
 - **Security Operations Center** (`/admin/soc`, `SocDashboard`) — Phase-17 SOC on
   **real** signal via `GET /api/admin/soc/overview`: aggregates failed logins,
   brute-force IPs (from `system_logs` security meta), AI prompt-injection blocks,

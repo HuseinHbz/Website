@@ -311,10 +311,9 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
   const [plId, setPlId] = useState('')
   const [plItems, setPlItems] = useState<{ productId: number; sku: string; nameEn: string; nameFa: string | null; unitPrice: number }[]>([])
   useEffect(() => { if (autoNew) { setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
-  const [invProducts, setInvProducts] = useState<{ id: number; sku: string; nameEn: string; nameFa: string | null; price: number }[]>([])
   useEffect(() => { fetch('/api/admin/erp/sales/pricelists').then(r => r.json()).then(d => setPriceLists(d.priceLists ?? [])).catch(() => {}) }, [])
-  useEffect(() => { fetch('/api/admin/erp/inventory/products').then(r => r.json()).then(d => setInvProducts((d.products ?? []).filter((p: { active: number | boolean }) => p.active !== 0).map((p: { id: number; sku: string; nameEn: string; nameFa: string | null; price: number }) => ({ id: p.id, sku: p.sku, nameEn: p.nameEn, nameFa: p.nameFa, price: p.price })))).catch(() => {}) }, [])
-  function addProduct(productId: number) { const p = invProducts.find(x => x.id === productId); if (!p) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: 9, productId: p.id }]) }
+  // 26.15: products are searched on demand (server-limited) — never preloaded.
+  function addProduct(p: InvProduct) { setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: 9, productId: p.id }]) }
   useEffect(() => { if (!plId) { setPlItems([]); return } fetch(`/api/admin/erp/sales/pricelists?items=${plId}`).then(r => r.json()).then(d => setPlItems(d.items ?? [])).catch(() => {}) }, [plId])
   function addFromPriceList(productId: number) { const it = plItems.find(x => x.productId === productId); if (!it) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn, qty: 1, unitPrice: it.unitPrice, discountPct: 0, taxPct: 9, productId: it.productId }]) }
 
@@ -425,12 +424,7 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
                   {plItems.map(it => <option key={it.productId} value={it.productId}>{it.sku} · {locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn} — {it.unitPrice.toLocaleString()}</option>)}
                 </select>
               )}
-              {invProducts.length > 0 && (
-                <select onChange={e => { if (e.target.value) { addProduct(Number(e.target.value)); e.target.value = '' } }} className="form-input !py-1.5 text-xs max-w-xs" defaultValue="">
-                  <option value="">{locale === 'fa' ? '＋ افزودن کالای انبار' : '＋ Add inventory product'}</option>
-                  {invProducts.map(p => <option key={p.id} value={p.id}>{p.sku} · {locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn} — {p.price.toLocaleString()}</option>)}
-                </select>
-              )}
+              <ProductSearchPicker locale={locale} onPick={addProduct} />
             </div>
           </div>
           <div className="rounded-lg border border-subtle p-3 grid grid-cols-4 gap-2 text-sm">
@@ -545,5 +539,49 @@ function PriceListManager({ fa, toast }: { fa: boolean; toast: Toast }) {
         </div>
       )}
     </Card>
+  )
+}
+
+// ── Enterprise product picker (Phase 26.15) ──────────────────────────────────
+// Server-limited, debounced incremental search over SKU / barcode / name — never
+// loads the whole catalog into the client (fixes the "load 1000 products" gap).
+export interface InvProduct { id: number; sku: string; barcode?: string | null; nameEn: string; nameFa: string | null; price: number }
+
+function ProductSearchPicker({ locale, onPick }: { locale: string; onPick: (p: InvProduct) => void }) {
+  const rtl = locale === 'fa'
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+  const [rows, setRows] = useState<InvProduct[]>([])
+  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const id = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const r = await fetch(`/api/admin/erp/inventory/products?picker=1&q=${encodeURIComponent(q)}&limit=25`)
+        if (r.ok) setRows((await r.json()).products ?? [])
+      } finally { setLoading(false) }
+    }, 250)
+    return () => clearTimeout(id)
+  }, [q, open])
+  return (
+    <div className="relative max-w-xs">
+      <input value={q} onFocus={() => setOpen(true)} onChange={e => { setQ(e.target.value); setOpen(true) }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={rtl ? '＋ جستجوی کالای انبار (SKU/بارکد/نام)' : '＋ Search inventory product (SKU/barcode/name)'}
+        className="form-input !py-1.5 text-xs w-full" aria-label={rtl ? 'جستجوی کالا' : 'Search product'} />
+      {open && (
+        <div className="absolute z-20 mt-1 w-72 max-h-64 overflow-auto rounded-lg border border-subtle bg-surface-2 shadow-lg">
+          {loading && <p className="px-3 py-2 text-2xs text-text-tertiary">{rtl ? 'در حال جستجو…' : 'Searching…'}</p>}
+          {!loading && rows.length === 0 && <p className="px-3 py-2 text-2xs text-text-tertiary">{rtl ? 'موردی یافت نشد' : 'No products'}</p>}
+          {rows.map(p => (
+            <button key={p.id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { onPick(p); setQ(''); setOpen(false) }}
+              className="block w-full text-start px-3 py-1.5 text-xs text-text-secondary hover:bg-surface">
+              <span className="font-mono text-text-tertiary">{p.sku}</span> · {rtl ? (p.nameFa || p.nameEn) : p.nameEn} — {p.price.toLocaleString()}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

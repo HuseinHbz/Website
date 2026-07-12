@@ -10,10 +10,24 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 // GET — products with live on-hand, valuation and reorder status + KPI rollup.
-export async function GET() {
+// `?picker=1[&q=...]` returns a lightweight, server-limited search (SKU/barcode/
+// name) for the enterprise product picker — never loads the whole catalog (26.15).
+export async function GET(req: NextRequest) {
   const auth = await requireAdmin()
   if ('error' in auth) return auth.error
   try {
+    const sp = req.nextUrl.searchParams
+    if (sp.get('picker')) {
+      const q = (sp.get('q') ?? '').trim().toLowerCase()
+      const term = `%${q}%`
+      const limit = Math.min(50, Math.max(1, Number(sp.get('limit')) || 25))
+      const rows = await pgQuery(
+        `SELECT id, sku, barcode, name_en AS "nameEn", name_fa AS "nameFa", price::float AS price
+         FROM inv_products WHERE active=1 AND ($1='%%' OR lower(sku) LIKE $1 OR lower(name_en) LIKE $1
+           OR lower(COALESCE(name_fa,'')) LIKE $1 OR lower(COALESCE(barcode,'')) LIKE $1)
+         ORDER BY name_en LIMIT $2`, [term, limit])
+      return NextResponse.json({ products: rows, picker: true })
+    }
     const products = await loadProductLevels()
     return NextResponse.json({ products, kpis: inventoryKpis(products) })
   } catch (e) { return apiError(e, 'Failed to load products') }

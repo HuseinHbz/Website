@@ -53,4 +53,15 @@ describe('Navigation regression (26.7 duplicate-active fix)', () => {
     expect(workspaceForPath('/admin/sales').id).toBe('erp')
     expect(workspaceForPath('/admin/settings').id).toBe('system')
   })
+  it('tabbed nav (?tab=) activates the item matching the current tab (26.15 M2 fix)', () => {
+    const tabs = ['/admin/treasury?tab=overview', '/admin/treasury?tab=banks', '/admin/treasury?tab=payments']
+    // On the banks tab, only the banks item is active — not the first (overview).
+    expect(resolveActiveHref('/admin/treasury', tabs, 'banks')).toBe('/admin/treasury?tab=banks')
+    expect(resolveActiveHref('/admin/treasury', tabs, 'payments')).toBe('/admin/treasury?tab=payments')
+    // No ?tab= in the URL → the first tab is the sensible default (unchanged).
+    expect(resolveActiveHref('/admin/treasury', tabs)).toBe('/admin/treasury?tab=overview')
+    // Exactly one candidate active on a given tab.
+    const active = tabs.filter(h => h === resolveActiveHref('/admin/treasury', tabs, 'banks'))
+    expect(active).toEqual(['/admin/treasury?tab=banks'])
+  })
 })
