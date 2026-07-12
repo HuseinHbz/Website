@@ -674,6 +674,36 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   dup groups, dangling-supplier/no-stock integrity, merge repoints+archives+resolves).
   Honest boundary: extended individual-customer fields + a drag-drop category tree +
   alternative-suppliers M2M are recorded as future work, not stubbed.
+- **Master Data Advanced** (Phase 26.17, extends the `/admin/master-data` workspace;
+  report: `docs/governance/phase26.17-master-data-completion-report.md`, audit:
+  `phase26.17-master-data-advanced-audit.md`). Audit-first; reuses Business Rules
+  (`runRules`, M6), Approval (26.12, M4), RBAC/audit, Reporting (M8) and the 26.16
+  quality engine — only the genuine gaps built. **M1 Category Tree**: `erp_categories`
+  (unlimited hierarchy) + pure `masterdata/categoryTree.ts` (`buildTree`/`descendants`/
+  `canMove` cycle-guard/`levelOf`/`treeStats`) + `categoryData.ts` (create/move/merge/
+  archive — *cannot archive a category with active products* — + legacy migration from
+  `inv_products.category` → new `category_id`). **M2 Alternative Suppliers**:
+  `inv_product_suppliers` M2M + pure `supplierRanking.ts` (weighted 0–100 price/lead/
+  quality/delivery → A/B/C/D, `bestSupplier`/`compareSuppliers`) + `supplierData.ts`
+  (`setPrimary` mirrors to `inv_products.default_supplier_id`). **M3 Versioning**:
+  `master_data_history` + pure `versioning.ts` (`diffValues`/`restorePayload`/
+  `compareVersions`) + `versionData.ts` (record-on-change, timeline, **restore**),
+  wired into the product-edit path (price/name changes create a version). **M7**:
+  extended `quality.ts` with the 5 MDM dimensions (`dimensionRollup` + validity
+  checkers incl. **Iranian national-id check digit** + economic code) + per-domain
+  `qualityDimensions()`. **M5**: `master_data_issues` steward queue (generate-from-scan
+  + assign/resolve/ignore). API `GET/POST /api/admin/erp/master-data/advanced`
+  (`?module=categories|suppliers|versions|dimensions|issues`; RBAC + audit; merge/
+  migrate/restore administrator-gated). UI: 4 new tabs on the Master-Data workspace
+  (Category tree · Product master = alt-suppliers + version-history-with-restore ·
+  Data quality dimensions · Data steward queue), bilingual RTL/EN, no empty buttons.
+  32 new unit tests (535 total) + live-PG 15/15 across the 8 required scenarios
+  (create tree, move + cycle-reject, product w/ 2 suppliers rank/best/primary, price
+  change → version → restore, archive-guard, merge, legacy migration, quality, issues).
+  Fixed a real bug: the advanced route's suppliers/versions/issues POST branches
+  compared a shadowed `module` global (never matched) → renamed to `mod`. TS 0 ·
+  ESLint 0 · 7 audits 0 · build clean. Honest boundaries: category drag-drop is an
+  explicit Move action, version restore is product-scoped, M8 export is CSV/print.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

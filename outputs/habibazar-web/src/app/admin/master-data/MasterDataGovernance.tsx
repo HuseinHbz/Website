@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Badge, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
+import { CategoriesTab, QualityTab, StewardTab, ProductMasterTab } from './MasterDataAdvanced'
 
 const L = (fa: boolean, en: string, faT: string) => (fa ? faT : en)
 
@@ -27,17 +28,21 @@ const barColor = (s: number) => (s >= 95 ? 'bg-success' : s >= 85 ? 'bg-brand' :
 export function MasterDataGovernance({ role }: { role: string }) {
   const fa = useAdminLocale() === 'fa'
   const { toast } = useToast()
-  const [tab, setTab] = useState<'overview' | 'duplicates' | 'integrity'>('overview')
+  const [tab, setTab] = useState<'overview' | 'categories' | 'products' | 'quality' | 'steward' | 'duplicates' | 'integrity'>('overview')
   const canMerge = ['administrator', 'super_admin'].includes(role)
 
   return (
     <div className="space-y-4">
       <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1 flex-wrap">
-        {([['overview', 'Overview', 'نمای کلی'], ['duplicates', 'Duplicates', 'تکراری‌ها'], ['integrity', 'Relation integrity', 'یکپارچگی روابط']] as const).map(([id, en, faL]) => (
+        {([['overview', 'Overview', 'نمای کلی'], ['categories', 'Category tree', 'درخت دسته'], ['products', 'Product master', 'کارت کالا'], ['quality', 'Data quality', 'کیفیت داده'], ['steward', 'Data steward', 'میز داده'], ['duplicates', 'Duplicates', 'تکراری‌ها'], ['integrity', 'Relation integrity', 'یکپارچگی روابط']] as const).map(([id, en, faL]) => (
           <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${tab === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
         ))}
       </div>
       {tab === 'overview' && <OverviewTab fa={fa} />}
+      {tab === 'categories' && <CategoriesTab fa={fa} toast={toast} canAdmin={canMerge} />}
+      {tab === 'products' && <ProductMasterTab fa={fa} toast={toast} canAdmin={canMerge} />}
+      {tab === 'quality' && <QualityTab fa={fa} />}
+      {tab === 'steward' && <StewardTab fa={fa} toast={toast} />}
       {tab === 'duplicates' && <DuplicatesTab fa={fa} canMerge={canMerge} toast={toast} />}
       {tab === 'integrity' && <IntegrityTab fa={fa} />}
     </div>

@@ -1265,6 +1265,75 @@ export async function runMigrations() {
     -- Phase 26.16: product master gains a default supplier (soft ref → purchase_vendors).
     ALTER TABLE inv_products ADD COLUMN IF NOT EXISTS default_supplier_id INTEGER;
 
+    -- Phase 26.17 M1 — enterprise product category tree (unlimited hierarchy).
+    CREATE TABLE IF NOT EXISTS erp_categories (
+      id SERIAL PRIMARY KEY,
+      parent_id INTEGER REFERENCES erp_categories(id),
+      code TEXT NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      description TEXT,
+      level INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_erp_categories_code ON erp_categories(code);
+    CREATE INDEX IF NOT EXISTS idx_erp_categories_parent ON erp_categories(parent_id);
+    -- Products link to the tree (soft ref; keeps the legacy free-text category column).
+    ALTER TABLE inv_products ADD COLUMN IF NOT EXISTS category_id INTEGER;
+
+    -- Phase 26.17 M2 — product ↔ supplier relationships (alternative suppliers).
+    CREATE TABLE IF NOT EXISTS inv_product_suppliers (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id) ON DELETE CASCADE,
+      supplier_id INTEGER NOT NULL REFERENCES purchase_vendors(id),
+      supplier_code TEXT,
+      purchase_price NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      lead_time_days INTEGER NOT NULL DEFAULT 0,
+      minimum_order_qty NUMERIC NOT NULL DEFAULT 0,
+      quality_score NUMERIC NOT NULL DEFAULT 0,
+      delivery_score NUMERIC NOT NULL DEFAULT 0,
+      is_primary INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_prod_supplier ON inv_product_suppliers(product_id, supplier_id);
+
+    -- Phase 26.17 M3 — master-data version history (old/new JSON + restore).
+    CREATE TABLE IF NOT EXISTS master_data_history (
+      id SERIAL PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      old_value TEXT,
+      new_value TEXT,
+      changed_by TEXT,
+      change_reason TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_md_history_entity ON master_data_history(entity_type, entity_id);
+
+    -- Phase 26.17 M5 — data-steward issue queue (assign / resolve / ignore).
+    CREATE TABLE IF NOT EXISTS master_data_issues (
+      id SERIAL PRIMARY KEY,
+      issue_key TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      severity TEXT NOT NULL DEFAULT 'warning',
+      status TEXT NOT NULL DEFAULT 'open',
+      assigned_to TEXT,
+      resolution_note TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_md_issues_status ON master_data_issues(status);
+
     -- One row per stock movement. qty is signed: >0 in, <0 out. A transfer is
     -- written as two rows (issue from source, receipt into destination) sharing a ref.
     CREATE TABLE IF NOT EXISTS inv_moves (

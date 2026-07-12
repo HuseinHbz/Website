@@ -100,6 +100,48 @@ export interface IntegritySummary {
   score: number // 100 = no integrity problems
 }
 
+// ── Data-quality dimensions (Phase 26.17 M7) ─────────────────────────────────
+// Extends the 26.16 completeness engine with the classic MDM quality dimensions.
+export type QualityDimension = 'completeness' | 'consistency' | 'uniqueness' | 'validity' | 'relationship'
+
+export interface DimensionScore { dimension: QualityDimension; score: number; issues: number }
+
+const DIM_WEIGHT: Record<QualityDimension, number> = {
+  completeness: 0.30, validity: 0.25, uniqueness: 0.20, consistency: 0.15, relationship: 0.10,
+}
+
+/** Weighted roll-up of the five dimensions into one 0..100 data-quality score. */
+export function dimensionRollup(dims: DimensionScore[]): number {
+  if (dims.length === 0) return 100
+  let wsum = 0
+  let acc = 0
+  for (const d of dims) { const w = DIM_WEIGHT[d.dimension]; wsum += w; acc += d.score * w }
+  return wsum === 0 ? 100 : Math.round(acc / wsum)
+}
+
+// Pure validity checkers (Iranian formats + generic).
+export function isValidEmail(v: string | null | undefined): boolean {
+  if (!v) return false
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+}
+/** Iranian national ID: 10 digits with the official check-digit algorithm. */
+export function isValidIranNationalId(v: string | null | undefined): boolean {
+  if (!v) return false
+  const s = v.trim()
+  if (!/^\d{10}$/.test(s)) return false
+  if (/^(\d)\1{9}$/.test(s)) return false
+  const check = Number(s[9])
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += Number(s[i]) * (10 - i)
+  const r = sum % 11
+  return (r < 2 && check === r) || (r >= 2 && check === 11 - r)
+}
+/** Economic code: 11–14 digits (Iranian تعریف). */
+export function isValidEconomicCode(v: string | null | undefined): boolean {
+  if (!v) return false
+  return /^\d{11,14}$/.test(v.trim())
+}
+
 /** Roll integrity findings (each carrying an affected-row `count`) into a summary. */
 export function integritySummary(issues: IntegrityIssue[]): IntegritySummary {
   const active = issues.filter(i => i.count > 0).sort((a, b) => SEV_RANK[b.severity] - SEV_RANK[a.severity] || b.count - a.count)

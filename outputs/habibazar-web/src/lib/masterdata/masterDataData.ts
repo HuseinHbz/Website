@@ -8,7 +8,9 @@
 import { pgQuery, getPool } from '@/lib/db'
 import {
   domainQuality, overallScore, duplicateGroups, duplicateBurden, integritySummary,
+  dimensionRollup, isValidEmail, isValidEconomicCode,
   type DomainQuality, type DuplicateGroup, type IntegrityIssue, type IntegritySummary, type FieldCoverage,
+  type DimensionScore,
 } from './quality'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -149,4 +151,88 @@ export async function mergeCustomers(primaryId: number, duplicateId: number): Pr
   } finally {
     client.release()
   }
+}
+
+// ── M7: five-dimension data quality per domain (Phase 26.17) ─────────────────
+const pctOf = (a: number, b: number) => (b <= 0 ? 100 : Math.round((a / b) * 100))
+
+export async function qualityDimensions(): Promise<{ domain: string; dimensions: DimensionScore[]; score: number }[]> {
+  const out: { domain: string; dimensions: DimensionScore[]; score: number }[] = []
+
+  // Customers: completeness (reuse), validity (email + economic code), uniqueness, relationship.
+  const cq = await customerQuality()
+  const custTotal = (await pgQuery<{ v: number }>(`SELECT COUNT(*)::int AS v FROM sales_customers`))[0].v
+  const custEmails = await pgQuery<{ email: string | null }>(`SELECT email FROM sales_customers WHERE COALESCE(email,'')<>''`)
+  const validEmail = custEmails.filter(r => isValidEmail(r.email)).length
+  const custEco = await pgQuery<{ economic_code: string | null }>(`SELECT economic_code FROM sales_customers WHERE kind='company' AND COALESCE(economic_code,'')<>''`)
+  const validEco = custEco.filter(r => isValidEconomicCode(r.economic_code)).length
+  const validityCust = Math.round(((custEmails.length ? pctOf(validEmail, custEmails.length) : 100) + (custEco.length ? pctOf(validEco, custEco.length) : 100)) / 2)
+  const dupes = await detectDuplicates()
+  const custDupBurden = dupes.groups.filter(g => g.keyType.startsWith('customer.')).reduce((s, g) => s + (g.members.length - 1), 0)
+  const uniquenessCust = custTotal ? Math.max(0, 100 - Math.round((custDupBurden / custTotal) * 100)) : 100
+  const integ = await relationIntegrity()
+  out.push(dims('customers', [
+    { dimension: 'completeness', score: cq.score, issues: cq.fields.reduce((s, f) => s + f.missing, 0) },
+    { dimension: 'validity', score: validityCust, issues: (custEmails.length - validEmail) + (custEco.length - validEco) },
+    { dimension: 'uniqueness', score: uniquenessCust, issues: custDupBurden },
+    { dimension: 'relationship', score: integ.score, issues: integ.errors + integ.warnings },
+  ]))
+
+  const sq = await supplierQuality()
+  const supDupBurden = dupes.groups.filter(g => g.keyType.startsWith('supplier.')).reduce((s, g) => s + (g.members.length - 1), 0)
+  const supTotal = (await pgQuery<{ v: number }>(`SELECT COUNT(*)::int AS v FROM purchase_vendors`))[0].v
+  out.push(dims('suppliers', [
+    { dimension: 'completeness', score: sq.score, issues: sq.fields.reduce((s, f) => s + f.missing, 0) },
+    { dimension: 'uniqueness', score: supTotal ? Math.max(0, 100 - Math.round((supDupBurden / supTotal) * 100)) : 100, issues: supDupBurden },
+    { dimension: 'relationship', score: integ.score, issues: integ.errors },
+  ]))
+
+  const pq = await productQuality()
+  const prodDupBurden = dupes.groups.filter(g => g.keyType.startsWith('product.')).reduce((s, g) => s + (g.members.length - 1), 0)
+  const prodTotal = (await pgQuery<{ v: number }>(`SELECT COUNT(*)::int AS v FROM inv_products`))[0].v
+  out.push(dims('products', [
+    { dimension: 'completeness', score: pq.score, issues: pq.fields.reduce((s, f) => s + f.missing, 0) },
+    { dimension: 'uniqueness', score: prodTotal ? Math.max(0, 100 - Math.round((prodDupBurden / prodTotal) * 100)) : 100, issues: prodDupBurden },
+    { dimension: 'relationship', score: integ.score, issues: integ.errors + integ.warnings },
+  ]))
+  return out
+}
+
+function dims(domain: string, dimensions: DimensionScore[]) {
+  return { domain, dimensions, score: dimensionRollup(dimensions) }
+}
+
+// ── M5: data-steward issue queue (assign / resolve / ignore) ─────────────────
+export interface StewardIssue { id: number; issueKey: string; entityType: string; titleEn: string; titleFa: string | null; severity: string; status: string; assignedTo: string | null; resolutionNote: string | null; createdAt: string }
+
+/** Materialise the live scan into the issue queue (idempotent by issue_key). */
+export async function generateIssues(userId?: string): Promise<{ created: number }> {
+  const integ = await relationIntegrity()
+  const dupes = await detectDuplicates()
+  const candidates: { key: string; entity: string; en: string; fa: string; sev: string }[] = [
+    ...integ.issues.map(i => ({ key: `integrity.${i.code}`, entity: 'relation', en: `${i.en} (${i.count})`, fa: `${i.fa} (${i.count})`, sev: i.severity })),
+    ...(dupes.groups.length ? [{ key: 'duplicate.records', entity: 'duplicate', en: `${dupes.groups.length} duplicate group(s)`, fa: `${dupes.groups.length} گروه تکراری`, sev: 'warning' }] : []),
+  ]
+  let created = 0
+  for (const c of candidates) {
+    const exists = (await pgQuery(`SELECT id FROM master_data_issues WHERE issue_key=$1 AND status='open'`, [c.key]))[0]
+    if (exists) continue
+    await pgQuery(
+      `INSERT INTO master_data_issues (issue_key, entity_type, title_en, title_fa, severity, status, created_by, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,'open',$6,${NOW},${NOW})`, [c.key, c.entity, c.en, c.fa, c.sev, userId ?? null])
+    created++
+  }
+  return { created }
+}
+
+export async function listIssues(status?: string): Promise<StewardIssue[]> {
+  return pgQuery<StewardIssue>(
+    `SELECT id, issue_key AS "issueKey", entity_type AS "entityType", title_en AS "titleEn", title_fa AS "titleFa", severity, status, assigned_to AS "assignedTo", resolution_note AS "resolutionNote", created_at AS "createdAt"
+     FROM master_data_issues ${status && status !== 'all' ? 'WHERE status=$1' : ''} ORDER BY created_at DESC LIMIT 500`, status && status !== 'all' ? [status] : [])
+}
+
+export async function updateIssue(id: number, action: 'assign' | 'resolve' | 'ignore', value?: string): Promise<void> {
+  if (action === 'assign') await pgQuery(`UPDATE master_data_issues SET assigned_to=$2, status='in_progress', updated_at=${NOW} WHERE id=$1`, [id, value ?? null])
+  else if (action === 'resolve') await pgQuery(`UPDATE master_data_issues SET status='resolved', resolution_note=$2, updated_at=${NOW} WHERE id=$1`, [id, value ?? null])
+  else await pgQuery(`UPDATE master_data_issues SET status='ignored', resolution_note=$2, updated_at=${NOW} WHERE id=$1`, [id, value ?? null])
 }

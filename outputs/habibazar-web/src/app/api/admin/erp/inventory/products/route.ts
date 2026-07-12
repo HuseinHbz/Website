@@ -5,6 +5,7 @@ import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { loadProductLevels } from '@/lib/erp/inventoryData'
 import { inventoryKpis } from '@/lib/erp/inventory'
+import { recordVersion } from '@/lib/masterdata/versionData'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -84,6 +85,9 @@ export async function POST(req: NextRequest) {
       await logAction(auth.user, 'inv.product.create', 'inv_product', row.id, null, { sku: d.sku, openingQty: d.openingQty ?? 0 })
       return NextResponse.json({ id: row.id })
     }
+    // Phase 26.17 M3 — snapshot the tracked fields before the change for versioning.
+    const before = (await pgQuery<Record<string, unknown>>(
+      `SELECT sku, name_en AS "nameEn", name_fa AS "nameFa", price::float AS price, cost::float AS cost, category_id AS "categoryId", default_supplier_id AS "defaultSupplierId", active FROM inv_products WHERE id=$1`, [d.id]))[0]
     await pgQuery(
       `UPDATE inv_products SET sku=$2, barcode=$3, name_en=$4, name_fa=$5, category=$6, unit=$7, cost=$8, price=$9,
          track_lot=$10, track_serial=$11, valuation_method=$12, reorder_point=$13, min_stock=$14, max_stock=$15,
@@ -91,6 +95,10 @@ export async function POST(req: NextRequest) {
       [d.id, d.sku, d.barcode ?? null, d.nameEn, d.nameFa ?? null, d.category, d.unit, d.cost, d.price,
        d.trackLot ? 1 : 0, d.trackSerial ? 1 : 0, d.valuationMethod, d.reorderPoint, d.minStock, d.maxStock, d.safetyStock, d.active ? 1 : 0, d.defaultSupplierId ?? null],
     )
+    if (before) await recordVersion('product', d.id,
+      before,
+      { sku: d.sku, nameEn: d.nameEn, nameFa: d.nameFa ?? null, price: d.price, cost: d.cost, categoryId: before.categoryId, defaultSupplierId: d.defaultSupplierId ?? null, active: d.active ? 1 : 0 },
+      auth.user.id)
     await logAction(auth.user, 'inv.product.update', 'inv_product', d.id)
     return NextResponse.json({ id: d.id })
   } catch (e) { return apiError(e, 'Failed to save product') }
