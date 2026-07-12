@@ -523,6 +523,38 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   (IRR/IRT/USD/EUR, transactions unchanged). Verified vs real PostgreSQL:
   budget(100)→posted GL expense(120, cost_center_id)→variance +20% over→center
   rollup 120→approve snapshot+lock→KPI dashboard→budget_overrun alert.
+- **Business Intelligence Platform** (`/admin/business-intelligence`,
+  `BusinessIntelligence`) — Phase 26.13, operational-intelligence layer above ERP
+  (report: `docs/governance/phase26.13-business-operations-intelligence-report.md`,
+  audit: `phase26.13-business-operations-intelligence-audit.md`). Audit-first,
+  reuses `executiveOverview`/`cfoDashboard`/`assembleKpis` (26.11), approval
+  analytics + escalation (26.12), `financialAlerts`, `globalSearch`, `reportData`,
+  `runCompletion`, currency/RBAC/audit — only gaps built. **Pure engines** under
+  `src/lib/bi/` (unit-tested): `kpiFormula.ts` (safe expression evaluator
+  tokenizer→shunting-yard→RPN, NO eval, + attainment/weighting/scorecard),
+  `okr.ts` (progress/confidence/alignment), `processMining.ts` (bottleneck/
+  delay-vs-baseline/perf score), `sla.ts` (business-hours elapsed w/ holidays +
+  escalation), `businessAlerts.ts` (severity→channel routing + dedupe),
+  `dataQuality.ts` (weighted score + graded issues). **Data layers** reuse
+  verified module data: `kpiData` (formula actuals over a live metrics dict +
+  history snapshots), `okrData`, `slaData` (scan→escalation→notification),
+  `processData` (approval-timeline mining), `alertsData` (financial reuse + ops +
+  security signals → `business_alerts` idempotent), `cockpitData` (assembles
+  cfoDashboard + operational + risk), `dataQualityData` (real COUNT checks). APIs
+  `/api/admin/erp/bi/{cockpit,kpi,okr,process,sla,alerts,data-quality,advisor}`
+  (zod+RBAC+audit); AI Business Advisor reuses `runCompletion`+RAG over a
+  cross-module snapshot (analysis only, never mutates); Reporting Center +2
+  executive reports (CEO/COO; CFO/Sales/Procurement/Project already exist); Global
+  Search reused for M10 (permission-aware + `search_stats` analytics). Tables
+  `kpi_definitions/_values`, `okr_objectives/_results`, `sla_definitions/_events`,
+  `process_metrics`, `executive_reports`, `business_alerts`, `data_quality_checks`
+  (idempotent+indexed; `deploy/postgres/rollback-phase26.13.sql`). UI: one
+  currency-aware RTL/EN workspace (Executive Cockpit · KPI Center · OKR · Process
+  Intelligence · SLA Center · Alert Center · Data Governance · AI Advisor) under a
+  **Business Intelligence** ERP nav group. Verified vs real PostgreSQL: gross-margin
+  KPI formula=40 on_target + history → OKR progress 40 + alignment → SLA 27h
+  business-hours breach + 3 escalation stages → over-budget business alert →
+  data-quality grade → executive cockpit assembled.
 - **Phase 26.9 — Enterprise ERP Final Completion** (audit-first; report:
   `docs/governance/phase26.9-final-completion-report.md`, audit:
   `phase26.9-erp-final-completion-audit.md`). Most of the 12-task pack already
