@@ -16,6 +16,8 @@ import { budgetPortfolio } from '@/lib/erp/budgetData'
 import { costCenterOverview } from '@/lib/erp/costCenterData'
 import { assembleKpis, runForecast } from '@/lib/erp/financialIntelligenceData'
 import { executiveCockpit } from '@/lib/bi/cockpitData'
+import { bankBalances } from '@/lib/treasury/bankOpsData'
+import { currentCashPosition, liquidity, chequeDashboard } from '@/lib/treasury/analyticsData'
 import type { Row, Column } from './pivot'
 
 export interface ReportDef {
@@ -49,6 +51,11 @@ export const REPORTS: ReportDef[] = [
   // Phase 26.13 — executive management reports (CFO/Sales/Procurement/Project reuse existing).
   { id: 'ceo_report', module: 'financial', nameEn: 'CEO Report', nameFa: 'گزارش مدیرعامل', groupField: 'group', measureField: 'value' },
   { id: 'coo_report', module: 'financial', nameEn: 'COO Report', nameFa: 'گزارش مدیر عملیات', groupField: 'group', measureField: 'value' },
+  // Phase 26.14 — treasury reports (currency exposure + FX gain/loss already exist).
+  { id: 'treasury_bank_balance', module: 'financial', nameEn: 'Bank Balance Report', nameFa: 'گزارش مانده بانکی', groupField: 'currency', measureField: 'balance' },
+  { id: 'treasury_cash_position', module: 'financial', nameEn: 'Cash Position Report', nameFa: 'گزارش وضعیت نقدی', groupField: 'metric', measureField: 'value' },
+  { id: 'treasury_liquidity', module: 'financial', nameEn: 'Liquidity Risk Report', nameFa: 'گزارش ریسک نقدینگی', groupField: 'horizon', measureField: 'expectedBalance' },
+  { id: 'treasury_cheque_aging', module: 'financial', nameEn: 'Cheque Aging Report', nameFa: 'گزارش سنی چک', groupField: 'bucket', measureField: 'amount' },
 ]
 
 export interface ReportOutput { columns: Column[]; rows: Row[]; summary: { label: string; value: number }[] }
@@ -258,6 +265,29 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         { group: 'Risk', metric: 'Low stock', value: c.risk.lowStock },
       ]
       return { columns: [{ key: 'group', label: 'Group' }, { key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }], rows, summary: [{ label: 'Open projects', value: c.operational.openProjects }] }
+    }
+    case 'treasury_bank_balance': {
+      const banks = await bankBalances()
+      const rows: Row[] = banks.map(b => ({ name: b.name, currency: b.currency, balance: money(b.balance) }))
+      return { columns: [{ key: 'name', label: 'Bank account' }, { key: 'currency', label: 'Currency' }, { key: 'balance', label: 'Balance' }], rows, summary: [{ label: 'Total (IRR-base)', value: money(banks.reduce((s, b) => s + b.balance, 0)) }] }
+    }
+    case 'treasury_cash_position': {
+      const p = await currentCashPosition()
+      const rows: Row[] = [
+        { metric: 'Bank', value: p.bank }, { metric: 'Cash', value: p.cash }, { metric: 'Available', value: p.available },
+        { metric: 'Pending receipts', value: p.pendingReceipts }, { metric: 'Pending payments', value: p.pendingPayments }, { metric: 'Projected', value: p.projected },
+      ]
+      return { columns: [{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }], rows, summary: [{ label: 'Projected cash', value: p.projected }] }
+    }
+    case 'treasury_liquidity': {
+      const l = await liquidity()
+      const rows: Row[] = l.buckets.map(b => ({ horizon: `${b.days}d`, inflow: b.inflow, outflow: b.outflow, net: b.net, expectedBalance: b.expectedBalance }))
+      return { columns: [{ key: 'horizon', label: 'Horizon' }, { key: 'inflow', label: 'Inflow' }, { key: 'outflow', label: 'Outflow' }, { key: 'net', label: 'Net' }, { key: 'expectedBalance', label: 'Expected balance' }], rows, summary: [{ label: 'Risk', value: 0 }] }
+    }
+    case 'treasury_cheque_aging': {
+      const c = await chequeDashboard()
+      const rows: Row[] = c.aging.map(a => ({ bucket: a.bucket, count: a.count, amount: a.amount }))
+      return { columns: [{ key: 'bucket', label: 'Bucket' }, { key: 'count', label: 'Count' }, { key: 'amount', label: 'Amount' }], rows, summary: [{ label: 'Total amount', value: money(c.aging.reduce((s, a) => s + a.amount, 0)) }] }
     }
     default: return null
   }

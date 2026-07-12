@@ -1791,6 +1791,133 @@ export async function runMigrations() {
       ('inventory_turnover','Inventory Turnover','گردش موجودی','inventory','cogs / inventory_value','ratio','higher_better',4)
     ON CONFLICT (code) DO NOTHING;
 
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 26.14 — Enterprise Treasury & Banking Platform
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Bank master (M1): EXTEND the existing bank_accounts (no duplicate table).
+    ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS swift TEXT;
+    ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS branch TEXT;
+    ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS country TEXT;
+    ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS account_type TEXT NOT NULL DEFAULT 'current';
+    ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+
+    -- Statement import batches (M2). bank_statement_lines = the transactions.
+    CREATE TABLE IF NOT EXISTS bank_statements (
+      id SERIAL PRIMARY KEY,
+      account_id INTEGER NOT NULL REFERENCES bank_accounts(id) ON DELETE CASCADE,
+      format TEXT NOT NULL DEFAULT 'csv' CHECK(format IN ('csv','excel','mt940','camt053','api')),
+      period_from TEXT,
+      period_to TEXT,
+      line_count INTEGER NOT NULL DEFAULT 0,
+      imported_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    ALTER TABLE bank_statement_lines ADD COLUMN IF NOT EXISTS statement_id INTEGER;
+    ALTER TABLE bank_statement_lines ADD COLUMN IF NOT EXISTS erp_type TEXT;
+    ALTER TABLE bank_statement_lines ADD COLUMN IF NOT EXISTS fingerprint TEXT;
+    CREATE INDEX IF NOT EXISTS idx_stmt_lines_fp ON bank_statement_lines(fingerprint);
+
+    -- Reconciliation matches (M3) with audit.
+    CREATE TABLE IF NOT EXISTS bank_matches (
+      id SERIAL PRIMARY KEY,
+      statement_line_id BIGINT NOT NULL REFERENCES bank_statement_lines(id) ON DELETE CASCADE,
+      erp_ref TEXT NOT NULL,          -- sales_payment:12 | purchase_payment:7 | payment_order:3
+      confidence NUMERIC NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'suggested' CHECK(status IN ('suggested','matched','rejected')),
+      reasons TEXT,
+      matched_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_bank_matches_line ON bank_matches(statement_line_id, status);
+
+    -- Payment orders (M4): full lifecycle, wired to the approval engine + GL.
+    CREATE TABLE IF NOT EXISTS payment_orders (
+      id SERIAL PRIMARY KEY,
+      payment_no TEXT,
+      payment_type TEXT NOT NULL CHECK(payment_type IN ('supplier_payment','customer_refund','internal_transfer','salary_payment','tax_payment','foreign_payment')),
+      party TEXT,
+      party_ref TEXT,                 -- vendor:5 / customer:3
+      amount NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      exchange_rate NUMERIC NOT NULL DEFAULT 1,
+      bank_account_id INTEGER REFERENCES bank_accounts(id),
+      date TEXT NOT NULL,
+      memo TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','pending_approval','approved','processing','completed','rejected','cancelled')),
+      approval_request_id INTEGER,
+      gl_entry_id INTEGER,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_status ON payment_orders(status, date);
+
+    -- Receipts (M5) with AR settlement allocations.
+    CREATE TABLE IF NOT EXISTS receipt_transactions (
+      id SERIAL PRIMARY KEY,
+      receipt_no TEXT,
+      receipt_type TEXT NOT NULL DEFAULT 'customer_receipt' CHECK(receipt_type IN ('customer_receipt','cash_receipt','card_receipt','foreign_receipt','advance_receipt')),
+      customer_id INTEGER,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      bank_account_id INTEGER REFERENCES bank_accounts(id),
+      date TEXT NOT NULL,
+      allocations TEXT NOT NULL DEFAULT '[]',   -- JSON [{invoiceId, amount}]
+      advance NUMERIC NOT NULL DEFAULT 0,
+      gl_entry_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_receipts_customer ON receipt_transactions(customer_id, date);
+
+    -- Cash position snapshots (M7).
+    CREATE TABLE IF NOT EXISTS cash_positions (
+      id SERIAL PRIMARY KEY,
+      as_of TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      bank NUMERIC NOT NULL DEFAULT 0,
+      cash NUMERIC NOT NULL DEFAULT 0,
+      pending_receipts NUMERIC NOT NULL DEFAULT 0,
+      pending_payments NUMERIC NOT NULL DEFAULT 0,
+      projected NUMERIC NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Treasury liquidity forecasts (M8).
+    CREATE TABLE IF NOT EXISTS treasury_forecasts (
+      id SERIAL PRIMARY KEY,
+      as_of TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      buckets TEXT NOT NULL,          -- JSON LiquidityBucket[]
+      risk TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Currency exposures (M9).
+    CREATE TABLE IF NOT EXISTS currency_exposures (
+      id SERIAL PRIMARY KEY,
+      as_of TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      assets NUMERIC NOT NULL DEFAULT 0,
+      liabilities NUMERIC NOT NULL DEFAULT 0,
+      net_exposure NUMERIC NOT NULL DEFAULT 0,
+      unrealized NUMERIC NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_currency_exp_asof ON currency_exposures(as_of, currency);
+
+    -- Salaries expense account for payment GL posting (idempotent).
+    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES ('6100','Salaries','حقوق و دستمزد','expense') ON CONFLICT (code) DO NOTHING;
+    -- Payment approval matrix (M4): <100M finance_manager, ≤1B cfo, >1B ceo (Toman tiers).
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, max_amount, levels) VALUES
+      ('payment_request','Payment ≤ 100M','پرداخت تا ۱۰۰م',0,100000000,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"finance_manager"}]}]'),
+      ('payment_request','Payment 100M–1B','پرداخت ۱۰۰م تا ۱میلیارد',100000001,1000000000,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"finance_manager"}]},{"level":2,"mode":"all","approvers":[{"type":"role","ref":"cfo"}]}]'),
+      ('payment_request','Payment > 1B','پرداخت بالای ۱میلیارد',1000000001,NULL,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"cfo"}]},{"level":2,"mode":"all","approvers":[{"type":"role","ref":"ceo"}]}]')
+    ON CONFLICT DO NOTHING;
+
 
     -- Phase 24: cover hot structural/lookup foreign keys that participate in
     -- JOIN/WHERE (parent→child containment, tree parents, join tables, session

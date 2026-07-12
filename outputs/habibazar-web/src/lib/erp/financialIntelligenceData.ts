@@ -25,7 +25,11 @@ async function series(sql: string): Promise<Point[]> {
 
 /** Open receivables / payables (AR / AP). */
 export async function openReceivables(): Promise<number> {
-  return num(`SELECT COALESCE(SUM(total-paid_total),0)::float AS v FROM sales_documents WHERE doc_type='invoice' AND status IN ('sent','confirmed','partial')`)
+  // Sales AR is tracked via sales_payments (no per-invoice paid_total): open
+  // invoices' total minus all customer payments, clamped at 0.
+  const invoiced = await num(`SELECT COALESCE(SUM(total),0)::float AS v FROM sales_documents WHERE doc_type='invoice' AND status IN ('sent','confirmed','partial')`)
+  const paid = await num(`SELECT COALESCE(SUM(amount),0)::float AS v FROM sales_payments`)
+  return Math.max(0, invoiced - paid)
 }
 export async function openPayables(): Promise<number> {
   return num(`SELECT COALESCE(SUM(total-paid_total),0)::float AS v FROM purchase_documents WHERE doc_type='invoice' AND status IN ('confirmed','partial')`)

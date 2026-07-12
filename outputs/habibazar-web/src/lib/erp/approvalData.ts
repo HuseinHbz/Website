@@ -165,6 +165,7 @@ async function advanceDocument(row: RequestRow): Promise<void> {
   if (!row.refType || !row.refId) return
   try {
     if (row.refType === 'purchase_documents') await pgQuery(`UPDATE purchase_documents SET status='approved' WHERE id=$1 AND status NOT IN ('paid','void')`, [row.refId])
+    else if (row.refType === 'payment_orders') await pgQuery(`UPDATE payment_orders SET status='approved' WHERE id=$1 AND status='pending_approval'`, [row.refId])
     else if (row.refType === 'sales_documents') await pgQuery(`UPDATE sales_documents SET status='confirmed' WHERE id=$1 AND status='sent'`, [row.refId])
     else if (row.refType === 'gen_documents') await pgQuery(`UPDATE gen_documents SET status='issued' WHERE id=$1`, [row.refId])
   } catch { /* document advance is best-effort; the approval itself is authoritative */ }

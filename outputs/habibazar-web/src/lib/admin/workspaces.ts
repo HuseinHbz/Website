@@ -115,6 +115,18 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Asset Center', labelFa: 'مرکز دارایی‌ها', href: '/admin/assets', icon: '🖧' },
         { labelEn: 'Project Center', labelFa: 'مرکز پروژه', href: '/admin/project-management', icon: '📋' },
       ] },
+      { en: 'Treasury', fa: 'خزانه‌داری', items: [
+        { labelEn: 'Treasury Overview', labelFa: 'نمای خزانه', href: '/admin/treasury?tab=overview', icon: '🏦' },
+        { labelEn: 'Banks', labelFa: 'بانک‌ها', href: '/admin/treasury?tab=banks', icon: '🏛️' },
+        { labelEn: 'Statements', labelFa: 'صورت‌حساب‌ها', href: '/admin/treasury?tab=statements', icon: '📥' },
+        { labelEn: 'Reconciliation', labelFa: 'مغایرت‌گیری', href: '/admin/treasury?tab=reconcile', icon: '🔗' },
+        { labelEn: 'Payments', labelFa: 'پرداخت‌ها', href: '/admin/treasury?tab=payments', icon: '💸' },
+        { labelEn: 'Receipts', labelFa: 'دریافت‌ها', href: '/admin/treasury?tab=receipts', icon: '🧾' },
+        { labelEn: 'Cheques', labelFa: 'چک‌ها', href: '/admin/treasury?tab=cheques', icon: '📆' },
+        { labelEn: 'Cash Forecast', labelFa: 'پیش‌بینی نقدینگی', href: '/admin/treasury?tab=cash', icon: '📈' },
+        { labelEn: 'Risk Analysis', labelFa: 'تحلیل ریسک', href: '/admin/treasury?tab=risk', icon: '⚠️' },
+        { labelEn: 'AI Treasury Assistant', labelFa: 'دستیار خزانه', href: '/admin/treasury?tab=ai', icon: '🤖' },
+      ] },
       { en: 'Business Intelligence', fa: 'هوش تجاری', items: [
         { labelEn: 'Executive Cockpit', labelFa: 'کاکپیت اجرایی', href: '/admin/business-intelligence?tab=cockpit', icon: '🛰️' },
         { labelEn: 'KPI Center', labelFa: 'مرکز KPI', href: '/admin/business-intelligence?tab=kpi', icon: '🎯' },
