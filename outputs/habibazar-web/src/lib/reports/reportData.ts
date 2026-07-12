@@ -15,6 +15,7 @@ import { costingPortfolio } from '@/lib/erp/costingData'
 import { budgetPortfolio } from '@/lib/erp/budgetData'
 import { costCenterOverview } from '@/lib/erp/costCenterData'
 import { assembleKpis, runForecast } from '@/lib/erp/financialIntelligenceData'
+import { executiveCockpit } from '@/lib/bi/cockpitData'
 import type { Row, Column } from './pivot'
 
 export interface ReportDef {
@@ -45,6 +46,9 @@ export const REPORTS: ReportDef[] = [
   { id: 'profit_center_report', module: 'financial', nameEn: 'Profit Center Report', nameFa: 'گزارش مراکز سود', groupField: 'name', measureField: 'profit' },
   { id: 'cfo_report', module: 'financial', nameEn: 'CFO Report', nameFa: 'گزارش مدیر مالی', groupField: 'group', measureField: 'value' },
   { id: 'forecast_report', module: 'financial', nameEn: 'Financial Forecast Report', nameFa: 'گزارش پیش‌بینی مالی', groupField: 'kind', measureField: 'value' },
+  // Phase 26.13 — executive management reports (CFO/Sales/Procurement/Project reuse existing).
+  { id: 'ceo_report', module: 'financial', nameEn: 'CEO Report', nameFa: 'گزارش مدیرعامل', groupField: 'group', measureField: 'value' },
+  { id: 'coo_report', module: 'financial', nameEn: 'COO Report', nameFa: 'گزارش مدیر عملیات', groupField: 'group', measureField: 'value' },
 ]
 
 export interface ReportOutput { columns: Column[]; rows: Row[]; summary: { label: string; value: number }[] }
@@ -226,6 +230,34 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         ...f.forecast.map(p => ({ period: p.period, kind: 'Forecast', value: p.value })),
       ]
       return { columns: [{ key: 'period', label: 'Period' }, { key: 'kind', label: 'Kind' }, { key: 'value', label: 'Revenue' }], rows, summary: [{ label: 'Next forecast', value: f.nextValue }] }
+    }
+    case 'ceo_report': {
+      const c = await executiveCockpit()
+      const rows: Row[] = [
+        { group: 'Financial', metric: 'Revenue (monthly)', value: c.financial?.overview.revenue ?? 0 },
+        { group: 'Financial', metric: 'Net profit', value: c.financial?.overview.profit ?? 0 },
+        { group: 'Financial', metric: 'Cash position', value: c.financial?.overview.cash ?? 0 },
+        { group: 'Performance', metric: 'KPI scorecard', value: c.scorecard.score },
+        { group: 'Operations', metric: 'Sales invoiced', value: c.operational.salesInvoiced },
+        { group: 'Operations', metric: 'Open projects', value: c.operational.openProjects },
+        { group: 'Risk', metric: 'Open alerts', value: c.risk.openAlerts },
+        { group: 'Risk', metric: 'Approval delays', value: c.risk.approvalDelays },
+      ]
+      return { columns: [{ key: 'group', label: 'Group' }, { key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }], rows, summary: [{ label: 'KPI score', value: c.scorecard.score }] }
+    }
+    case 'coo_report': {
+      const c = await executiveCockpit()
+      const rows: Row[] = [
+        { group: 'Sales', metric: 'Invoiced', value: c.operational.salesInvoiced },
+        { group: 'Procurement', metric: 'Spend', value: c.operational.purchaseSpend },
+        { group: 'Inventory', metric: 'Value', value: c.operational.inventoryValue },
+        { group: 'Projects', metric: 'Open projects', value: c.operational.openProjects },
+        { group: 'Projects', metric: 'Active tasks', value: c.operational.activeTasks },
+        { group: 'Approvals', metric: 'Avg hours', value: c.approvals?.avgHours ?? 0 },
+        { group: 'Approvals', metric: 'SLA violations', value: c.approvals?.slaViolations ?? 0 },
+        { group: 'Risk', metric: 'Low stock', value: c.risk.lowStock },
+      ]
+      return { columns: [{ key: 'group', label: 'Group' }, { key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }], rows, summary: [{ label: 'Open projects', value: c.operational.openProjects }] }
     }
     default: return null
   }

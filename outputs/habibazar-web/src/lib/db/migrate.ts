@@ -1624,6 +1624,173 @@ export async function runMigrations() {
       ('purchase_order','Purchase > 1B','خرید بالای ۱میلیارد',1000000001,NULL,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"dept_manager"}]},{"level":2,"mode":"all","approvers":[{"type":"role","ref":"cfo"}]},{"level":3,"mode":"all","approvers":[{"type":"role","ref":"ceo"}]}]')
     ON CONFLICT DO NOTHING;
 
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 26.13 — Business Operations Intelligence Platform
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- KPI definitions + values (M2): formula-driven KPIs with target + history.
+    CREATE TABLE IF NOT EXISTS kpi_definitions (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      category TEXT NOT NULL DEFAULT 'financial' CHECK(category IN ('company','department','employee','project','financial','sales','inventory')),
+      formula TEXT,               -- expression over named metrics (kpiFormula engine)
+      unit TEXT,                  -- %, IRR, days, ratio …
+      direction TEXT NOT NULL DEFAULT 'higher_better' CHECK(direction IN ('higher_better','lower_better')),
+      target NUMERIC,
+      weight NUMERIC NOT NULL DEFAULT 1,
+      owner_id TEXT REFERENCES users(id),
+      cost_center_id INTEGER,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_kpi_defs_cat ON kpi_definitions(category, active);
+    CREATE TABLE IF NOT EXISTS kpi_values (
+      id SERIAL PRIMARY KEY,
+      kpi_id INTEGER NOT NULL REFERENCES kpi_definitions(id) ON DELETE CASCADE,
+      period TEXT NOT NULL,       -- 'YYYY-MM' or 'YYYY'
+      actual NUMERIC NOT NULL DEFAULT 0,
+      target NUMERIC,
+      attainment_pct NUMERIC,
+      status TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (kpi_id, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_kpi_values_kpi ON kpi_values(kpi_id, period);
+
+    -- OKR (M3): objectives + key results, aligned company/department/employee.
+    CREATE TABLE IF NOT EXISTS okr_objectives (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      level TEXT NOT NULL DEFAULT 'company' CHECK(level IN ('company','department','employee')),
+      parent_id INTEGER REFERENCES okr_objectives(id),
+      owner_id TEXT REFERENCES users(id),
+      department TEXT,
+      period TEXT NOT NULL,       -- e.g. '1405-Q1'
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','completed','cancelled')),
+      confidence NUMERIC,
+      progress_pct NUMERIC NOT NULL DEFAULT 0,
+      start_date TEXT,
+      end_date TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_okr_obj_period ON okr_objectives(period, level);
+    CREATE TABLE IF NOT EXISTS okr_results (
+      id SERIAL PRIMARY KEY,
+      objective_id INTEGER NOT NULL REFERENCES okr_objectives(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      start_value NUMERIC NOT NULL DEFAULT 0,
+      target_value NUMERIC NOT NULL DEFAULT 100,
+      current_value NUMERIC NOT NULL DEFAULT 0,
+      weight NUMERIC NOT NULL DEFAULT 1,
+      unit TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_okr_results_obj ON okr_results(objective_id);
+
+    -- SLA (M5): definitions + events.
+    CREATE TABLE IF NOT EXISTS sla_definitions (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      sla_type TEXT NOT NULL DEFAULT 'internal' CHECK(sla_type IN ('customer','internal','approval','support')),
+      target_hours NUMERIC NOT NULL DEFAULT 24,
+      priority TEXT,
+      business_hours TEXT,        -- JSON BusinessHours
+      holidays TEXT,              -- JSON string[]
+      escalation TEXT,            -- JSON SlaEscalationRule[]
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS sla_events (
+      id SERIAL PRIMARY KEY,
+      sla_id INTEGER NOT NULL REFERENCES sla_definitions(id) ON DELETE CASCADE,
+      ref_type TEXT,
+      ref_id INTEGER,
+      started_at TEXT NOT NULL DEFAULT (${NOW}),
+      due_at TEXT,
+      resolved_at TEXT,
+      elapsed_hours NUMERIC,
+      state TEXT NOT NULL DEFAULT 'within' CHECK(state IN ('within','due_soon','breached','resolved')),
+      escalation_levels TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_sla_events_state ON sla_events(state, sla_id);
+
+    -- Process metrics (M4): captured process-timeline snapshots.
+    CREATE TABLE IF NOT EXISTS process_metrics (
+      id SERIAL PRIMARY KEY,
+      process TEXT NOT NULL,      -- sales/purchase/approval/payment/project
+      period TEXT NOT NULL,
+      transition TEXT,
+      avg_hours NUMERIC,
+      max_hours NUMERIC,
+      case_count INTEGER,
+      failure_rate_pct NUMERIC,
+      performance_score NUMERIC,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_process_metrics ON process_metrics(process, period);
+
+    -- Executive reports (M7): saved report configs/snapshots.
+    CREATE TABLE IF NOT EXISTS executive_reports (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      audience TEXT NOT NULL DEFAULT 'ceo' CHECK(audience IN ('ceo','cfo','coo','sales','procurement','project')),
+      config TEXT,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Business alerts (M6): centralized alert store (all domains).
+    CREATE TABLE IF NOT EXISTS business_alerts (
+      id SERIAL PRIMARY KEY,
+      kind TEXT NOT NULL,
+      domain TEXT NOT NULL CHECK(domain IN ('financial','operational','security')),
+      severity TEXT NOT NULL DEFAULT 'warning' CHECK(severity IN ('info','warning','critical')),
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      detail TEXT,
+      metric_value NUMERIC,
+      ref_type TEXT,
+      ref_id INTEGER,
+      channels TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','acknowledged','resolved')),
+      fingerprint TEXT UNIQUE,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_biz_alerts_status ON business_alerts(status, domain, severity);
+
+    -- Data quality checks (M9): last-run snapshots.
+    CREATE TABLE IF NOT EXISTS data_quality_checks (
+      id SERIAL PRIMARY KEY,
+      check_key TEXT NOT NULL UNIQUE,
+      label_en TEXT NOT NULL,
+      label_fa TEXT,
+      severity TEXT NOT NULL DEFAULT 'medium' CHECK(severity IN ('low','medium','high')),
+      affected INTEGER NOT NULL DEFAULT 0,
+      total INTEGER NOT NULL DEFAULT 0,
+      last_run TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- Seed a couple of KPI definitions once (formula-driven).
+    INSERT INTO kpi_definitions (code, name_en, name_fa, category, formula, unit, direction, target) VALUES
+      ('gross_margin','Gross Margin','حاشیه سود ناخالص','financial','(revenue - cogs) / revenue * 100','%','higher_better',40),
+      ('net_margin','Net Margin','حاشیه سود خالص','financial','net_income / revenue * 100','%','higher_better',15),
+      ('inventory_turnover','Inventory Turnover','گردش موجودی','inventory','cogs / inventory_value','ratio','higher_better',4)
+    ON CONFLICT (code) DO NOTHING;
+
 
     -- Phase 24: cover hot structural/lookup foreign keys that participate in
     -- JOIN/WHERE (parent→child containment, tree parents, join tables, session

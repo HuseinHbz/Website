@@ -115,6 +115,15 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Asset Center', labelFa: 'مرکز دارایی‌ها', href: '/admin/assets', icon: '🖧' },
         { labelEn: 'Project Center', labelFa: 'مرکز پروژه', href: '/admin/project-management', icon: '📋' },
       ] },
+      { en: 'Business Intelligence', fa: 'هوش تجاری', items: [
+        { labelEn: 'Executive Cockpit', labelFa: 'کاکپیت اجرایی', href: '/admin/business-intelligence?tab=cockpit', icon: '🛰️' },
+        { labelEn: 'KPI Center', labelFa: 'مرکز KPI', href: '/admin/business-intelligence?tab=kpi', icon: '🎯' },
+        { labelEn: 'OKR Management', labelFa: 'مدیریت OKR', href: '/admin/business-intelligence?tab=okr', icon: '🧭' },
+        { labelEn: 'Process Intelligence', labelFa: 'هوش فرایند', href: '/admin/business-intelligence?tab=process', icon: '🔬' },
+        { labelEn: 'SLA Center', labelFa: 'مرکز SLA', href: '/admin/business-intelligence?tab=sla', icon: '⏳' },
+        { labelEn: 'Alert Center', labelFa: 'مرکز هشدار', href: '/admin/business-intelligence?tab=alerts', icon: '🚨' },
+        { labelEn: 'AI Business Advisor', labelFa: 'مشاور هوشمند', href: '/admin/business-intelligence?tab=advisor', icon: '🧠' },
+      ] },
       { en: 'Documents & Reports', fa: 'اسناد و گزارش‌ها', items: [
         { labelEn: 'Document Center', labelFa: 'مرکز اسناد', href: '/admin/documents', icon: '📄' },
         { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت', href: '/admin/company', icon: '🏢' },
