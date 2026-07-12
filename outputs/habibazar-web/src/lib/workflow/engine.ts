@@ -16,7 +16,7 @@
  * `task` handlers — no duplicated logic.
  */
 
-export type NodeType = 'start' | 'end' | 'set' | 'condition' | 'log' | 'task' | 'delay' | 'approval'
+export type NodeType = 'start' | 'end' | 'set' | 'condition' | 'log' | 'task' | 'delay' | 'approval' | 'parallel' | 'notification' | 'ai_decision'
 export type CompareOp = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'truthy' | 'falsy'
 
 export interface WorkflowNode {
@@ -216,9 +216,28 @@ export async function executeWorkflow(
         break
 
       case 'approval':
-        // Human/approval gate: pause the run; a later resume continues from here.
-        add(node.id, node.type, node.label || 'awaiting approval', 'warn')
+      case 'parallel':
+        // Human/approval gate (single or parallel): pause; a resume continues.
+        // The centralized approval platform (26.12) tracks the parallel levels.
+        add(node.id, node.type, node.label || (node.type === 'parallel' ? 'awaiting parallel approvals' : 'awaiting approval'), 'warn')
         return { status: 'waiting', variables, log, steps, waitingNode: node.id }
+
+      case 'notification':
+        // Fire-and-continue: record the notification intent (a handler sends it).
+        if (handlers['notify']) { try { await handlers['notify']('notify', node.config ?? {}, ctx) } catch { /* best-effort */ } }
+        add(node.id, node.type, node.label || 'notification sent')
+        currentId = node.next
+        break
+
+      case 'ai_decision': {
+        // AI advisory node: an injected handler returns a recommendation; the
+        // flow continues (AI never hard-decides — see 26.12 M10).
+        const aih = handlers['ai']
+        if (aih) { try { const out = await aih('ai', node.config ?? {}, ctx); if (node.assignTo) variables[node.assignTo] = out } catch { /* best-effort */ } }
+        add(node.id, node.type, node.label || 'ai recommendation recorded')
+        currentId = node.next
+        break
+      }
 
       case 'task': {
         const action = node.action ?? ''

@@ -122,6 +122,7 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
       ] },
       { en: 'Automation', fa: 'اتوماسیون', items: [
+        { labelEn: 'Approval Center', labelFa: 'مرکز تأیید', href: '/admin/approvals', icon: '✅' },
         { labelEn: 'Workflow Designer', labelFa: 'طراح گردش‌کار', href: '/admin/workflows', icon: '🔀' },
         { labelEn: 'Rules Center', labelFa: 'مرکز قوانین', href: '/admin/rules', icon: '⚖️' },
         { labelEn: 'Integration Hub', labelFa: 'مرکز یکپارچه‌سازی', href: '/admin/integration-hub', icon: '🔌' },

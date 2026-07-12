@@ -1501,6 +1501,130 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_wf_runs_wf ON workflow_runs(workflow_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_wf_status ON workflows(status);
 
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 26.12 — Enterprise Approval & Workflow Intelligence
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Central approval matrix (M1): docType × amount range × optional condition
+    -- → ordered levels (JSON: [{level,mode,minCount,approvers[]}]).
+    CREATE TABLE IF NOT EXISTS approval_matrix (
+      id SERIAL PRIMARY KEY,
+      doc_type TEXT NOT NULL,
+      name_en TEXT,
+      name_fa TEXT,
+      min_amount NUMERIC NOT NULL DEFAULT 0,
+      max_amount NUMERIC,
+      condition TEXT,          -- JSON RouteCondition (rules engine)
+      levels TEXT NOT NULL,    -- JSON ApprovalLevelPlan[]
+      priority INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_appr_matrix_doc ON approval_matrix(doc_type, active);
+
+    -- Approval requests (M8/M15): one per document routed for approval.
+    CREATE TABLE IF NOT EXISTS approval_requests (
+      id SERIAL PRIMARY KEY,
+      doc_type TEXT NOT NULL,
+      ref_type TEXT,           -- ERP table the document lives in
+      ref_id INTEGER,
+      title TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      department TEXT,
+      cost_center_id INTEGER,
+      project_id INTEGER,
+      context TEXT,            -- JSON facts for routing/AI
+      plan TEXT NOT NULL,      -- resolved ApprovalLevelPlan[] (snapshot)
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','changes_requested','cancelled')),
+      current_level INTEGER NOT NULL DEFAULT 1,
+      pending_since TEXT NOT NULL DEFAULT (${NOW}),
+      decided_at TEXT,
+      sla_breached INTEGER NOT NULL DEFAULT 0,
+      escalation_stages TEXT NOT NULL DEFAULT '[]',
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_appr_req_status ON approval_requests(status, doc_type);
+    CREATE INDEX IF NOT EXISTS idx_appr_req_ref ON approval_requests(ref_type, ref_id);
+
+    -- Approval actions (M8/M13): every approve/reject/change with full audit.
+    CREATE TABLE IF NOT EXISTS approval_actions (
+      id SERIAL PRIMARY KEY,
+      request_id INTEGER NOT NULL REFERENCES approval_requests(id) ON DELETE CASCADE,
+      level INTEGER NOT NULL,
+      approver_id TEXT NOT NULL REFERENCES users(id),
+      on_behalf_of TEXT REFERENCES users(id),   -- delegation
+      decision TEXT NOT NULL CHECK(decision IN ('approved','rejected','changes_requested')),
+      comment TEXT,
+      ip_address TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_appr_actions_req ON approval_actions(request_id);
+
+    -- Delegations (M5).
+    CREATE TABLE IF NOT EXISTS approval_delegations (
+      id SERIAL PRIMARY KEY,
+      from_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      to_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      doc_type TEXT,
+      department TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_appr_deleg_to ON approval_delegations(to_user_id, active);
+
+    -- Escalation history (M6).
+    CREATE TABLE IF NOT EXISTS workflow_escalations (
+      id SERIAL PRIMARY KEY,
+      request_id INTEGER NOT NULL REFERENCES approval_requests(id) ON DELETE CASCADE,
+      stage INTEGER NOT NULL,
+      action TEXT NOT NULL,       -- reminder | escalate
+      target TEXT,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (request_id, stage)
+    );
+
+    -- Comments / collaboration (M9).
+    CREATE TABLE IF NOT EXISTS workflow_comments (
+      id SERIAL PRIMARY KEY,
+      request_id INTEGER NOT NULL REFERENCES approval_requests(id) ON DELETE CASCADE,
+      author_id TEXT NOT NULL REFERENCES users(id),
+      body TEXT NOT NULL,
+      mentions TEXT,              -- JSON user ids
+      attachment_url TEXT,
+      internal INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_wf_comments_req ON workflow_comments(request_id);
+
+    -- Notification log (M12).
+    CREATE TABLE IF NOT EXISTS workflow_notifications (
+      id SERIAL PRIMARY KEY,
+      request_id INTEGER REFERENCES approval_requests(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,      -- email | internal | webhook
+      recipient TEXT,
+      kind TEXT NOT NULL,         -- request | reminder | escalation | completion
+      status TEXT NOT NULL DEFAULT 'queued',
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_wf_notif_req ON workflow_notifications(request_id);
+
+    -- Seed the default enterprise purchase approval matrix once.
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, max_amount, levels) VALUES
+      ('purchase_order','Purchase ≤ 100M','خرید تا ۱۰۰ میلیون',0,100000000,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"dept_manager"}]}]'),
+      ('purchase_order','Purchase 100M–1B','خرید ۱۰۰م تا ۱میلیارد',100000001,1000000000,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"dept_manager"}]},{"level":2,"mode":"all","approvers":[{"type":"role","ref":"finance_manager"}]}]'),
+      ('purchase_order','Purchase > 1B','خرید بالای ۱میلیارد',1000000001,NULL,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"dept_manager"}]},{"level":2,"mode":"all","approvers":[{"type":"role","ref":"cfo"}]},{"level":3,"mode":"all","approvers":[{"type":"role","ref":"ceo"}]}]')
+    ON CONFLICT DO NOTHING;
+
+
     -- Phase 24: cover hot structural/lookup foreign keys that participate in
     -- JOIN/WHERE (parent→child containment, tree parents, join tables, session
     -- and RBAC lookups). Audit-trail FKs (created_by/updated_by/author_id/

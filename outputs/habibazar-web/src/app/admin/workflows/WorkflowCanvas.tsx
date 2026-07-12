@@ -5,13 +5,15 @@ import { useT } from '@/lib/admin/locale'
 import { autoLayout, graphEdges } from '@/lib/workflow/layout'
 import type { WorkflowDefinition, WorkflowNode, NodeType } from '@/lib/workflow/engine'
 
-const NODE_TYPES: NodeType[] = ['start', 'end', 'set', 'condition', 'log', 'task', 'delay', 'approval']
+const NODE_TYPES: NodeType[] = ['start', 'end', 'set', 'condition', 'log', 'task', 'delay', 'approval', 'parallel', 'notification', 'ai_decision']
 const NODE_COLOR: Record<NodeType, string> = {
   start: '#16a34a', end: '#64748b', set: '#0ea5e9', condition: '#f59e0b',
   log: '#6366f1', task: '#8b5cf6', delay: '#0891b2', approval: '#ef4444',
+  parallel: '#db2777', notification: '#0d9488', ai_decision: '#7c3aed',
 }
 const NODE_ICON: Record<NodeType, string> = {
   start: '▶', end: '⏹', set: '=', condition: '◆', log: '📝', task: '⚙', delay: '⏱', approval: '✋',
+  parallel: '⇄', notification: '🔔', ai_decision: '🤖',
 }
 const W = 150, H = 54
 
