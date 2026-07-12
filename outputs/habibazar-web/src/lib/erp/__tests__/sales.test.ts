@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis } from '../sales'
+import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced } from '../sales'
 
 describe('sales line & document totals', () => {
   it('computes a line: qty×price, then discount, then tax on discounted net', () => {
@@ -57,5 +57,31 @@ describe('invoice status & KPIs', () => {
     expect(k.outstanding).toBe(3500) // 10000 - 6000 - 500
     expect(k.wonValue).toBe(8000)
     expect(k.taxCollected).toBe(900)
+  })
+})
+
+describe('salesInvoicePostingLines (26.15.1 Sales → GL)', () => {
+  it('posts an invoice Dr AR / Cr Revenue / Cr VAT and balances', () => {
+    const lines = salesInvoicePostingLines(1000, 90, 1090, 'invoice')
+    expect(postingBalanced(lines)).toBe(true)
+    const ar = lines.find(l => l.accountCode === '1100')!
+    const rev = lines.find(l => l.accountCode === '4000')!
+    const vat = lines.find(l => l.accountCode === '2100')!
+    expect(ar.debit).toBe(1090)
+    expect(rev.credit).toBe(1000)
+    expect(vat.credit).toBe(90)
+  })
+  it('omits the VAT line when tax is zero', () => {
+    const lines = salesInvoicePostingLines(500, 0, 500, 'invoice')
+    expect(lines.some(l => l.accountCode === '2100')).toBe(false)
+    expect(postingBalanced(lines)).toBe(true)
+  })
+  it('reverses the entry for a credit note (return)', () => {
+    const lines = salesInvoicePostingLines(1000, 90, 1090, 'credit_note')
+    expect(postingBalanced(lines)).toBe(true)
+    const ar = lines.find(l => l.accountCode === '1100')!
+    const rev = lines.find(l => l.accountCode === '4000')!
+    expect(ar.credit).toBe(1090) // AR reduced
+    expect(rev.debit).toBe(1000) // revenue reversed
   })
 })

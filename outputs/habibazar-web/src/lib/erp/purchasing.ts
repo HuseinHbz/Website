@@ -104,7 +104,10 @@ export function purchaseInvoiceStatus(total: number, paid: number): PurchaseStat
 }
 
 // ── GL posting (double-entry integration) ───────────────────────────────────
-export interface PostingLine { accountCode: string; debit: number; credit: number; memo: string }
+// `PostingLine`/`postingBalanced` are defined once in ./sales (the module
+// purchasing already depends on) and re-exported here for backward compatibility.
+export { postingBalanced, type PostingLine } from './sales'
+import type { PostingLine } from './sales'
 /**
  * Double-entry lines for a purchase invoice (goods): Dr Inventory (net),
  * Dr Taxes Payable (recoverable VAT input), Cr Accounts Payable (gross total).
@@ -124,12 +127,6 @@ export function purchasePaymentPostingLines(amount: number): PostingLine[] {
     { accountCode: '2000', debit: round2(amount), credit: 0, memo: 'Settle payable' },
     { accountCode: '1010', debit: 0, credit: round2(amount), memo: 'Bank payment' },
   ]
-}
-/** A set of posting lines is valid only when it balances. */
-export function postingBalanced(lines: PostingLine[]): boolean {
-  const d = lines.reduce((s, l) => s + l.debit, 0)
-  const c = lines.reduce((s, l) => s + l.credit, 0)
-  return Math.abs(round2(d) - round2(c)) < 0.001
 }
 
 // ── Analytics ────────────────────────────────────────────────────────────────

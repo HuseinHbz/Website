@@ -5,7 +5,8 @@
  * list, the credit check and the dashboard.
  */
 import { pgQuery } from '@/lib/db'
-import { customerCredit, salesKpis } from './sales'
+import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
+import { nextNumber } from '@/lib/numbering/integrate'
 
 export interface CustomerWithCredit {
   id: number; code: string; name: string; email: string | null; phone: string | null
@@ -127,4 +128,44 @@ export async function customerStatement(customerId: number) {
     ...pays.map(p => ({ date: p.date, kind: 'payment' as const, ref: p.reference || `${p.method.toUpperCase()}-${p.id}`, debit: 0, credit: p.amount })),
   ]
   return { customer, ...runStatement(entries) }
+}
+
+// ── Sales invoice → General-Ledger posting (Phase 26.15.1) ───────────────────
+// The missing half of double-entry: a confirmed sales invoice creates a posted
+// journal entry (Dr AR / Cr Revenue / Cr VAT) so revenue actually reaches the
+// income statement + trial balance. Idempotent — a second call returns the same
+// entry. Mirrors purchasing's postPurchaseInvoiceToGl (same primitives).
+export async function postSalesInvoiceToGl(docId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
+  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null; currency: string | null; exchange_rate: number | null }>(
+    `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no, currency, exchange_rate
+       FROM sales_documents WHERE id=$1 AND deleted_at IS NULL`, [docId]))[0]
+  if (!d) throw new Error('Document not found')
+  if (d.gl_entry_id) return { entryId: d.gl_entry_id, alreadyPosted: true }
+  if (d.doc_type !== 'invoice' && d.doc_type !== 'credit_note') throw new Error('Only invoices and credit notes post to the GL')
+  if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the document before posting')
+
+  const num = (n: number | null | undefined) => Number(n ?? 0)
+  const net = num(d.subtotal) - num(d.discount_total)
+  const kind = d.doc_type === 'credit_note' ? 'credit_note' : 'invoice'
+  const lines = salesInvoicePostingLines(net, num(d.tax_total), num(d.total), kind)
+  if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+
+  const codes = [...new Set(lines.map(l => l.accountCode))]
+  const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
+  const idOf = new Map(accs.map(a => [a.code, a.id]))
+  for (const c of codes) if (!idOf.has(c)) throw new Error(`GL account ${c} is missing from the chart`)
+
+  const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
+  const memo = `${kind === 'credit_note' ? 'Sales credit note' : 'Sales invoice'} ${d.doc_no ?? docId}`
+  const entry = (await pgQuery<{ id: number }>(
+    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, created_at, posted_at)
+     VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, $6, $7, ${NOW_SQL}, ${NOW_SQL}) RETURNING id`,
+    [entryNo, memo, `SAL-${docId}`, num(d.total), d.currency ?? 'IRR', num(d.exchange_rate) || 1, userId ?? null]))[0]
+  let ln = 0
+  for (const l of lines) {
+    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
+  }
+  await pgQuery(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
+  return { entryId: entry.id, alreadyPosted: false }
 }

@@ -12,7 +12,7 @@ type Tab = 'dashboard' | 'customers' | 'quote' | 'order' | 'invoice' | 'payments
 type DocType = 'quote' | 'order' | 'invoice' | 'credit_note' | 'debit_note'
 
 interface Customer { id?: number; code: string; name: string; email: string | null; phone: string | null; company: string | null; taxId: string | null; kind?: string; nationalId?: string | null; regNo?: string | null; economicCode?: string | null; creditLimit: number; address?: string | null; notes?: string | null; active: number | boolean; invoiced?: number; paid?: number; outstanding?: number; available?: number; overLimit?: boolean; utilizationPct?: number }
-interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number; currency?: string }
+interface DocRow { id: number; docType: DocType; docNo: string; date: string; dueDate: string | null; status: string; total: number; customerName: string; paid: number; currency?: string; glEntryId?: number | null }
 interface Line { description: string; qty: number; unitPrice: number; discountPct: number; taxPct: number; productId?: number | null }
 interface Payment { id: number; date: string; amount: number; method: string; reference: string | null; note: string | null; customer: string; docNo: string | null }
 interface Kpis { customers: number; quotes: number; orders: number; invoiced: number; collected: number; outstanding: number; wonValue: number; taxCollected: number }
@@ -382,6 +382,8 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
     { id: 'toInvoice', labelEn: 'To Invoice', labelFa: t('sales_toInvoice'), icon: '→', hidden: r => !(docType === 'order' && r.status !== 'void'), onClick: r => op(r.id, 'convert', 'invoice') },
     { id: 'pay', labelEn: 'Record Payment', labelFa: t('sales_recordPay'), icon: '💰', hidden: r => !(docType === 'invoice' && r.status !== 'paid' && r.status !== 'void'), onClick: r => { setPayFor(r); setPayAmount(r.total - r.paid) } },
     { id: 'return', labelEn: 'Return (credit note)', labelFa: locale === 'fa' ? 'برگشت (اعلامیه بستانکار)' : 'Return (credit note)', icon: '↩', hidden: r => !(docType === 'invoice' && r.status !== 'void'), onClick: r => op(r.id, 'return') },
+    // Phase 26.15.1 — post a confirmed invoice/credit-note to the General Ledger.
+    { id: 'postGl', labelEn: 'Post to GL', labelFa: locale === 'fa' ? 'ثبت در دفتر کل' : 'Post to GL', icon: '📒', hidden: r => !(docType === 'invoice' && !['draft', 'void'].includes(r.status) && !r.glEntryId), onClick: r => op(r.id, 'post') },
     { id: 'void', labelEn: 'Void', labelFa: t('sales_void'), icon: '✕', danger: true, hidden: r => r.status === 'void', onClick: r => op(r.id, 'void') },
     { id: 'delete', labelEn: 'Delete', labelFa: locale === 'fa' ? 'حذف' : 'Delete', icon: '🗑', danger: true, hidden: r => r.paid > 0, onClick: r => del(r) },
   ]

@@ -120,3 +120,41 @@ export function salesKpis(a: {
     taxCollected: round2(a.taxCollected),
   }
 }
+
+// ── Double-entry GL posting primitives (shared, single source) ───────────────
+// `PostingLine` + `postingBalanced` live here (sales is the lower module that
+// purchasing already imports); purchasing re-exports them so both sides turn a
+// document total into balanced double-entry with one primitive — no duplication.
+export interface PostingLine { accountCode: string; debit: number; credit: number; memo: string }
+/** A set of posting lines is valid only when Σdebit = Σcredit. */
+export function postingBalanced(lines: PostingLine[]): boolean {
+  const d = lines.reduce((s, l) => s + l.debit, 0)
+  const c = lines.reduce((s, l) => s + l.credit, 0)
+  return Math.abs(round2(d) - round2(c)) < 0.001
+}
+
+// ── Sales → General-Ledger posting (Phase 26.15.1) ───────────────────────────
+// Reuses the same `PostingLine` primitive as purchasing so a document total is
+// turned into balanced double-entry in exactly one place. A sales *invoice*
+// posts:  Dr 1100 Accounts Receivable (gross) / Cr 4000 Sales Revenue (net) /
+// Cr 2100 Taxes Payable (VAT).  A *credit_note* (sales return) reverses it.
+// `net` = subtotal − discount, `tax` = VAT, `total` = net + tax.
+export type SalesPostingKind = 'invoice' | 'credit_note'
+
+export function salesInvoicePostingLines(net: number, tax: number, total: number, kind: SalesPostingKind = 'invoice'): PostingLine[] {
+  const ar = { accountCode: '1100', memo: 'Accounts receivable' }
+  const rev = { accountCode: '4000', memo: 'Sales revenue' }
+  const vat = { accountCode: '2100', memo: 'VAT payable' }
+  const lines: PostingLine[] = kind === 'credit_note'
+    ? [
+        { ...rev, debit: round2(net), credit: 0 },
+        ...(tax > 0 ? [{ ...vat, debit: round2(tax), credit: 0 }] : []),
+        { ...ar, debit: 0, credit: round2(total) },
+      ]
+    : [
+        { ...ar, debit: round2(total), credit: 0 },
+        { ...rev, debit: 0, credit: round2(net) },
+        ...(tax > 0 ? [{ ...vat, debit: 0, credit: round2(tax) }] : []),
+      ]
+  return lines
+}

@@ -630,6 +630,25 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   No regression: TS 0 · ESLint 0 · 469 unit tests · 7 audits 0 · build clean.
   Deliberately NOT done (would break no-rewrite/no-heavy-dep): `.docx` export and
   a pixel-zoom canvas rewrite.
+- **Phase 26.15.1 — Enterprise Document & Business Process Studio** (audit-first
+  CFO operational audit; report: `docs/governance/phase26.15.1-enterprise-document-process-audit.md`).
+  End-to-end sales/purchase/inventory simulation confirmed Parts 2–7 (Workflow
+  Studio, Rule Builder, Document/Invoice/Letterhead designers, CFO dashboard, AI
+  copilot) already ship from 26.7–26.14 (reused, not rebuilt). The **one severe
+  real defect**: sales invoices never posted to the GL, so `ledgerData` (posted
+  lines only) understated revenue on the income statement / trial balance.
+  **Fix — Sales → GL auto-posting**: pure `salesInvoicePostingLines(net,tax,total,
+  kind)` (Dr 1100 AR / Cr 4000 Revenue / Cr 2100 VAT; credit_note reverses) +
+  `postSalesInvoiceToGl` (idempotent via new `sales_documents.gl_entry_id`, mirrors
+  purchasing; `PostingLine`/`postingBalanced` now defined once in `sales.ts`,
+  re-exported by `purchasing.ts` — no duplicate). API `PUT …/sales/documents`
+  `op:'post'` (administrator-gated, audited); Sales invoice **“Post to GL”** action.
+  **Accounting Validation Engine** (`accountingValidation.ts` pure + `…Data.ts`
+  scan): flags unbalanced/one-sided/missing-account/zero-total entries + 0–100
+  integrity score; `GET …/finance/validate`; Finance→Accounting **“Ledger
+  validation”** section. Live-PG verified: revenue **0→1,000,000** after posting,
+  balanced entry, idempotent, engine flags an injected unbalanced entry. TS 0 ·
+  ESLint 0 · 483 tests · 7 audits 0 · build clean.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

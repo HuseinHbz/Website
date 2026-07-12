@@ -4,6 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
+import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { clientIp } from '@/lib/api/clientIp'
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     const type = req.nextUrl.searchParams.get('type')
     const rows = await pgQuery(
       `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.date, d.due_date AS "dueDate", d.status,
-              d.total::float AS total, d.currency, c.name AS "customerName",
+              d.total::float AS total, d.currency, d.gl_entry_id AS "glEntryId", c.name AS "customerName",
               COALESCE((SELECT SUM(amount) FROM sales_payments p WHERE p.document_id=d.id),0)::float AS paid
        FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id
        WHERE d.deleted_at IS NULL ${type ? 'AND d.doc_type=$1' : ''}
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
   } catch (e) { return apiError(e, 'Failed to save document') }
 }
 
-const opSchema = z.object({ id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return']), toType: z.enum(DOC_TYPES).optional() })
+const opSchema = z.object({ id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return', 'post']), toType: z.enum(DOC_TYPES).optional() })
 
 // PUT — lifecycle: send/confirm/void, or convert a quote→order or order→invoice
 // (copies the lines into a new draft document that references the source).
@@ -146,6 +147,13 @@ export async function PUT(req: NextRequest) {
         [cn.id, id])
       await logAction(auth.user, 'sales.doc.return', 'sales_document', id, null, { creditNoteId: cn.id }, clientIp(req))
       return NextResponse.json({ id: cn.id, docNo })
+    }
+    if (op === 'post') {
+      // GL posting is an administrator action (mirrors purchasing's doc.post).
+      if (!['administrator', 'super_admin'].includes(auth.user.role)) return badRequest('Only administrators can post to the GL')
+      const res = await postSalesInvoiceToGl(id, auth.user.id)
+      await logAction(auth.user, 'sales.doc.post', 'sales_document', id, null, { entryId: res.entryId, alreadyPosted: res.alreadyPosted }, clientIp(req))
+      return NextResponse.json({ ok: true, entryId: res.entryId, alreadyPosted: res.alreadyPosted })
     }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])

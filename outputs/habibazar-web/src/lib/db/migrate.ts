@@ -891,6 +891,8 @@ export async function runMigrations() {
       note TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT (${NOW})
     );
     ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
+    -- Phase 26.15.1: sales invoices now auto-post to the GL (Dr AR / Cr Revenue / Cr VAT).
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
     ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'normal';
     ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS product_id INTEGER;
     ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS received_qty NUMERIC NOT NULL DEFAULT 0;

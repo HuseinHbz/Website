@@ -906,13 +906,13 @@ function RevaluationSection({ fa, toast }: { fa: boolean; toast: (m: string, k?:
 // ── Accounting Core (Phase 26.9): periods · opening balance · year-end · statement ──
 interface CoaFlat { id: number; code: string; nameEn: string; nameFa: string | null; type: string }
 function AccountingView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
-  const [sec, setSec] = useState<'periods' | 'opening' | 'closing' | 'statement'>('periods')
+  const [sec, setSec] = useState<'periods' | 'opening' | 'closing' | 'statement' | 'validation'>('periods')
   const [accounts, setAccounts] = useState<CoaFlat[]>([])
   useEffect(() => { fetch('/api/admin/erp/finance/periods?view=accounts').then(r => r.json()).then(d => setAccounts(d.flat ?? [])).catch(() => {}) }, [])
   return (
     <div className="space-y-4">
       <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1 flex-wrap">
-        {([['periods', 'Fiscal periods', 'دوره‌های مالی'], ['opening', 'Opening balance', 'تراز افتتاحیه'], ['closing', 'Year-end closing', 'بستن سال مالی'], ['statement', 'Account statement', 'کاردکس حساب']] as const).map(([id, en, faL]) => (
+        {([['periods', 'Fiscal periods', 'دوره‌های مالی'], ['opening', 'Opening balance', 'تراز افتتاحیه'], ['closing', 'Year-end closing', 'بستن سال مالی'], ['statement', 'Account statement', 'کاردکس حساب'], ['validation', 'Ledger validation', 'اعتبارسنجی دفتر']] as const).map(([id, en, faL]) => (
           <button key={id} onClick={() => setSec(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${sec === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
         ))}
       </div>
@@ -920,7 +920,62 @@ function AccountingView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'su
       {sec === 'opening' && <OpeningSection fa={fa} toast={toast} accounts={accounts} />}
       {sec === 'closing' && <ClosingSection fa={fa} toast={toast} />}
       {sec === 'statement' && <StatementSection fa={fa} accounts={accounts} />}
+      {sec === 'validation' && <ValidationSection fa={fa} />}
     </div>
+  )
+}
+
+// ── Accounting Validation Engine (Phase 26.15.1) ─────────────────────────────
+// Read-only auditor scan of the GL: unbalanced / one-sided / missing-account /
+// zero-total entries + an integrity score. Never mutates.
+interface ValIssue { code: string; severity: string; message: string; lineNo?: number }
+interface ValEntry { entryId: number; entryNo: string | null; totalDebit: number; totalCredit: number; difference: number; issues: ValIssue[] }
+interface ValSummary { entriesChecked: number; clean: number; withIssues: number; criticalCount: number; warningCount: number; byCode: Record<string, number>; score: number; entries: ValEntry[] }
+function ValidationSection({ fa }: { fa: boolean }) {
+  const [sum, setSum] = useState<ValSummary | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState<'posted' | 'all'>('posted')
+  const run = useCallback(async () => {
+    setLoading(true)
+    try { const d = await fetch(`/api/admin/erp/finance/validate?status=${status}`).then(r => r.json()); setSum(d.summary ?? null) } finally { setLoading(false) }
+  }, [status])
+  useEffect(() => { run() }, [run])
+  const scoreColor = !sum ? 'text-text-tertiary' : sum.score >= 95 ? 'text-success' : sum.score >= 80 ? 'text-warning' : 'text-danger'
+  const cell = (label: string, value: string, cls = 'text-text-primary') => (
+    <div className="rounded-lg border border-subtle p-3"><p className="text-2xs text-text-tertiary mb-1">{label}</p><p className={`text-lg font-bold ${cls}`}>{value}</p></div>
+  )
+  return (
+    <Card>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <h3 className="text-sm font-semibold text-text-primary">{L(fa, 'Accounting Validation Engine', 'موتور اعتبارسنجی حسابداری')}</h3>
+        <div className="flex items-center gap-2">
+          <select value={status} onChange={e => setStatus(e.target.value as 'posted' | 'all')} className="form-input !py-1.5 text-xs">
+            <option value="posted">{L(fa, 'Posted entries', 'اسناد قطعی')}</option>
+            <option value="all">{L(fa, 'All entries', 'همه اسناد')}</option>
+          </select>
+          <Btn size="sm" onClick={run} disabled={loading}>{loading ? L(fa, 'Scanning…', 'در حال بررسی…') : L(fa, 'Re-scan', 'بررسی مجدد')}</Btn>
+        </div>
+      </div>
+      {sum && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+            {cell(L(fa, 'Integrity score', 'امتیاز صحت'), `${sum.score}`, scoreColor)}
+            {cell(L(fa, 'Entries checked', 'اسناد بررسی‌شده'), `${sum.entriesChecked}`)}
+            {cell(L(fa, 'Clean', 'سالم'), `${sum.clean}`, 'text-success')}
+            {cell(L(fa, 'Critical', 'بحرانی'), `${sum.criticalCount}`, sum.criticalCount ? 'text-danger' : 'text-text-tertiary')}
+            {cell(L(fa, 'Warnings', 'هشدار'), `${sum.warningCount}`, sum.warningCount ? 'text-warning' : 'text-text-tertiary')}
+          </div>
+          {sum.withIssues === 0
+            ? <p className="text-xs text-text-tertiary">{L(fa, '✓ Every posted entry is balanced and well-formed.', '✓ همهٔ اسناد قطعی متوازن و درست‌اند.')}</p>
+            : <DataTable tableId="ledger-validation" columns={[
+                { key: 'entryNo', labelEn: 'Entry', labelFa: 'سند', render: (r: ValEntry) => <span className="font-mono text-xs">{r.entryNo ?? r.entryId}</span> },
+                { key: 'difference', labelEn: 'Δ (Dr−Cr)', labelFa: 'اختلاف', numeric: true, render: (r: ValEntry) => <span className={r.difference !== 0 ? 'text-danger' : 'text-text-tertiary'}>{r.difference.toLocaleString()}</span> },
+                { key: 'issues', labelEn: 'Issues', labelFa: 'ایرادها', render: (r: ValEntry) => <div className="flex flex-wrap gap-1">{r.issues.map((i, k) => <Badge key={k} color={i.severity === 'critical' ? 'danger' : 'warning'}>{i.code}{i.lineNo != null ? ` #${i.lineNo}` : ''}</Badge>)}</div> },
+              ]} rows={sum.entries} locale={fa ? 'fa' : 'en'} rowKey={(r: ValEntry) => String(r.entryId)} exportName="ledger-validation"
+              emptyLabel={L(fa, 'No issues.', 'ایرادی نیست.')} />}
+        </>
+      )}
+    </Card>
   )
 }
 
