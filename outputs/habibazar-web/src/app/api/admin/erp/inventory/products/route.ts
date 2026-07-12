@@ -53,6 +53,7 @@ const schema = z.object({
   active: z.boolean().default(true),
   openingWarehouseId: z.number().int().positive().optional(),
   openingQty: z.number().min(0).optional(),
+  defaultSupplierId: z.number().int().positive().nullable().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -67,10 +68,10 @@ export async function POST(req: NextRequest) {
       if (dup) return badRequest('A product with this SKU already exists')
       const row = (await pgQuery(
         `INSERT INTO inv_products (sku, barcode, name_en, name_fa, category, unit, cost, price,
-           track_lot, track_serial, valuation_method, reorder_point, min_stock, max_stock, safety_stock, active, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, to_char(now(),'YYYY-MM-DD HH24:MI:SS')) RETURNING id`,
+           track_lot, track_serial, valuation_method, reorder_point, min_stock, max_stock, safety_stock, active, default_supplier_id, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17, to_char(now(),'YYYY-MM-DD HH24:MI:SS')) RETURNING id`,
         [d.sku, d.barcode ?? null, d.nameEn, d.nameFa ?? null, d.category, d.unit, d.cost, d.price,
-         d.trackLot ? 1 : 0, d.trackSerial ? 1 : 0, d.valuationMethod, d.reorderPoint, d.minStock, d.maxStock, d.safetyStock, d.active ? 1 : 0],
+         d.trackLot ? 1 : 0, d.trackSerial ? 1 : 0, d.valuationMethod, d.reorderPoint, d.minStock, d.maxStock, d.safetyStock, d.active ? 1 : 0, d.defaultSupplierId ?? null],
       ))[0] as { id: number }
       // 26.10: opening stock — receive the initial quantity into the chosen
       // warehouse so a newly-defined product isn't immediately 'out of stock'.
@@ -86,9 +87,9 @@ export async function POST(req: NextRequest) {
     await pgQuery(
       `UPDATE inv_products SET sku=$2, barcode=$3, name_en=$4, name_fa=$5, category=$6, unit=$7, cost=$8, price=$9,
          track_lot=$10, track_serial=$11, valuation_method=$12, reorder_point=$13, min_stock=$14, max_stock=$15,
-         safety_stock=$16, active=$17, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
+         safety_stock=$16, active=$17, default_supplier_id=$18, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
       [d.id, d.sku, d.barcode ?? null, d.nameEn, d.nameFa ?? null, d.category, d.unit, d.cost, d.price,
-       d.trackLot ? 1 : 0, d.trackSerial ? 1 : 0, d.valuationMethod, d.reorderPoint, d.minStock, d.maxStock, d.safetyStock, d.active ? 1 : 0],
+       d.trackLot ? 1 : 0, d.trackSerial ? 1 : 0, d.valuationMethod, d.reorderPoint, d.minStock, d.maxStock, d.safetyStock, d.active ? 1 : 0, d.defaultSupplierId ?? null],
     )
     await logAction(auth.user, 'inv.product.update', 'inv_product', d.id)
     return NextResponse.json({ id: d.id })

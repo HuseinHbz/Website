@@ -1262,6 +1262,8 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW}),
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    -- Phase 26.16: product master gains a default supplier (soft ref → purchase_vendors).
+    ALTER TABLE inv_products ADD COLUMN IF NOT EXISTS default_supplier_id INTEGER;
 
     -- One row per stock movement. qty is signed: >0 in, <0 out. A transfer is
     -- written as two rows (issue from source, receipt into destination) sharing a ref.

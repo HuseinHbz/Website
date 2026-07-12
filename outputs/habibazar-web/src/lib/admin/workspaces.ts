@@ -140,6 +140,7 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Document Center', labelFa: 'مرکز اسناد', href: '/admin/documents', icon: '📄' },
         { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت', href: '/admin/company', icon: '🏢' },
         { labelEn: 'Reporting Center', labelFa: 'مرکز گزارش‌ها', href: '/admin/reports', icon: '📈' },
+        { labelEn: 'Master Data Governance', labelFa: 'حاکمیت داده پایه', href: '/admin/master-data', icon: '🗂' },
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
       ] },
       { en: 'Automation', fa: 'اتوماسیون', items: [

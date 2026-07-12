@@ -649,6 +649,31 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   validation”** section. Live-PG verified: revenue **0→1,000,000** after posting,
   balanced entry, idempotent, engine flags an injected unbalanced entry. TS 0 ·
   ESLint 0 · 483 tests · 7 audits 0 · build clean.
+- **Master Data Governance** (`/admin/master-data`, `MasterDataGovernance`) —
+  Phase 26.16, audit-first master-data layer over the existing customer/supplier/
+  product tables (report: `docs/governance/phase26.16-master-data-completion-report.md`,
+  audit: `phase26.16-master-data-audit.md`). The masters, vendor evaluation, global
+  search, workflow/approval, reporting, RBAC and audit already ship (26.1–26.15) —
+  only the governance gaps were built. Pure engine `src/lib/masterdata/quality.ts`
+  (`scorePct`/`grade`/`domainQuality`/`overallScore` completeness; `normalizeKey`/
+  `duplicateGroups`/`duplicateBurden` per-record duplicate detection; `integritySummary`
+  severity-weighted 0–100; 20 unit tests) + data layer `masterDataData.ts`:
+  **per-domain completeness score** (customers/suppliers/products required-field
+  coverage), **duplicate detection** (customer national_id/phone/email · supplier
+  economic_code/tax_id · product sku/barcode, active-only) distinct from BI's
+  aggregate count, **relation integrity** (8 cross-module business checks FKs don't
+  enforce: product no-stock/no-supplier/dangling-supplier/no-category, customer
+  over-limit/inactive-open/company-no-tax, purchase no-vendor), and a safe
+  transactional **customer merge** (repoints `sales_documents`/`sales_payments`,
+  archives the duplicate `active=0`; administrator-only, audited). Schema:
+  `inv_products.default_supplier_id` (idempotent; also a product form field).
+  API `GET /api/admin/erp/master-data?view=overview|duplicates|integrity` +
+  `POST {action:'merge'}`; UI `/admin/master-data` (Overview·Duplicates·Integrity,
+  currency-agnostic bilingual RTL/EN on the DataTable, ERP→Documents&Reports group).
+  Verified vs real PostgreSQL (16 assertions: 3-domain scoring, national_id+barcode
+  dup groups, dangling-supplier/no-stock integrity, merge repoints+archives+resolves).
+  Honest boundary: extended individual-customer fields + a drag-drop category tree +
+  alternative-suppliers M2M are recorded as future work, not stubbed.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`
