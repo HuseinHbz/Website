@@ -7,6 +7,7 @@ import { runCompletion, AiConfigError } from '@/lib/ai/engine'
 import { financeOverview } from '@/lib/erp/ledgerData'
 import { scanAnomalies, scanPaymentAnomalies, buildFinancePrompt, type EntryFact, type PaymentFact, type FinanceAiAction } from '@/lib/erp/financeAi'
 import { forecastSales } from '@/lib/erp/salesPerformance'
+import { metricSeries, currencyExposure } from '@/lib/erp/financialIntelligenceData'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -37,8 +38,16 @@ async function financeSnapshot(): Promise<{ text: string; anomalies: ReturnType<
   const series = (rows: { month: string; v: number }[]) => rows.slice().reverse().map(r => ({ month: r.month, invoiced: r.v }))
   const fmtSeries = (rows: { month: string; invoiced: number }[]) => rows.map(r => `${r.month}:${r.invoiced}`).join(' ') || 'none'
   const salesSeries = series(salesM), spendSeries = series(spendM)
+  // Root-cause deltas (M10): month-over-month change across the drivers.
+  const [rev, exp, prof] = await Promise.all([metricSeries('revenue'), metricSeries('expense'), metricSeries('profit')])
+  const delta = (s: { period: string; value: number }[]) => s.length >= 2 ? `${s[s.length - 1].period}: ${s[s.length - 1].value} (Δ ${Math.round((s[s.length - 1].value - s[s.length - 2].value) * 100) / 100} vs ${s[s.length - 2].period})` : 'insufficient history'
+  const exposure = await currencyExposure().catch(() => [])
   const k = ov.kpis
   const text = [
+    `MoM revenue → ${delta(rev)}`,
+    `MoM expense → ${delta(exp)}`,
+    `MoM profit → ${delta(prof)}`,
+    `FX exposure: ${exposure.map(e => `${e.code} ${e.sharePct}%`).join(', ') || 'none'}`,
     `Assets ${k.totalAssets} | Liabilities ${k.totalLiabilities} | Equity ${k.totalEquity} | Cash ${k.cash}`,
     `Revenue ${k.revenue} | Expenses ${k.expenses} | Net income ${k.netIncome}`,
     `Open receivables ${receivables} | Open payables ${payables}`,
@@ -50,7 +59,7 @@ async function financeSnapshot(): Promise<{ text: string; anomalies: ReturnType<
 }
 
 const schema = z.object({
-  action: z.enum(['explain', 'summarize', 'analyze', 'forecast']),
+  action: z.enum(['explain', 'summarize', 'analyze', 'forecast', 'diagnose']),
   question: z.string().max(2000).optional(),
   locale: z.enum(['en', 'fa']).default('en'),
 })

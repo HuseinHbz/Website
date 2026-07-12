@@ -12,6 +12,9 @@ import { loadCustomers } from '@/lib/erp/salesData'
 import { loadProductLevels } from '@/lib/erp/inventoryData'
 import { loadAssets } from '@/lib/erp/assetData'
 import { costingPortfolio } from '@/lib/erp/costingData'
+import { budgetPortfolio } from '@/lib/erp/budgetData'
+import { costCenterOverview } from '@/lib/erp/costCenterData'
+import { assembleKpis, runForecast } from '@/lib/erp/financialIntelligenceData'
 import type { Row, Column } from './pivot'
 
 export interface ReportDef {
@@ -35,6 +38,13 @@ export const REPORTS: ReportDef[] = [
   { id: 'projects_costing', module: 'projects', nameEn: 'Project Costing', nameFa: 'هزینه‌یابی پروژه', groupField: 'name', measureField: 'profit' },
   { id: 'currency_exposure', module: 'financial', nameEn: 'Currency Exposure', nameFa: 'پوشش ارزی', groupField: 'currency', measureField: 'gainLoss' },
   { id: 'currency_gain_loss', module: 'financial', nameEn: 'Currency Gain/Loss (Exchange Differences)', nameFa: 'سود/زیان تسعیر ارز', groupField: 'date', measureField: 'net' },
+  // Phase 26.11 — Financial Intelligence reports.
+  { id: 'budget_report', module: 'financial', nameEn: 'Budget Report', nameFa: 'گزارش بودجه', groupField: 'status', measureField: 'budget' },
+  { id: 'variance_report', module: 'financial', nameEn: 'Budget Variance Report', nameFa: 'گزارش مغایرت بودجه', groupField: 'status', measureField: 'variance' },
+  { id: 'cost_center_report', module: 'financial', nameEn: 'Cost Center Report', nameFa: 'گزارش مراکز هزینه', groupField: 'kind', measureField: 'cost' },
+  { id: 'profit_center_report', module: 'financial', nameEn: 'Profit Center Report', nameFa: 'گزارش مراکز سود', groupField: 'name', measureField: 'profit' },
+  { id: 'cfo_report', module: 'financial', nameEn: 'CFO Report', nameFa: 'گزارش مدیر مالی', groupField: 'group', measureField: 'value' },
+  { id: 'forecast_report', module: 'financial', nameEn: 'Financial Forecast Report', nameFa: 'گزارش پیش‌بینی مالی', groupField: 'kind', measureField: 'value' },
 ]
 
 export interface ReportOutput { columns: Column[]; rows: Row[]; summary: { label: string; value: number }[] }
@@ -156,6 +166,66 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         rows,
         summary: [{ label: 'Budget', value: p.kpis.budget }, { label: 'Cost', value: p.kpis.cost }, { label: 'Profit', value: p.kpis.profit }],
       }
+    }
+    case 'budget_report': {
+      const p = await budgetPortfolio()
+      const rows: Row[] = p.map(b => ({ name: b.name, status: b.status, budget: money(b.budget), actual: money(b.actual), consumptionPct: money(b.consumptionPct) }))
+      return {
+        columns: [{ key: 'name', label: 'Budget' }, { key: 'status', label: 'Status' }, { key: 'budget', label: 'Budget' }, { key: 'actual', label: 'Actual' }, { key: 'consumptionPct', label: 'Consumption %' }],
+        rows,
+        summary: [{ label: 'Total budget', value: money(p.reduce((s, b) => s + b.budget, 0)) }, { label: 'Total actual', value: money(p.reduce((s, b) => s + b.actual, 0)) }],
+      }
+    }
+    case 'variance_report': {
+      const p = await budgetPortfolio()
+      const rows: Row[] = p.map(b => ({ name: b.name, status: b.status, budget: money(b.budget), actual: money(b.actual), variance: money(b.actual - b.budget) }))
+      return {
+        columns: [{ key: 'name', label: 'Budget' }, { key: 'status', label: 'Status' }, { key: 'budget', label: 'Budget' }, { key: 'actual', label: 'Actual' }, { key: 'variance', label: 'Variance' }],
+        rows,
+        summary: [{ label: 'Total variance', value: money(p.reduce((s, b) => s + (b.actual - b.budget), 0)) }],
+      }
+    }
+    case 'cost_center_report': {
+      const o = await costCenterOverview()
+      const rows: Row[] = o.centers.map(c => ({ code: c.code, name: c.nameEn, kind: c.kind, revenue: c.revenue, cost: c.cost, profit: c.profit }))
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Cost Center' }, { key: 'kind', label: 'Kind' }, { key: 'revenue', label: 'Revenue' }, { key: 'cost', label: 'Cost' }, { key: 'profit', label: 'Profit' }],
+        rows,
+        summary: [{ label: 'Total cost', value: o.totals.cost }, { label: 'Total revenue', value: o.totals.revenue }],
+      }
+    }
+    case 'profit_center_report': {
+      const o = await costCenterOverview()
+      const rows: Row[] = o.centers.filter(c => c.kind === 'profit').map(c => ({ code: c.code, name: c.nameEn, revenue: c.revenue, cost: c.cost, profit: c.profit, marginPct: c.marginPct }))
+      return {
+        columns: [{ key: 'code', label: 'Code' }, { key: 'name', label: 'Profit Center' }, { key: 'revenue', label: 'Revenue' }, { key: 'cost', label: 'Cost' }, { key: 'profit', label: 'Profit' }, { key: 'marginPct', label: 'Margin %' }],
+        rows,
+        summary: [{ label: 'Total profit', value: money(rows.reduce((s, r) => s + Number(r.profit), 0)) }],
+      }
+    }
+    case 'cfo_report': {
+      const { kpis } = await assembleKpis()
+      const rows: Row[] = [
+        { group: 'Revenue', metric: 'Monthly revenue', value: kpis.revenue.monthly },
+        { group: 'Revenue', metric: 'Growth rate %', value: kpis.revenue.growthRatePct },
+        { group: 'Profit', metric: 'Gross profit', value: kpis.profit.gross },
+        { group: 'Profit', metric: 'Net profit', value: kpis.profit.net },
+        { group: 'Profit', metric: 'Net margin %', value: kpis.profit.netMarginPct },
+        { group: 'Cash', metric: 'Cash position', value: kpis.cash.position },
+        { group: 'Cash', metric: 'Burn rate', value: kpis.cash.burnRate },
+        { group: 'Working capital', metric: 'Receivables', value: kpis.receivable.outstanding },
+        { group: 'Working capital', metric: 'Payables', value: kpis.payable.outstanding },
+        { group: 'Working capital', metric: 'Inventory value', value: kpis.inventory.value },
+      ]
+      return { columns: [{ key: 'group', label: 'Group' }, { key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }], rows, summary: [{ label: 'Net profit', value: kpis.profit.net }] }
+    }
+    case 'forecast_report': {
+      const f = await runForecast('revenue', 'trend', 3)
+      const rows: Row[] = [
+        ...f.history.map(p => ({ period: p.period, kind: 'Actual', value: p.value })),
+        ...f.forecast.map(p => ({ period: p.period, kind: 'Forecast', value: p.value })),
+      ]
+      return { columns: [{ key: 'period', label: 'Period' }, { key: 'kind', label: 'Kind' }, { key: 'value', label: 'Revenue' }], rows, summary: [{ label: 'Next forecast', value: f.nextValue }] }
     }
     default: return null
   }

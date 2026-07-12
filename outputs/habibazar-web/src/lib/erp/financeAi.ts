@@ -8,7 +8,7 @@
  * narrative on top of real numbers.
  */
 
-export type FinanceAiAction = 'explain' | 'summarize' | 'analyze' | 'forecast'
+export type FinanceAiAction = 'explain' | 'summarize' | 'analyze' | 'forecast' | 'diagnose'
 
 export interface EntryFact { id: number; date: string; total: number; memo?: string | null }
 export interface Anomaly { code: string; message: string; entryIds: number[] }
@@ -44,6 +44,7 @@ const ACTION_TASK: Record<FinanceAiAction, string> = {
   summarize: 'Summarize the financial position from the snapshot: profitability, liquidity, payables pressure. 4-6 tight sentences.',
   analyze: 'Analyze the books for risks: anomalies listed below, expense concentration, unusual balances. Be specific; cite the numbers given.',
   forecast: 'Comment on the near-term cash outlook using the receivables/payables and net income in the snapshot. State assumptions explicitly.',
+  diagnose: 'Act as a Financial Analyst. Perform ROOT-CAUSE analysis of the change the user asks about (e.g. why profit moved this month), reasoning ONLY from the month-over-month deltas in the snapshot across sales, purchases/expenses, currency exposure and inventory. Output three labelled sections: "Root cause" (the biggest contributing drivers, with the numbers), "Recommendations" (concrete, actionable), and "Insights" (one or two forward-looking notes). Cite the figures.',
 }
 
 /** Build the grounded system + user prompt for the finance assistant. */

@@ -108,6 +108,7 @@ export const WORKSPACES: Workspace[] = [
     groups: [
       { en: 'Operations', fa: 'عملیات', items: [
         { labelEn: 'Financial Center', labelFa: 'مرکز مالی', href: '/admin/finance', icon: '💰' },
+        { labelEn: 'Financial Intelligence', labelFa: 'هوش مالی', href: '/admin/financial-intelligence', icon: '🧠' },
         { labelEn: 'Sales Center', labelFa: 'مرکز فروش', href: '/admin/sales', icon: '🛒' },
         { labelEn: 'Purchasing Center', labelFa: 'مرکز خرید', href: '/admin/purchasing', icon: '🧾' },
         { labelEn: 'Inventory Center', labelFa: 'مرکز انبار', href: '/admin/inventory', icon: '📦' },

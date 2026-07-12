@@ -1340,6 +1340,137 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_asset_maint_asset ON asset_maintenance(asset_id, scheduled_date);
     CREATE INDEX IF NOT EXISTS idx_asset_maint_status ON asset_maintenance(status);
     CREATE INDEX IF NOT EXISTS idx_asset_activity_asset ON asset_activity(asset_id, created_at);
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 26.11 — Enterprise Financial Intelligence Platform
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Cost / Profit centers (M3/M4): the canonical registry (replaces the
+    -- free-text assets.cost_center/department). A profit center is a cost center
+    -- with kind='profit' (tracks revenue too) — no duplicate table.
+    CREATE TABLE IF NOT EXISTS erp_cost_centers (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      kind TEXT NOT NULL DEFAULT 'department' CHECK(kind IN ('department','branch','project','business_unit','profit')),
+      parent_id INTEGER REFERENCES erp_cost_centers(id),
+      manager_user_id TEXT REFERENCES users(id),
+      company_id INTEGER,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_cost_centers_kind ON erp_cost_centers(kind, active);
+    -- Every financial transaction can carry a cost_center_id (additive).
+    ALTER TABLE gl_journal_lines ADD COLUMN IF NOT EXISTS cost_center_id INTEGER;
+    CREATE INDEX IF NOT EXISTS idx_gl_lines_cc ON gl_journal_lines(cost_center_id);
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS cost_center_id INTEGER;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS cost_center_id INTEGER;
+    -- Department-manager cost-center scope (RBAC restriction, M12).
+    CREATE TABLE IF NOT EXISTS erp_cost_center_members (
+      id SERIAL PRIMARY KEY,
+      cost_center_id INTEGER NOT NULL REFERENCES erp_cost_centers(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      UNIQUE (cost_center_id, user_id)
+    );
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS finance_role TEXT;
+
+    -- Budgets (M1): header + lines + immutable version snapshots.
+    CREATE TABLE IF NOT EXISTS erp_budgets (
+      id SERIAL PRIMARY KEY,
+      code TEXT,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      budget_type TEXT NOT NULL DEFAULT 'annual' CHECK(budget_type IN ('annual','monthly','department','project','branch','company','cost_center')),
+      fiscal_year INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      company_id INTEGER,
+      cost_center_id INTEGER REFERENCES erp_cost_centers(id),
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','approved','locked')),
+      version INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      approved_by TEXT REFERENCES users(id),
+      approved_at TEXT,
+      locked_at TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_budgets_fy ON erp_budgets(fiscal_year, status);
+    CREATE TABLE IF NOT EXISTS erp_budget_lines (
+      id SERIAL PRIMARY KEY,
+      budget_id INTEGER NOT NULL REFERENCES erp_budgets(id) ON DELETE CASCADE,
+      cost_center_id INTEGER REFERENCES erp_cost_centers(id),
+      account_id INTEGER REFERENCES gl_accounts(id),
+      category TEXT NOT NULL,
+      period TEXT,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      notes TEXT,
+      line_no INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_budget_lines_budget ON erp_budget_lines(budget_id);
+    CREATE TABLE IF NOT EXISTS erp_budget_versions (
+      id SERIAL PRIMARY KEY,
+      budget_id INTEGER NOT NULL REFERENCES erp_budgets(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      snapshot TEXT NOT NULL,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (budget_id, version)
+    );
+
+    -- Forecasts (M5): saved forecast snapshots.
+    CREATE TABLE IF NOT EXISTS erp_forecasts (
+      id SERIAL PRIMARY KEY,
+      name_en TEXT NOT NULL,
+      name_fa TEXT,
+      metric TEXT NOT NULL CHECK(metric IN ('revenue','expense','cash_flow','profit')),
+      method TEXT NOT NULL CHECK(method IN ('trend','moving_average','growth','seasonal')),
+      horizon INTEGER NOT NULL DEFAULT 3,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      result TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    -- KPI snapshots (M6): periodic snapshot of the KPI set for trend history.
+    CREATE TABLE IF NOT EXISTS erp_kpi_snapshots (
+      id SERIAL PRIMARY KEY,
+      as_of TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      kpis TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_kpi_snapshots_asof ON erp_kpi_snapshots(as_of);
+
+    -- Financial alerts (M9): deduped by fingerprint.
+    CREATE TABLE IF NOT EXISTS erp_financial_alerts (
+      id SERIAL PRIMARY KEY,
+      kind TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'warning' CHECK(severity IN ('info','warning','critical')),
+      title_en TEXT NOT NULL,
+      title_fa TEXT,
+      detail TEXT,
+      metric_value NUMERIC,
+      ref_type TEXT,
+      ref_id INTEGER,
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','acknowledged','resolved')),
+      fingerprint TEXT UNIQUE,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_fin_alerts_status ON erp_financial_alerts(status, severity);
+
+    -- Seed default cost centers once (idempotent).
+    INSERT INTO erp_cost_centers (code, name_en, name_fa, kind) VALUES
+      ('CC-IT','IT Operations','عملیات فناوری اطلاعات','department'),
+      ('CC-HQ','Headquarters','دفتر مرکزی','branch'),
+      ('PC-SALES','Sales','فروش','profit')
+    ON CONFLICT (code) DO NOTHING;
+
     CREATE INDEX IF NOT EXISTS idx_gl_lines_entry ON gl_journal_lines(entry_id);
     CREATE INDEX IF NOT EXISTS idx_gl_lines_account ON gl_journal_lines(account_id);
     CREATE INDEX IF NOT EXISTS idx_gl_entries_status ON gl_journal_entries(status, date);
