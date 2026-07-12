@@ -555,6 +555,40 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   KPI formula=40 on_target + history → OKR progress 40 + alignment → SLA 27h
   business-hours breach + 3 escalation stages → over-budget business alert →
   data-quality grade → executive cockpit assembled.
+- **Treasury & Banking Platform** (`/admin/treasury`, `TreasuryCenter`) — Phase
+  26.14 (the prompt labelled it 26.13; filed 26.14 to avoid colliding with the BI
+  phase). Audit-first enterprise treasury (report:
+  `docs/governance/phase26.14-treasury-banking-report.md`, audit:
+  `phase26.14-treasury-banking-audit.md`). Reuses `banking.ts` (matchStatement/
+  cheque state machine/pettyCash/cashFlowSeries), the GL journal (no second
+  accounting engine), the 26.12 approval platform, 26.8 revaluation, currency and
+  AI — `bank_accounts` is **extended** (SWIFT/branch/type/company/status), not
+  duplicated. **Pure engines** (`lib/treasury/*`, 24 unit cases): `statementImport`
+  (CSV/MT940/CAMT.053 parse + mapping + duplicate detection), `reconcile` (smart
+  matching amount+date+reference+name/description similarity → scored status),
+  `payments` (lifecycle state machine + balanced GL lines per type + AR-settlement
+  allocation + approval tiers), `cash` (position + liquidity 7/30/90/365d +
+  risk), `risk` (FX exposure assets−liabilities/currency + realized/unrealized +
+  level), `cheque` (aging/calendar/per-cheque risk). **Data layers**: `bankOpsData`
+  (bank master, statement import, reconciliation → persisted `bank_matches` +
+  audit), `paymentData` (payment orders wired to the approval engine + GL posting;
+  receipts settle AR via `sales_payments` + GL), `analyticsData` (cash/liquidity/
+  FX-risk/cheque/overview). APIs `/api/admin/erp/treasury/{banks,statements,
+  reconcile,payments,receipts,cheques,cash,liquidity,risk,overview,ai}` (zod+RBAC+
+  audit); AI Treasury Assistant reuses `runCompletion` (advisory only). Reporting
+  Center +4 treasury reports. Tables (idempotent+FK+indexed;
+  `deploy/postgres/rollback-phase26.14.sql`): extended `bank_accounts`,
+  `bank_statements`, `bank_matches`, `payment_orders`, `receipt_transactions`,
+  `cash_positions`, `treasury_forecasts`, `currency_exposures` + payment approval
+  matrix + `6100` salaries GL seed; payment approval wired into
+  `approvalData.advanceDocument`. UI: one currency-aware RTL/EN Treasury workspace
+  (Overview·Banks·Statements·Reconciliation·Payments·Receipts·Cheques·Cash
+  Forecast·Risk·AI) under a **Treasury** ERP nav group. **Fix**: sales AR was
+  queried via a non-existent `sales_documents.paid_total` (silently 0 behind
+  guards) → now computed from `sales_payments` in `openReceivables` + treasury.
+  Verified vs real PostgreSQL: bank→import(2 lines+dup)→reconcile(0.8, matched+
+  audited)→2B payment→2-level approval→GL(2 balanced lines)→completed→receipt
+  settles invoice→cash position 1.3B→overview+FX risk.
 - **Phase 26.9 — Enterprise ERP Final Completion** (audit-first; report:
   `docs/governance/phase26.9-final-completion-report.md`, audit:
   `phase26.9-erp-final-completion-audit.md`). Most of the 12-task pack already
