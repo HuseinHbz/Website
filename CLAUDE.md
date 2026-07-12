@@ -492,6 +492,37 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   Exposure + Currency Gain/Loss (11 total). setRate audits old+new rate.
   Live-PG verified: 2000-USD asset → USD/IRT/IRR/EUR views; 5000-USD invoice
   immutable through a rate change; 3.5B gain booked once + 700M incremental.
+- **Financial Intelligence Platform** (`/admin/financial-intelligence`,
+  `FinancialIntelligence`) — Phase 26.11, audit-first upgrade of the Financial
+  System (report: `docs/governance/phase26.11-enterprise-financial-intelligence-report.md`,
+  audit: `phase26.11-financial-intelligence-audit.md`). Reuses GL/AP/AR/sales/
+  purchasing/inventory/assets/treasury/currency/tax/reporting/AI — only gaps
+  built. **Pure engines** (unit-tested): `erp/budget.ts` (variance/consumption/
+  forecast-remaining + lifecycle draft→review→approved→locked), `erp/costCenter.ts`
+  (cost/profit-center roll-up + margin + allocation + tree — a profit center is a
+  cost center `kind='profit'`, one engine), `erp/forecast.ts` (trend/moving-average/
+  growth%/seasonal), `erp/kpiEngine.ts` (revenue/profit/cash/AR/AP/inventory KPIs +
+  runway/DSO/turnover), `erp/financialAlerts.ts` (budget>90%/cash-shortage/AR-
+  overdue/FX/tax rules + fingerprints). **Data layers** reuse verified module data
+  (no duplicated aggregation): `budgetData` (CRUD + immutable version snapshots +
+  lifecycle + actuals from **POSTED GL** by account×cost-center×fiscal-year),
+  `costCenterData`, `financialIntelligenceData` (KPI assembly, CFO + department
+  dashboards, forecasting, FX exposure, tax liability, snapshots),
+  `financialAlertsData` (idempotent upsert-by-fingerprint + auto-resolve),
+  `financeRbac` (**additive** `users.finance_role` + `erp_cost_center_members`
+  scope over the 3-role core — dept managers see only their centers, CFO/CEO
+  consolidated). APIs `/api/admin/erp/finance/{budgets,cost-centers,intelligence,
+  forecast,alerts}` + `finance/ai` **`diagnose`** root-cause analyst (MoM deltas
+  through `runCompletion`); Reporting Center +6 reports (budget/variance/cost-
+  center/profit-center/CFO/forecast). Tables `erp_cost_centers(+_members)`,
+  `erp_budgets/_lines/_versions`, `erp_forecasts`, `erp_kpi_snapshots`,
+  `erp_financial_alerts` + additive `cost_center_id` on GL/sales/purchase lines
+  (idempotent; `deploy/postgres/rollback-phase26.11.sql`). UI: CFO dashboard +
+  budgets(variance+lifecycle) + cost/profit centers + forecasting + alerts + AI
+  analyst, every figure repriced live via `useDisplayCurrency`/`CurrencyPicker`
+  (IRR/IRT/USD/EUR, transactions unchanged). Verified vs real PostgreSQL:
+  budget(100)→posted GL expense(120, cost_center_id)→variance +20% over→center
+  rollup 120→approve snapshot+lock→KPI dashboard→budget_overrun alert.
 - **Phase 26.9 — Enterprise ERP Final Completion** (audit-first; report:
   `docs/governance/phase26.9-final-completion-report.md`, audit:
   `phase26.9-erp-final-completion-audit.md`). Most of the 12-task pack already
