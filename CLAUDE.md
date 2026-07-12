@@ -587,6 +587,35 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   definition JSON the engine runs (Canvas/JSON toggle). The Rules Engine (21.7)
   and Integration Hub (21.8) were subsequently built and compose via the
   engine's handler seam (no duplicated logic) — see their bullets below.
+- **Approval Center** (`/admin/approvals`, `ApprovalCenter`) — Phase 26.12,
+  centralized approval orchestration over the workflow system (report:
+  `docs/governance/phase26.12-approval-workflow-intelligence-report.md`, audit:
+  `phase26.12-approval-workflow-audit.md`). **NOT a second graph executor** — a
+  matrix-driven approval store alongside the graph engine; routing conditions
+  reuse the Business Rules `evalCondition`; RBAC reuses `canDo`+`finance_role`;
+  audit/notifications/AI reuse `logAction`/`notifications`/`runCompletion`. Pure
+  engines (unit-tested): `approval/matrix.ts` (amount-tiered + condition-routed
+  matrix over 15 doc types → ordered levels; generalises purchasing's
+  `ApprovalTier`), `approval/engine.ts` (`approvalState` multi-level + parallel
+  all/any/min completion + any-rejection-stops; delegation `canActFor`/
+  `effectiveApprovers`), `approval/escalation.ts` (SLA 24h reminder/48h manager/
+  72h CEO, idempotent), `approval/analytics.ts` (avg time/bottlenecks/rejection
+  rate/SLA/dept). Data layer `erp/approvalData.ts` (matrix CRUD, request creation
+  snapshots the resolved plan, act with RBAC+delegation+IP audit, bulk approve,
+  comments, escalation scan, notification log, inbox, analytics; `advanceDocument`
+  advances the source ERP doc on full approval). APIs `/api/admin/erp/approvals`
+  (inbox/decide/bulk/comment/escalate) + `/approvals/{matrix,delegations,ai}`
+  (matrix administrator-gated; AI is **advisory only, never decides**). Workflow
+  engine gained additive node types **parallel/notification/ai_decision** (graph
+  executor unchanged). Tables `approval_matrix`, `approval_requests`,
+  `approval_actions`, `approval_delegations`, `workflow_escalations`,
+  `workflow_comments`, `workflow_notifications` (idempotent+indexed;
+  `deploy/postgres/rollback-phase26.12.sql`). UI: inbox (pending/approved/
+  rejected/delegated/expired + approve/reject/request-change/comment/bulk + AI
+  brief) + matrix + delegations + analytics, amounts via the display-currency
+  engine. Verified vs real PostgreSQL: 2B purchase → 3 levels → approve L1/L2/L3
+  → doc advances to approved → rejection stops → 73h-stale → escalation stages
+  1,2,3 + SLA breach (idempotent) → analytics.
 - **Business Rules Engine** (`/admin/rules`, `RulesCenter`) — Phase-21.7. Pure
   engine `src/lib/rules/engine.ts` (`evalCondition` with eq/ne/gt/gte/lt/lte/in/
   nin/contains/between/truthy/falsy + dotted paths, `ruleMatches` all/any,
