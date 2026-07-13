@@ -751,6 +751,32 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   +98/0098/98→0, email, national-code padding, ٬٫ separators) applied before
   validation. Live-PG verified (Persian-sheet xlsx → dry-run wrote nothing →
   real import + «۰۹۱۲…» phone normalized).
+- **Operational Health Center + Self-Healing Engine** (`/admin/health`,
+  `HealthCenter`, Operations workspace) — Phase 26.20 (report:
+  `docs/governance/phase26.20-completion-report.md`, audit:
+  `phase26.20-operational-audit.md`). Pure engine `src/lib/health/selfheal.ts`
+  (22 tests): a fixed **12-check registry** (unposted sales/purchase invoices,
+  unbalanced GL, stuck import jobs, orphan shipment holds, negative stock,
+  stuck approved counts, failed workflows, expired-active contracts, duplicate
+  payments/customers, negative margin) with `actionFor` (auto_fixed | alert |
+  recommendation), `riskScore` (critical×12/warning×5/info×1, cap 100),
+  `overallHealth`/`healthGrade`, business validators + the AI-advisor prompt
+  builder. Data layer `selfhealData.ts` (`runSelfHeal`): safe auto-fixes REUSE
+  each module's idempotent ops — `postSalesInvoiceToGl`/`postPurchaseInvoiceToGl`,
+  reservation release, contract expiry, job fail-out (FIX_CAP 50/check) — trail
+  in `selfheal_runs`/`selfheal_findings`. `healthData.ts` composes self-heal risk
+  + `scanLedgerIntegrity` + master-data quality + open financial/business alerts
+  + `opsSnapshot` + workflow/integration state into **8 weighted health
+  components** + overall grade + risk. API `/api/admin/erp/health` (GET overview/
+  checks; POST `selfheal` administrator-gated + IP-audited, `advise` = **AI
+  Operational Advisor** through the SHARED `runCompletion` — root cause/
+  recommendations/risk/forecast/optimize/workflow, grounded read-only snapshot,
+  no new AI). Bilingual RTL/EN dashboard (score cards, component matrix,
+  self-heal console + findings DataTable, check registry, advisor card).
+  Live-PG 28/28: injected broken company state → heal run auto-fixes the 5 safe
+  classes, alerts the rest, books balance (Dr=Cr, revenue reaches 4000), run #2
+  is a no-op (idempotent), Health Center assembles. HR/payroll + manufacturing
+  + scheduled heal cadence = documented roadmap (never stubbed).
 - **Inventory & Supply Chain Platform** (Phase 26.19, extends the Inventory
   Center; reports: `docs/governance/phase26.19-inventory-completion-report.md`,
   `phase26.19-operational-simulation.md`, `phase26.19-performance-report.md`,

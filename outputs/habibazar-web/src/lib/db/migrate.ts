@@ -1516,6 +1516,29 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_inv_shipment_lines ON inv_shipment_lines(shipment_id);
 
+    -- Phase 26.20 — Self-Healing Engine + Operational Health Center.
+    CREATE TABLE IF NOT EXISTS selfheal_runs (
+      id SERIAL PRIMARY KEY,
+      started_by TEXT REFERENCES users(id),
+      issues INTEGER NOT NULL DEFAULT 0,
+      fixed INTEGER NOT NULL DEFAULT 0,
+      risk NUMERIC NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      finished_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS selfheal_findings (
+      id SERIAL PRIMARY KEY,
+      run_id INTEGER NOT NULL REFERENCES selfheal_runs(id) ON DELETE CASCADE,
+      code TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'info' CHECK(severity IN ('critical','warning','info')),
+      action TEXT NOT NULL DEFAULT 'alert' CHECK(action IN ('auto_fixed','alert','recommendation')),
+      count INTEGER NOT NULL DEFAULT 0,
+      fixed INTEGER NOT NULL DEFAULT 0,
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_selfheal_findings_run ON selfheal_findings(run_id);
+
     -- One row per stock movement. qty is signed: >0 in, <0 out. A transfer is
     -- written as two rows (issue from source, receipt into destination) sharing a ref.
     CREATE TABLE IF NOT EXISTS inv_moves (

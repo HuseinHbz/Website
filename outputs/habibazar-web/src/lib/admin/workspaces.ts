@@ -179,6 +179,7 @@ export const WORKSPACES: Workspace[] = [
     descEn: 'System health, database, logs and monitoring', descFa: 'سلامت سیستم، دیتابیس، لاگ و پایش',
     groups: [{ en: 'Operations', fa: 'عملیات', items: [
       { labelEn: 'Operations Center', labelFa: 'مرکز عملیات', href: '/admin/operations', icon: '🖥️' },
+      { labelEn: 'Operational Health', labelFa: 'سلامت عملیاتی', href: '/admin/health', icon: '🩺' },
       { labelEn: 'Logs & Monitoring', labelFa: 'لاگ‌ها و پایش', href: '/admin/logs-monitoring', icon: '📡' },
       { labelEn: 'Database Center', labelFa: 'مرکز دیتابیس', href: '/admin/database', icon: '🗄️' },
     ] }],
