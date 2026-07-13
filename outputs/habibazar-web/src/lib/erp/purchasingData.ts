@@ -5,6 +5,7 @@
 import { pgQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
+import { assertPostable } from './accountingData'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
@@ -231,8 +232,8 @@ import { purchaseInvoicePostingLines, postingBalanced } from './purchasing'
  * Returns the created journal entry id, or the existing one if already posted.
  */
 export async function postPurchaseInvoiceToGl(docId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null }>(
-    `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null; date: string | null }>(
+    `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no, date FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
   if (d.gl_entry_id) return { entryId: d.gl_entry_id, alreadyPosted: true }
   if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices post to the GL')
@@ -248,11 +249,16 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   const idOf = new Map(accs.map(a => [a.code, a.id]))
   for (const c of codes) if (!idOf.has(c)) throw new Error(`GL account ${c} is missing from the chart`)
 
+  // Post ON THE DOCUMENT DATE (26.21 audit fix — mirrors sales): a now()-dated
+  // entry lands outside the invoice's fiscal period and breaks period reports.
+  const glDate = (d.date ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10)
+  const gate = await assertPostable(glDate)
+  if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this document date')
   const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
   const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
-     VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, ${NOW}, ${NOW}) RETURNING id`,
-    [entryNo, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null]))[0]
+    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, created_at, posted_at)
+     VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, ${NOW}, ${NOW}) RETURNING id`,
+    [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null, gate.periodId ?? null]))[0]
   let ln = 0
   for (const l of lines) {
     await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,

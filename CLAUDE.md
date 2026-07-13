@@ -751,6 +751,25 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   +98/0098/98→0, email, national-code padding, ٬٫ separators) applied before
   validation. Live-PG verified (Persian-sheet xlsx → dry-run wrote nothing →
   real import + «۰۹۱۲…» phone normalized).
+- **Phase 26.21 — Enterprise Full Company Simulation (CFO validation)** —
+  a complete 24-month company operation executed against the real data layers
+  on live PostgreSQL (45/45 assertions; reports:
+  `docs/governance/phase26.21-simulation-and-quality-report.md` +
+  `phase26.21-executive-reports.md`). Exercised end-to-end with seasonality/
+  growth/inflation/FX movement: masters + opening balances, 92 sales cycles
+  (quote→order→invoice→GL→collection incl. partial/late/bad-debt/returns),
+  24 procure-to-pay cycles (budget-gated PR→tiered approvals→PO→partial GRN→
+  invoice→GL→payments, plus rejected approval/voided PO/RFQ compare),
+  quarterly cycle counts + revaluation, monthly bank reconciliation/cheques/
+  petty cash/payroll/depreciation, FY2024+FY2025 year-end closings, CSV
+  import round-trip w/ rollback, customer merge, all 25 reports, 100k-row
+  stress. **Bug found & fixed (HIGH)**: `postSalesInvoiceToGl`/
+  `postPurchaseInvoiceToGl` dated GL entries `now()` instead of the document
+  date → period misattribution (year-end closings swept zero revenue). Both
+  posters now post on the **document date**, `assertPostable`-gated (the
+  fiscal-period lock covers auto-posting + self-heal) and stamp `period_id`.
+  Verified: FY24 +1.18B / FY25 +1.70B closed to retained earnings, stranded
+  revenue 0, TB balanced, ledger integrity 100, 26.20 E2E 28/28 regression.
 - **Operational Health Center + Self-Healing Engine** (`/admin/health`,
   `HealthCenter`, Operations workspace) — Phase 26.20 (report:
   `docs/governance/phase26.20-completion-report.md`, audit:
