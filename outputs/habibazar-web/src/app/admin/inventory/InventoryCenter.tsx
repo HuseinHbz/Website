@@ -7,8 +7,16 @@ import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { IntelligenceTab, TrackingTab, StockOpsTab, LogisticsTab } from './InventoryOps'
 
-type Tab = 'dashboard' | 'products' | 'warehouses' | 'moves'
+type Tab = 'dashboard' | 'products' | 'warehouses' | 'moves' | 'intelligence' | 'tracking' | 'stockops' | 'logistics'
+// Phase 26.19 tabs carry inline bilingual labels (outside the locale dictionary).
+const OPS_TABS: [Tab, string, string][] = [
+  ['intelligence', 'Intelligence', 'هوش موجودی'],
+  ['tracking', 'Serial / Batch', 'سریال / بچ'],
+  ['stockops', 'Stock Ops', 'عملیات موجودی'],
+  ['logistics', 'Logistics', 'لجستیک'],
+]
 type StockStatus = 'out' | 'below_safety' | 'reorder' | 'ok' | 'overstock'
 
 interface Product {
@@ -57,12 +65,22 @@ export function InventoryCenter() {
             {t(`inv_tab_${tb}` as 'inv_tab_dashboard')}
           </button>
         ))}
+        {OPS_TABS.map(([tb, en, faL]) => (
+          <button key={tb} onClick={() => setTab(tb)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${tab === tb ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
+            {fa ? faL : en}
+          </button>
+        ))}
       </div>
 
       {tab === 'dashboard' && <Dashboard t={t} fa={fa} />}
       {tab === 'products' && <Products t={t} fa={fa} toast={toast} autoNew={autoNew} onAutoNew={() => setAutoNew(false)} />}
       {tab === 'warehouses' && <Warehouses t={t} fa={fa} toast={toast} />}
       {tab === 'moves' && <Moves t={t} fa={fa} toast={toast} />}
+      {tab === 'intelligence' && <IntelligenceTab fa={fa} />}
+      {tab === 'tracking' && <TrackingTab fa={fa} toast={toast} />}
+      {tab === 'stockops' && <StockOpsTab fa={fa} toast={toast} canAdmin />}
+      {tab === 'logistics' && <LogisticsTab fa={fa} toast={toast} />}
     </>
   )
 }

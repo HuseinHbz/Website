@@ -12,6 +12,8 @@ import { parseCsv } from '@/lib/admin/dataTableExport'
 import { normalizeKey } from '@/lib/masterdata/quality'
 import { postOpeningBalance } from '@/lib/erp/accountingData'
 import { nextNumber } from '@/lib/numbering/integrate'
+import { isXlsx, xlsxToMatrix } from './xlsx'
+import { cleanseRecord } from './cleanse'
 import {
   ENTITY_SPECS, autoMapColumns, applyMapping, validateRecord, journalGroupBalanced,
   approvalTierFor, tierSatisfiedBy, canTransitionJob,
@@ -56,24 +58,33 @@ async function setStatus(jobId: number, from: JobStatus, to: JobStatus): Promise
 }
 
 // ── Create (upload) ──────────────────────────────────────────────────────────
-export async function createJob(d: { entityType: EntityType; name: string; sourceSystem?: string; fileName: string; content: string }, userId?: string): Promise<{ id: number; headers: string[]; suggested: Record<string, string>; totalRows: number }> {
+export async function createJob(d: { entityType: EntityType; name: string; sourceSystem?: string; fileName: string; content: string | Buffer; sheet?: string }, userId?: string): Promise<{ id: number; headers: string[]; suggested: Record<string, string>; totalRows: number; sheetNames?: string[] }> {
   const isJson = d.fileName.toLowerCase().endsWith('.json')
+  const buf = Buffer.isBuffer(d.content) ? d.content : null
   let headers: string[] = []
   let rows: Record<string, string>[] = []
-  if (isJson) {
-    const arr = JSON.parse(d.content)
-    if (!Array.isArray(arr) || arr.length === 0) throw new Error('JSON must be a non-empty array of objects')
-    headers = [...new Set(arr.flatMap((o: object) => Object.keys(o)))]
-    rows = arr.map((o: Record<string, unknown>) => Object.fromEntries(headers.map(h => [h, o[h] == null ? '' : String(o[h])])))
-  } else {
-    const matrix = parseCsv(d.content)
+  let sheetNames: string[] | undefined
+  const fromMatrix = (matrix: string[][]) => {
     if (matrix.length < 2) throw new Error('File needs a header row and at least one data row')
     headers = matrix[0].map(h => h.trim())
     rows = matrix.slice(1).filter(cells => cells.some(c => c.trim() !== ''))
       .map(cells => Object.fromEntries(headers.map((h, i) => [h, (cells[i] ?? '').trim()])))
   }
+  if (buf && isXlsx(buf)) {
+    // Native .xlsx (Phase 26.19): multi-sheet, shared strings, Unicode/Persian.
+    const wb = xlsxToMatrix(buf, d.sheet)
+    sheetNames = wb.sheetNames
+    fromMatrix(wb.matrix)
+  } else if (isJson) {
+    const arr = JSON.parse(buf ? buf.toString('utf8') : (d.content as string))
+    if (!Array.isArray(arr) || arr.length === 0) throw new Error('JSON must be a non-empty array of objects')
+    headers = [...new Set(arr.flatMap((o: object) => Object.keys(o)))]
+    rows = arr.map((o: Record<string, unknown>) => Object.fromEntries(headers.map(h => [h, o[h] == null ? '' : String(o[h])])))
+  } else {
+    fromMatrix(parseCsv(buf ? buf.toString('utf8') : (d.content as string)))
+  }
   if (rows.length > 20000) throw new Error('Maximum 20,000 rows per import job')
-  const fileHash = createHash('sha256').update(d.content).digest('hex')
+  const fileHash = createHash('sha256').update(buf ?? (d.content as string)).digest('hex')
   const suggested = autoMapColumns(headers, d.entityType)
   const tier = approvalTierFor(rows.length)
   const job = (await pgQuery<{ id: number }>(
@@ -88,8 +99,8 @@ export async function createJob(d: { entityType: EntityType; name: string; sourc
     chunk.forEach((r, j) => { params.push(i + j + 1, JSON.stringify(r)) })
     await pgQuery(`INSERT INTO import_job_rows (job_id, row_no, raw) VALUES ${values}`, params)
   }
-  await history(job.id, 'created', userId, { fileName: d.fileName, fileHash, rows: rows.length, tier })
-  return { id: job.id, headers, suggested, totalRows: rows.length }
+  await history(job.id, 'created', userId, { fileName: d.fileName, fileHash, rows: rows.length, tier, sheet: sheetNames ? (d.sheet ?? sheetNames[0]) : undefined })
+  return { id: job.id, headers, suggested, totalRows: rows.length, sheetNames }
 }
 
 // ── Read ─────────────────────────────────────────────────────────────────────
@@ -170,7 +181,9 @@ export async function validateJob(jobId: number): Promise<{ valid: number; warni
   const journalGroups = new Map<string, { debit: number; credit: number; rowNos: number[] }>()
 
   for (const r of rows) {
-    const mapped = applyMapping(JSON.parse(r.raw), job.mapping.fields)
+    // 26.19: field-aware cleansing (Persian digits, phone, email, national code)
+    // runs BEFORE validation so legacy formats normalize instead of failing.
+    const mapped = cleanseRecord(applyMapping(JSON.parse(r.raw), job.mapping.fields))
     const res = validateRecord(job.entityType, mapped, ctx)
     let status = res.status
     // Conflicted rows under 'skip' resolution get skipped at execute time.
@@ -229,10 +242,18 @@ export async function approveJob(jobId: number, user: { id: string; role: string
 // ── Execution (M7/M8) ────────────────────────────────────────────────────────
 type Rec = Record<string, string | number | boolean | null> & { __conflict?: boolean }
 
-export async function executeJob(jobId: number, userId?: string): Promise<{ imported: number; skipped: number }> {
+export async function executeJob(jobId: number, userId?: string, opts: { dryRun?: boolean } = {}): Promise<{ imported: number; skipped: number; dryRun?: boolean }> {
+  const dryRun = opts.dryRun === true
   const job = rowOf((await pgQuery(`SELECT * FROM import_jobs WHERE id=$1`, [jobId]))[0] ?? {})
   if (job.status !== 'approved') throw new Error('Job must be approved before execution')
-  await setStatus(jobId, 'approved', 'processing')
+  // Dry-run (26.19): financial single-shot entities simulate by reporting the
+  // would-be counts only; row entities run the full transaction then ROLL BACK.
+  if (dryRun && (job.entityType === 'opening_balance')) {
+    const n = (await pgQuery<{ n: number }>(`SELECT COUNT(*)::int AS n FROM import_job_rows WHERE job_id=$1 AND status IN ('valid','warning')`, [jobId]))[0].n
+    await history(jobId, 'dry_run', userId, { wouldImport: n })
+    return { imported: n, skipped: 0, dryRun: true }
+  }
+  if (!dryRun) await setStatus(jobId, 'approved', 'processing')
   const rows = await pgQuery<{ id: number; row_no: number; mapped: string; status: string }>(
     `SELECT id, row_no, mapped, status FROM import_job_rows WHERE job_id=$1 AND status IN ('valid','warning') ORDER BY row_no`, [jobId])
   const recs = rows.map(r => ({ rowId: r.id, rec: JSON.parse(r.mapped) as Rec }))
@@ -245,12 +266,13 @@ export async function executeJob(jobId: number, userId?: string): Promise<{ impo
   const markRow = (rowId: number, status: string) => client.query(`UPDATE import_job_rows SET status=$2 WHERE id=$1`, [rowId, status])
 
   try {
-    // Journal numbers are minted before the transaction (numbering is atomic on its own).
+    // Journal numbers are minted before the transaction (numbering is atomic on
+    // its own). A dry run must not consume numbers — placeholders are used.
     let journalNos: Map<string, string> | null = null
     if (job.entityType === 'journal') {
       journalNos = new Map()
       const refs = [...new Set(recs.map(x => String(x.rec.ref)))]
-      for (const ref of refs) journalNos.set(ref, await nextNumber('journal', { legacyPrefix: 'JV' }))
+      for (const ref of refs) journalNos.set(ref, dryRun ? `DRY-${jobId}-${ref}` : await nextNumber('journal', { legacyPrefix: 'JV' }))
     }
     // Opening balance goes through the 26.9 engine (self-balancing + audited entry).
     if (job.entityType === 'opening_balance') {
@@ -353,14 +375,22 @@ export async function executeJob(jobId: number, userId?: string): Promise<{ impo
     } else {
       throw new Error(`Unsupported entity ${job.entityType}`)
     }
-    await client.query('COMMIT')
+    // Dry run: the whole write set is rolled back — nothing persists, the job
+    // stays approved and the report shows exactly what a real run would do.
+    await client.query(dryRun ? 'ROLLBACK' : 'COMMIT')
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})
-    await pgQuery(`UPDATE import_jobs SET status='failed', error=$2, updated_at=${NOW} WHERE id=$1`, [jobId, e instanceof Error ? e.message : 'Execution failed'])
-    await history(jobId, 'failed', userId, { error: e instanceof Error ? e.message : String(e) })
+    if (!dryRun) {
+      await pgQuery(`UPDATE import_jobs SET status='failed', error=$2, updated_at=${NOW} WHERE id=$1`, [jobId, e instanceof Error ? e.message : 'Execution failed'])
+      await history(jobId, 'failed', userId, { error: e instanceof Error ? e.message : String(e) })
+    }
     throw e
   } finally {
     client.release()
+  }
+  if (dryRun) {
+    await history(jobId, 'dry_run', userId, { wouldImport: imported, wouldSkip: skipped })
+    return { imported, skipped, dryRun: true }
   }
   await pgQuery(`UPDATE import_jobs SET status='completed', imported_rows=$2, completed_at=${NOW}, updated_at=${NOW} WHERE id=$1`, [jobId, imported])
   await history(jobId, 'executed', userId, { imported, skipped })

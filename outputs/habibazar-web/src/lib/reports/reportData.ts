@@ -16,6 +16,7 @@ import { budgetPortfolio } from '@/lib/erp/budgetData'
 import { costCenterOverview } from '@/lib/erp/costCenterData'
 import { assembleKpis, runForecast } from '@/lib/erp/financialIntelligenceData'
 import { executiveCockpit } from '@/lib/bi/cockpitData'
+import { stockIntelligence, listBatches } from '@/lib/inventory/inventoryOpsData'
 import { bankBalances } from '@/lib/treasury/bankOpsData'
 import { currentCashPosition, liquidity, chequeDashboard } from '@/lib/treasury/analyticsData'
 import type { Row, Column } from './pivot'
@@ -37,6 +38,8 @@ export const REPORTS: ReportDef[] = [
   { id: 'purchase_register', module: 'purchasing', nameEn: 'Purchase Register', nameFa: 'دفتر خرید', groupField: 'status', measureField: 'total' },
   { id: 'purchase_by_vendor', module: 'purchasing', nameEn: 'Spend by Vendor', nameFa: 'خرید به تفکیک تأمین‌کننده', groupField: 'vendor', measureField: 'total' },
   { id: 'inv_valuation', module: 'inventory', nameEn: 'Inventory Valuation', nameFa: 'ارزش‌گذاری انبار', groupField: 'category', measureField: 'value' },
+  { id: 'inv_intelligence', module: 'inventory', nameEn: 'Stock Intelligence (ABC/XYZ/Aging/Turnover)', nameFa: 'هوش موجودی (ABC/XYZ/عمر/گردش)', groupField: 'abc', measureField: 'value' },
+  { id: 'inv_expiry', module: 'inventory', nameEn: 'Batch Expiration Report', nameFa: 'گزارش انقضای بچ', groupField: 'status', measureField: 'qtyRemaining' },
   { id: 'assets_register', module: 'assets', nameEn: 'Asset Register', nameFa: 'دفتر دارایی‌ها', groupField: 'category', measureField: 'bookValue' },
   { id: 'projects_costing', module: 'projects', nameEn: 'Project Costing', nameFa: 'هزینه‌یابی پروژه', groupField: 'name', measureField: 'profit' },
   { id: 'currency_exposure', module: 'financial', nameEn: 'Currency Exposure', nameFa: 'پوشش ارزی', groupField: 'currency', measureField: 'gainLoss' },
@@ -158,6 +161,32 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         columns: [{ key: 'sku', label: 'SKU' }, { key: 'name', label: 'Product' }, { key: 'category', label: 'Category' }, { key: 'onHand', label: 'On hand' }, { key: 'avgCost', label: 'Avg cost' }, { key: 'value', label: 'Value' }, { key: 'status', label: 'Status' }],
         rows,
         summary: [{ label: 'Products', value: p.length }, { label: 'Total value', value: money(p.reduce((s, x) => s + x.value, 0)) }],
+      }
+    }
+    // Phase 26.19 — stock-intelligence reports (ABC/XYZ/aging/turnover + expiry).
+    case 'inv_intelligence': {
+      const intel = await stockIntelligence()
+      const rows: Row[] = intel.rows.map(r => ({ sku: r.sku, name: r.name, onHand: r.onHand, value: r.value, abc: r.abc, xyz: r.xyz, movement: r.movement, turnover: r.turnover, aging: r.aging, eoq: r.eoq }))
+      return {
+        columns: [{ key: 'sku', label: 'SKU' }, { key: 'name', label: 'Product' }, { key: 'onHand', label: 'On hand' }, { key: 'value', label: 'Value' }, { key: 'abc', label: 'ABC' }, { key: 'xyz', label: 'XYZ' }, { key: 'movement', label: 'Movement' }, { key: 'turnover', label: 'Turnover' }, { key: 'aging', label: 'Aging' }, { key: 'eoq', label: 'EOQ' }],
+        rows,
+        summary: [
+          { label: 'Products', value: intel.kpis.products }, { label: 'Class A', value: intel.kpis.aCount },
+          { label: 'Dead stock', value: intel.kpis.deadCount }, { label: 'Below reorder', value: intel.kpis.belowReorder },
+          { label: 'Avg turnover', value: intel.kpis.avgTurnover },
+        ],
+      }
+    }
+    case 'inv_expiry': {
+      const batches = await listBatches()
+      const rows: Row[] = batches.map(b => ({ sku: b.sku, product: b.nameEn, batchNo: b.batchNo, expiryDate: b.expiryDate ?? '—', qtyRemaining: b.qtyRemaining, status: b.expiry }))
+      return {
+        columns: [{ key: 'sku', label: 'SKU' }, { key: 'product', label: 'Product' }, { key: 'batchNo', label: 'Batch' }, { key: 'expiryDate', label: 'Expiry' }, { key: 'qtyRemaining', label: 'Remaining' }, { key: 'status', label: 'Status' }],
+        rows,
+        summary: [
+          { label: 'Batches', value: batches.length },
+          { label: 'Expired/near', value: batches.filter(b => b.expiry === 'expired' || b.expiry === 'near').length },
+        ],
       }
     }
     case 'assets_register': {

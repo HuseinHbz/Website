@@ -742,6 +742,50 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   balance 7M=7M, journal group → one posted entry + unbalanced voucher rejected,
   analytics). Honest boundaries: .xlsx = save-as-CSV (no heavy dep); invoice/
   asset executors + AI-assisted mapping + update-mode value-reversal are roadmap.
+  **Phase 26.19 additions**: **native zero-dep XLSX reader** `src/lib/import/xlsx.ts`
+  (ZIP STORE+DEFLATE via node zlib, sharedStrings incl. rich text, inline strings,
+  cached formula values, multi-sheet + Persian sheet names — `.xlsx` uploads now
+  parse directly), **dry-run mode** on execute (full run inside a transaction →
+  ROLLBACK; job stays approved, nothing persists, no numbering consumed) and
+  **data cleansing** `cleanse.ts` (Persian/Arabic digits→Latin, Iranian phone
+  +98/0098/98→0, email, national-code padding, ٬٫ separators) applied before
+  validation. Live-PG verified (Persian-sheet xlsx → dry-run wrote nothing →
+  real import + «۰۹۱۲…» phone normalized).
+- **Inventory & Supply Chain Platform** (Phase 26.19, extends the Inventory
+  Center; reports: `docs/governance/phase26.19-inventory-completion-report.md`,
+  `phase26.19-operational-simulation.md`, `phase26.19-performance-report.md`,
+  audit: `phase26.19-inventory-audit.md`). Audit-first: `inv_locations`
+  (rack/shelf/bin) and `inv_moves.lot/serial` already existed — extended, never
+  duplicated; `inv_moves` stays the single stock ledger. **Pure engines**
+  (`src/lib/inventory/`, 45 unit tests): `stockOps.ts` (stock states real/
+  reserved/blocked/damaged/in-transit/**available**, hold guard, shipment
+  draft→picking→packed→shipped→delivered/returned + count draft→counting→
+  submitted→approved→posted state machines, **EOQ**, `inventoryAdjustmentPostingLines`
+  Dr/Cr 1200↔5000), `intelligence.ts` (**ABC** by cumulative value — classify by
+  the share *before* the item; a live-PG-caught boundary bug, fixed + regression
+  test — **XYZ** demand-CV, fast/slow/**dead** movement, aging buckets, turnover,
+  near-expiry, EOQ-aware reorder suggestions, KPI rollup), `serials.ts` (**IMEI
+  Luhn**, serial lifecycle in_stock→…→recalled, warranty state, batch date guard,
+  recall planner); `erp/barcode.ts` gained a pure **EAN-13** engine (GS1 check
+  digit + SVG) beside Code 39. **Tables** (idempotent): `inv_serials`,
+  `inv_batches`, `inv_reservations`, `inv_counts`(+lines), `inv_shipments`(+lines)
+  + warehouse `wtype/capacity/temperature_controlled` and location `zone/aisle`
+  ALTERs. **Data layer** `inventoryOpsData.ts`: registries write real receipt
+  moves; shipments reserve on create, consume holds + issue moves + mark serials
+  sold on `shipped`, return moves on `returned`; cycle-count posting writes
+  `count` adjustment moves + a **balanced GL entry** (numbering engine);
+  `revalueInventory` posts the value delta; `stockIntelligence` feeds the pure
+  engine from 3 aggregate queries. **API** `/api/admin/erp/inventory/ops` (8 GET
+  views + 15 POST actions; approve/post/recall/revalue administrator-gated; all
+  IP-audited). **UI**: 4 new Inventory tabs (Intelligence dashboard ·
+  Serial/Batch with scan-input IMEI search + traceability + label print ·
+  Stock Ops holds + counts · Logistics shipments), bilingual RTL/EN; Reporting
+  Center +2 (Stock Intelligence, Batch Expiration). **Live-PG 43/43** — full CFO
+  operational simulation (receive→reserve→pick→pack→ship→return→count→approve→
+  GL→revalue→intelligence→xlsx-import→auditor reconciliation: posted ledger
+  Dr=Cr, inventory=count). Honest boundaries: live external-DB/ERP connectors,
+  FTP/SFTP, scheduled/queued imports, camera barcode decoding, offline sync and
+  formula evaluation are roadmap (documented, not stubbed).
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`

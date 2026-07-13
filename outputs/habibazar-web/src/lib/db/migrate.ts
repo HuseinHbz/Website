@@ -1416,6 +1416,106 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_migration_tx_job ON migration_transactions(job_id);
 
+    -- Phase 26.19 — Enterprise Inventory & Supply Chain platform.
+    ALTER TABLE inv_warehouses ADD COLUMN IF NOT EXISTS wtype TEXT NOT NULL DEFAULT 'standard';
+    ALTER TABLE inv_warehouses ADD COLUMN IF NOT EXISTS capacity NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE inv_warehouses ADD COLUMN IF NOT EXISTS temperature_controlled INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE inv_locations ADD COLUMN IF NOT EXISTS zone TEXT;
+    ALTER TABLE inv_locations ADD COLUMN IF NOT EXISTS aisle TEXT;
+
+    CREATE TABLE IF NOT EXISTS inv_batches (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id) ON DELETE CASCADE,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      batch_no TEXT NOT NULL,
+      production_date TEXT,
+      expiry_date TEXT,
+      manufacturer TEXT,
+      qty_received NUMERIC NOT NULL DEFAULT 0,
+      qty_remaining NUMERIC NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE (product_id, warehouse_id, batch_no)
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_batches_expiry ON inv_batches(expiry_date);
+
+    CREATE TABLE IF NOT EXISTS inv_serials (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id) ON DELETE CASCADE,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      batch_id INTEGER REFERENCES inv_batches(id),
+      serial TEXT NOT NULL UNIQUE,
+      imei TEXT,
+      status TEXT NOT NULL DEFAULT 'in_stock' CHECK(status IN ('in_stock','reserved','sold','returned','damaged','recalled')),
+      warranty_start TEXT,
+      warranty_months INTEGER,
+      ref TEXT,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_serials_imei ON inv_serials(imei);
+    CREATE INDEX IF NOT EXISTS idx_inv_serials_product ON inv_serials(product_id, status);
+
+    CREATE TABLE IF NOT EXISTS inv_reservations (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id) ON DELETE CASCADE,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      kind TEXT NOT NULL DEFAULT 'reserve' CHECK(kind IN ('reserve','block','damage')),
+      qty NUMERIC NOT NULL,
+      ref TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','released','consumed')),
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      released_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_reservations_pw ON inv_reservations(product_id, warehouse_id, status);
+
+    CREATE TABLE IF NOT EXISTS inv_counts (
+      id SERIAL PRIMARY KEY,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','counting','submitted','approved','posted','cancelled')),
+      note TEXT,
+      created_by TEXT,
+      approved_by TEXT,
+      gl_entry_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS inv_count_lines (
+      id SERIAL PRIMARY KEY,
+      count_id INTEGER NOT NULL REFERENCES inv_counts(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id),
+      system_qty NUMERIC NOT NULL DEFAULT 0,
+      counted_qty NUMERIC,
+      unit_cost NUMERIC NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_count_lines ON inv_count_lines(count_id);
+
+    CREATE TABLE IF NOT EXISTS inv_shipments (
+      id SERIAL PRIMARY KEY,
+      shipment_no TEXT NOT NULL,
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      customer_id INTEGER,
+      carrier TEXT,
+      tracking_no TEXT,
+      container_no TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','picking','packed','shipped','delivered','returned','cancelled')),
+      ref TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      shipped_at TEXT,
+      delivered_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS inv_shipment_lines (
+      id SERIAL PRIMARY KEY,
+      shipment_id INTEGER NOT NULL REFERENCES inv_shipments(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id),
+      qty NUMERIC NOT NULL,
+      serial TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_shipment_lines ON inv_shipment_lines(shipment_id);
+
     -- One row per stock movement. qty is signed: >0 in, <0 out. A transfer is
     -- written as two rows (issue from source, receipt into destination) sharing a ref.
     CREATE TABLE IF NOT EXISTS inv_moves (

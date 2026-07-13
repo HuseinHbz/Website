@@ -46,6 +46,7 @@ const actionSchema = z.object({
   name: z.string().max(200).optional(),
   sourceSystem: z.string().max(60).optional(),
   templateFields: z.array(z.string().max(60)).max(60).optional(),
+  dryRun: z.boolean().optional(),
 })
 
 // POST — multipart/form-data = upload (job.create); JSON = pipeline actions.
@@ -65,12 +66,13 @@ export async function POST(req: NextRequest) {
       if (!ENTITY_TYPES.includes(entityType)) return badRequest('Unknown entity type')
       if (file.size > 8 * 1024 * 1024) return badRequest('File too large (max 8 MB) — split the import')
       const lower = file.name.toLowerCase()
-      if (!lower.endsWith('.csv') && !lower.endsWith('.json') && !lower.endsWith('.txt')) {
-        return badRequest('Unsupported format — upload CSV or JSON (save Excel files as CSV first)')
+      if (!lower.endsWith('.csv') && !lower.endsWith('.json') && !lower.endsWith('.txt') && !lower.endsWith('.xlsx')) {
+        return badRequest('Unsupported format — upload XLSX, CSV or JSON')
       }
-      const content = await file.text()
-      const res = await createJob({ entityType, name: name || file.name, sourceSystem, fileName: file.name, content }, auth.user.id)
-      await logAction(auth.user, 'import.job.create', 'import_job', res.id, null, { entityType, fileName: file.name, rows: res.totalRows }, ip)
+      const sheet = String(fd.get('sheet') ?? '').trim() || undefined
+      const content = lower.endsWith('.xlsx') ? Buffer.from(await file.arrayBuffer()) : await file.text()
+      const res = await createJob({ entityType, name: name || file.name, sourceSystem, fileName: file.name, content, sheet }, auth.user.id)
+      await logAction(auth.user, 'import.job.create', 'import_job', res.id, null, { entityType, fileName: file.name, rows: res.totalRows, sheet: sheet ?? null }, ip)
       return NextResponse.json(res)
     }
 
@@ -97,8 +99,8 @@ export async function POST(req: NextRequest) {
     }
     if (d.action === 'execute') {
       if (!d.id) return badRequest('id required')
-      const res = await executeJob(d.id, auth.user.id)
-      await logAction(auth.user, 'import.job.execute', 'import_job', d.id, null, res, ip)
+      const res = await executeJob(d.id, auth.user.id, { dryRun: d.dryRun })
+      await logAction(auth.user, d.dryRun ? 'import.job.dryrun' : 'import.job.execute', 'import_job', d.id, null, res, ip)
       return NextResponse.json(res)
     }
     if (d.action === 'rollback') {

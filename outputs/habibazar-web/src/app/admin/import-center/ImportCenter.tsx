@@ -143,13 +143,17 @@ function Wizard({ fa, toast, role }: { fa: boolean; toast: (m: string, k?: 'succ
       toast(L(fa, 'Approved', 'تأیید شد'), 'success')
     } catch (e) { toast(e instanceof Error ? e.message : L(fa, 'Approval failed', 'تأیید ناموفق'), 'error') } finally { setBusy(false) }
   }
-  async function execute() {
+  async function execute(dryRun = false) {
     if (!jobId) return
     setBusy(true)
     try {
-      const r = await postJson({ action: 'execute', id: jobId })
+      const r = await postJson({ action: 'execute', id: jobId, dryRun })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
+      if (dryRun) {
+        toast(L(fa, `Dry run: ${d.imported} would import, ${d.skipped} would skip — nothing written`, `شبیه‌سازی: ${d.imported} وارد و ${d.skipped} رد می‌شد — چیزی نوشته نشد`), 'success')
+        return
+      }
       setExecRes(d); setStep(5)
       toast(L(fa, `${d.imported} rows imported`, `${d.imported} ردیف وارد شد`), 'success')
     } catch (e) { toast(e instanceof Error ? e.message : L(fa, 'Execution failed', 'اجرا ناموفق'), 'error') } finally { setBusy(false) }
@@ -182,10 +186,10 @@ function Wizard({ fa, toast, role }: { fa: boolean; toast: (m: string, k?: 'succ
             </div>
             <div>
               <label className="block text-2xs text-text-tertiary mb-1">{L(fa, 'File (CSV / JSON)', 'فایل (CSV / JSON)')}</label>
-              <input ref={fileRef} type="file" accept=".csv,.json,.txt" className="block w-full text-xs text-text-secondary" />
+              <input ref={fileRef} type="file" accept=".csv,.json,.txt,.xlsx" className="block w-full text-xs text-text-secondary" />
             </div>
           </div>
-          <p className="mt-2 text-2xs text-text-tertiary">{L(fa, 'Excel (.xlsx)? Save it as CSV first (File → Save As → CSV UTF-8). Legacy ERPs (SAP/Oracle/Dynamics/Odoo) export CSV.', 'فایل اکسل دارید؟ ابتدا آن را به CSV ذخیره کنید (File → Save As → CSV UTF-8). خروجی ERPهای قدیمی نیز CSV است.')}
+          <p className="mt-2 text-2xs text-text-tertiary">{L(fa, 'Native Excel (.xlsx), CSV and JSON are supported — the first sheet is read (Persian sheets and text included). Legacy ERPs (SAP/Oracle/Dynamics/Odoo) export these formats.', 'اکسل (.xlsx)، CSV و JSON مستقیم پشتیبانی می‌شوند — شیت اول خوانده می‌شود (شیت و متن فارسی هم). خروجی ERPهای قدیمی همین فرمت‌هاست.')}
             {' '}<a href={`${API}?view=template-csv&entity=${entity}`} className="text-brand underline">{L(fa, 'Download template', 'دانلود قالب')}</a></p>
           <div className="mt-3"><Btn onClick={upload} disabled={busy}>{busy ? L(fa, 'Uploading…', 'در حال بارگذاری…') : L(fa, 'Upload & detect structure', 'بارگذاری و شناسایی ساختار')}</Btn></div>
         </Card>
@@ -260,8 +264,11 @@ function Wizard({ fa, toast, role }: { fa: boolean; toast: (m: string, k?: 'succ
       {step === 4 && (
         <Card>
           <h3 className="text-sm font-semibold text-text-primary mb-2">{L(fa, '5 — Execute', '۵ — اجرا')}</h3>
-          <p className="text-2xs text-text-tertiary mb-3">{L(fa, 'Rows are written in a single database transaction; every inserted record is logged for rollback.', 'ردیف‌ها در یک تراکنش واحد نوشته می‌شوند؛ هر رکورد برای بازگردانی ثبت می‌شود.')}</p>
-          <Btn onClick={execute} disabled={busy}>{busy ? L(fa, 'Importing…', 'در حال ورود…') : L(fa, 'Run import', 'اجرای ورود')}</Btn>
+          <p className="text-2xs text-text-tertiary mb-3">{L(fa, 'Rows are written in a single database transaction; every inserted record is logged for rollback. A dry run simulates the full import and rolls everything back.', 'ردیف‌ها در یک تراکنش واحد نوشته می‌شوند؛ هر رکورد برای بازگردانی ثبت می‌شود. «شبیه‌سازی» کل ورود را اجرا و سپس همه‌چیز را بازمی‌گرداند.')}</p>
+          <div className="flex gap-2">
+            <Btn variant="secondary" onClick={() => execute(true)} disabled={busy}>{L(fa, 'Dry run (simulate)', 'شبیه‌سازی (Dry run)')}</Btn>
+            <Btn onClick={() => execute(false)} disabled={busy}>{busy ? L(fa, 'Importing…', 'در حال ورود…') : L(fa, 'Run import', 'اجرای ورود')}</Btn>
+          </div>
         </Card>
       )}
 
