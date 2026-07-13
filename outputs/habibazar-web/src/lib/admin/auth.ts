@@ -34,7 +34,7 @@ export interface AdminUser {
   id: string
   name: string
   email: string
-  role: 'super_admin' | 'administrator' | 'editor'
+  role: 'super_admin' | 'administrator' | 'editor' | 'auditor' | 'viewer'
   department?: string | null
   avatar?: string | null
 }
@@ -161,6 +161,10 @@ export function canDo(role: AdminUser['role'], action: 'manage_users' | 'manage_
     super_admin: ['manage_users', 'manage_settings', 'delete', 'publish', 'edit'],
     administrator: ['manage_settings', 'delete', 'publish', 'edit'],
     editor: ['edit', 'publish'],
+    // Read-only roles (26.22): auditor sees everything incl. logs but writes
+    // nothing; viewer (shareholder/observer) sees dashboards + reports only.
+    auditor: [],
+    viewer: [],
   }
   return perms[role]?.includes(action) ?? false
 }

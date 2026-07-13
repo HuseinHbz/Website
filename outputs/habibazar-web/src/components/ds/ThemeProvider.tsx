@@ -35,8 +35,14 @@ function applyTheme(resolved: 'dark' | 'light' | 'high-contrast') {
   root.style.colorScheme = resolved === 'light' ? 'light' : 'dark'
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
+export function ThemeProvider({ children, defaultTheme = 'dark', storageKey = STORAGE_KEY }: {
+  children: React.ReactNode
+  /** Theme used before any user choice ('system' follows prefers-color-scheme). */
+  defaultTheme?: Theme
+  /** Separate keys let the admin panel and public site keep independent prefs. */
+  storageKey?: string
+}) {
+  const [theme, setThemeState] = useState<Theme>(defaultTheme)
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light' | 'high-contrast'>('dark')
 
   const resolve = useCallback((t: Theme): 'dark' | 'light' | 'high-contrast' => {
@@ -50,16 +56,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(t)
     setResolvedTheme(resolved)
     applyTheme(resolved)
-    try { localStorage.setItem(STORAGE_KEY, t) } catch {}
-  }, [resolve])
+    try { localStorage.setItem(storageKey, t) } catch {}
+  }, [resolve, storageKey])
 
   const toggleTheme = useCallback(() => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
   }, [resolvedTheme, setTheme])
 
   useEffect(() => {
-    let saved: Theme = 'dark'
-    try { saved = (localStorage.getItem(STORAGE_KEY) as Theme) || 'dark' } catch {}
+    let saved: Theme = defaultTheme
+    try { saved = (localStorage.getItem(storageKey) as Theme) || defaultTheme } catch {}
     const resolved = resolve(saved)
     setThemeState(saved)
     setResolvedTheme(resolved)
@@ -76,7 +82,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mq.addEventListener('change', handler)
       return () => mq.removeEventListener('change', handler)
     }
-  }, [resolve])
+  }, [resolve, defaultTheme, storageKey])
 
   return (
     <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>

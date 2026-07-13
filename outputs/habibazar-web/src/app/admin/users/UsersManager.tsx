@@ -6,9 +6,9 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
-type User = { id: string; name: string; email: string; role: string; department?: string | null; active: boolean; createdAt: string; lastLogin: string; totpEnabled?: boolean }
+type User = { id: string; name: string; email: string; role: string; employeeCode?: string | null; department?: string | null; active: boolean; createdAt: string; lastLogin: string; totpEnabled?: boolean }
 const EMPTY = { name: '', email: '', password: '', role: 'editor', department: '' }
-const ROLE_COLOR: Record<string, string> = { super_admin: 'yellow', administrator: 'blue', editor: 'green' }
+const ROLE_COLOR: Record<string, string> = { super_admin: 'yellow', administrator: 'blue', editor: 'green', auditor: 'purple', viewer: 'slate' }
 
 type TwoFAPanel = { userId: string; email: string; secret: string; qrCode: string; enabled: boolean; phase: 'view' | 'setup' | 'confirm' }
 
@@ -102,7 +102,8 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
 
   const userColumns: Column<User>[] = [
     { key: 'name', labelEn: 'User', labelFa: 'کاربر', render: u => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold">{u.name.charAt(0)}</div><div><div className="font-medium text-white">{u.name}{u.id === currentUserId && <span className="text-xs text-text-tertiary ml-2">(you)</span>}</div><div className="text-xs text-text-tertiary">{u.email}</div></div></div> },
-    { key: 'role', labelEn: 'Role', labelFa: 'نقش', type: 'enum', options: ['super_admin', 'administrator', 'editor'].map(r => ({ value: r, labelEn: r, labelFa: r })), render: u => <Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge> },
+    { key: 'employeeCode', labelEn: 'Code', labelFa: 'کد پرسنلی', render: u => <span className="font-mono text-xs text-text-secondary">{u.employeeCode ?? '—'}</span> },
+    { key: 'role', labelEn: 'Role', labelFa: 'نقش', type: 'enum', options: ['super_admin', 'administrator', 'editor', 'auditor', 'viewer'].map(r => ({ value: r, labelEn: r, labelFa: r })), render: u => <Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge> },
     { key: 'totpEnabled', labelEn: '2FA', labelFa: '2FA', type: 'boolean', value: u => !!u.totpEnabled, render: u => <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-surface-2/50 text-text-tertiary hover:bg-surface-2'}`}>{u.totpEnabled ? '🔐 On' : '○ Off'}</button> },
     { key: 'active', labelEn: 'Status', labelFa: 'وضعیت', type: 'boolean', value: u => u.active, render: u => <Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Active' : 'Inactive'}</Badge> },
     { key: 'lastLogin', labelEn: 'Last Login', labelFa: 'آخرین ورود', type: 'date', render: u => <span className="text-xs text-text-tertiary">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</span> },
@@ -132,11 +133,13 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
       </Card>
 
       {/* Role Guide */}
-      <div className="grid grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
         {[
           { role: 'super_admin', label: 'Super Admin', desc: 'Full system access, user management, settings', color: 'yellow' },
           { role: 'administrator', label: 'Administrator', desc: 'All content + settings, no user deletion', color: 'blue' },
           { role: 'editor', label: 'Editor', desc: 'Create and publish content only', color: 'green' },
+          { role: 'auditor', label: 'Auditor', desc: 'Read-only everything + audit trail & logs; cannot change any record', color: 'purple' },
+          { role: 'viewer', label: 'Viewer / Shareholder', desc: 'Executive dashboards, analytics and reports only', color: 'slate' },
         ].map((r) => (
           <div key={r.role} className="bg-surface border border-border rounded-xl p-4">
             <Badge color={r.color}>{r.label}</Badge>
@@ -155,7 +158,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
             label="Role"
             value={editing.role}
             onChange={(v) => setEditing({ ...editing, role: v })}
-            options={[{ value: 'editor', label: 'Editor' }, { value: 'administrator', label: 'Administrator' }, { value: 'super_admin', label: 'Super Admin' }]}
+            options={[{ value: 'editor', label: 'Editor' }, { value: 'administrator', label: 'Administrator' }, { value: 'super_admin', label: 'Super Admin' }, { value: 'auditor', label: 'Auditor (read-only)' }, { value: 'viewer', label: 'Viewer / Shareholder' }]}
           />
           <Input label="Department / Team" value={editing.department ?? ''} onChange={(v) => setEditing({ ...editing, department: v })} />
           <div className="flex gap-3">

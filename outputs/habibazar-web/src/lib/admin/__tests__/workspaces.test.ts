@@ -92,3 +92,28 @@ describe('breadcrumb engine', () => {
     expect(findItem('/admin/nope')).toBeNull()
   })
 })
+
+describe('read-only roles (26.22)', () => {
+  it('auditor and viewer hold no write permissions', () => {
+    for (const role of ['auditor', 'viewer']) {
+      expect(roleCan(role, 'edit')).toBe(false)
+      expect(roleCan(role, 'manage_settings')).toBe(false)
+      expect(roleCan(role, 'manage_users')).toBe(false)
+    }
+  })
+  it('viewer sees only executive/analytics/documentation workspaces', () => {
+    const ids = visibleWorkspaces('viewer').map(w => w.id).sort()
+    expect(ids).toEqual(['analytics', 'documentation', 'executive'])
+  })
+  it('auditor sees the security workspace (audit trail) but never ERP editing', () => {
+    const ids = visibleWorkspaces('auditor').map(w => w.id)
+    expect(ids).toContain('security')
+    expect(ids).toContain('operations')
+    expect(ids).not.toContain('erp')
+  })
+  it('full-permission roles are unaffected by the whitelist', () => {
+    const ids = visibleWorkspaces('super_admin').map(w => w.id)
+    expect(ids).toContain('erp')
+    expect(ids).toContain('security')
+  })
+})

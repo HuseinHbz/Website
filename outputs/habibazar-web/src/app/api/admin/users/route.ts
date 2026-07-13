@@ -6,6 +6,16 @@ import { eq, desc, sql } from 'drizzle-orm'
 import { getAdminUser, hashPassword, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { nanoid } from 'nanoid'
+import { pgQuery } from '@/lib/db'
+
+const VALID_ROLES = ['super_admin', 'administrator', 'editor', 'auditor', 'viewer']
+
+/** Next unique personnel code: EMP-0001, EMP-0002, … (26.22). */
+async function nextEmployeeCode(): Promise<string> {
+  const row = (await pgQuery<{ m: number }>(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace(employee_code, '\\D', '', 'g'), '')::int), 0) AS m FROM users WHERE employee_code LIKE 'EMP-%'`))[0]
+  return `EMP-${String(Number(row?.m ?? 0) + 1).padStart(4, '0')}`
+}
 
 export async function GET() {
   try {      const me = await getAdminUser()
@@ -18,6 +28,7 @@ export async function GET() {
         name: users.name,
         email: users.email,
         role: users.role,
+        employeeCode: users.employeeCode,
         department: users.department,
         active: users.active,
         totpEnabled: users.totpEnabled,
@@ -38,6 +49,7 @@ export async function POST(req: NextRequest) {
       }
       const { name, email, password, role, department } = await guardJson(req)
       if (!name || !email || !password) return NextResponse.json({ error: 'Name, email, password required' }, { status: 400 })
+      if (role && !VALID_ROLES.includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
       const hash = await hashPassword(password)
       const db = getDb()
       const result = await db.insert(users).values({
@@ -46,6 +58,7 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase(),
         passwordHash: hash,
         role: role || 'editor',
+        employeeCode: await nextEmployeeCode(),
         department: department || null,
       }).returning()
       await logAction(me, 'CREATE', 'users', result[0]?.id, null, { name, email, role, department })
@@ -63,6 +76,7 @@ export async function PUT(req: NextRequest) {
       }
       const { id, password, ...data } = await guardJson(req)
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      if (data.role && !VALID_ROLES.includes(data.role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
       const db = getDb()
       const updateData: Record<string, unknown> = { ...data }
       if (password) updateData.passwordHash = await hashPassword(password)

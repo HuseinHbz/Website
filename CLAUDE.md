@@ -751,6 +751,24 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   +98/0098/98→0, email, national-code padding, ٬٫ separators) applied before
   validation. Live-PG verified (Persian-sheet xlsx → dry-run wrote nothing →
   real import + «۰۹۱۲…» phone normalized).
+- **Phase 26.22 — Role-Based QA, Theme, Coding & RBAC** (report:
+  `docs/governance/phase26.22-qa-rbac-theme-report.md`). 14-role QA sweep → 7
+  real defects fixed: the admin panel now mounts `ThemeProvider`
+  (**Light/Dark toggle** in the header, default `system`, persisted under
+  `hbz-admin-theme`; provider gained `defaultTheme`/`storageKey` props),
+  loads **Vazirmatn/Inter/JetBrains via next/font in the admin layout**, and
+  its body/header are token-based (no hardcoded dark). **RBAC**: two new
+  read-only roles — `auditor` (everything + audit/logs, zero writes) and
+  `viewer` (shareholder: executive/analytics/docs only) — enforced in
+  `canDo` (no write perms), **centrally in middleware** (JWT role → non-GET
+  on `/api/admin/*` returns 403), and in the nav via a per-role workspace
+  whitelist in `workspaces.ts`; users form/badges/drizzle enum updated; role
+  values validated in the users API. **ERP coding**: 6 Iranian-standard
+  گروه-level GL roots seeded + every leaf auto-attached by leading digit
+  (idempotent, at the END of migrate.ts so all seeds exist; trial balance
+  unaffected) and `users.employee_code` (unique, auto `EMP-####` on create,
+  shown/searchable in Users). Verified live-PG 9/9 + regressions 26.21
+  45/45, 26.20 28/28; 649 unit tests.
 - **Phase 26.21 — Enterprise Full Company Simulation (CFO validation)** —
   a complete 24-month company operation executed against the real data layers
   on live PostgreSQL (45/45 assertions; reports:

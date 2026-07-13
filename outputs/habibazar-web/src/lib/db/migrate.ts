@@ -1201,6 +1201,21 @@ export async function runMigrations() {
     INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
       SELECT '1150', 'Due From Affiliates', 'دریافتنی از شرکت‌های گروه', 'asset', 1
       WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='1150');
+
+    -- 26.22: Iranian-standard coding — گروه (group) level accounts seeded as
+    -- hierarchy roots; every leaf account is attached by its leading digit
+    -- (گروه → کل/معین via parent_id, idempotent: only NULL parents are set).
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT v.code, v.en, v.fa, v.t, 1 FROM (VALUES
+        ('1','Assets','دارایی‌ها','asset'),
+        ('2','Liabilities','بدهی‌ها','liability'),
+        ('3','Equity','حقوق صاحبان سهام','equity'),
+        ('4','Revenue','درآمدها','revenue'),
+        ('5','Cost of Goods','بهای تمام‌شده','expense'),
+        ('6','Operating Expenses','هزینه‌های عملیاتی','expense')
+      ) AS v(code, en, fa, t)
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts g WHERE g.code = v.code);
+
     INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
       SELECT '2150', 'Due To Affiliates', 'پرداختنی به شرکت‌های گروه', 'liability', 1
       WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='2150');
@@ -1652,6 +1667,9 @@ export async function runMigrations() {
       UNIQUE (cost_center_id, user_id)
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS finance_role TEXT;
+    -- 26.22: unique personnel code (auto-assigned EMP-#### on user creation).
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_code TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_employee_code ON users(employee_code) WHERE employee_code IS NOT NULL;
 
     -- Budgets (M1): header + lines + immutable version snapshots.
     CREATE TABLE IF NOT EXISTS erp_budgets (
@@ -2226,5 +2244,12 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_success_stories_org ON success_stories(organization_id);
     CREATE INDEX IF NOT EXISTS idx_inv_moves_location ON inv_moves(location_id);
     CREATE INDEX IF NOT EXISTS idx_numbering_audit_format ON numbering_audit(format_id);
+
+    -- 26.22 (runs LAST so every seeded account exists): attach each leaf
+    -- account to its Iranian-coding گروه root by leading digit (idempotent).
+    UPDATE gl_accounts a SET parent_id = g.id
+      FROM gl_accounts g
+      WHERE a.parent_id IS NULL AND length(a.code) > 1 AND length(g.code) = 1
+        AND g.code = left(a.code, 1);
   `)
 }

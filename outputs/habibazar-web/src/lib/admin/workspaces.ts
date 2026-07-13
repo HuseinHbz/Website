@@ -19,7 +19,7 @@
 export interface WsItem { labelEn: string; labelFa: string; href: string; icon: string; requires?: WorkspaceRequire }
 export interface WsGroup { en: string; fa: string; items: WsItem[] }
 export type WorkspaceRequire = 'edit' | 'manage_settings' | 'manage_users'
-export type AdminRole = 'super_admin' | 'administrator' | 'editor'
+export type AdminRole = 'super_admin' | 'administrator' | 'editor' | 'auditor' | 'viewer'
 export interface Workspace {
   id: string
   nameEn: string; nameFa: string
@@ -303,12 +303,24 @@ const ROLE_PERMS: Record<AdminRole, WorkspaceRequire[]> = {
   super_admin: ['edit', 'manage_settings', 'manage_users'],
   administrator: ['edit', 'manage_settings'],
   editor: ['edit'],
+  auditor: [],
+  viewer: [],
+}
+
+// Read-only roles see a curated workspace subset (26.22). The whitelist also
+// grants the auditor the Security workspace (audit trail) despite its
+// manage_users gate — the server still blocks every write for these roles.
+const ROLE_WORKSPACE_WHITELIST: Record<string, string[]> = {
+  viewer: ['executive', 'analytics', 'documentation'],
+  auditor: ['executive', 'analytics', 'operations', 'security', 'documentation'],
 }
 /** Pure permission check usable on the client (server routes still enforce RBAC). */
 export function roleCan(role: string, action: WorkspaceRequire): boolean {
   return (ROLE_PERMS[role as AdminRole] ?? []).includes(action)
 }
 export function canSeeWorkspace(role: string, ws: Workspace): boolean {
+  const whitelist = ROLE_WORKSPACE_WHITELIST[role]
+  if (whitelist) return whitelist.includes(ws.id)
   return !ws.requires || roleCan(role, ws.requires)
 }
 export function canSeeItem(role: string, ws: Workspace, item: WsItem): boolean {
@@ -358,6 +370,8 @@ const ROLE_DEFAULT_FAVORITES: Record<string, string[]> = {
   super_admin: ['/admin', '/admin/finance', '/admin/crm', '/admin/operations', '/admin/users'],
   administrator: ['/admin', '/admin/finance', '/admin/crm', '/admin/reports'],
   editor: ['/admin', '/admin/content', '/admin/projects', '/admin/media'],
+  auditor: ['/admin', '/admin/audit', '/admin/logs-monitoring', '/admin/reports'],
+  viewer: ['/admin', '/admin/dashboard'],
 }
 /** Suggested starter favorites for a role — only hrefs the role may actually see. */
 export function roleDefaultFavorites(role: string): string[] {

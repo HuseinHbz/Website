@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { AdminUser } from '@/lib/admin/auth'
+import { ThemeToggle } from '@/components/ds/ThemeProvider'
 
 interface Notification {
   id: string
@@ -57,10 +58,12 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
     super_admin: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
     administrator: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
     editor: 'text-green-400 bg-green-400/10 border-green-400/20',
+    auditor: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
+    viewer: 'text-text-secondary bg-white/5 border-border',
   }
   const roleLabel: Record<string, Record<string, string>> = {
-    fa: { super_admin: 'ادمین ارشد', administrator: 'مدیر', editor: 'ویرایشگر' },
-    en: { super_admin: 'Super Admin', administrator: 'Administrator', editor: 'Editor' },
+    fa: { super_admin: 'ادمین ارشد', administrator: 'مدیر', editor: 'ویرایشگر', auditor: 'حسابرس', viewer: 'سهامدار/ناظر' },
+    en: { super_admin: 'Super Admin', administrator: 'Administrator', editor: 'Editor', auditor: 'Auditor', viewer: 'Viewer' },
   }
 
   return (
@@ -83,19 +86,21 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
         {/* Command Palette button */}
         <button
           onClick={onOpenCmd}
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-text-muted hover:text-text-primary transition-all"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-text-muted hover:text-text-primary transition-all bg-surface border border-border"
           title={isRTL ? 'جستجوی سریع (Ctrl+K)' : 'Quick search (Ctrl+K)'}
         >
           <span>🔍</span>
           <span className="hidden lg:inline">{isRTL ? 'جستجو...' : 'Search...'}</span>
-          <kbd className="text-3xs px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>⌘K</kbd>
+          <kbd className="text-3xs px-1 py-0.5 rounded bg-surface-2 border border-border">⌘K</kbd>
         </button>
+
+        {/* Theme toggle (light/dark, persisted per user) */}
+        <ThemeToggle />
 
         {/* Locale toggle */}
         <button
           onClick={onToggleLocale}
-          className="text-xs font-bold px-2 py-1 rounded border border-border text-text-secondary hover:text-white hover:border-brand transition-all"
+          className="text-xs font-bold px-2 py-1 rounded border border-border text-text-secondary hover:text-text-primary hover:border-brand transition-all"
         >
           {locale === 'fa' ? 'EN' : 'FA'}
         </button>

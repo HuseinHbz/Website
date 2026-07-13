@@ -17,9 +17,15 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || 'HBZ-Admin-Secret-Key-2025-Change-In-Production'
 )
 
-async function verifyToken(token: string) {
-  await jwtVerify(token, JWT_SECRET)
+async function verifyToken(token: string): Promise<{ role?: string }> {
+  const { payload } = await jwtVerify(token, JWT_SECRET)
+  return { role: typeof payload.role === 'string' ? payload.role : undefined }
 }
+
+// Read-only roles (26.22): every mutation is refused centrally, before any
+// route runs — route-level canDo gates remain the second line of defence.
+const READ_ONLY_ROLES = new Set(['auditor', 'viewer'])
+const READ_ONLY_ALLOWED_POSTS = new Set(['/api/admin/auth/logout'])
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -53,7 +59,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     try {
-      await verifyToken(token)
+      const { role } = await verifyToken(token)
+      if (role && READ_ONLY_ROLES.has(role) && request.method !== 'GET' && !READ_ONLY_ALLOWED_POSTS.has(pathname)) {
+        return NextResponse.json({ error: 'This role is read-only' }, { status: 403 })
+      }
       return NextResponse.next()
     } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
