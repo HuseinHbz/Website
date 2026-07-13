@@ -1334,6 +1334,88 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_md_issues_status ON master_data_issues(status);
 
+    -- Phase 26.18 — Enterprise Data Import & Migration Center.
+    CREATE TABLE IF NOT EXISTS import_templates (
+      id SERIAL PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      fields TEXT NOT NULL DEFAULT '[]',
+      version INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS import_mappings (
+      id SERIAL PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      source_system TEXT,
+      mapping TEXT NOT NULL DEFAULT '{}',
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS import_jobs (
+      id SERIAL PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      source_system TEXT,
+      file_name TEXT,
+      file_hash TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','mapping','validating','validated','approved','processing','completed','failed','rolled_back')),
+      total_rows INTEGER NOT NULL DEFAULT 0,
+      valid_rows INTEGER NOT NULL DEFAULT 0,
+      warning_rows INTEGER NOT NULL DEFAULT 0,
+      error_rows INTEGER NOT NULL DEFAULT 0,
+      imported_rows INTEGER NOT NULL DEFAULT 0,
+      mapping TEXT NOT NULL DEFAULT '{}',
+      approval_tier TEXT NOT NULL DEFAULT 'auto',
+      approved_by TEXT,
+      approved_at TEXT,
+      error TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      completed_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_import_jobs_status ON import_jobs(status);
+    CREATE TABLE IF NOT EXISTS import_job_rows (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+      row_no INTEGER NOT NULL,
+      raw TEXT NOT NULL DEFAULT '{}',
+      mapped TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','valid','warning','error','imported','skipped')),
+      message TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_import_job_rows_job ON import_job_rows(job_id, status);
+    CREATE TABLE IF NOT EXISTS import_validation_errors (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+      row_no INTEGER NOT NULL,
+      field TEXT,
+      code TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'error',
+      message TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_import_val_errors_job ON import_validation_errors(job_id);
+    CREATE TABLE IF NOT EXISTS import_history (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER REFERENCES import_jobs(id) ON DELETE SET NULL,
+      action TEXT NOT NULL,
+      actor TEXT,
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS migration_transactions (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      table_name TEXT NOT NULL,
+      record_id INTEGER NOT NULL,
+      op TEXT NOT NULL DEFAULT 'insert',
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_migration_tx_job ON migration_transactions(job_id);
+
     -- One row per stock movement. qty is signed: >0 in, <0 out. A transfer is
     -- written as two rows (issue from source, receipt into destination) sharing a ref.
     CREATE TABLE IF NOT EXISTS inv_moves (

@@ -704,6 +704,44 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   compared a shadowed `module` global (never matched) → renamed to `mod`. TS 0 ·
   ESLint 0 · 7 audits 0 · build clean. Honest boundaries: category drag-drop is an
   explicit Move action, version restore is product-scoped, M8 export is CSV/print.
+- **Import & Migration Center** (`/admin/import-center`, `ImportCenter`) — Phase
+  26.18 enterprise data-migration platform (report:
+  `docs/governance/phase26.18-data-import-completion-report.md`, audit:
+  `phase26.18-data-import-migration-audit.md`). Audit-first: reuses the DataTable
+  `parseCsv` (no second CSV parser), the 26.16/26.17 quality validators +
+  `normalizeKey` duplicates, 26.9 `postOpeningBalance`, the Numbering Engine,
+  FormData upload, RBAC + `logAction`. **Pure engine** `src/lib/import/engine.ts`
+  (43 tests): `ENTITY_SPECS` for 8 entities (customer/supplier/product/category/
+  warehouse/inventory/opening_balance/journal, FA/EN + synonyms),
+  `autoMapColumns` header auto-mapping, `coerce`, `validateRecord`
+  (required→type→format→relationship→duplicate, resolution-aware skip/update/
+  block), `journalGroupBalanced` Dr=Cr, `approvalTierFor` (<100 auto ·
+  100–1000 manager=administrator · >1000 admin=super_admin) and the
+  `canTransitionJob` state machine (draft→mapping→validating→validated→approved→
+  processing→completed/failed→rolled_back; approval unskippable). **Data layer**
+  `importData.ts`: `createJob` (CSV/JSON, SHA-256 file hash, chunked rows,
+  suggested mapping, 20k-row/8MB caps), `validateJob` (live-DB identity +
+  product/warehouse/account reference sets → `import_validation_errors`),
+  `approveJob` (tier×role), `executeJob` (single SQL transaction; upsert
+  `ON CONFLICT…DO UPDATE` with `xmax=0` insert/update detection; inventory →
+  real `inv_moves`; journal groups → posted entries via `nextNumber`; opening
+  balance → 26.9 engine; every insert logged to `migration_transactions`),
+  `rollbackJob` (reverse-order transactional delete → status rolled_back),
+  `importAnalytics`, templates + mapping profiles, `import_history`. Tables (7,
+  idempotent): `import_templates/_mappings/_jobs/_job_rows/_validation_errors/
+  _history`, `migration_transactions`. API `/api/admin/erp/import` (GET 6 views ·
+  POST multipart upload + 8 actions; rollback administrator-gated; all audited
+  w/ IP + file hash). UI: bilingual RTL/EN Import Center — Dashboard (M11) ·
+  **6-step wizard** (Upload w/ source system SAP/Oracle/Dynamics/Odoo + template
+  CSV download → Mapping + resolution + save-profile → Validation tiles + error
+  table → tiered Approval → Execute → Report) · Migration Jobs (contextual
+  validate/approve/execute/rollback) · Templates (versioned). Live-PG 27/27 over
+  the 9 required scenarios (100-customer import w/ legacy-header auto-map,
+  duplicate skip, editor-rejected/manager approval, full rollback restores the DB,
+  products, inventory w/ ghost-SKU relationship rejection, balanced opening
+  balance 7M=7M, journal group → one posted entry + unbalanced voucher rejected,
+  analytics). Honest boundaries: .xlsx = save-as-CSV (no heavy dep); invoice/
+  asset executors + AI-assisted mapping + update-mode value-reversal are roadmap.
 - **Inventory Center** (`/admin/inventory`, `InventoryCenter`) — Phase-21 ERP
   Module 4 (Enterprise Inventory). Tabbed: Dashboard · Products · Warehouses ·
   Stock Moves. Tables `inv_warehouses`/`inv_locations`/`inv_products`/`inv_moves`
