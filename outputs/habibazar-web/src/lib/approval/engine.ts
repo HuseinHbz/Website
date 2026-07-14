@@ -76,3 +76,24 @@ export function effectiveApprovers(principal: string, delegations: Delegation[],
   for (const d of delegations) if (d.fromUserId === principal && delegationActive(d, on, docType, department)) out.add(d.toUserId)
   return [...out]
 }
+
+/**
+ * Separation-of-duties guard (26.24b بند ۳). A journal-entry posting request may
+ * never be decided by its own creator — whether the creator acts directly OR a
+ * delegate acts on the creator's behalf (the effective decision owner is the
+ * creator either way). `onBehalfOf` is the principal a delegate is representing.
+ */
+export function isSeparationViolation(docType: string, createdBy: string, actorId: string, onBehalfOf?: string | null): boolean {
+  if (docType !== 'journal_entry') return false
+  return createdBy === actorId || createdBy === onBehalfOf
+}
+
+/**
+ * Would creating a from→to delegation form a self-loop or a cycle? (26.24b بند ۳)
+ * A user cannot delegate to themselves, and an active reverse delegation (to→from)
+ * must not already exist — otherwise a principal's authority could round-trip back.
+ */
+export function wouldCreateDelegationCycle(fromUserId: string, toUserId: string, existing: Delegation[]): boolean {
+  if (fromUserId === toUserId) return true
+  return existing.some(d => d.fromUserId === toUserId && d.toUserId === fromUserId)
+}

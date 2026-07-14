@@ -11,7 +11,7 @@ import { financeRole } from './financeRbac'
 import {
   resolveApprovalPlan, type MatrixRule, type ApprovalLevelPlan, type ApprovalDocType,
 } from '@/lib/approval/matrix'
-import { approvalState, canActFor, type ApprovalActionRec, type Delegation, type Decision } from '@/lib/approval/engine'
+import { approvalState, canActFor, isSeparationViolation, wouldCreateDelegationCycle, type ApprovalActionRec, type Delegation, type Decision } from '@/lib/approval/engine'
 import { dueEscalations, slaBreached } from '@/lib/approval/escalation'
 import { approvalKpis, type RequestFact, type ActionFact } from '@/lib/approval/analytics'
 
@@ -128,13 +128,6 @@ async function resolveActor(user: AdminUser, row: RequestRow, level: ApprovalLev
 
 /** Approve / reject / request-change at the current level (RBAC + delegation + audit). */
 export async function actOnRequest(id: number, user: AdminUser, decision: Decision, comment: string | undefined, ip: string | undefined): Promise<{ status: string }> {
-  {
-    const row0 = await getRow(id)
-    // 26.23: server-side separation of duties — the creator of a journal-entry
-    // posting request may never approve/reject their own entry.
-    if (row0?.docType === 'journal_entry' && row0.createdBy === user.id)
-      throw new Error('Separation of duties: the entry creator cannot approve their own posting')
-  }
   const row = await getRow(id)
   if (!row) throw new Error('Request not found')
   if (row.status !== 'pending' && row.status !== 'changes_requested') throw new Error(`Request is already ${row.status}`)
@@ -143,6 +136,12 @@ export async function actOnRequest(id: number, user: AdminUser, decision: Decisi
   if (!level) throw new Error('No current level to act on')
   const actor = await resolveActor(user, row, level)
   if (!actor.allowed) throw new Error('You are not an authorized approver for this level')
+  // 26.23 + 26.24b (بند ۳): server-side separation of duties on the EFFECTIVE
+  // decision owner — the creator of a journal-entry posting request may never
+  // approve their own entry, whether acting directly OR as the delegate of the
+  // creator (delegation could otherwise proxy the creator's authority back).
+  if (isSeparationViolation(row.docType, row.createdBy ?? '', user.id, actor.onBehalfOf))
+    throw new Error('Separation of duties: the entry creator cannot approve their own posting')
 
   await pgQuery(`INSERT INTO approval_actions (request_id, level, approver_id, on_behalf_of, decision, comment, ip_address) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
     [id, row.currentLevel, user.id, actor.onBehalfOf, decision, comment ?? null, ip ?? null])
@@ -195,6 +194,15 @@ export async function listDelegations() {
   return pgQuery(`SELECT d.id, d.from_user_id AS "fromUserId", uf.name AS "fromName", d.to_user_id AS "toUserId", ut.name AS "toName", d.start_date AS "startDate", d.end_date AS "endDate", d.doc_type AS "docType", d.department, d.active FROM approval_delegations d LEFT JOIN users uf ON uf.id=d.from_user_id LEFT JOIN users ut ON ut.id=d.to_user_id ORDER BY d.id DESC`)
 }
 export async function createDelegation(input: { fromUserId: string; toUserId: string; startDate: string; endDate: string; docType?: string; department?: string }, userId: string): Promise<{ id: number }> {
+  // 26.24b (بند ۳): reject self-delegation and cyclic delegation (A→B when an
+  // active B→A already exists) at creation — a delegation loop would let a
+  // principal's authority round-trip back to themselves through a proxy.
+  const activePairs = (await pgQuery<{ fromUserId: string; toUserId: string }>(
+    `SELECT from_user_id AS "fromUserId", to_user_id AS "toUserId" FROM approval_delegations WHERE active=1`))
+    .map(p => ({ ...p, startDate: '', endDate: '' } as Delegation))
+  if (input.fromUserId === input.toUserId) throw new Error('A user cannot delegate approval authority to themselves')
+  if (wouldCreateDelegationCycle(input.fromUserId, input.toUserId, activePairs))
+    throw new Error('Cyclic delegation rejected: a reverse delegation between these users is already active')
   const r = (await pgQuery<{ id: number }>(`INSERT INTO approval_delegations (from_user_id, to_user_id, start_date, end_date, doc_type, department, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
     [input.fromUserId, input.toUserId, input.startDate, input.endDate, input.docType ?? null, input.department ?? null, userId]))[0]
   return r

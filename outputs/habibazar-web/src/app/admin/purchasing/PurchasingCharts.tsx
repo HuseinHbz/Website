@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { BRAND, chartColor } from '@/lib/design/tokens'
+import { faDigits, rtlChartProps } from '@/lib/admin/chartRtl'
 
 /**
  * Purchasing analytics charts. Recharts is heavy, so this module is standalone
@@ -16,9 +17,13 @@ export interface PurchasingChartsData {
 const tooltipStyle = { background: '#111122', border: '1px solid #1e1e2e', borderRadius: 8, fontSize: 12 } as const
 const tick = { fill: '#4a4a6a', fontSize: 11 } as const
 
-export default function PurchasingCharts({ data, labels }: { data: PurchasingChartsData; labels: { spend: string; vendors: string } }) {
+export default function PurchasingCharts({ data, labels, locale = 'en' }: { data: PurchasingChartsData; labels: { spend: string; vendors: string }; locale?: string }) {
+  // 26.24b بند ۵.۲: RTL/fa-IR aware — reversed time axis + Persian-digit amounts.
+  const rtl = locale === 'fa'
+  const { xReversed, yOrientation } = rtlChartProps(rtl)
+  const money = (v: number | string) => { const s = Number(v).toLocaleString(); return rtl ? faDigits(s) : s }
   return (
-    <div className="grid lg:grid-cols-2 gap-4">
+    <div className="grid lg:grid-cols-2 gap-4" dir={rtl ? 'rtl' : 'ltr'}>
       <div className="rounded-xl border border-subtle bg-surface p-4">
         <h3 className="text-sm font-semibold text-text-primary mb-3">{labels.spend}</h3>
         <ResponsiveContainer width="100%" height={240}>
@@ -30,9 +35,9 @@ export default function PurchasingCharts({ data, labels }: { data: PurchasingCha
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-            <XAxis dataKey="month" tick={tick} tickLine={false} />
-            <YAxis tick={tick} tickLine={false} axisLine={false} width={80} tickFormatter={v => Number(v).toLocaleString()} />
-            <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#9090b0' }} formatter={v => Number(v).toLocaleString()} />
+            <XAxis dataKey="month" reversed={xReversed} tick={tick} tickLine={false} tickFormatter={v => (rtl ? faDigits(v) : v)} />
+            <YAxis orientation={yOrientation} tick={tick} tickLine={false} axisLine={false} width={80} tickFormatter={money} />
+            <Tooltip contentStyle={{ ...tooltipStyle, direction: rtl ? 'rtl' : 'ltr' }} labelStyle={{ color: '#9090b0' }} formatter={(v) => money(v as number)} />
             <Area type="monotone" dataKey="total" stroke={BRAND.indigo} fill="url(#purSpend)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
@@ -42,10 +47,10 @@ export default function PurchasingCharts({ data, labels }: { data: PurchasingCha
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={data.topVendorSpend} layout="vertical" margin={{ left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" horizontal={false} />
-            <XAxis type="number" tick={tick} tickLine={false} axisLine={false} tickFormatter={v => Number(v).toLocaleString()} />
-            <YAxis type="category" dataKey="vendor" tick={tick} tickLine={false} axisLine={false} width={120} />
-            <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#9090b0' }} formatter={v => Number(v).toLocaleString()} />
-            <Bar dataKey="total" fill={chartColor(1)} radius={[0, 6, 6, 0]} barSize={18} />
+            <XAxis type="number" reversed={rtl} orientation="bottom" tick={tick} tickLine={false} axisLine={false} tickFormatter={money} />
+            <YAxis type="category" dataKey="vendor" orientation={yOrientation} tick={tick} tickLine={false} axisLine={false} width={120} />
+            <Tooltip contentStyle={{ ...tooltipStyle, direction: rtl ? 'rtl' : 'ltr' }} labelStyle={{ color: '#9090b0' }} formatter={(v) => money(v as number)} />
+            <Bar dataKey="total" fill={chartColor(1)} radius={rtl ? [6, 0, 0, 6] : [0, 6, 6, 0]} barSize={18} />
           </BarChart>
         </ResponsiveContainer>
       </div>

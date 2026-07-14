@@ -6,7 +6,7 @@ import {
   listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition,
   listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
   recordPayment, convertDocument, overview, postPurchaseInvoiceToGl, analytics,
-  receiveDocument, compareQuotes,
+  receiveDocument, compareQuotes, confirmPurchaseInvoice, voidPurchaseInvoice,
 } from '@/lib/erp/purchasingData'
 import { issueVendorToken, revokeVendorTokens } from '@/lib/erp/vendorPortal'
 import type { PurchaseDocType } from '@/lib/erp/purchasing'
@@ -47,10 +47,12 @@ const docApprove = z.object({ action: z.literal('doc.approve'), id: z.number().i
 const docConvert = z.object({ action: z.literal('doc.convert'), sourceId: z.number().int(), toType: z.enum(DOC_TYPES) })
 const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional() })
 const docPost = z.object({ action: z.literal('doc.post'), id: z.number().int() })
+const docConfirm = z.object({ action: z.literal('doc.confirm'), id: z.number().int() })
+const docVoid = z.object({ action: z.literal('doc.void'), id: z.number().int() })
 const docReceive = z.object({ action: z.literal('doc.receive'), id: z.number().int(), warehouseId: z.number().int(), lines: z.array(z.object({ lineId: z.number().int(), qty: z.number().min(0) })).optional() })
 const portalLink = z.object({ action: z.literal('vendor.portalLink'), vendorId: z.number().int(), days: z.number().int().min(1).max(365).optional() })
 const portalRevoke = z.object({ action: z.literal('vendor.portalRevoke'), vendorId: z.number().int() })
-const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost, docReceive, portalLink, portalRevoke])
+const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost, docConfirm, docVoid, docReceive, portalLink, portalRevoke])
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin('edit')
@@ -102,6 +104,22 @@ export async function POST(req: NextRequest) {
         if (!['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'Posting to the GL requires an administrator' }, { status: 403 })
         const res = await postPurchaseInvoiceToGl(d.id, uid)
         await logAction(auth.user, 'erp.purchase.post', 'purchase_documents', String(d.id), { entryId: res.entryId, alreadyPosted: res.alreadyPosted })
+        return NextResponse.json(res)
+      }
+      case 'doc.confirm': {
+        // 26.24b BUG-008: confirming a purchase invoice AUTO-POSTS it to the GL
+        // (Cr Accounts Payable), mirroring sales. A closed period fails loudly and
+        // the status rolls back so AP can never drift negative on later payment.
+        try {
+          const res = await confirmPurchaseInvoice(d.id, uid)
+          await logAction(auth.user, 'erp.purchase.confirm', 'purchase_documents', String(d.id), null, { status: res.status, entryId: res.entryId }, ip)
+          return NextResponse.json(res)
+        } catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : 'Confirm failed' }, { status: 400 }) }
+      }
+      case 'doc.void': {
+        // Voiding a GL-posted purchase invoice books a balanced reversal entry.
+        const res = await voidPurchaseInvoice(d.id, uid)
+        await logAction(auth.user, 'erp.purchase.void', 'purchase_documents', String(d.id), null, { status: res.status, reversalId: res.reversalId }, ip)
         return NextResponse.json(res)
       }
     }

@@ -62,7 +62,7 @@ function Analytics({ rtl }: { rtl: boolean }) {
   }
   return (
     <div className="space-y-4">
-      <PurchasingCharts data={d} labels={{ spend: lc(rtl, 'Committed spend by month', 'هزینه ماهانه'), vendors: lc(rtl, 'Top vendors by spend', 'تأمین‌کنندگان پرهزینه') }} />
+      <PurchasingCharts data={d} locale={rtl ? 'fa' : 'en'} labels={{ spend: lc(rtl, 'Committed spend by month', 'هزینه ماهانه'), vendors: lc(rtl, 'Top vendors by spend', 'تأمین‌کنندگان پرهزینه') }} />
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-4">
           <h3 className="text-sm font-semibold text-text-primary mb-3">{lc(rtl, 'Spend by document type', 'هزینه بر اساس نوع سند')}</h3>
@@ -248,7 +248,9 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { id: 'grn', labelEn: 'Convert to GRN', labelFa: 'تبدیل به رسید', icon: '📦', hidden: d => d.docType !== 'order' || !['approved', 'confirmed'].includes(d.status), onClick: d => op('doc.convert', { sourceId: d.id, toType: 'receipt' }) },
     { id: 'receive', labelEn: 'Receive (GRN)', labelFa: 'دریافت کالا', icon: '🏭', hidden: d => d.docType !== 'receipt' || ['received', 'void', 'rejected'].includes(d.status), onClick: d => setReceiveFor(d) },
     { id: 'compare', labelEn: 'Compare quotes', labelFa: 'مقایسه استعلام‌ها', icon: '⚖', hidden: d => d.docType !== 'rfq', onClick: d => setCompareFor(d) },
+    { id: 'confirm', labelEn: 'Confirm & post', labelFa: 'تأیید و ثبت', icon: '✅', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || d.status !== 'draft', onClick: d => op('doc.confirm', { id: d.id }) },
     { id: 'post', labelEn: 'Post to GL', labelFa: 'ثبت در دفتر کل', icon: '📒', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || ['draft', 'void'].includes(d.status), onClick: d => op('doc.post', { id: d.id }) },
+    { id: 'void', labelEn: 'Void', labelFa: 'ابطال', icon: '🚫', hidden: d => d.docType !== 'invoice' || ['void', 'draft'].includes(d.status), onClick: d => op('doc.void', { id: d.id }) },
   ]
   return (
     <div className="space-y-4">

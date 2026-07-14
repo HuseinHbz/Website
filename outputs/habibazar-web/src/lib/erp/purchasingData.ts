@@ -6,7 +6,7 @@ import { pgQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
 import { assertPostable } from './accountingData'
-import { loadGlMap, applyGlMap, postPurchasePaymentToGl } from './glPosting'
+import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry } from './glPosting'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
@@ -236,8 +236,8 @@ import { purchaseInvoicePostingLines, postingBalanced } from './purchasing'
  * Returns the created journal entry id, or the existing one if already posted.
  */
 export async function postPurchaseInvoiceToGl(docId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null; date: string | null }>(
-    `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no, date FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null; date: string | null; company_id: number | null; cost_center_id: number | null; currency: string | null; exchange_rate: number | null }>(
+    `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no, date, company_id, cost_center_id, currency, exchange_rate FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
   if (d.gl_entry_id) return { entryId: d.gl_entry_id, alreadyPosted: true }
   if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices post to the GL')
@@ -260,17 +260,57 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   const gate = await assertPostable(glDate)
   if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this document date')
   const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
+  // Carry the document's company + currency onto the entry (tenancy + multi-currency).
   const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, created_at, posted_at)
-     VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, ${NOW}, ${NOW}) RETURNING id`,
-    [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null, gate.periodId ?? null]))[0]
+    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, company_id, currency, exchange_rate, created_at, posted_at)
+     VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, $10, ${NOW}, ${NOW}) RETURNING id`,
+    [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null, gate.periodId ?? null,
+     d.company_id ?? null, d.currency ?? 'IRR', num(d.exchange_rate) || 1]))[0]
   let ln = 0
   for (const l of lines) {
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
+    // Cost-center from the document flows onto every posting line (26.11 analytics).
+    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, d.cost_center_id ?? null])
   }
   await pgQuery(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
   return { entryId: entry.id, alreadyPosted: false }
+}
+
+/**
+ * Confirm a draft purchase invoice and auto-post it to the GL (26.24b BUG-008).
+ * Mirrors the sales confirm→auto-post path: a closed fiscal period fails loudly
+ * and the status is rolled back so the invoice never ends up "confirmed but
+ * never credited to AP" (the asymmetry that let AP drift negative on payment).
+ * Idempotent via the gl_entry_id guard inside postPurchaseInvoiceToGl.
+ */
+export async function confirmPurchaseInvoice(docId: number, userId?: string): Promise<{ status: PurchaseStatus; entryId: number | null }> {
+  const d = (await pgQuery<{ doc_type: string; status: string }>(`SELECT doc_type, status FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!d) throw new Error('Document not found')
+  if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices can be confirmed to the GL')
+  if (d.status === 'void') throw new Error('Voided documents cannot be confirmed')
+  const prev = d.status
+  await pgQuery(`UPDATE purchase_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [docId])
+  try {
+    const res = await postPurchaseInvoiceToGl(docId, userId)
+    return { status: 'confirmed', entryId: res.entryId }
+  } catch (err) {
+    await pgQuery(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, prev])
+    throw err
+  }
+}
+
+/**
+ * Void a purchase invoice. If it was posted to the GL, book a balanced REVERSAL
+ * entry (reuses the 26.23 reverseEntry mechanism → two-way reversal_of/reversed_by
+ * linkage). Idempotent — re-voiding a posted+reversed doc books nothing new.
+ */
+export async function voidPurchaseInvoice(docId: number, userId?: string): Promise<{ status: PurchaseStatus; reversalId: number | null }> {
+  const d = (await pgQuery<{ status: string; gl_entry_id: number | null }>(`SELECT status, gl_entry_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!d) throw new Error('Document not found')
+  let reversalId: number | null = null
+  if (d.gl_entry_id) reversalId = (await reverseEntry(Number(d.gl_entry_id), userId)).reversalId
+  await pgQuery(`UPDATE purchase_documents SET status='void', updated_at=${NOW} WHERE id=$1`, [docId])
+  return { status: 'void', reversalId }
 }
 
 // ── Analytics ────────────────────────────────────────────────────────────────

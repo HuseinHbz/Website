@@ -281,7 +281,7 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
                       </div>
                     )}
                   </div>
-                  <WidgetBody payload={payload} t={t} />
+                  <WidgetBody payload={payload} t={t} locale={locale} />
                 </Card>
               </div>
             )
@@ -293,7 +293,7 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
   )
 }
 
-function WidgetBody({ payload, t }: { payload: Payload | undefined; t: (k: string) => string }) {
+function WidgetBody({ payload, t, locale }: { payload: Payload | undefined; t: (k: string) => string; locale: string }) {
   if (!payload) return <div className="h-16 animate-pulse bg-white/[0.03] rounded" />
   switch (payload.kind) {
     case 'denied': return <p className="text-xs text-text-tertiary py-4">{t('dash_denied')}</p>
@@ -305,7 +305,7 @@ function WidgetBody({ payload, t }: { payload: Payload | undefined; t: (k: strin
         {payload.sub && <p className="text-xs text-text-tertiary mt-1">{payload.sub}</p>}
       </div>
     )
-    case 'chart': return <WidgetChart points={payload.points} />
+    case 'chart': return <WidgetChart points={payload.points} locale={locale} />
     case 'ops': return (
       <div className="space-y-2">
         {payload.metrics.map(m => (

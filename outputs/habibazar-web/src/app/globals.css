@@ -1138,3 +1138,47 @@ select.form-input option {
 .hx-sonar { animation-name: hxSonar; border-radius: 50% }
 .hx-galaxy-spin { animation-name: hxGalaxySpin }
 .hx-vortex { animation-name: hxVortex }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Print stylesheet for financial reports (Phase 26.24b بند ۵.۱)
+ * Trial balance / income statement / balance sheet / TTMS. Hides the admin
+ * chrome, forces A4 + light print-safe colours, repeats table headers across
+ * pages, and shows the company letterhead (`.print-company-header`, populated
+ * from erp_settings) + page numbers only on paper.
+ * ───────────────────────────────────────────────────────────────────────── */
+@media screen { .print-only { display: none !important; } }
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+
+  /* Hide the app shell + all interactive chrome. */
+  aside, header, nav[aria-label], .no-print, [data-no-print],
+  button:not(.print-keep), .admin-sidebar, .command-palette { display: none !important; }
+
+  /* Neutralise dark theme: print on white with black ink. */
+  html, body, #admin-main, .print-report {
+    background: #fff !important; color: #000 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  #admin-main { padding: 0 !important; overflow: visible !important; margin: 0 !important; }
+
+  .print-only { display: block !important; }
+  .print-company-header { display: block !important; margin-bottom: 8mm; border-bottom: 1.5pt solid #000; padding-bottom: 4mm; }
+  .print-company-header .name { font-size: 15pt; font-weight: 700; }
+  .print-company-header .meta { font-size: 9pt; color: #333; }
+
+  /* A report container prints edge-to-edge, black on white. */
+  .print-report { box-shadow: none !important; border: none !important; }
+  .print-report .bg-surface, .print-report .bg-surface-2, .print-report [class*="bg-white/"] { background: #fff !important; }
+  .print-report * { color: #000 !important; border-color: #999 !important; }
+
+  /* Repeat table headers on every printed page; avoid row splits. */
+  .print-report table { width: 100% !important; border-collapse: collapse; }
+  .print-report thead { display: table-header-group; }
+  .print-report tfoot { display: table-footer-group; }
+  .print-report tr { page-break-inside: avoid; }
+  .print-report th, .print-report td { border: 0.5pt solid #999 !important; padding: 3pt 5pt !important; font-size: 9pt !important; }
+
+  /* Footer page numbers via CSS counters. */
+  .print-page-number::after { content: counter(page) " / " counter(pages); }
+}

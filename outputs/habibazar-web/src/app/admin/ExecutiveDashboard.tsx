@@ -6,7 +6,7 @@ import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, Btn } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 
 const ViewsChart = dynamic(() => import('./ViewsChart'), { ssr: false, loading: () => <div className="h-[200px] animate-pulse rounded-lg bg-surface-2" /> })
 
@@ -27,6 +27,7 @@ function num(n: number | undefined | null): string { return (n ?? 0).toLocaleStr
 export function ExecutiveDashboard() {
   const { money: dmoney } = useDisplayCurrency()
   const t = useT()
+  const locale = useAdminLocale()
   const [ov, setOv] = useState<Overview | null>(null)
   const [tr, setTr] = useState<Traffic | null>(null)
   const [loading, setLoading] = useState(true)
@@ -99,7 +100,7 @@ export function ExecutiveDashboard() {
       <div className="grid lg:grid-cols-3 gap-4">
         <Card className="p-5 lg:col-span-2">
           <h3 className="text-sm font-semibold text-text-primary mb-4">{t('dash_trafficTrend')}</h3>
-          {tr && tr.dailyViews.length > 0 ? <ViewsChart data={tr.dailyViews} /> : <p className="text-xs text-text-tertiary">{t('dash_noData')}</p>}
+          {tr && tr.dailyViews.length > 0 ? <ViewsChart data={tr.dailyViews} locale={locale} /> : <p className="text-xs text-text-tertiary">{t('dash_noData')}</p>}
         </Card>
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-text-primary mb-3">{t('dash_activity')}</h3>

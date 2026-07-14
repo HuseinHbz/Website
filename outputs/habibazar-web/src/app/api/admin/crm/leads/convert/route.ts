@@ -4,6 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
+import { decideLeadConversion } from '@/lib/crm/leads'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,18 +24,20 @@ export async function POST(req: NextRequest) {
     const lead = (await pgQuery<{ id: number; name: string; email: string | null; phone: string | null; company: string | null; status: string; converted_customer_id: number | null }>(
       `SELECT id, name, email, phone, company, status, converted_customer_id FROM crm_leads WHERE id=$1`, [parsed.data.leadId]))[0]
     if (!lead) return badRequest('Lead not found')
-    if (lead.converted_customer_id) return NextResponse.json({ customerId: lead.converted_customer_id, linkedExisting: true, alreadyConverted: true })
-    if (!['qualified', 'proposal', 'won'].includes(lead.status)) return badRequest('Only qualified/proposal/won leads can be converted')
 
     // Duplicate detection: an active customer sharing the lead's email or phone.
-    let customerId: number | null = null
-    let linkedExisting = false
+    let matchId: number | null = null
     if (lead.email || lead.phone) {
       const existing = (await pgQuery<{ id: number }>(
         `SELECT id FROM sales_customers WHERE active=1 AND ((email IS NOT NULL AND email=$1) OR (phone IS NOT NULL AND phone=$2)) LIMIT 1`,
         [lead.email, lead.phone]))[0]
-      if (existing) { customerId = existing.id; linkedExisting = true }
+      if (existing) matchId = existing.id
     }
+    const decision = decideLeadConversion({ status: lead.status, convertedCustomerId: lead.converted_customer_id }, matchId)
+    if (decision.action === 'already') return NextResponse.json({ customerId: decision.customerId, linkedExisting: true, alreadyConverted: true })
+    if (decision.action === 'reject') return badRequest(decision.reason)
+    let customerId: number | null = decision.action === 'link' ? decision.customerId : null
+    const linkedExisting = decision.action === 'link'
     if (!customerId) {
       const code = `C-${String((await pgQuery<{ m: number }>(`SELECT COALESCE(MAX(id),0)::int AS m FROM sales_customers`))[0].m + 1).padStart(4, '0')}`
       customerId = (await pgQuery<{ id: number }>(

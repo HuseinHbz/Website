@@ -351,8 +351,13 @@ function ReportsView({ t, fa }: { t: T; fa: boolean }) {
   if (!d) return <Card className="p-5"><p className="text-sm text-text-tertiary">{t('fin_empty')}</p></Card>
   const name = (l: { nameEn: string; nameFa?: string | null }) => fa ? (l.nameFa || l.nameEn) : l.nameEn
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="space-y-4 print-report">
+      {/* Print-only statement header (26.24b بند ۵.۱). */}
+      <div className="print-only print-company-header">
+        <div className="name">{t(`fin_rep_${view}` as 'fin_rep_trial')}</div>
+        <div className="meta">{new Date().toLocaleDateString(fa ? 'fa-IR' : 'en-US')}{company !== 'all' ? ` · ${company}` : ''}</div>
+      </div>
+      <div className="flex flex-wrap items-end gap-3 no-print">
         <div className="flex gap-2">
           {(['trial', 'income', 'balance'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${view === v ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary border border-border'}`}>{t(`fin_rep_${v}` as 'fin_rep_trial')}</button>
@@ -363,6 +368,7 @@ function ReportsView({ t, fa }: { t: T; fa: boolean }) {
             options={[{ value: 'all', label: L(fa, 'Consolidated (all companies)', 'تلفیقی (همهٔ شرکت‌ها)') }, ...((d?.companies ?? []).map(c => ({ value: String(c.id), label: `${fa ? c.nameFa : c.nameEn} (${c.code})` })))]} />
           <Btn size="sm" variant="secondary" onClick={() => setShowCompany(true)}>+ {L(fa, 'Company', 'شرکت')}</Btn>
           <Btn size="sm" variant="secondary" onClick={() => setShowIc(true)}>⇄ {L(fa, 'Intercompany', 'بین‌شرکتی')}</Btn>
+          <Btn size="sm" variant="secondary" onClick={() => window.print()}>{L(fa, 'Print', 'چاپ')}</Btn>
         </div>
       </div>
       {showCompany && <CompanyModal fa={fa} onClose={() => setShowCompany(false)} onDone={() => { setShowCompany(false); load() }} />}

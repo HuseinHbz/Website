@@ -50,6 +50,27 @@ export function isOpen(status: LeadStatus): boolean {
   return status !== 'won' && status !== 'lost'
 }
 
+/**
+ * Pure lead→customer conversion decision (26.24b بند ۲.۳). Given a lead's current
+ * state and any active customer matched on email/phone, decides whether to short-
+ * circuit (already converted), link to the existing customer, create a new one,
+ * or reject. Keeps the route thin and makes dedup/idempotency unit-testable.
+ */
+export type ConversionDecision =
+  | { action: 'already'; customerId: number }
+  | { action: 'reject'; reason: string }
+  | { action: 'link'; customerId: number }
+  | { action: 'create' }
+export function decideLeadConversion(
+  lead: { status: string; convertedCustomerId: number | null },
+  existingMatchId: number | null,
+): ConversionDecision {
+  if (lead.convertedCustomerId) return { action: 'already', customerId: lead.convertedCustomerId }
+  if (!['qualified', 'proposal', 'won'].includes(lead.status)) return { action: 'reject', reason: 'Only qualified/proposal/won leads can be converted' }
+  if (existingMatchId) return { action: 'link', customerId: existingMatchId }
+  return { action: 'create' }
+}
+
 /** Aggregate pipeline metrics for the sales dashboard. */
 export interface PipelineStats {
   total: number

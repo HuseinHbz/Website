@@ -51,6 +51,8 @@ export function ReportingCenter() {
   const [result, setResult] = useState<RunResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'table' | 'summary'>('table')
+  // 26.24b بند ۵.۱: company letterhead for the print stylesheet (from erp_settings).
+  const [company, setCompany] = useState<{ name: string; meta: string }>({ name: '', meta: '' })
 
   useEffect(() => {
     fetch('/api/admin/erp/reports')
@@ -58,6 +60,16 @@ export function ReportingCenter() {
       .then(d => { setReports(d.reports ?? []); if (d.reports?.[0]) setActive(d.reports[0].id) })
       .catch(() => toast(t('rep_loadFail'), 'error'))
   }, [toast, t])
+
+  useEffect(() => {
+    fetch('/api/admin/settings').then(r => r.json()).then((s: Record<string, string>) => {
+      const meta = [s.company_reg_no && `${locale === 'fa' ? 'ثبت' : 'Reg'}: ${s.company_reg_no}`,
+        s.company_economic_code && `${locale === 'fa' ? 'کد اقتصادی' : 'Economic'}: ${s.company_economic_code}`,
+        s.company_national_id && `${locale === 'fa' ? 'شناسه ملی' : 'National ID'}: ${s.company_national_id}`]
+        .filter(Boolean).join('  ·  ')
+      setCompany({ name: s.company_name || s.site_name || '', meta })
+    }).catch(() => { /* header is optional */ })
+  }, [locale])
 
   const run = useCallback(async (id: string) => {
     if (!id) return
@@ -92,11 +104,14 @@ export function ReportingCenter() {
         title={t('rep_title')}
         subtitle={t('rep_subtitle')}
         action={result && (
-          <a
-            href={`/api/admin/erp/reports?id=${encodeURIComponent(result.def.id)}&format=csv`}
-            className="inline-flex items-center gap-2 rounded-lg font-semibold h-9 px-4 py-2 text-sm bg-surface-2 hover:bg-surface text-text-primary border border-border hover:border-border-strong transition-all duration-fast"
-            download
-          >{t('rep_exportCsv')}</a>
+          <div className="flex items-center gap-2">
+            <Btn variant="secondary" onClick={() => window.print()}>{locale === 'fa' ? 'چاپ' : 'Print'}</Btn>
+            <a
+              href={`/api/admin/erp/reports?id=${encodeURIComponent(result.def.id)}&format=csv`}
+              className="inline-flex items-center gap-2 rounded-lg font-semibold h-9 px-4 py-2 text-sm bg-surface-2 hover:bg-surface text-text-primary border border-border hover:border-border-strong transition-all duration-fast"
+              download
+            >{t('rep_exportCsv')}</a>
+          </div>
         )}
       />
 
@@ -122,7 +137,15 @@ export function ReportingCenter() {
       </Card>
 
       {result && (
-        <>
+        <div className="print-report space-y-6">
+          {/* Print-only company letterhead + report title (26.24b بند ۵.۱). */}
+          <div className="print-only print-company-header">
+            {company.name && <div className="name">{company.name}</div>}
+            {company.meta && <div className="meta">{company.meta}</div>}
+            <div className="meta" style={{ marginTop: '2mm' }}>
+              {name(result.def)} — {new Date().toLocaleDateString(locale === 'fa' ? 'fa-IR' : 'en-US')}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <Badge color={MODULE_COLOR[result.def.module]}>{t(`rep_mod_${result.def.module}`)}</Badge>
             <span className="text-sm text-text-secondary">{name(result.def)}</span>
@@ -160,10 +183,10 @@ export function ReportingCenter() {
               ))}
             </Card>
           )}
-        </>
+        </div>
       )}
 
-      <p className="text-xs text-text-tertiary">{t('rep_footnote')}</p>
+      <p className="text-xs text-text-tertiary no-print">{t('rep_footnote')}</p>
     </div>
   )
 }

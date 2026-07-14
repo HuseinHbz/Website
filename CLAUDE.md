@@ -782,6 +782,32 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   مودیان final POST needs the customer's key; payment merchants need terminal ids.
   **New governance rule: every new transactional table MUST carry `company_id`
   (enforced by `audit:tenancy`).**
+- **Phase 26.24b — Closeout** (report: `docs/governance/phase26.24b-closeout-report.md`).
+  Five core-debt items settled before the horizontal phases (audit-first, no new
+  scope). **BUG-008 (purchase→GL auto-post)**: audit proved purchase invoices only
+  posted via the manual admin `doc.post` — sales auto-posted since 26.23, so a paid-
+  but-unposted purchase invoice drove **AP negative** (payments Dr AP that was never
+  Cr'd). Fixed: `confirmPurchaseInvoice` (status→confirmed + auto-post through the
+  existing `postPurchaseInvoiceToGl`/`gl_map_*`, closed-period fails loudly + rolls
+  back, idempotent via `gl_entry_id`, now stamps `company_id`/`cost_center_id`/
+  currency) + `voidPurchaseInvoice` (balanced `reverseEntry`, two-way link) +
+  route `doc.confirm`/`doc.void` + PurchasingCenter "Confirm & post"/"Void" actions.
+  Live-PG **13/13** incl. the mandatory numeric AP proof (unposted → −10.9M, posting
+  Cr's AP → 0, global AP settles to **exactly 0, non-negative**). **Delegation
+  self-approval hole**: the maker≠checker guard checked only the nominal actor, so a
+  delegate acting **on behalf of the creator** bypassed it → fixed to the **effective
+  decision owner** (`isSeparationViolation`) + cyclic/self delegation rejected at
+  creation (`wouldCreateDelegationCycle`, both pure in `approval/engine.ts`). **Missing
+  26.23 unit tests** added as fast regressions (`closeout-2624b.test.ts` 15) + pure
+  `decideLeadConversion` (`crm/leads.ts`) — **666 → 684**. **Load/stress → real
+  numbers**: new CI `load-test` job (build → `next start` + postgres service →
+  `load-test.mjs`) + 5-min RSS watch; measured **zero 5xx**, p50 27–100ms, RSS flat
+  273MB (no leak). **Print + RTL** (real audit): financial-report `@media print`
+  stylesheet (A4, hide chrome, repeating table headers, `erp_settings` letterhead,
+  page numbers) on Reporting + Finance centers; recharts RTL bugs fixed (reversed
+  X-axis, right Y-axis, fa-IR digits) via pure tested `lib/admin/chartRtl.ts`
+  (`faDigits`/`axisTickFormatter`/`rtlChartProps`, 3 tests). Gates: TS 0 · ESLint 0 ·
+  **684 tests** · 9 audits 0 · build clean · regressions 45/45 · 26/26 · 24/24 · 28/28.
 - **Phase 26.23 — GL Integration Core + Operational CRM** (report:
   `docs/governance/phase26.23-gl-integration-crm-report.md`). **Sub-ledger →
   GL is now automatic**: confirming a sales invoice/credit note auto-posts it
