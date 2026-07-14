@@ -35,7 +35,7 @@ export function MasterDataGovernance({ role }: { role: string }) {
     <div className="space-y-4">
       <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1 flex-wrap">
         {([['overview', 'Overview', 'نمای کلی'], ['categories', 'Category tree', 'درخت دسته'], ['products', 'Product master', 'کارت کالا'], ['quality', 'Data quality', 'کیفیت داده'], ['steward', 'Data steward', 'میز داده'], ['duplicates', 'Duplicates', 'تکراری‌ها'], ['integrity', 'Relation integrity', 'یکپارچگی روابط']] as const).map(([id, en, faL]) => (
-          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${tab === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
+          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${tab === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>{L(fa, en, faL)}</button>
         ))}
       </div>
       {tab === 'overview' && <OverviewTab fa={fa} />}

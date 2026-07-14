@@ -156,8 +156,8 @@ export function BlogManager() {
         action={
           <div className="flex gap-2">
             <div className="flex rounded-lg bg-background border border-border overflow-hidden">
-              <button onClick={() => setTab('posts')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'posts' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{t('blogPosts')}</button>
-              <button onClick={() => setTab('categories')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'categories' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{t('blogCats')}</button>
+              <button onClick={() => setTab('posts')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'posts' ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('blogPosts')}</button>
+              <button onClick={() => setTab('categories')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${tab === 'categories' ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('blogCats')}</button>
             </div>
             {tab === 'posts' ? (
               <Btn onClick={() => { setEditing(EMPTY_POST); setModal(true) }}>{t('postNew')}</Btn>
@@ -181,7 +181,7 @@ export function BlogManager() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={isFA ? 'عنوان یا slug...' : 'title or slug...'}
-                    className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-white placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                    className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
                   />
                 </div>
               </div>
@@ -190,7 +190,7 @@ export function BlogManager() {
                 <select
                   value={filterCat}
                   onChange={(e) => setFilterCat(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه دسته‌ها' : 'All categories'}</option>
                   {categories.map((c) => (
@@ -203,7 +203,7 @@ export function BlogManager() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه' : 'All'}</option>
                   <option value="published">{t('published')}</option>
@@ -216,7 +216,7 @@ export function BlogManager() {
                 <select
                   value={filterFeatured}
                   onChange={(e) => setFilterFeatured(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه' : 'All'}</option>
                   <option value="yes">{isFA ? '★ ویژه' : '★ Featured'}</option>
@@ -243,7 +243,7 @@ export function BlogManager() {
             <DataTable
               tableId="blog-posts"
               columns={[
-                { key: 'titleEn', labelEn: 'Title', labelFa: t('title'), render: p => <div><div className="font-medium text-white flex items-center gap-1">{p.featured && <span className="text-yellow-400 text-xs">★</span>}{p.titleEn}</div><div className="text-xs text-text-tertiary truncate max-w-48">{p.titleFa}</div></div> },
+                { key: 'titleEn', labelEn: 'Title', labelFa: t('title'), render: p => <div><div className="font-medium text-text-primary flex items-center gap-1">{p.featured && <span className="text-yellow-400 text-xs">★</span>}{p.titleEn}</div><div className="text-xs text-text-tertiary truncate max-w-48">{p.titleFa}</div></div> },
                 { key: 'categoryId', labelEn: 'Category', labelFa: t('category'), type: 'enum', value: p => categories.find(c => c.id === p.categoryId)?.nameEn ?? '', render: p => { const cat = categories.find((c) => c.id === p.categoryId); return cat ? <span className="flex items-center gap-1 text-sm"><span className="w-2 h-2 rounded-full inline-block" style={{ background: cat.color }} /><span className="text-text-primary">{cat.nameEn}</span></span> : <span className="text-text-disabled">—</span> } },
                 { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['draft', 'published', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: p => <Badge color={statusColor[p.status]}>{statusLabel[p.status] || p.status}</Badge> },
                 { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true, render: p => <span className="text-text-tertiary">{p.views}</span> },
@@ -274,7 +274,7 @@ export function BlogManager() {
                     value={catSearch}
                     onChange={(e) => setCatSearch(e.target.value)}
                     placeholder={isFA ? 'نام یا slug...' : 'name or slug...'}
-                    className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-white placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
+                    className={`w-full bg-background border border-border rounded-lg py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-brand ${isFA ? 'pr-9 pl-3' : 'pl-9 pr-3'}`}
                   />
                 </div>
               </div>
@@ -283,7 +283,7 @@ export function BlogManager() {
                 <select
                   value={filterCatActive}
                   onChange={(e) => setFilterCatActive(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand"
                 >
                   <option value="">{isFA ? 'همه' : 'All'}</option>
                   <option value="active">{isFA ? 'فعال' : 'Active'}</option>
@@ -310,7 +310,7 @@ export function BlogManager() {
             <DataTable
               tableId="blog-categories"
               columns={[
-                { key: 'nameEn', labelEn: 'Category', labelFa: t('category'), render: c => <div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
+                { key: 'nameEn', labelEn: 'Category', labelFa: t('category'), render: c => <div><div className="font-medium text-text-primary">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
                 { key: 'slug', labelEn: 'Slug', labelFa: t('slug'), render: c => <span className="text-text-tertiary font-mono text-xs">{c.slug}</span> },
                 { key: 'icon', labelEn: 'Icon', labelFa: t('icon'), sortable: false, render: c => <span>{c.icon}</span> },
                 { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: c => <span className="inline-flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} /><span className="text-xs text-text-tertiary font-mono">{c.color}</span></span> },

@@ -167,14 +167,14 @@ function Templates({ rtl, toast, onOpen }: { rtl: boolean; toast: Toast; onOpen:
     <div className="space-y-4">
       <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1">
         {(['all', 'classic', 'premium'] as const).map(l => (
-          <button key={l} onClick={() => setLib(l)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${lib === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>
+          <button key={l} onClick={() => setLib(l)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${lib === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>
             {l === 'all' ? lc(rtl, 'All', 'همه') : l === 'classic' ? lc(rtl, 'Classic Templates', 'قالب‌های کلاسیک') : lc(rtl, 'Premium Templates', 'قالب‌های ویژه')}
           </button>
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
         {['all', ...HERO_CATEGORIES].map(c => (
-          <button key={c} onClick={() => setCat(c)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cat === c ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>{c}</button>
+          <button key={c} onClick={() => setCat(c)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cat === c ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-text-primary'}`}>{c}</button>
         ))}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -357,7 +357,7 @@ function AnimationLibrary({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' |
       <div className="flex flex-wrap gap-2 justify-end">
         <Btn size="sm" onClick={create}>+ {lc(rtl, 'New preset', 'پریست جدید')}</Btn>
         <Btn size="sm" variant="secondary" onClick={exportPkg}>⇩ {lc(rtl, 'Export signed package', 'خروجی امضاشده')}</Btn>
-        <label className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white/5 text-text-secondary hover:text-white text-sm cursor-pointer">
+        <label className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white/5 text-text-secondary hover:text-text-primary text-sm cursor-pointer">
           ⇧ {lc(rtl, 'Import package', 'ورود بسته')}
           <input type="file" accept="application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importPkg(f); e.target.value = '' }} />
         </label>

@@ -94,7 +94,7 @@ export function SecurityManager() {
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Two-Factor Authentication (TOTP)</p>
+                <p className="text-sm font-semibold text-text-primary">Two-Factor Authentication (TOTP)</p>
                 <p className="text-xs text-text-tertiary mt-0.5">Requires Google Authenticator or compatible app</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${state?.enabled ? 'bg-green-500/15 text-green-400' : 'bg-surface-2 text-text-secondary'}`}>
@@ -114,11 +114,11 @@ export function SecurityManager() {
           {/* Setup flow */}
           {phase === 'setup' && state && (
             <Card className="p-6 space-y-5">
-              <h3 className="text-sm font-semibold text-white">Setup Two-Factor Authentication</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Setup Two-Factor Authentication</h3>
 
               <div className="space-y-1">
                 <p className="text-xs text-text-secondary">Step 1 — Scan this QR code in Google Authenticator or Authy:</p>
-                <div className="flex justify-center p-4 bg-white rounded-xl w-fit mx-auto">
+                <div className="flex justify-center p-4 bg-surface rounded-xl w-fit mx-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={state.qrCode} alt="2FA QR Code" className="w-48 h-48" />
                 </div>
@@ -141,7 +141,7 @@ export function SecurityManager() {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
                   autoFocus
-                  className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-text-primary text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
 
@@ -157,7 +157,7 @@ export function SecurityManager() {
           {/* Disable flow */}
           {phase === 'disable' && (
             <Card className="p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-white">Disable Two-Factor Authentication</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Disable Two-Factor Authentication</h3>
               <p className="text-xs text-text-secondary">Enter the current code from your authenticator app to confirm:</p>
               <input
                 type="text"
@@ -167,7 +167,7 @@ export function SecurityManager() {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
                 autoFocus
-                className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
+                className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-text-primary text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
               />
               <div className="flex gap-3">
                 <Btn variant="danger" onClick={disable} disabled={saving || code.length < 6}>

@@ -50,7 +50,7 @@ export function AiKbManager() {
         <DataTable
           tableId="ai-kb"
           columns={[
-            { key: 'title', labelEn: 'Title', labelFa: 'عنوان', render: item => <div><div className="font-medium text-white">{item.title}</div>{item.tags && <div className="text-xs text-text-disabled mt-0.5">{item.tags}</div>}</div> },
+            { key: 'title', labelEn: 'Title', labelFa: 'عنوان', render: item => <div><div className="font-medium text-text-primary">{item.title}</div>{item.tags && <div className="text-xs text-text-disabled mt-0.5">{item.tags}</div>}</div> },
             { key: 'type', labelEn: 'Type', labelFa: 'نوع', type: 'enum', options: ['document', 'faq', 'snippet', 'url'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: item => <Badge color={typeColor[item.type]}>{item.type}</Badge> },
             { key: 'locale', labelEn: 'Locale', labelFa: 'زبان', type: 'enum', render: item => <span className="text-text-tertiary">{item.locale}</span> },
             { key: 'priority', labelEn: 'Priority', labelFa: 'اولویت', type: 'number', numeric: true, render: item => <span className="text-text-tertiary">{item.priority}</span> },

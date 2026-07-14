@@ -137,7 +137,7 @@ export function AboutEditor() {
           <div className="flex items-center gap-3">
             <div className="flex rounded-lg bg-background border border-border overflow-hidden">
               {(['en', 'fa'] as const).map((l) => (
-                <button key={l} onClick={() => setLocale(l)} className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>
+                <button key={l} onClick={() => setLocale(l)} className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>
                   {l.toUpperCase()}
                 </button>
               ))}

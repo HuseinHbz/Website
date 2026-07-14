@@ -131,7 +131,7 @@ export function AnalyticsPanel() {
               <span className="text-xs text-text-tertiary">{kpi.label}</span>
               <span style={{ color: kpi.color }} className="text-lg">{kpi.icon}</span>
             </div>
-            <p className="text-2xl font-bold text-white">{kpi.value.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-text-primary">{kpi.value.toLocaleString()}</p>
             <p className="text-xs text-text-disabled mt-1">{kpi.sub}</p>
           </div>
         ))}
@@ -140,11 +140,11 @@ export function AnalyticsPanel() {
       {/* Traffic Chart */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-white">نمودار ترافیک روزانه</h3>
+          <h3 className="text-sm font-semibold text-text-primary">نمودار ترافیک روزانه</h3>
           <div className="flex gap-1">
             {(['7', '14', '30'] as const).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${range === r ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary hover:text-white'}`}>
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${range === r ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary hover:text-text-primary'}`}>
                 {r} روز
               </button>
             ))}
@@ -178,7 +178,7 @@ export function AnalyticsPanel() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Top Pages bar chart */}
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">صفحات پربازدید</h3>
+          <h3 className="text-sm font-semibold text-text-primary mb-4">صفحات پربازدید</h3>
           {topPagesData.length > 0 ? (
             <div className="space-y-2.5">
               {topPagesData.map((p, i) => (
@@ -209,7 +209,7 @@ export function AnalyticsPanel() {
 
         {/* Action breakdown pie */}
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">توزیع عملیات‌های اخیر</h3>
+          <h3 className="text-sm font-semibold text-text-primary mb-4">توزیع عملیات‌های اخیر</h3>
           {actionPieData.length > 0 ? (
             <div className="flex items-center gap-6">
               <PieChart width={160} height={160}>
@@ -238,7 +238,7 @@ export function AnalyticsPanel() {
 
       {/* Full Activity Log */}
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">گزارش کامل فعالیت‌ها</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-4">گزارش کامل فعالیت‌ها</h3>
         <DataTable
           tableId="analytics-activity"
           columns={[
@@ -258,7 +258,7 @@ export function AnalyticsPanel() {
 
       {/* Content stats */}
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">وضعیت محتوا</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-4">وضعیت محتوا</h3>
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: 'پست وبلاگ', value: s?.publishedPosts ?? 0, color: '#818cf8', icon: '▣' },
@@ -267,7 +267,7 @@ export function AnalyticsPanel() {
           ].map((item, i) => (
             <div key={i} className="text-center p-4 bg-background rounded-xl border border-border">
               <span className="text-2xl" style={{ color: item.color }}>{item.icon}</span>
-              <p className="text-2xl font-bold text-white mt-1">{item.value}</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{item.value}</p>
               <p className="text-xs text-text-tertiary mt-0.5">{item.label}</p>
             </div>
           ))}

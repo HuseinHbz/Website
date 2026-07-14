@@ -167,7 +167,7 @@ export function ImageUploadCrop({
                 value={value || ''}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="/uploads/..."
-                className="w-full bg-background border border-strong rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-background border border-strong rounded-lg px-3 py-2 text-xs text-text-primary placeholder-slate-600 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
@@ -189,8 +189,8 @@ export function ImageUploadCrop({
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-surface-2 border border-strong rounded-2xl p-6 max-w-2xl w-full space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between">
-              <h3 className="text-white font-semibold">Crop Image</h3>
-              <button onClick={() => setSrcBlob(null)} className="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+              <h3 className="text-text-primary font-semibold">Crop Image</h3>
+              <button onClick={() => setSrcBlob(null)} className="text-slate-400 hover:text-text-primary text-xl leading-none">✕</button>
             </div>
 
             <div className="flex-1 overflow-auto flex items-center justify-center bg-background rounded-lg p-2">
@@ -217,7 +217,7 @@ export function ImageUploadCrop({
               <button
                 type="button"
                 onClick={() => setSrcBlob(null)}
-                className="px-4 py-2 text-sm text-slate-400 hover:text-white border border-strong rounded-lg transition-colors"
+                className="px-4 py-2 text-sm text-slate-400 hover:text-text-primary border border-strong rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -225,7 +225,7 @@ export function ImageUploadCrop({
                 type="button"
                 onClick={applyCrop}
                 disabled={uploading}
-                className="px-6 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                className="px-6 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-text-primary rounded-lg transition-colors"
               >
                 {uploading ? 'Uploading...' : 'Crop & Upload'}
               </button>

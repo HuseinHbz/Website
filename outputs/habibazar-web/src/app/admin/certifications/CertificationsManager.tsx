@@ -92,7 +92,7 @@ export function CertificationsManager() {
         <DataTable
           tableId="certifications"
           columns={[
-            { key: 'nameEn', labelEn: 'Certification', labelFa: 'گواهینامه', render: c => <div className="flex items-center gap-3">{c.badgeUrl ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.badgeUrl} alt={c.nameEn} className="w-8 h-8 rounded object-contain" style={{ background: `${c.color}15` }} />) : (<div className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold text-white" style={{ background: c.color }}>{c.nameEn.slice(0, 2).toUpperCase()}</div>)}<div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div></div> },
+            { key: 'nameEn', labelEn: 'Certification', labelFa: 'گواهینامه', render: c => <div className="flex items-center gap-3">{c.badgeUrl ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.badgeUrl} alt={c.nameEn} className="w-8 h-8 rounded object-contain" style={{ background: `${c.color}15` }} />) : (<div className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold text-text-primary" style={{ background: c.color }}>{c.nameEn.slice(0, 2).toUpperCase()}</div>)}<div><div className="font-medium text-text-primary">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div></div> },
             { key: 'issuer', labelEn: 'Issuer', labelFa: 'صادرکننده', type: 'enum', render: c => <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: c.color }} /><span className="text-text-primary">{c.issuer || '—'}</span></span> },
             { key: 'issueDate', labelEn: 'Issue Date', labelFa: 'تاریخ صدور', type: 'date', render: c => <span className="text-text-secondary text-sm">{c.issueDate || '—'}</span> },
             { key: 'expiryDate', labelEn: 'Expiry', labelFa: 'تاریخ انقضا', type: 'date', render: c => <span className="text-text-secondary text-sm">{c.expiryDate || <span className="text-green-500 text-xs">{isFA ? 'بدون انقضا' : 'No expiry'}</span>}</span> },
@@ -136,7 +136,7 @@ export function CertificationsManager() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={editing.badgeUrl} alt="badge" className="w-14 h-14 rounded-lg object-contain border border-border" style={{ background: `${editing.color}15` }} />
               ) : (
-                <div className="w-14 h-14 rounded-lg flex items-center justify-center text-sm font-bold text-white border border-border" style={{ background: editing.color }}>
+                <div className="w-14 h-14 rounded-lg flex items-center justify-center text-sm font-bold text-text-primary border border-border" style={{ background: editing.color }}>
                   {editing.nameEn.slice(0, 3).toUpperCase() || '?'}
                 </div>
               )}
@@ -157,7 +157,7 @@ export function CertificationsManager() {
               <select
                 value={editing.active ? 'true' : 'false'}
                 onChange={(e) => set('active', e.target.value === 'true')}
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand"
               >
                 <option value="true">{isFA ? 'فعال' : 'Active'}</option>
                 <option value="false">{isFA ? 'غیرفعال' : 'Inactive'}</option>

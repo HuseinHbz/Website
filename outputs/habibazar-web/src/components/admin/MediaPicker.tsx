@@ -248,7 +248,7 @@ export function GalleryPicker({ value, onChange, label, folder: defaultFolder = 
                     <img src={f.url} alt={f.originalName} className="w-full h-20 object-cover" />
                     {value.includes(f.url) && (
                       <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                        <span className="text-white text-lg">✓</span>
+                        <span className="text-text-primary text-lg">✓</span>
                       </div>
                     )}
                   </div>

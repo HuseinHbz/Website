@@ -51,7 +51,7 @@ export function AuditView() {
           <div key={action} className="flex flex-col items-center gap-1 p-3 rounded-xl border border-border bg-surface-2">
             <span className="text-base">{ACTION_ICON[action] || '•'}</span>
             <span className="text-3xs text-text-tertiary uppercase font-bold">{action}</span>
-            <span className="text-sm font-bold text-white">{stats[action] || 0}</span>
+            <span className="text-sm font-bold text-text-primary">{stats[action] || 0}</span>
           </div>
         ))}
       </div>

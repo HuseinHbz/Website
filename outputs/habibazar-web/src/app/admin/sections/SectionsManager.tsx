@@ -200,7 +200,7 @@ export function SectionsManager() {
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         {[
-          { label: t('total'), count: sections.length, color: 'text-white' },
+          { label: t('total'), count: sections.length, color: 'text-text-primary' },
           { label: t('published'), count: sections.filter((s) => s.status === 'published').length, color: 'text-green-400' },
           { label: t('draft'), count: sections.filter((s) => s.status === 'draft').length, color: 'text-text-secondary' },
           { label: t('archived'), count: sections.filter((s) => s.status === 'archived').length, color: 'text-red-400' },
@@ -217,7 +217,7 @@ export function SectionsManager() {
         <DataTable
           tableId="sections"
           columns={[
-            { key: 'titleEn', labelEn: 'Section', labelFa: t('section'), render: s => <div><div className="font-medium text-white text-sm">{s.titleEn || <span className="text-text-tertiary italic">Untitled</span>}</div>{s.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{s.titleFa}</div>}</div> },
+            { key: 'titleEn', labelEn: 'Section', labelFa: t('section'), render: s => <div><div className="font-medium text-text-primary text-sm">{s.titleEn || <span className="text-text-tertiary italic">Untitled</span>}</div>{s.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{s.titleFa}</div>}</div> },
             { key: 'sectionType', labelEn: 'Type', labelFa: t('type'), type: 'enum', value: s => { const ti = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]; return ti ? ti.labelEn : s.sectionType }, render: s => { const typeInfo = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]; return <span className="text-xs text-brand">{typeInfo ? `${typeInfo.icon} ${typeInfo.labelEn}` : s.sectionType}</span> } },
             { key: 'variant', labelEn: 'Variant', labelFa: t('variant'), type: 'enum', render: s => <span className="text-xs text-text-secondary">{s.variant}</span> },
             { key: 'theme', labelEn: 'Theme', labelFa: t('theme'), type: 'enum', render: s => <span className="text-xs text-text-secondary">{s.theme}</span> },
@@ -274,7 +274,7 @@ export function SectionsManager() {
               value={editing.contentEn || ''}
               onChange={(e) => setEditing({ ...editing, contentEn: e.target.value })}
               rows={3}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand transition-colors resize-y"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand transition-colors resize-y"
             />
           </div>
           <div>
@@ -284,7 +284,7 @@ export function SectionsManager() {
               onChange={(e) => setEditing({ ...editing, contentFa: e.target.value })}
               rows={3}
               dir="rtl"
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand transition-colors resize-y"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand transition-colors resize-y"
             />
           </div>
 
@@ -371,7 +371,7 @@ export function SectionsManager() {
                 return (
                   <div key={v.version} className="bg-background border border-border rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white">Version {v.version}</span>
+                      <span className="text-sm font-medium text-text-primary">Version {v.version}</span>
                       <span className="text-xs text-text-tertiary">{new Date(v.createdAt).toLocaleString()}</span>
                     </div>
                     <div className="text-xs text-text-secondary">

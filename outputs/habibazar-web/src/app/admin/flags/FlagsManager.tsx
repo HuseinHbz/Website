@@ -72,7 +72,7 @@ export function FlagsManager() {
       key: 'enabled', labelEn: 'State', labelFa: t('flag_colState'), type: 'boolean', value: (f) => f.enabled,
       render: (f) => (
         <button onClick={() => toggle(f)} className={`relative w-9 h-5 rounded-full transition-colors ${f.enabled ? 'bg-success' : 'bg-surface-2'}`} aria-pressed={f.enabled}>
-          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${f.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+          <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${f.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
         </button>
       ),
     },

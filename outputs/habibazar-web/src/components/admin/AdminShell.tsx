@@ -76,7 +76,7 @@ export function AdminShell({ user, title, children }: Props) {
     <NavPrefsProvider>
     <div className="min-h-screen bg-background text-text-primary flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Skip navigation link (WCAG) */}
-      <a href="#admin-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:start-2 focus:bg-brand focus:text-white focus:px-3 focus:py-2 focus:rounded-lg">
+      <a href="#admin-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:start-2 focus:bg-brand focus:text-text-primary focus:px-3 focus:py-2 focus:rounded-lg">
         {isRTL ? 'پرش به محتوا' : 'Skip to content'}
       </a>
       {/* Mobile overlay */}

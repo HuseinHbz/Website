@@ -751,6 +751,37 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   +98/0098/98→0, email, national-code padding, ٬٫ separators) applied before
   validation. Live-PG verified (Persian-sheet xlsx → dry-run wrote nothing →
   real import + «۰۹۱۲…» phone normalized).
+- **Phase 26.24 — Production Hardening + Iran Compliance + Tenancy** (report:
+  `docs/governance/phase26.24-hardening-iran-report.md`, ADR:
+  `docs/governance/ADR-001-tenancy.md`). **Tenancy (ADR-001)**: adopted
+  multi-company-now / tenant-ready; `company_id` backfilled (idempotent,
+  nullable) onto every transactional table (sales/purchase docs+payments,
+  inv_moves, assets, crm_leads); new **`audit:tenancy`** gate fails the build if
+  a transactional table lacks it. **CI**: `.github/workflows/ci.yml` (quality
+  job = tsc+eslint+tests+9 audits+build; live-pg job = postgres:16 service →
+  `scripts/ci-live-pg.ts`). **Health probes**: `/api/health?probe=live|ready|deep`
+  (deep = DB+migrations+disk+memory). **Theme debt**: a fragment-aware codemod
+  migrated 169 hardcoded `text-white`/`bg-white` on neutral surfaces across 54
+  admin files to tokens (keeping legit white-on-`bg-brand`); new **`audit:theme`**
+  gate (0 hits). **Iran compliance** — **سامانه مودیان** (`src/lib/erp/moadian/`:
+  pure standard e-invoice builder + `moadian_queue` pending→sent→failed→confirmed
+  + submit adapter — real endpoint when a private-key/memory-id is set in
+  erp_settings, deterministic **sandbox** otherwise; Finance **Iran Compliance**
+  tab + Sales "Send to مودیان" action); **payment gateway** (`src/lib/erp/
+  payments/`: one `GatewayProvider`, Zarrinpal full w/ official sandbox +
+  Saman/Mellat skeletons; create→public `/api/pay/callback` server-verify→
+  reconcile to sales_payments + auto-post GL receipt via 26.23); **TTMS**
+  (`erp/ttms.ts` + pure zero-dep `erp/jalali.ts` calendar: quarterly معاملات
+  فصلی report bounded by Persian quarter + CSV). `payment_transactions` +
+  `sales_documents.moadian_status` tables. **Hardening**: `deploy/restore-drill.sh`
+  (dump→throwaway-DB→validate→trial-balance, prints RTO), `deploy/deploy-blue-
+  green.sh` (paired-port PM2 + health-gate + 1-line rollback), `scripts/load-
+  test.mjs`. SQL-injection proof: 1033 pgQuery calls all `$n`-parametrized.
+  Gates: TS 0 · ESLint 0 · **666 tests** · **9 audits 0** · build clean · live-PG
+  **24/24** + regressions 45/45, 26/26, 28/28. Honest boundaries (blocked-external):
+  مودیان final POST needs the customer's key; payment merchants need terminal ids.
+  **New governance rule: every new transactional table MUST carry `company_id`
+  (enforced by `audit:tenancy`).**
 - **Phase 26.23 — GL Integration Core + Operational CRM** (report:
   `docs/governance/phase26.23-gl-integration-crm-report.md`). **Sub-ledger →
   GL is now automatic**: confirming a sales invoice/credit note auto-posts it
@@ -1237,7 +1268,7 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
 - E2E seeds/logs in via the seeded admin above (see `e2e/helpers.ts`).
 - Target: zero TS errors, zero lint warnings, 0 vulnerabilities, all tests green.
 
-## Governance audits (`npm run audit` runs all seven; docs in `docs/governance/`)
+## Governance audits (`npm run audit` runs all nine; docs in `docs/governance/`)
 - `audit:tokens` — design tokens: fails on arbitrary Tailwind color classes
   (drift). Source of truth: `tailwind.config.ts` + `src/lib/design/tokens.ts`
   (`BRAND`, `CHART_PALETTE`, `SOCIAL_BRAND`) for values that can't be a class.
@@ -1262,7 +1293,7 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   informationally. Micro sizes are on-scale via `4xs` (9px)/`3xs` (10px)/`2xs`
   (11px). Complements `audit:tokens` (colour). Report:
   `docs/governance/phase24-quality-platform.md`.
-- `tokens`, `content`, `deps`, `links`, `i18n` and `ui` audits gate CI (in the ESLint job).
+- `tokens`, `content`, `deps`, `links`, `i18n`, `ui`, `tenancy` and `theme` audits gate CI (GitHub Actions `.github/workflows/ci.yml` + the ESLint job). `audit:tenancy` (26.24) fails on a transactional table without `company_id`; `audit:theme` (26.24) fails on hardcoded white/black on neutral admin surfaces.
 
 ## CI (`.github/workflows/ci.yml`)
 Jobs: TypeScript, ESLint, Unit Tests, Build, Security Audit

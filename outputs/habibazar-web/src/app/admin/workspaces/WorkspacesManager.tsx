@@ -38,7 +38,7 @@ export function WorkspacesManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editWorkspace') : t('newWorkspace')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editWorkspace') : t('newWorkspace')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label={t('name')} value={editing.name || ''} onChange={v => setEditing(e => ({ ...e, name: v }))} /></div>
               <Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} />
@@ -69,7 +69,7 @@ export function WorkspacesManager() {
               </div>
               <Badge color={ws.active ? 'green' : 'slate'}>{ws.active ? t('active') : t('inactive')}</Badge>
             </div>
-            <div className="font-bold text-white mb-1">{ws.name}</div>
+            <div className="font-bold text-text-primary mb-1">{ws.name}</div>
             <div className="text-xs text-text-tertiary mb-3">{ws.type} · {ws.isolationLevel} isolation</div>
             <Btn size="sm" variant="ghost" onClick={() => setEditing(ws)}>{t('configure')}</Btn>
           </div>

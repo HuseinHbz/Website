@@ -69,8 +69,8 @@ export function SkillsManager() {
         action={
           <div className="flex gap-2">
             <div className="flex rounded-lg bg-background border border-border overflow-hidden">
-              <button onClick={() => setTab('skills')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${tab === 'skills' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{t('skillsTab')}</button>
-              <button onClick={() => setTab('certs')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${tab === 'certs' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{t('certsTab')}</button>
+              <button onClick={() => setTab('skills')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${tab === 'skills' ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('skillsTab')}</button>
+              <button onClick={() => setTab('certs')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${tab === 'certs' ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('certsTab')}</button>
             </div>
             <Btn onClick={() => { if (tab === 'skills') setEditS(EMPTY_SKILL); else setEditC(EMPTY_CERT); setModal(true) }}>{t('add')}</Btn>
           </div>
@@ -82,7 +82,7 @@ export function SkillsManager() {
           <DataTable
             tableId="skills"
             columns={[
-              { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: s => <div><div className="font-medium text-white">{s.nameEn}</div><div className="text-xs text-text-tertiary">{s.nameFa}</div></div> },
+              { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: s => <div><div className="font-medium text-text-primary">{s.nameEn}</div><div className="text-xs text-text-tertiary">{s.nameFa}</div></div> },
               { key: 'categoryEn', labelEn: 'Category', labelFa: t('category'), type: 'enum', render: s => <span className="text-text-secondary">{s.categoryEn}</span> },
               { key: 'level', labelEn: 'Level', labelFa: t('level'), type: 'number', numeric: true, render: s => <div className="flex items-center gap-2"><div className="flex-1 h-1.5 bg-surface-2 rounded-full max-w-20"><div className="h-full rounded-full bg-brand" style={{ width: `${s.level}%` }} /></div><span className="text-xs text-text-secondary">{s.level}%</span></div> },
               { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: s => <ColorDot color={s.color} /> },
@@ -104,7 +104,7 @@ export function SkillsManager() {
           <DataTable
             tableId="skills-certs"
             columns={[
-              { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: c => <div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
+              { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: c => <div><div className="font-medium text-text-primary">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
               { key: 'issuer', labelEn: 'Issuer', labelFa: t('issuer'), type: 'enum', render: c => <span className="text-text-secondary">{c.issuer}</span> },
               { key: 'issueDate', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-text-tertiary text-xs">{c.issueDate}</span> },
               { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: c => <ColorDot color={c.color} /> },

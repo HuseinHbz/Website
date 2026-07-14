@@ -97,7 +97,7 @@ export function MenuBuilder() {
       <div className="flex gap-2 mb-6">
         {(['header', 'footer'] as const).map(loc => (
           <button key={loc} onClick={() => setLocation(loc)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${location === loc ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-white'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${location === loc ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-text-primary'}`}>
             {loc === 'header' ? `☰ ${t('headerNav')}` : `— ${t('footerNav')}`}
           </button>
         ))}
@@ -108,7 +108,7 @@ export function MenuBuilder() {
         {/* Tree view */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white capitalize">{location} Menu</h3>
+            <h3 className="text-sm font-semibold text-text-primary capitalize">{location} Menu</h3>
             <Btn size="sm" onClick={() => openNew(location)}>+ Add Item</Btn>
           </div>
           {filteredItems.length === 0 && (
@@ -120,12 +120,12 @@ export function MenuBuilder() {
                 <div className={`flex items-center gap-3 p-2.5 rounded-lg ${item.active ? '' : 'opacity-50'}`}
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <div className="flex flex-col gap-0.5">
-                    <button onClick={() => reorder(item.id, -1)} className="text-text-disabled hover:text-white text-3xs">▲</button>
-                    <button onClick={() => reorder(item.id, 1)} className="text-text-disabled hover:text-white text-3xs">▼</button>
+                    <button onClick={() => reorder(item.id, -1)} className="text-text-disabled hover:text-text-primary text-3xs">▲</button>
+                    <button onClick={() => reorder(item.id, 1)} className="text-text-disabled hover:text-text-primary text-3xs">▼</button>
                   </div>
                   <span className="text-base">{item.icon || '◦'}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium">{item.labelEn}</p>
+                    <p className="text-sm text-text-primary font-medium">{item.labelEn}</p>
                     <p className="text-xs text-text-tertiary">{item.labelFa} · <span className="font-mono">{item.href}</span></p>
                   </div>
                   <Badge color={item.active ? 'green' : 'slate'}>{item.active ? 'On' : 'Off'}</Badge>
@@ -142,7 +142,7 @@ export function MenuBuilder() {
                     style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.1)' }}>
                     <span className="text-text-disabled text-xs">↳</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white">{child.labelEn}</p>
+                      <p className="text-xs text-text-primary">{child.labelEn}</p>
                       <p className="text-3xs text-text-tertiary font-mono">{child.href}</p>
                     </div>
                     <div className="flex gap-1">
@@ -158,16 +158,16 @@ export function MenuBuilder() {
 
         {/* Preview */}
         <Card className="p-4">
-          <h3 className="text-sm font-semibold text-white mb-4">
+          <h3 className="text-sm font-semibold text-text-primary mb-4">
             {location === 'header' ? `☰ ${t('headerPreview')}` : `— ${t('footerPreview')}`}
           </h3>
           {location === 'header' ? (
             <div className="rounded-xl overflow-hidden bg-surface-2 border border-subtle">
               <div className="flex items-center gap-4 px-6 py-3 border-b border-subtle">
-                <span className="text-white font-bold text-sm">HBZ</span>
+                <span className="text-text-primary font-bold text-sm">HBZ</span>
                 <div className="flex gap-4 ml-auto">
                   {topLevel.filter(i => i.active).map(i => (
-                    <span key={i.id} className="text-xs text-text-secondary hover:text-white cursor-pointer">{i.labelEn}</span>
+                    <span key={i.id} className="text-xs text-text-secondary hover:text-text-primary cursor-pointer">{i.labelEn}</span>
                   ))}
                 </div>
               </div>
@@ -176,9 +176,9 @@ export function MenuBuilder() {
             <div className="rounded-xl overflow-hidden p-6 bg-surface-2 border border-subtle">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-xs font-bold text-white mb-2">Navigation</p>
+                  <p className="text-xs font-bold text-text-primary mb-2">Navigation</p>
                   {filteredItems.filter(i => i.active && !i.parentId).map(i => (
-                    <p key={i.id} className="text-xs text-text-tertiary mb-1 hover:text-white cursor-pointer">{i.labelEn}</p>
+                    <p key={i.id} className="text-xs text-text-tertiary mb-1 hover:text-text-primary cursor-pointer">{i.labelEn}</p>
                   ))}
                 </div>
               </div>
@@ -194,7 +194,7 @@ export function MenuBuilder() {
                   setEditing({ ...EMPTY, labelEn: link.label, labelFa: link.label, href: link.href, location, sortOrder: filteredItems.length })
                   setModal(true)
                 }}
-                  className="text-xs px-2 py-1 rounded text-text-secondary hover:text-white transition-colors"
+                  className="text-xs px-2 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   + {link.label}
                 </button>

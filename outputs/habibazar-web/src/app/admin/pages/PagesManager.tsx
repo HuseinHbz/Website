@@ -190,7 +190,7 @@ export function PagesManager() {
         <DataTable
           tableId="pages"
           columns={[
-            { key: 'titleEn', labelEn: 'Page', labelFa: 'صفحه', render: p => <div><div className="font-medium text-white text-sm">{p.titleEn}</div>{p.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{p.titleFa}</div>}</div> },
+            { key: 'titleEn', labelEn: 'Page', labelFa: 'صفحه', render: p => <div><div className="font-medium text-text-primary text-sm">{p.titleEn}</div>{p.titleFa && <div className="text-xs text-text-tertiary mt-0.5" dir="rtl">{p.titleFa}</div>}</div> },
             { key: 'slug', labelEn: 'Slug', labelFa: 'اسلاگ', render: p => <span className="text-xs text-brand font-mono">/{p.slug}</span> },
             { key: 'layout', labelEn: 'Layout', labelFa: 'چیدمان', type: 'enum', render: p => <span className="text-xs text-text-secondary">{p.layout}</span> },
             { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', options: ['draft', 'published', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: p => <Badge color={STATUS_COLOR[p.status] || 'slate'}>{p.status}</Badge> },
@@ -284,13 +284,13 @@ export function PagesManager() {
                         <span className="text-text-disabled text-sm font-mono w-5 text-center">{idx + 1}</span>
                         <span className="text-base">{typeInfo?.icon || '📦'}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-white truncate">{s.titleEn || 'Untitled'}</div>
+                          <div className="text-sm text-text-primary truncate">{s.titleEn || 'Untitled'}</div>
                           <div className="text-xs text-text-tertiary">{typeInfo?.labelEn || s.sectionType} · {s.variant}</div>
                         </div>
                         <Badge color={s.status === 'published' ? 'green' : 'slate'}>{s.status || 'draft'}</Badge>
                         <div className="flex gap-1">
-                          <button onClick={() => moveSection(idx, -1)} disabled={idx === 0} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-white disabled:opacity-20">↑</button>
-                          <button onClick={() => moveSection(idx, 1)} disabled={idx === builderPage.sections.length - 1} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-white disabled:opacity-20">↓</button>
+                          <button onClick={() => moveSection(idx, -1)} disabled={idx === 0} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-20">↑</button>
+                          <button onClick={() => moveSection(idx, 1)} disabled={idx === builderPage.sections.length - 1} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-20">↓</button>
                           <button onClick={() => toggleSectionActive(idx)} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-yellow-400">{s.active ? '👁' : '🙈'}</button>
                           <button onClick={() => removeSection(idx)} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-red-400">✕</button>
                         </div>
@@ -322,7 +322,7 @@ export function PagesManager() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm">{typeInfo?.icon || '📦'}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-white truncate">{s.titleEn || 'Untitled'}</div>
+                          <div className="text-xs font-medium text-text-primary truncate">{s.titleEn || 'Untitled'}</div>
                           <div className="text-xs text-text-tertiary">{typeInfo?.labelEn || s.sectionType}</div>
                         </div>
                         {already && <span className="text-xs text-green-400">✓</span>}

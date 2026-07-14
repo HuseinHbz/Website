@@ -232,24 +232,24 @@ export function LogsMonitoring() {
             <button onClick={() => setMode('history')} className={`px-3 py-1.5 text-xs font-medium ${mode === 'history' ? 'bg-brand text-white' : 'text-text-secondary'}`}>History</button>
           </div>
 
-          <select value={level} onChange={(e) => setLevel(e.target.value as Level | 'all')} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white">
+          <select value={level} onChange={(e) => setLevel(e.target.value as Level | 'all')} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary">
             {LEVELS.map((l) => <option key={l} value={l}>{l === 'all' ? 'All levels' : l.toUpperCase()}</option>)}
           </select>
-          <select value={source} onChange={(e) => setSource(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white">
+          <select value={source} onChange={(e) => setSource(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary">
             <option value="all">All sources</option>
             {facets.sources.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select value={service} onChange={(e) => setService(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white">
+          <select value={service} onChange={(e) => setService(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary">
             <option value="all">All services</option>
             {facets.services.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="flex-1 min-w-[160px] bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-text-disabled" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="flex-1 min-w-[160px] bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-text-primary placeholder-text-disabled" />
 
           {mode === 'history' && (
             <>
-              <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white" />
-              <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white" />
+              <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary" />
+              <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary" />
               <Btn size="sm" variant="secondary" onClick={runQuery}>Search</Btn>
               <label className="flex items-center gap-1.5 text-xs text-text-secondary"><input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} /> Group errors</label>
             </>

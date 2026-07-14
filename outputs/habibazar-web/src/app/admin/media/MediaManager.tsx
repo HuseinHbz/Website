@@ -172,7 +172,7 @@ export function MediaManager() {
         {selected && (
           <div className="w-60 flex-shrink-0">
             <Card className="p-4 space-y-3">
-              <p className="text-xs font-bold text-white truncate">{selected.originalName}</p>
+              <p className="text-xs font-bold text-text-primary truncate">{selected.originalName}</p>
               {isImage(selected.mimeType) && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={selected.url.startsWith('/') ? selected.url : `/${selected.url}`} alt={selected.alt || ''} className="w-full rounded-lg bg-background" />

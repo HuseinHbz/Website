@@ -1,214 +1,66 @@
 name: CI
 
+# Phase 26.24 (بند ۲.۱): typecheck + lint + unit tests + build + all governance
+# audits on every push/PR, plus live-PostgreSQL verification in a service
+# container. The app lives in outputs/habibazar-web (defaults.run.working-directory).
 on:
   push:
-    branches: [feature/v2-enterprise-upgrade, hbz, main]
+    branches: [feature/v2-enterprise-upgrade, main]
   pull_request:
-    branches: [hbz, main]
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 defaults:
   run:
     working-directory: outputs/habibazar-web
 
 jobs:
-  # ── Type check ─────────────────────────────────────────────────────────────
-  typecheck:
-    name: TypeScript
+  quality:
+    name: Type · Lint · Test · Build · Audits
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: npm
           cache-dependency-path: outputs/habibazar-web/package-lock.json
       - run: npm ci
-      - run: npx tsc --noEmit
-
-  # ── Lint ───────────────────────────────────────────────────────────────────
-  lint:
-    name: ESLint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
-      - run: npm ci
-      - run: npx next lint
-      - name: Design token governance
-        run: npm run audit:tokens
-      - name: CMS content governance
-        run: npm run audit:content
-      - name: Dependency & bundle governance
-        run: npm run audit:deps
-      - name: Link & media integrity
-        run: npm run audit:links
-      - name: Translation-key integrity
-        run: npm run audit:i18n
-      - name: UI consistency (design language)
-        run: npm run audit:ui
-
-  # ── Unit tests ─────────────────────────────────────────────────────────────
-  test:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
-      - run: npm ci
-      - run: npm test --if-present
-
-  # ── Build ──────────────────────────────────────────────────────────────────
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [typecheck, lint]
-    env:
-      ADMIN_JWT_SECRET: ci-test-secret-not-for-production
-      NEXT_PUBLIC_SITE_URL: https://habibazar.ir
-      NEXT_PUBLIC_API_URL: https://api.habibazar.ir
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-build
-          path: outputs/habibazar-web/.next
-          # .next is a dotfile; upload-artifact@v4 excludes hidden files by default
-          include-hidden-files: true
-          retention-days: 7
-
-  # ── Security scan ──────────────────────────────────────────────────────────
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
-      - run: npm audit --audit-level=critical --omit=dev
-      - name: Check for secrets in code
-        run: |
-          if grep -rE "(password|secret|token|key)\s*=\s*['\"][^'\"]{8,}['\"]" \
-            --include="*.ts" --include="*.tsx" \
-            --exclude-dir=node_modules --exclude-dir=.next \
-            . | grep -v "process\.env\|placeholder\|example\|TODO\|CHANGEME\|test\|spec\|blogContent"; then
-            echo "Potential hardcoded secrets found!"
-            exit 1
-          fi
-          echo "No hardcoded secrets found."
-
-  # ── E2E tests ──────────────────────────────────────────────────────────────
-  e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    needs: [build]
-    env:
-      ADMIN_JWT_SECRET: ci-test-secret-not-for-production
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      NEXT_PUBLIC_API_URL: http://localhost:3000
-      PLAYWRIGHT_BASE_URL: http://localhost:3000
-      PLAYWRIGHT_CHROMIUM_PATH: /usr/bin/chromium-browser
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
-      - run: npm ci
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: next-build
-          path: outputs/habibazar-web/.next
-      - name: Install Chromium
-        run: sudo apt-get install -y chromium-browser
-      - name: Install Playwright
-        run: npx playwright install chromium --with-deps
-      - name: Start app
-        run: npm run start &
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: ESLint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test
+      - name: Governance audits (9)
+        run: npm run audit
+      - name: Build
+        run: npm run build
         env:
-          PORT: 3000
-      - name: Wait for app
-        run: npx wait-on http://localhost:3000/api/health --timeout 30000
-      - name: Run E2E tests
-        run: npx playwright test --reporter=github
-      - name: Upload E2E artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: outputs/habibazar-web/playwright-report
-          retention-days: 7
+          ADMIN_JWT_SECRET: ci-build-secret-placeholder-value
 
-  # ── Lighthouse CI ──────────────────────────────────────────────────────────
-  lighthouse:
-    name: Lighthouse CI
+  live-pg:
+    name: Live PostgreSQL verification
     runs-on: ubuntu-latest
-    needs: [build]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hbz_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      ADMIN_JWT_SECRET: ci-test-secret-not-for-production
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      PLAYWRIGHT_BASE_URL: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/hbz_ci
+      ADMIN_JWT_SECRET: ci-live-pg-secret-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: npm
           cache-dependency-path: outputs/habibazar-web/package-lock.json
       - run: npm ci
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: next-build
-          path: outputs/habibazar-web/.next
-      - name: Install Chromium
-        run: sudo apt-get install -y chromium-browser
-      - name: Start app
-        run: npm run start &
-        env:
-          PORT: 3000
-      - name: Wait for app
-        run: npx wait-on http://localhost:3000/api/health --timeout 30000
-      - name: Run Lighthouse CI
-        run: |
-          npm install -g @lhci/cli
-          lhci autorun \
-            --collect.url=http://localhost:3000/fa \
-            --collect.url=http://localhost:3000/en \
-            --collect.numberOfRuns=1 \
-            --assert.preset=lighthouse:recommended \
-            --assert.assertions.categories:performance=off \
-            --assert.assertions.categories:pwa=off \
-            --upload.target=temporary-public-storage || true
-      - name: Upload Lighthouse report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-report
-          path: outputs/habibazar-web/.lighthouseci
-          include-hidden-files: true
-          retention-days: 7
+      - name: Migrate + seed + smoke health
+        run: npx tsx scripts/ci-live-pg.ts

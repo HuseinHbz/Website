@@ -33,7 +33,7 @@ export function ProductsManager() {
   }
 
   const columns: Column<Product>[] = [
-    { key: 'nameEn', labelEn: 'Product', labelFa: t('product'), render: p => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${p.color}20`, border: `1px solid ${p.color}30` }}>{p.icon}</div><div><div className="font-medium text-white">{p.nameEn}</div><div className="text-xs text-text-tertiary">{p.taglineEn}</div></div></div> },
+    { key: 'nameEn', labelEn: 'Product', labelFa: t('product'), render: p => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${p.color}20`, border: `1px solid ${p.color}30` }}>{p.icon}</div><div><div className="font-medium text-text-primary">{p.nameEn}</div><div className="text-xs text-text-tertiary">{p.taglineEn}</div></div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: p => <span className="text-text-secondary">{p.type}</span> },
     { key: 'currentVersion', labelEn: 'Version', labelFa: t('version'), render: p => <span className="text-text-secondary font-mono text-xs">{p.currentVersion || '—'}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: p => <Badge color={STATUS_COLORS[p.status] || 'slate'}>{p.status}</Badge> },
@@ -49,7 +49,7 @@ export function ProductsManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editProduct') : t('newProduct')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editProduct') : t('newProduct')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />

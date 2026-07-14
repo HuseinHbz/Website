@@ -64,7 +64,7 @@ export function SitesManager() {
   }
 
   const columns: Column<Site>[] = [
-    { key: 'name', labelEn: 'Site', labelFa: t('site'), render: s => <div><div className="font-medium text-white">{s.name}</div><div className="text-xs text-text-tertiary">{s.slug}</div></div> },
+    { key: 'name', labelEn: 'Site', labelFa: t('site'), render: s => <div><div className="font-medium text-text-primary">{s.name}</div><div className="text-xs text-text-tertiary">{s.slug}</div></div> },
     { key: 'domain', labelEn: 'Domain', labelFa: t('domain'), render: s => <span className="text-text-secondary text-xs font-mono">{s.domain || '—'}</span> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: SITE_TYPES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: s => <span className="text-text-secondary">{s.type}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(ss => ({ value: ss, labelEn: ss, labelFa: ss })), render: s => <Badge color={STATUS_COLORS[s.status] || 'slate'}>{s.status}</Badge> },
@@ -88,7 +88,7 @@ export function SitesManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editSite') : t('newSite')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editSite') : t('newSite')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label={t('name')} value={editing.name || ''} onChange={v => setEditing(e => ({ ...e, name: v }))} /></div>
               <Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} />
@@ -127,7 +127,7 @@ export function SitesManager() {
           <div key={stat.label} className="rounded-xl p-4 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <span className="text-2xl">{stat.icon}</span>
             <div>
-              <div className="text-2xl font-black text-white">{stat.value}</div>
+              <div className="text-2xl font-black text-text-primary">{stat.value}</div>
               <div className="text-xs text-text-tertiary">{stat.label}</div>
             </div>
           </div>

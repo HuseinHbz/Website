@@ -37,13 +37,46 @@ async function checkMemory(): Promise<Check> {
   }
 }
 
+// Migrations applied? (deep probe — a table from the latest phase must exist.)
+async function checkMigrations(): Promise<Check> {
+  try {
+    await pgQuery(`SELECT 1 FROM moadian_queue LIMIT 1`)
+    return { name: 'migrations', status: 'ok', detail: 'schema current' }
+  } catch {
+    return { name: 'migrations', status: 'down', detail: 'schema behind (moadian_queue missing)' }
+  }
+}
+
+// Disk headroom on the writable filesystem (deep probe).
+async function checkDisk(): Promise<Check> {
+  try {
+    const { statfs } = await import('node:fs/promises')
+    const fs = await statfs(process.cwd())
+    const freePct = fs.blocks ? (fs.bfree / fs.blocks) * 100 : 100
+    return { name: 'disk', status: freePct < 5 ? 'degraded' : 'ok', detail: `${freePct.toFixed(1)}% free` }
+  } catch { return { name: 'disk', status: 'ok', detail: 'n/a' } }
+}
+
+/**
+ * Phase 26.24 (بند ۲.۲): three probe levels via ?probe=
+ *   live  — process is up (no I/O; for liveness restarts)
+ *   ready — DB reachable (for load-balancer readiness / traffic gating)
+ *   deep  — DB + migrations + disk + memory (default; full picture)
+ * `?detail=1` also attaches raw checks + memory (backward compatible).
+ */
 export async function GET(request: Request) {
-  // Only allow health checks from internal/trusted sources
   const { searchParams } = new URL(request.url)
+  const probe = searchParams.get('probe') ?? 'deep'
   const detailed = searchParams.get('detail') === '1'
 
-  const [db, mem] = await Promise.all([checkDatabase(), checkMemory()])
-  const checks: Check[] = [db, mem]
+  if (probe === 'live') {
+    return NextResponse.json({ status: 'ok', probe: 'live', ts: new Date().toISOString(), uptime: Math.round(process.uptime()) },
+      { headers: { 'Cache-Control': 'no-store', 'X-Health-Status': 'ok' } })
+  }
+
+  const checks: Check[] = probe === 'ready'
+    ? [await checkDatabase()]
+    : await Promise.all([checkDatabase(), checkMigrations(), checkDisk(), checkMemory()])
 
   const overallStatus = checks.some(c => c.status === 'down')
     ? 'down'
@@ -53,24 +86,18 @@ export async function GET(request: Request) {
 
   const body: Record<string, unknown> = {
     status: overallStatus,
+    probe,
     ts: new Date().toISOString(),
     version: process.env.APP_VERSION ?? '2.0.0',
     uptime: Math.round(process.uptime()),
     env: process.env.NODE_ENV,
+    checks,
   }
-
-  if (detailed) {
-    body.checks = checks
-    body.memory = process.memoryUsage()
-  }
+  if (detailed) body.memory = process.memoryUsage()
 
   const httpStatus = overallStatus === 'down' ? 503 : 200
-
   return NextResponse.json(body, {
     status: httpStatus,
-    headers: {
-      'Cache-Control': 'no-store',
-      'X-Health-Status': overallStatus,
-    },
+    headers: { 'Cache-Control': 'no-store', 'X-Health-Status': overallStatus },
   })
 }

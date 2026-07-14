@@ -74,7 +74,7 @@ export function OperationsCenter() {
       <div className="flex gap-2 mb-6 flex-wrap items-center">
         {TABS.map((x) => (
           <button key={x} onClick={() => setTab(x)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${tab === x ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary hover:text-white'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${tab === x ? 'bg-brand text-white' : 'bg-surface-2 text-text-secondary hover:text-text-primary'}`}>
             {x}
           </button>
         ))}

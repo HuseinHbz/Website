@@ -32,7 +32,7 @@ export function ImportCenter({ role }: { role: string }) {
     <div className="space-y-4">
       <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1 flex-wrap">
         {([['dashboard', 'Dashboard', 'داشبورد'], ['wizard', 'New Import', 'ورود جدید'], ['jobs', 'Migration Jobs', 'کارهای مهاجرت'], ['templates', 'Templates', 'قالب‌ها']] as const).map(([id, en, faL]) => (
-          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${tab === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
+          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${tab === id ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>{L(fa, en, faL)}</button>
         ))}
       </div>
       {tab === 'dashboard' && <Dashboard fa={fa} />}

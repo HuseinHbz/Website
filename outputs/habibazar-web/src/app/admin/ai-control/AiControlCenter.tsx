@@ -174,7 +174,7 @@ export function AiControlCenter() {
       <div className="flex gap-2 mb-6 flex-wrap">
         {TABS.map(tabItem => (
           <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === tabItem.id ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-white'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === tabItem.id ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-text-primary'}`}>
             {tabItem.label}
           </button>
         ))}
@@ -193,11 +193,11 @@ export function AiControlCenter() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-white truncate">{mod.nameEn.replace('HBZ ', '')}</p>
+                      <p className="text-sm font-semibold text-text-primary truncate">{mod.nameEn.replace('HBZ ', '')}</p>
                       <div className="flex items-center gap-1">
                         <button onClick={() => toggleModule(mod)}
                           className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${mod.enabled ? 'bg-brand' : 'bg-surface-2'}`}>
-                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${mod.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                          <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${mod.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                         </button>
                       </div>
                     </div>
@@ -230,7 +230,7 @@ export function AiControlCenter() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-bold text-brand">[{(item as { id?: number }).id}]</span>
-                      <p className="text-sm font-medium text-white">{item.title}</p>
+                      <p className="text-sm font-medium text-text-primary">{item.title}</p>
                       <Badge color={item.type === 'document' ? 'blue' : item.type === 'faq' ? 'green' : item.type === 'snippet' ? 'yellow' : 'indigo'}>{item.type}</Badge>
                       {!item.active && <Badge color="slate">{t('disabledLabel')}</Badge>}
                     </div>
@@ -272,7 +272,7 @@ export function AiControlCenter() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{stat.icon}</span>
                   <div>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
+                    <p className="text-2xl font-bold text-text-primary">{stat.value}</p>
                     <p className="text-xs text-text-tertiary">{stat.label}</p>
                   </div>
                 </div>

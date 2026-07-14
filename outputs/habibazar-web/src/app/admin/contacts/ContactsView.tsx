@@ -40,7 +40,7 @@ export function ContactsView() {
   const newCount = contacts.filter((c) => c.status === 'new').length
 
   const columns: Column<Contact>[] = [
-    { key: 'name', labelEn: 'Name', labelFa: t('name'), render: c => <span className="font-medium text-white">{c.name}</span> },
+    { key: 'name', labelEn: 'Name', labelFa: t('name'), render: c => <span className="font-medium text-text-primary">{c.name}</span> },
     { key: 'email', labelEn: 'Email', labelFa: t('email'), render: c => <span className="text-text-secondary">{c.email}</span> },
     { key: 'company', labelEn: 'Company', labelFa: t('company'), render: c => <span className="text-text-tertiary">{c.company || '—'}</span> },
     { key: 'subject', labelEn: 'Subject', labelFa: t('subject'), render: c => <span className="text-text-secondary">{c.subject || '—'}</span> },
@@ -75,7 +75,7 @@ export function ContactsView() {
         {selected && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><p className="text-text-tertiary text-xs mb-1">{t('name')}</p><p className="text-white font-medium">{selected.name}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('name')}</p><p className="text-text-primary font-medium">{selected.name}</p></div>
               <div><p className="text-text-tertiary text-xs mb-1">{t('email')}</p><p className="text-blue-400">{selected.email}</p></div>
               <div><p className="text-text-tertiary text-xs mb-1">{t('phone')}</p><p className="text-text-primary">{selected.phone || '—'}</p></div>
               <div><p className="text-text-tertiary text-xs mb-1">{t('company')}</p><p className="text-text-primary">{selected.company || '—'}</p></div>

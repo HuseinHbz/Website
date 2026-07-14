@@ -428,7 +428,7 @@ function HeroPreview({ config, locale, theme }: { config: HeroConfig; locale: Lo
       {bg === 'video' && s.background?.value && (
         <video src={s.background.value} autoPlay={!config.reduceMotion} muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
       )}
-      {s.overlay ? <div className="absolute inset-0 bg-black" style={{ opacity: s.overlay }} /> : null}
+      {s.overlay ? <div className="absolute inset-0 bg-background" style={{ opacity: s.overlay }} /> : null}
       <div className="relative z-10 px-8 py-12 w-full" style={{ maxWidth: s.containerWidth ? `${s.containerWidth}px` : undefined }}>
         {c.badge && <span className="inline-block mb-4 px-3 py-1 rounded-full text-xs font-medium border border-current/30 opacity-90">{c.badge}</span>}
         <h1 style={{ fontSize: `${Math.min(s.titleSize ?? 56, 72)}px`, fontWeight: s.fontWeight ?? 800, lineHeight: s.lineHeight ?? 1.1, letterSpacing: s.letterSpacing ? `${s.letterSpacing}px` : undefined }} className="font-black tracking-tight">

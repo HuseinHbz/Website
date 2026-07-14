@@ -195,7 +195,7 @@ function AdvisorCard({ fa }: { fa: boolean }) {
       <p className="text-2xs text-text-tertiary mb-3">{L(fa, 'Grounded in the live health snapshot via the shared AI engine — advisory only, never mutates data.', 'مبتنی بر عکس فوری زندهٔ سلامت از طریق موتور مشترک AI — فقط مشاوره، هیچ داده‌ای تغییر نمی‌کند.')}</p>
       <div className="flex gap-1 flex-wrap mb-2">
         {ADVISOR_KINDS.map(([id, en, faL]) => (
-          <button key={id} onClick={() => setKind(id)} className={`px-3 py-1 rounded-md text-2xs font-semibold transition-colors ${kind === id ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-white'}`}>{L(fa, en, faL)}</button>
+          <button key={id} onClick={() => setKind(id)} className={`px-3 py-1 rounded-md text-2xs font-semibold transition-colors ${kind === id ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-text-primary'}`}>{L(fa, en, faL)}</button>
         ))}
       </div>
       <div className="flex gap-2 items-center mb-2">

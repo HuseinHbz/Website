@@ -350,6 +350,11 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
     const r = await fetch('/api/admin/erp/sales/documents', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, op: o, toType }) })
     if (r.ok) { toast(t('sales_saved'), 'success'); load() } else { const d = await r.json().catch(() => ({})); toast(d.error || t('sales_saveFail'), 'error') }
   }
+  async function enqueueMoadian(id: number) {
+    const r = await fetch('/api/admin/erp/moadian', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'enqueue', documentId: id, pattern: '1' }) })
+    const d = await r.json()
+    toast(r.ok ? (locale === 'fa' ? `به صف مودیان اضافه شد (${d.taxId?.slice(0, 10)}…)` : `Queued for مودیان (${d.taxId?.slice(0, 10)}…)`) : (d.error || 'خطا'), r.ok ? 'success' : 'error')
+  }
   async function pay() {
     if (!payFor || payAmount <= 0) return
     try {
@@ -386,6 +391,8 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
     { id: 'return', labelEn: 'Return (credit note)', labelFa: locale === 'fa' ? 'برگشت (اعلامیه بستانکار)' : 'Return (credit note)', icon: '↩', hidden: r => !(docType === 'invoice' && r.status !== 'void'), onClick: r => op(r.id, 'return') },
     // Phase 26.15.1 — post a confirmed invoice/credit-note to the General Ledger.
     { id: 'postGl', labelEn: 'Post to GL', labelFa: locale === 'fa' ? 'ثبت در دفتر کل' : 'Post to GL', icon: '📒', hidden: r => !(docType === 'invoice' && !['draft', 'void'].includes(r.status) && !r.glEntryId), onClick: r => op(r.id, 'post') },
+    // Phase 26.24 — enqueue a confirmed invoice to سامانه مودیان.
+    { id: 'moadian', labelEn: 'Send to مودیان', labelFa: 'ارسال به مودیان', icon: '🧾', hidden: r => !(docType === 'invoice' && !['draft', 'void'].includes(r.status)), onClick: r => enqueueMoadian(r.id) },
     { id: 'void', labelEn: 'Void', labelFa: t('sales_void'), icon: '✕', danger: true, hidden: r => r.status === 'void', onClick: r => op(r.id, 'void') },
     { id: 'delete', labelEn: 'Delete', labelFa: locale === 'fa' ? 'حذف' : 'Delete', icon: '🗑', danger: true, hidden: r => r.paid > 0, onClick: r => del(r) },
   ]

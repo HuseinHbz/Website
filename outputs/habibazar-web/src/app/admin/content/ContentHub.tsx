@@ -59,7 +59,7 @@ export function ContentHub() {
   }
 
   const columns: Column<ContentItem>[] = [
-    { key: 'titleEn', labelEn: 'Content', labelFa: t('content'), render: item => <div><div className="font-medium text-white">{item.titleEn}</div><div className="text-xs text-text-tertiary">{item.slug}</div></div> },
+    { key: 'titleEn', labelEn: 'Content', labelFa: t('content'), render: item => <div><div className="font-medium text-text-primary">{item.titleEn}</div><div className="text-xs text-text-tertiary">{item.slug}</div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: item => <span className="text-text-secondary">{TYPE_ICONS[item.type]} {item.type}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: item => <Badge color={STATUS_COLORS[item.status] || 'slate'}>{item.status}</Badge> },
     { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true, render: item => <span className="text-text-secondary">{item.views.toLocaleString()}</span> },
@@ -82,7 +82,7 @@ export function ContentHub() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editContent') : t('newContent')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editContent') : t('newContent')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Select label={t('type')} value={editing.type || 'blog'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: `${TYPE_ICONS[tp]} ${tp}` }))} />
@@ -94,12 +94,12 @@ export function ContentHub() {
               <div className="col-span-2">
                 <label className="text-xs text-text-secondary mb-1 block">{t('excerpt')}</label>
                 <textarea value={editing.excerptEn || ''} onChange={e2 => setEditing(e => ({ ...e, excerptEn: e2.target.value }))} rows={2}
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" />
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none" />
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-text-secondary mb-1 block">{t('contentMarkdown')}</label>
                 <textarea value={editing.contentEn || ''} onChange={e2 => setEditing(e => ({ ...e, contentEn: e2.target.value }))} rows={8}
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white outline-none font-mono" />
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none font-mono" />
               </div>
               <div className="col-span-2"><Input label={t('seoTitle')} value={editing.seoTitle || ''} onChange={v => setEditing(e => ({ ...e, seoTitle: v }))} /></div>
               <div className="col-span-2 flex gap-4 pt-1">

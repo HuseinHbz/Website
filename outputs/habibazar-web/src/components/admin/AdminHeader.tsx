@@ -109,7 +109,7 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
         <div className="relative">
           <button
             onClick={() => setNotifOpen(v => !v)}
-            className="relative w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-white hover:bg-white/5 transition-all"
+            className="relative w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-white/5 transition-all"
           >
             🔔
             {unread > 0 && (
@@ -127,7 +127,7 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
                 style={{ [isRTL ? 'left' : 'right']: 0 }}
               >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-subtle">
-                  <p className="text-sm font-semibold text-white">{isRTL ? 'اعلان‌ها' : 'Notifications'}</p>
+                  <p className="text-sm font-semibold text-text-primary">{isRTL ? 'اعلان‌ها' : 'Notifications'}</p>
                   {unread > 0 && (
                     <button
                       onClick={() => setNotifications(n => n.map(x => ({ ...x, read: true })))}

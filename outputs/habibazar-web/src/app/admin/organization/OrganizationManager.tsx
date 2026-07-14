@@ -50,7 +50,7 @@ export function OrganizationManager() {
       <ToastContainer />
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Organization Management</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Organization Management</h1>
           <p className="text-text-secondary text-sm mt-1">Company profile, brand assets, and legal information</p>
         </div>
         <Btn onClick={save} disabled={saving}>{saving ? t('saving') : t('saveChanges')}</Btn>
@@ -58,11 +58,11 @@ export function OrganizationManager() {
 
       {/* Brand preview */}
       <div className="rounded-2xl p-6 mb-6 flex items-center gap-5" style={{ background: `linear-gradient(135deg, ${org.primaryColor || '#6366f1'}20, ${org.secondaryColor || '#06b6d4'}10)`, border: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white" style={{ background: org.primaryColor || '#6366f1' }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-text-primary" style={{ background: org.primaryColor || '#6366f1' }}>
           {(org.brandNameEn || 'HBZ').substring(0, 3)}
         </div>
         <div>
-          <div className="text-xl font-bold text-white">{org.brandNameEn}</div>
+          <div className="text-xl font-bold text-text-primary">{org.brandNameEn}</div>
           <div className="text-text-secondary text-sm">{org.taglineEn || 'Enterprise Technology Solutions'}</div>
           <div className="text-text-tertiary text-xs mt-1">{org.website}</div>
         </div>
@@ -72,7 +72,7 @@ export function OrganizationManager() {
       <div className="flex gap-1 mb-5 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>
             {tab.label}
           </button>
         ))}

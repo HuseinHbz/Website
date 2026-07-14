@@ -135,9 +135,9 @@ export function SettingsManager() {
                     onClick={() => toggle(item.key)}
                     className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings[item.key] === '1' ? 'bg-brand' : 'bg-surface-2'}`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <span className="text-sm text-text-primary group-hover:text-white transition-colors">{item.label}</span>
+                  <span className="text-sm text-text-primary group-hover:text-text-primary transition-colors">{item.label}</span>
                 </label>
               ))}
             </div>
@@ -167,9 +167,9 @@ export function SettingsManager() {
                     onClick={() => toggle(item.key)}
                     className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings[item.key] === '1' ? 'bg-brand' : 'bg-surface-2'}`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <span className="text-sm text-text-primary group-hover:text-white transition-colors">{item.label}</span>
+                  <span className="text-sm text-text-primary group-hover:text-text-primary transition-colors">{item.label}</span>
                 </label>
               ))}
             </div>
@@ -190,7 +190,7 @@ export function SettingsManager() {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     currentProvider === p.value
                       ? 'bg-brand text-white'
-                      : 'bg-surface-2 text-text-secondary hover:text-white hover:bg-surface-2'
+                      : 'bg-surface-2 text-text-secondary hover:text-text-primary hover:bg-surface-2'
                   }`}
                 >
                   {p.label}

@@ -1067,6 +1067,13 @@ export async function runMigrations() {
       ('gl_posting_approval_threshold', '500000000'),
       -- 26.23: CRM follow-up SLA (days without activity on an open lead).
       ('crm_sla_days', '7'),
+      -- 26.24: Iran compliance — مودیان + payment gateway (empty = sandbox).
+      ('moadian_api_url', ''),
+      ('moadian_memory_id', ''),
+      ('moadian_private_key', ''),
+      ('company_economic_code', ''),
+      ('pay_sandbox', 'true'),
+      ('pay_zarinpal_merchant', ''),
       ('number_format', 'standard')
     ON CONFLICT (key) DO NOTHING;
 
@@ -2297,6 +2304,69 @@ export async function runMigrations() {
       SELECT 'journal_entry', 'Journal posting approval', 'تأیید ثبت سند حسابداری', 0,
              '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
       WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='journal_entry');
+
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 26.24 — Tenancy foundation (ADR-001, option b: multi-company).
+    -- Every transactional table carries a nullable company_id (NULL = default
+    -- company). Idempotent + non-breaking. audit:tenancy enforces this going
+    -- forward. Reference/config tables stay shared (no company_id).
+    -- ═══════════════════════════════════════════════════════════════════════
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE sales_payments ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE inv_moves ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE assets ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS company_id INTEGER;
+    CREATE INDEX IF NOT EXISTS idx_sales_docs_company ON sales_documents(company_id);
+    CREATE INDEX IF NOT EXISTS idx_purchase_docs_company ON purchase_documents(company_id);
+    CREATE INDEX IF NOT EXISTS idx_inv_moves_company ON inv_moves(company_id);
+
+    -- Phase 26.24 — سامانه مودیان (Iran Tax e-invoice queue). One row per sales
+    -- document submitted to the tax authority; the payload is the standard
+    -- electronic invoice, status tracks the delivery lifecycle.
+    CREATE TABLE IF NOT EXISTS moadian_queue (
+      id SERIAL PRIMARY KEY,
+      document_id INTEGER NOT NULL REFERENCES sales_documents(id) ON DELETE CASCADE,
+      tax_id TEXT,                    -- شماره منحصربه‌فرد مالیاتی
+      pattern TEXT NOT NULL DEFAULT '1' CHECK(pattern IN ('1','2')),  -- الگوی صورتحساب
+      payload TEXT NOT NULL,          -- JSON standard invoice
+      signature TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','sent','failed','confirmed')),
+      reference_number TEXT,          -- شماره مرجع سازمان مالیاتی
+      error TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_moadian_status ON moadian_queue(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_moadian_doc ON moadian_queue(document_id);
+
+    -- Phase 26.24 — payment gateway transactions (Zarrinpal/Saman/Mellat).
+    CREATE TABLE IF NOT EXISTS payment_transactions (
+      id SERIAL PRIMARY KEY,
+      provider TEXT NOT NULL DEFAULT 'zarinpal',
+      document_id INTEGER REFERENCES sales_documents(id) ON DELETE SET NULL,
+      customer_id INTEGER REFERENCES sales_customers(id) ON DELETE SET NULL,
+      amount NUMERIC NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      authority TEXT,                 -- provider transaction handle
+      ref_id TEXT,                    -- confirmed reference / RRN
+      status TEXT NOT NULL DEFAULT 'created' CHECK(status IN ('created','pending','paid','verified','failed','canceled')),
+      description TEXT,
+      callback_url TEXT,
+      sales_payment_id INTEGER,       -- linked once reconciled
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_paytx_authority ON payment_transactions(authority);
+    CREATE INDEX IF NOT EXISTS idx_paytx_status ON payment_transactions(status);
+
+    -- Phase 26.24: route/latency metrics roll-up (observability, بند ۲.۲).
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS moadian_status TEXT;
 
     -- 26.22 (runs LAST so every seeded account exists): attach each leaf
     -- account to its Iranian-coding گروه root by leading digit (idempotent).

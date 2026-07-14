@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
           <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 items-center justify-center text-white text-xl font-black mb-4 shadow-lg shadow-indigo-500/20">
             HBZ
           </div>
-          <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+          <h1 className="text-xl font-bold text-text-primary">Admin Panel</h1>
           <p className="text-sm text-text-tertiary mt-1">
             {step === 'totp' ? 'Two-Factor Authentication' : 'Sign in to manage your website'}
           </p>
@@ -77,7 +77,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="username"
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition-colors"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
               <div>
@@ -89,7 +89,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition-colors"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
             </>
@@ -116,7 +116,7 @@ export default function AdminLoginPage() {
                 autoFocus
                 autoComplete="one-time-code"
                 placeholder="000000"
-                className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.5em] font-mono focus:outline-none focus:border-brand transition-colors"
+                className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-text-primary text-center tracking-[0.5em] font-mono focus:outline-none focus:border-brand transition-colors"
               />
               <button
                 type="button"
@@ -137,7 +137,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading || (step === 'totp' && totpCode.length < 6)}
-            className="w-full bg-brand hover:bg-brand disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+            className="w-full bg-brand hover:bg-brand disabled:opacity-50 text-text-primary font-medium py-2.5 rounded-lg text-sm transition-colors"
           >
             {loading ? 'Verifying...' : step === 'totp' ? 'Verify Code' : 'Sign In'}
           </button>

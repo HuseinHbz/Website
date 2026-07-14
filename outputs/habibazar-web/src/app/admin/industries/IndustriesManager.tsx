@@ -57,7 +57,7 @@ export function IndustriesManager() {
       render: ind => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base" style={{ background: `${ind.color}20`, border: `1px solid ${ind.color}30` }}>{ind.icon}</div>
-          <div><div className="font-medium text-white">{ind.nameEn}</div><div className="text-xs text-text-tertiary">{ind.nameFa}</div></div>
+          <div><div className="font-medium text-text-primary">{ind.nameEn}</div><div className="text-xs text-text-tertiary">{ind.nameFa}</div></div>
         </div>
       ),
     },
@@ -78,7 +78,7 @@ export function IndustriesManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editIndustry') : t('newIndustry')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editIndustry') : t('newIndustry')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />

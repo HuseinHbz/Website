@@ -101,7 +101,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
   }
 
   const userColumns: Column<User>[] = [
-    { key: 'name', labelEn: 'User', labelFa: 'کاربر', render: u => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold">{u.name.charAt(0)}</div><div><div className="font-medium text-white">{u.name}{u.id === currentUserId && <span className="text-xs text-text-tertiary ml-2">(you)</span>}</div><div className="text-xs text-text-tertiary">{u.email}</div></div></div> },
+    { key: 'name', labelEn: 'User', labelFa: 'کاربر', render: u => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold">{u.name.charAt(0)}</div><div><div className="font-medium text-text-primary">{u.name}{u.id === currentUserId && <span className="text-xs text-text-tertiary ml-2">(you)</span>}</div><div className="text-xs text-text-tertiary">{u.email}</div></div></div> },
     { key: 'employeeCode', labelEn: 'Code', labelFa: 'کد پرسنلی', render: u => <span className="font-mono text-xs text-text-secondary">{u.employeeCode ?? '—'}</span> },
     { key: 'role', labelEn: 'Role', labelFa: 'نقش', type: 'enum', options: ['super_admin', 'administrator', 'editor', 'auditor', 'viewer'].map(r => ({ value: r, labelEn: r, labelFa: r })), render: u => <Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge> },
     { key: 'totpEnabled', labelEn: '2FA', labelFa: '2FA', type: 'boolean', value: u => !!u.totpEnabled, render: u => <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-surface-2/50 text-text-tertiary hover:bg-surface-2'}`}>{u.totpEnabled ? '🔐 On' : '○ Off'}</button> },
@@ -176,7 +176,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
               <>
                 <div className="flex items-center justify-between p-3 bg-background rounded-xl border border-border">
                   <div>
-                    <p className="text-sm font-medium text-white">Two-Factor Authentication</p>
+                    <p className="text-sm font-medium text-text-primary">Two-Factor Authentication</p>
                     <p className="text-xs text-text-tertiary mt-0.5">TOTP via Google Authenticator or Authy</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${twoFA.enabled ? 'bg-green-500/15 text-green-400' : 'bg-surface-2 text-text-secondary'}`}>
@@ -196,7 +196,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
             {twoFA.phase === 'setup' && (
               <>
                 <p className="text-xs text-text-secondary">Step 1 — Have the user scan this QR code in Google Authenticator:</p>
-                <div className="flex justify-center p-4 bg-white rounded-xl w-fit mx-auto">
+                <div className="flex justify-center p-4 bg-surface rounded-xl w-fit mx-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={twoFA.qrCode} alt="2FA QR Code" className="w-44 h-44" />
                 </div>
@@ -214,7 +214,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                     onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="000000"
                     autoFocus
-                    className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-white text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-3 text-2xl text-text-primary text-center tracking-[0.4em] font-mono focus:outline-none focus:border-brand transition-colors"
                   />
                 </div>
                 <div className="flex gap-3">

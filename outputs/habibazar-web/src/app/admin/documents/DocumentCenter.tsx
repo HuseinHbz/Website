@@ -422,7 +422,7 @@ function InvoiceDesigner({ rtl, toast, templates, onTemplatesChange }: { rtl: bo
       </div>
       <Card className="p-2 min-h-[480px]">
         {html
-          ? <iframe title="invoice preview" srcDoc={html} className="w-full h-[75vh] rounded-lg bg-white" />
+          ? <iframe title="invoice preview" srcDoc={html} className="w-full h-[75vh] rounded-lg bg-surface" />
           : <div className="h-full flex items-center justify-center text-sm text-text-tertiary p-10">{L2(rtl, 'Select or create a template — the live preview renders here with your real company profile.', 'یک قالب انتخاب/ایجاد کنید — پیش‌نمایش زنده با پروفایل واقعی شرکت اینجا رندر می‌شود.')}</div>}
       </Card>
     </div>

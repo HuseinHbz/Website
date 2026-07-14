@@ -49,7 +49,7 @@ export function ServicesManager() {
   function set<K extends keyof Service>(k: K, v: Service[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
   const serviceColumns: Column<Service>[] = [
-    { key: 'titleEn', labelEn: 'Title', labelFa: t('title'), render: s => <div><div className="font-medium text-white">{s.titleEn}</div><div className="text-xs text-text-tertiary">{s.titleFa}</div></div> },
+    { key: 'titleEn', labelEn: 'Title', labelFa: t('title'), render: s => <div><div className="font-medium text-text-primary">{s.titleEn}</div><div className="text-xs text-text-tertiary">{s.titleFa}</div></div> },
     { key: 'categoryEn', labelEn: 'Category', labelFa: t('category'), type: 'enum', render: s => <span className="text-text-secondary">{s.categoryEn}</span> },
     { key: 'color', labelEn: 'Color', labelFa: t('color'), sortable: false, render: s => <ColorDot color={s.color} /> },
     { key: 'sortOrder', labelEn: 'Order', labelFa: t('sortOrder'), type: 'number', numeric: true, render: s => <span className="text-text-tertiary">{s.sortOrder}</span> },

@@ -157,7 +157,7 @@ export function FormBuilder() {
         <DataTable
           tableId="forms"
           columns={[
-            { key: 'name', labelEn: 'Form', labelFa: 'فرم', render: f => <div><div className="font-medium text-white">{f.name}</div><div className="text-xs text-text-tertiary">/{f.slug}</div></div> },
+            { key: 'name', labelEn: 'Form', labelFa: 'فرم', render: f => <div><div className="font-medium text-text-primary">{f.name}</div><div className="text-xs text-text-tertiary">/{f.slug}</div></div> },
             { key: 'type', labelEn: 'Type', labelFa: 'نوع', type: 'enum', options: ['contact', 'consultation', 'newsletter', 'custom'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: f => <Badge color={TYPE_COLOR[f.type]}>{f.type}</Badge> },
             { key: 'fields', labelEn: 'Fields', labelFa: 'فیلدها', type: 'number', numeric: true, value: f => parseFields(f.fieldsJson).length, render: f => <span className="text-text-secondary">{parseFields(f.fieldsJson).length} fields</span> },
             { key: 'emailTo', labelEn: 'Email To', labelFa: 'ایمیل', render: f => <span className="text-text-tertiary text-xs">{f.emailTo || '—'}</span> },
@@ -181,7 +181,7 @@ export function FormBuilder() {
         <div className="flex gap-1 mb-5 border-b border-border pb-3">
           {(['fields', 'settings', 'notifications'] as const).map(tabKey => (
             <button key={tabKey} onClick={() => setActiveTab(tabKey)}
-              className={`px-3 py-1.5 text-xs rounded-lg capitalize transition-colors ${activeTab === tabKey ? 'bg-brand text-white' : 'text-text-secondary hover:text-white hover:bg-white/5'}`}>
+              className={`px-3 py-1.5 text-xs rounded-lg capitalize transition-colors ${activeTab === tabKey ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}`}>
               {tabKey}
             </button>
           ))}
@@ -217,8 +217,8 @@ export function FormBuilder() {
                 {fields.map((field, idx) => (
                   <div key={field.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <div className="flex flex-col gap-0.5">
-                      <button onClick={() => moveField(idx, -1)} className="text-text-disabled hover:text-white text-xs leading-none">▲</button>
-                      <button onClick={() => moveField(idx, 1)} className="text-text-disabled hover:text-white text-xs leading-none">▼</button>
+                      <button onClick={() => moveField(idx, -1)} className="text-text-disabled hover:text-text-primary text-xs leading-none">▲</button>
+                      <button onClick={() => moveField(idx, 1)} className="text-text-disabled hover:text-text-primary text-xs leading-none">▼</button>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export function FormBuilder() {
                         {field.required && <span className="text-4xs text-red-400 font-bold">REQUIRED</span>}
                         <span className="text-xs font-bold text-brand">{field.width === 'half' ? '½' : '□'}</span>
                       </div>
-                      <p className="text-sm text-white">{field.labelEn || '(no label)'}</p>
+                      <p className="text-sm text-text-primary">{field.labelEn || '(no label)'}</p>
                       {field.labelFa && <p className="text-xs text-text-tertiary">{field.labelFa}</p>}
                     </div>
                     <div className="flex gap-2">
@@ -294,7 +294,7 @@ export function FormBuilder() {
           <label className="flex items-center gap-3 cursor-pointer">
             <button type="button" onClick={() => setF('required', !editingField.required)}
               className={`w-9 h-5 rounded-full transition-colors relative ${editingField.required ? 'bg-brand' : 'bg-surface-2'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${editingField.required ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${editingField.required ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
             <span className="text-sm text-text-primary">{t('requiredField')}</span>
           </label>

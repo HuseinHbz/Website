@@ -9,7 +9,7 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
-type Tab = 'dashboard' | 'accounts' | 'journal' | 'accounting' | 'reports' | 'currency' | 'banking'
+type Tab = 'dashboard' | 'accounts' | 'journal' | 'accounting' | 'reports' | 'currency' | 'banking' | 'compliance'
 type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
 
 interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
@@ -49,10 +49,10 @@ export function FinanceCenter() {
       <ToastContainer />
       <PageHeader title={t('fin_title')} subtitle={t('fin_subtitle')} />
       <div className="flex gap-1 mb-6 border-b border-subtle overflow-x-auto">
-        {(['dashboard', 'accounts', 'journal', 'accounting', 'reports', 'currency', 'banking'] as Tab[]).map(tb => (
+        {(['dashboard', 'accounts', 'journal', 'accounting', 'reports', 'currency', 'banking', 'compliance'] as Tab[]).map(tb => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${tab === tb ? 'border-brand text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}>
-            {t(`fin_tab_${tb}` as 'fin_tab_dashboard')}
+            {tb === 'compliance' ? (fa ? 'انطباق ایران' : 'Iran Compliance') : t(`fin_tab_${tb}` as 'fin_tab_dashboard')}
           </button>
         ))}
       </div>
@@ -63,6 +63,7 @@ export function FinanceCenter() {
       {tab === 'reports' && <ReportsView t={t} fa={fa} />}
       {tab === 'currency' && <CurrencyView fa={fa} toast={toast} />}
       {tab === 'banking' && <BankingView fa={fa} toast={toast} />}
+      {tab === 'compliance' && <ComplianceView fa={fa} toast={toast} />}
     </>
   )
 }
@@ -1248,5 +1249,78 @@ function TaxProfilesSection({ fa, toast }: { fa: boolean; toast: (m: string, k?:
         ))}
       </div>
     </Card>
+  )
+}
+
+// ── Iran Compliance (Phase 26.24): مودیان queue + TTMS quarterly report ───────
+interface MoadianRow { id: number; documentId: number; docNo: string | null; taxId: string; pattern: string; status: string; referenceNumber: string | null; error: string | null; attempts: number }
+interface TtmsSummary { salesCount: number; salesTotal: number; salesVat: number; purchaseCount: number; purchaseTotal: number; purchaseVat: number }
+const STATUS_C: Record<string, string> = { pending: 'yellow', sent: 'blue', failed: 'red', confirmed: 'green' }
+
+function ComplianceView({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'success' | 'error') => void }) {
+  const L = (en: string, faT: string) => (fa ? faT : en)
+  const [mode, setMode] = useState('sandbox')
+  const [queue, setQueue] = useState<MoadianRow[]>([])
+  const [stats, setStats] = useState<{ pending: number; sent: number; failed: number; confirmed: number; total: number } | null>(null)
+  const [jYear, setJYear] = useState('')
+  const [quarter, setQuarter] = useState('1')
+  const [ttms, setTtms] = useState<{ summary: TtmsSummary; label: string } | null>(null)
+
+  const loadQueue = useCallback(async () => {
+    const r = await fetch('/api/admin/erp/moadian'); if (r.ok) { const d = await r.json(); setQueue(d.queue ?? []); setStats(d.stats ?? null); setMode(d.mode ?? 'sandbox') }
+  }, [])
+  useEffect(() => { loadQueue() }, [loadQueue])
+
+  async function submit(id: number) {
+    const r = await fetch('/api/admin/erp/moadian', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'submit', queueId: id }) })
+    const d = await r.json(); toast(r.ok ? L(`Submitted: ${d.status}`, `ارسال شد: ${d.status}`) : (d.error ?? 'خطا'), r.ok ? 'success' : 'error'); loadQueue()
+  }
+  async function runTtms() {
+    const qs = new URLSearchParams({ quarter }); if (jYear) qs.set('jYear', jYear)
+    const r = await fetch(`/api/admin/erp/reports/ttms?${qs}`); if (r.ok) { const d = await r.json(); setTtms({ summary: d.report.summary, label: d.report.quarter.label }) }
+  }
+
+  const cols: Column<MoadianRow>[] = [
+    { key: 'docNo', labelEn: 'Invoice', labelFa: 'فاکتور', render: r => <span className="font-mono text-xs text-text-secondary">{r.docNo || r.documentId}</span> },
+    { key: 'taxId', labelEn: 'Tax ID', labelFa: 'شماره مالیاتی', render: r => <span className="font-mono text-2xs text-text-tertiary">{r.taxId.slice(0, 14)}…</span> },
+    { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', render: r => <Badge color={STATUS_C[r.status] || 'slate'}>{r.status}</Badge> },
+    { key: 'referenceNumber', labelEn: 'Reference', labelFa: 'مرجع', render: r => <span className="text-2xs text-text-tertiary">{r.referenceNumber || (r.error ? `⚠ ${r.error.slice(0, 30)}` : '—')}</span> },
+  ]
+  const actions: RowAction<MoadianRow>[] = [
+    { id: 'submit', labelEn: 'Submit', labelFa: 'ارسال', icon: '📤', hidden: r => r.status === 'confirmed', onClick: r => submit(r.id) },
+  ]
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary">{L('سامانه مودیان — e-invoice queue', 'سامانه مودیان — صف صورتحساب الکترونیکی')}</h3>
+            <p className="text-2xs text-text-tertiary">{L(`Mode: ${mode}`, `حالت: ${mode === 'sandbox' ? 'شبیه‌ساز (نیازمند کلید مودیان مشتری برای اتصال نهایی)' : 'زنده'}`)}</p>
+          </div>
+          {stats && <div className="flex gap-2 text-2xs">
+            {(['pending', 'sent', 'confirmed', 'failed'] as const).map(k => <span key={k} className="px-2 py-1 rounded bg-surface-2 border border-subtle"><span className="text-text-tertiary">{k}</span> <span className="font-semibold text-text-primary">{stats[k]}</span></span>)}
+          </div>}
+        </div>
+        <DataTable tableId="moadian-queue" columns={cols} rows={queue} locale={fa ? 'fa' : 'en'} rowKey={r => String(r.id)} rowActions={actions} exportName="moadian-queue" emptyLabel={L('No invoices queued. Confirm a sales invoice, then enqueue it for مودیان.', 'صف خالی است. یک فاکتور فروش را تأیید و سپس برای مودیان ثبت کنید.')} />
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="text-sm font-semibold text-text-primary mb-3">{L('Seasonal Transactions (گزارش معاملات فصلی — TTMS)', 'گزارش معاملات فصلی')}</h3>
+        <div className="flex gap-2 items-end flex-wrap mb-3">
+          <Input label={L('Persian year (blank = current)', 'سال شمسی (خالی = جاری)')} value={jYear} onChange={setJYear} />
+          <Select label={L('Quarter', 'فصل')} value={quarter} onChange={setQuarter} options={[['1', 'بهار'], ['2', 'تابستان'], ['3', 'پاییز'], ['4', 'زمستان']].map(([v, l]) => ({ value: v, label: l }))} />
+          <Btn onClick={runTtms}>{L('Run', 'اجرا')}</Btn>
+          <a href={`/api/admin/erp/reports/ttms?quarter=${quarter}${jYear ? `&jYear=${jYear}` : ''}&format=csv`} className="px-3 py-2 rounded-lg text-xs border border-border text-text-secondary hover:text-text-primary">{L('Export CSV', 'خروجی CSV')}</a>
+        </div>
+        {ttms && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <Card><p className="text-2xs text-text-tertiary">{L('Quarter', 'فصل')}</p><p className="text-sm font-bold text-text-primary">{ttms.label}</p></Card>
+            <Card><p className="text-2xs text-text-tertiary">{L('Sales / VAT', 'فروش / مالیات')}</p><p className="text-sm font-bold text-text-primary">{money(ttms.summary.salesTotal)}</p><p className="text-2xs text-text-tertiary">{ttms.summary.salesCount} · VAT {money(ttms.summary.salesVat)}</p></Card>
+            <Card><p className="text-2xs text-text-tertiary">{L('Purchases / VAT', 'خرید / مالیات')}</p><p className="text-sm font-bold text-text-primary">{money(ttms.summary.purchaseTotal)}</p><p className="text-2xs text-text-tertiary">{ttms.summary.purchaseCount} · VAT {money(ttms.summary.purchaseVat)}</p></Card>
+          </div>
+        )}
+      </Card>
+    </div>
   )
 }

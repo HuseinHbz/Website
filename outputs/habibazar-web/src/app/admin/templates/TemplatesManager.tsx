@@ -60,7 +60,7 @@ export function TemplatesManager() {
   }
 
   const columns: Column<Template>[] = [
-    { key: 'nameEn', labelEn: 'Template', labelFa: t('template'), render: t2 => <div><div className="font-medium text-white">{t2.nameEn}</div><div className="text-xs text-text-tertiary">{t2.slug}</div></div> },
+    { key: 'nameEn', labelEn: 'Template', labelFa: t('template'), render: t2 => <div><div className="font-medium text-text-primary">{t2.nameEn}</div><div className="text-xs text-text-tertiary">{t2.slug}</div></div> },
     { key: 'category', labelEn: 'Category', labelFa: t('category'), type: 'enum', options: CATEGORIES.map(cat => ({ value: cat, labelEn: cat, labelFa: cat })), render: t2 => <span className="text-text-secondary">{t2.category}</span> },
     { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: t2 => t2.active, render: t2 => <Badge color={t2.active ? 'green' : 'slate'}>{t2.active ? t('active') : t('draft')}</Badge> },
   ]
@@ -81,7 +81,7 @@ export function TemplatesManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editTemplate') : t('newTemplate')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editTemplate') : t('newTemplate')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />

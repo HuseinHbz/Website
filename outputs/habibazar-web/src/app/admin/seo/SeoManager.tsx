@@ -91,7 +91,7 @@ export function SeoManager() {
       <div className="flex gap-2 mb-6 flex-wrap">
         {TABS.map(tabItem => (
           <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === tabItem.id ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-white'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === tabItem.id ? 'bg-brand text-white' : 'bg-surface text-text-secondary border border-border hover:text-text-primary'}`}>
             {tabItem.label}
           </button>
         ))}
@@ -103,7 +103,7 @@ export function SeoManager() {
             <Select value={page} onChange={setPage} options={PAGES.map(p => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1).replace('-', ' ') }))} />
             <div className="flex rounded-lg bg-background border border-border overflow-hidden">
               {(['en', 'fa'] as const).map(l => (
-                <button key={l} onClick={() => setLocale(l)} className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}>
+                <button key={l} onClick={() => setLocale(l)} className={`px-4 py-1.5 text-xs font-medium transition-colors ${locale === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>
                   {l.toUpperCase()}
                 </button>
               ))}
@@ -194,7 +194,7 @@ export function SeoManager() {
           </div>
           <p className="text-xs text-text-tertiary">Served at <code className="text-brand">/robots.txt</code></p>
           <textarea value={robotsTxt} onChange={e => setRobotsTxt(e.target.value)} rows={16}
-            className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-brand transition-colors" />
+            className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm text-text-primary font-mono focus:outline-none focus:border-brand transition-colors" />
           <div className="flex gap-3">
             <button onClick={() => setRobotsTxt('User-agent: *\nAllow: /\n\nSitemap: https://habibazar.com/sitemap.xml')} className="text-xs text-brand hover:text-brand">Reset to default</button>
             <button onClick={() => setRobotsTxt('User-agent: *\nDisallow: /')} className="text-xs text-red-400 hover:text-red-300">Block all crawlers</button>
@@ -208,7 +208,7 @@ export function SeoManager() {
           <div className="p-3 rounded-lg flex items-center gap-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
             <span className="text-emerald-400">✓</span>
             <div>
-              <p className="text-sm text-white">Dynamic sitemap is active at <code className="text-brand">/sitemap.xml</code></p>
+              <p className="text-sm text-text-primary">Dynamic sitemap is active at <code className="text-brand">/sitemap.xml</code></p>
               <p className="text-xs text-text-tertiary">Includes all pages, case studies, and blog posts automatically</p>
             </div>
           </div>

@@ -54,7 +54,7 @@ export function OrganizationHub() {
   }
 
   const columns: Column<Org>[] = [
-    { key: 'nameEn', labelEn: 'Organization', labelFa: t('organization'), render: org => <div><div className="font-medium text-white">{org.nameEn}</div><div className="text-xs text-text-tertiary">{org.country || org.slug}</div></div> },
+    { key: 'nameEn', labelEn: 'Organization', labelFa: t('organization'), render: org => <div><div className="font-medium text-text-primary">{org.nameEn}</div><div className="text-xs text-text-tertiary">{org.country || org.slug}</div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: org => <span className="text-text-secondary">{TYPE_ICONS[org.type]} {org.type}</span> },
     { key: 'tier', labelEn: 'Tier', labelFa: t('tier'), type: 'enum', options: TIERS.map(tr => ({ value: tr, labelEn: tr, labelFa: tr })), render: org => org.tier ? <Badge color={TIER_COLORS[org.tier] || 'slate'}>{org.tier}</Badge> : <span className="text-text-disabled">—</span> },
     { key: 'website', labelEn: 'Website', labelFa: t('website'), render: org => <span className="text-text-secondary text-xs">{org.website || '—'}</span> },
@@ -77,7 +77,7 @@ export function OrganizationHub() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editOrganization') : t('newOrganization')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editOrganization') : t('newOrganization')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} /></div>
@@ -91,7 +91,7 @@ export function OrganizationHub() {
               <div className="col-span-2">
                 <label className="text-xs text-text-secondary mb-1 block">{t('description')}</label>
                 <textarea value={editing.descriptionEn || ''} onChange={e2 => setEditing(e => ({ ...e, descriptionEn: e2.target.value }))} rows={3}
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" />
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none" />
               </div>
               <div className="col-span-2 flex gap-4 pt-1">
                 <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">

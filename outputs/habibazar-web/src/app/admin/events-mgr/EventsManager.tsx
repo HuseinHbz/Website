@@ -34,7 +34,7 @@ export function EventsManager() {
   }
 
   const columns: Column<Event>[] = [
-    { key: 'titleEn', labelEn: 'Event', labelFa: t('colEvent'), render: e => <div><div className="font-medium text-white">{e.titleEn}</div><div className="text-xs text-text-tertiary">{e.slug}</div></div> },
+    { key: 'titleEn', labelEn: 'Event', labelFa: t('colEvent'), render: e => <div><div className="font-medium text-text-primary">{e.titleEn}</div><div className="text-xs text-text-tertiary">{e.slug}</div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: e => <span className="text-text-secondary">{e.type}</span> },
     { key: 'startDate', labelEn: 'Date', labelFa: t('date'), type: 'date', render: e => <span className="text-text-secondary text-xs">{e.startDate}</span> },
     { key: 'format', labelEn: 'Format', labelFa: t('format'), type: 'enum', options: FORMATS.map(fm => ({ value: fm, labelEn: fm, labelFa: fm })), render: e => <span className="text-text-secondary">{e.format}</span> },
@@ -52,7 +52,7 @@ export function EventsManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editEvent') : t('addEvent')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editEvent') : t('addEvent')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('titleEn')} value={editing.titleEn || ''} onChange={v => setEditing(e => ({ ...e, titleEn: v }))} /></div>
@@ -64,7 +64,7 @@ export function EventsManager() {
               <div className="col-span-2">
                 <label className="text-xs text-text-secondary mb-1 block">{t('description')}</label>
                 <textarea value={editing.descriptionEn || ''} onChange={e2 => setEditing(e => ({ ...e, descriptionEn: e2.target.value }))} rows={3}
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white outline-none" />
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none" />
               </div>
               <div className="flex items-center gap-4 col-span-2 pt-1">
                 <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer"><input type="checkbox" checked={!!editing.isFree} onChange={e2 => setEditing(e => ({ ...e, isFree: e2.target.checked }))} /> {t('free')}</label>

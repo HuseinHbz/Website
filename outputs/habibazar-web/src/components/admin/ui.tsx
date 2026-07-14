@@ -155,7 +155,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
           checked ? 'bg-brand' : 'bg-border-strong'
         }`}
       >
-        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-moderate ease-spring ${
+        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-surface shadow-sm transition-all duration-moderate ease-spring ${
           checked ? 'left-5' : 'left-0.5'
         }`} />
       </div>

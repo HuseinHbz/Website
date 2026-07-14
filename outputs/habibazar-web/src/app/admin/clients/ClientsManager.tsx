@@ -40,7 +40,7 @@ export function ClientsManager() {
   function set<K extends keyof Client>(k: K, v: Client[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
   const columns: Column<Client>[] = [
-    { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: c => <div><div className="font-medium text-white">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
+    { key: 'nameEn', labelEn: 'Name', labelFa: t('name'), render: c => <div><div className="font-medium text-text-primary">{c.nameEn}</div><div className="text-xs text-text-tertiary">{c.nameFa}</div></div> },
     { key: 'typeEn', labelEn: 'Type', labelFa: t('type'), type: 'enum', render: c => <span className="text-text-secondary">{c.typeEn}</span> },
     { key: 'isTechPartner', labelEn: 'Tech Partner', labelFa: t('isTechPartner'), type: 'boolean', value: c => c.isTechPartner, render: c => <Badge color={c.isTechPartner ? 'blue' : 'slate'}>{c.isTechPartner ? t('isTechPartner') : t('isClient')}</Badge> },
     { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: c => c.active, render: c => <Badge color={c.active ? 'green' : 'slate'}>{c.active ? t('active') : t('hidden')}</Badge> },

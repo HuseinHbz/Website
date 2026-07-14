@@ -33,7 +33,7 @@ export function PartnersManager() {
   }
 
   const columns: Column<Partner>[] = [
-    { key: 'nameEn', labelEn: 'Partner', labelFa: t('partner'), render: p => <span className="font-medium text-white">{p.nameEn}</span> },
+    { key: 'nameEn', labelEn: 'Partner', labelFa: t('partner'), render: p => <span className="font-medium text-text-primary">{p.nameEn}</span> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })) },
     { key: 'tier', labelEn: 'Tier', labelFa: t('tier'), type: 'enum', options: TIERS.map(tr => ({ value: tr, labelEn: tr, labelFa: tr })), render: p => <Badge color={TIER_COLORS[p.tier] || 'slate'}>{p.tier}</Badge> },
     { key: 'website', labelEn: 'Website', labelFa: t('website'), render: p => <span className="text-text-secondary text-xs">{p.website || '—'}</span> },
@@ -52,7 +52,7 @@ export function PartnersManager() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">{editing.id ? t('editPartner') : t('newPartner')}</h3>
+            <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editPartner') : t('newPartner')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} /></div>
