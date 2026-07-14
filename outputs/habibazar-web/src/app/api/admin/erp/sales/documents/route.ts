@@ -10,6 +10,18 @@ import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { clientIp } from '@/lib/api/clientIp'
 import { defaultCurrency } from '@/lib/erp/settings'
+import { evaluateCredit } from '@/lib/crm/customer360Data'
+
+/** Idempotent credit-limit breach alert (26.25 بند ۱.۳), fingerprinted per invoice. */
+async function raiseCreditAlert(customerId: number, invoiceId: number, limit: number, projected: number) {
+  try {
+    await pgQuery(
+      `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, metric_value, ref_type, ref_id, fingerprint, updated_at)
+       VALUES ('credit_limit_exceeded','financial','warning','Customer credit limit exceeded','عبور مشتری از سقف اعتبار',$1,$2,'sales_customers',$3,$4,${NOW})
+       ON CONFLICT (fingerprint) DO UPDATE SET updated_at=${NOW}, status='open'`,
+      [`Invoice ${invoiceId}: projected ${projected} > limit ${limit}`, projected, customerId, `credit:${customerId}:${invoiceId}`])
+  } catch { /* alert is best-effort */ }
+}
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -155,6 +167,16 @@ export async function PUT(req: NextRequest) {
       const res = await postSalesInvoiceToGl(id, auth.user.id)
       await logAction(auth.user, 'sales.doc.post', 'sales_document', id, null, { entryId: res.entryId, alreadyPosted: res.alreadyPosted }, clientIp(req))
       return NextResponse.json({ ok: true, entryId: res.entryId, alreadyPosted: res.alreadyPosted })
+    }
+    // 26.25 بند ۱.۳: credit guard on confirming a sales invoice. block mode
+    // rejects an over-limit confirm; warn mode allows it and raises an alert;
+    // no limit (0) never blocks (backward compatible).
+    if (op === 'confirm' && String(src.doc_type) === 'invoice') {
+      const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
+      if (decision.exceeded) {
+        if (decision.mode === 'block') return badRequest(`Credit limit exceeded: limit ${decision.limit.toLocaleString()}, projected balance ${decision.projected.toLocaleString()}`)
+        await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
+      }
     }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])

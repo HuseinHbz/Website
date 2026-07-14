@@ -33,8 +33,15 @@ export interface RateLimitResult {
   retryAfter?: number
 }
 
+// 26.25 بند ۰: an explicit opt-in bypass for load/perf testing ONLY. It is a
+// hard error to enable this in a real production deployment — the flag exists so
+// `scripts/load-test.mjs` measures true 2xx throughput instead of 429 storms.
+// Never set RATE_LIMIT_DISABLED=1 outside a throwaway benchmark environment.
+const RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_DISABLED === '1'
+
 export function rateLimit(key: string, opts: RateLimitOptions): RateLimitResult {
   const now = Date.now()
+  if (RATE_LIMIT_DISABLED) return { allowed: true, remaining: opts.limit, resetAt: now + opts.windowSec * 1000 }
   const windowMs = opts.windowSec * 1000
 
   let win = store.get(key)

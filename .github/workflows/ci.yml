@@ -86,6 +86,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/hbz_load
       ADMIN_JWT_SECRET: ci-load-secret-placeholder
       NODE_ENV: production
+      # 26.25 بند ۰: measure true 2xx throughput, not a 429 storm (test-only).
+      RATE_LIMIT_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -104,7 +106,7 @@ jobs:
             curl -sf http://127.0.0.1:3000/api/health?probe=live && break
             sleep 2
           done
-      - name: Load test hot routes (p50/p95/p99 + 5xx) + 5-min RSS watch
+      - name: Load test hot routes (status dist + p50/p95/p99) + 5-min RSS watch
         run: node scripts/load-test.mjs
         env:
           BASE: http://127.0.0.1:3000

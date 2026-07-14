@@ -6,7 +6,7 @@ import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { assertPostable } from '@/lib/erp/accountingData'
 import { clientIp } from '@/lib/api/clientIp'
-import { entryBalanced } from '@/lib/erp/ledger'
+import { entryBalanced, isJournalEntryDeletable } from '@/lib/erp/ledger'
 import { reverseEntry, postEntryById } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { createApprovalRequest } from '@/lib/erp/approvalData'
@@ -200,7 +200,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const e = (await pgQuery(`SELECT status, entry_no AS "entryNo" FROM gl_journal_entries WHERE id=$1`, [parsed.data.id]))[0] as { status: string; entryNo: string } | undefined
     if (!e) return badRequest('Not found')
-    if (e.status !== 'draft') return badRequest('Only draft entries can be deleted — posted/voided entries are permanent audit records')
+    if (!isJournalEntryDeletable(e.status)) return badRequest('Only draft entries can be deleted — posted/voided entries are permanent audit records')
     await pgQuery(`DELETE FROM gl_journal_entries WHERE id=$1`, [parsed.data.id])
     await logAction(auth.user, 'gl.entry.delete', 'gl_journal_entry', parsed.data.id, e, null, clientIp(req))
     return NextResponse.json({ ok: true })

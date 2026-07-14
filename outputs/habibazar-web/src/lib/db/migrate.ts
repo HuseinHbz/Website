@@ -2368,6 +2368,112 @@ export async function runMigrations() {
     -- Phase 26.24: route/latency metrics roll-up (observability, بند ۲.۲).
     ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS moadian_status TEXT;
 
+    -- ══ Phase 26.25 — CRM core + customer portal + tickets/SLA + campaigns ══
+    -- بند ۱: customer payment terms (credit_limit already exists) + lead attribution.
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS payment_terms INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS campaign_id INTEGER;
+
+    -- بند ۲: customer portal sessions — auth is INDEPENDENT of the admin JWT.
+    -- OTP (sms) / magic-link (email); token_hash + otp_hash are sha256, never raw.
+    CREATE TABLE IF NOT EXISTS customer_portal_sessions (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES sales_customers(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL DEFAULT 'otp' CHECK(channel IN ('otp','magic_link')),
+      identifier TEXT NOT NULL,          -- phone or email the code was sent to
+      otp_hash TEXT,                     -- sha256 of the 6-digit code (pre-verify)
+      otp_expires_at TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      token_hash TEXT,                   -- sha256 of the session token (post-verify)
+      verified INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT,                   -- session expiry (post-verify)
+      revoked INTEGER NOT NULL DEFAULT 0,
+      ip TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_portal_sess_token ON customer_portal_sessions(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_portal_sess_cust ON customer_portal_sessions(customer_id);
+
+    -- بند ۳: support tickets + threaded messages + SLA linkage.
+    CREATE TABLE IF NOT EXISTS crm_tickets (
+      id SERIAL PRIMARY KEY,
+      ticket_no TEXT UNIQUE,
+      customer_id INTEGER NOT NULL REFERENCES sales_customers(id) ON DELETE CASCADE,
+      subject TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'general',
+      priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')),
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','open','pending','resolved','closed')),
+      owner_id TEXT,
+      company_id INTEGER,
+      sla_id INTEGER,
+      first_response_at TEXT,
+      resolved_at TEXT,
+      source TEXT NOT NULL DEFAULT 'portal',
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_tickets_customer ON crm_tickets(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_tickets_status ON crm_tickets(status, priority);
+    CREATE TABLE IF NOT EXISTS crm_ticket_messages (
+      id SERIAL PRIMARY KEY,
+      ticket_id INTEGER NOT NULL REFERENCES crm_tickets(id) ON DELETE CASCADE,
+      author_kind TEXT NOT NULL DEFAULT 'agent' CHECK(author_kind IN ('agent','customer','system')),
+      author_id TEXT,
+      body TEXT NOT NULL,
+      attachment_url TEXT,
+      internal INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_ticket_msgs ON crm_ticket_messages(ticket_id, created_at);
+
+    -- بند ۴: campaigns + recipients (send queue with retry) + consent/opt-out.
+    CREATE TABLE IF NOT EXISTS crm_campaigns (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      channel TEXT NOT NULL DEFAULT 'sms' CHECK(channel IN ('sms','email')),
+      subject TEXT,
+      body TEXT NOT NULL DEFAULT '',
+      utm_source TEXT, utm_medium TEXT, utm_campaign TEXT,
+      budget NUMERIC NOT NULL DEFAULT 0,
+      cost NUMERIC NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','sending','paused','done','canceled')),
+      company_id INTEGER,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS crm_campaign_recipients (
+      id SERIAL PRIMARY KEY,
+      campaign_id INTEGER NOT NULL REFERENCES crm_campaigns(id) ON DELETE CASCADE,
+      customer_id INTEGER,
+      lead_id INTEGER,
+      target TEXT NOT NULL,              -- phone or email
+      status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','sent','failed','skipped_optout')),
+      error TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      company_id INTEGER,
+      sent_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_campaign_recip ON crm_campaign_recipients(campaign_id, status);
+    -- Opt-out registry: a server-side block list, matched by channel + target.
+    CREATE TABLE IF NOT EXISTS crm_optouts (
+      id SERIAL PRIMARY KEY,
+      channel TEXT NOT NULL CHECK(channel IN ('sms','email')),
+      target TEXT NOT NULL,
+      reason TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE(channel, target)
+    );
+
+    -- 26.25 settings seeds (idempotent): credit guard mode + SMS provider config.
+    INSERT INTO erp_settings (key, value) VALUES
+      ('credit_guard_mode','warn'),
+      ('sms_provider','kavenegar'),
+      ('sms_api_key',''),
+      ('sms_sender','')
+    ON CONFLICT (key) DO NOTHING;
+
     -- 26.22 (runs LAST so every seeded account exists): attach each leaf
     -- account to its Iranian-coding گروه root by leading digit (idempotent).
     UPDATE gl_accounts a SET parent_id = g.id

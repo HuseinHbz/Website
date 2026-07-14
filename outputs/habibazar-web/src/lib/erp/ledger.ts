@@ -137,3 +137,12 @@ export function consolidateTallies(perCompany: AccountTally[][]): AccountTally[]
   }
   return [...merged.values()].sort((a, b) => a.code.localeCompare(b.code))
 }
+
+/**
+ * A journal entry may only be DELETED while it is a draft — posted and voided
+ * entries are permanent audit records (26.25 بند ۰.۴; the DELETE route enforces
+ * this). Voiding a posted entry books a reversal instead of deleting it.
+ */
+export function isJournalEntryDeletable(status: string): boolean {
+  return status === 'draft'
+}
