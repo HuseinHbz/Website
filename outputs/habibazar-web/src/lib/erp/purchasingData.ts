@@ -6,6 +6,7 @@ import { pgQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
 import { assertPostable } from './accountingData'
+import { loadGlMap, applyGlMap, postPurchasePaymentToGl } from './glPosting'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
@@ -207,8 +208,11 @@ export async function decideApproval(id: number, level: number, decision: 'appro
 /** Record a payment against a purchase invoice and recompute its settle status. */
 export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR') {
   const rate = (await rialRateFor(currency)) ?? 1
-  await pgQuery(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW})`,
-    [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate])
+  const pay = (await pgQuery<{ id: number }>(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW}) RETURNING id`,
+    [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate]))[0]
+  // 26.23: every supplier payment books Dr AP / Cr Bank (idempotent, best-effort —
+  // a closed period leaves the payment recorded and self-heal/manual can post later).
+  try { await postPurchasePaymentToGl(pay.id, userId) } catch { /* stays unposted */ }
   const d = (await pgQuery<{ total: number }>(`SELECT total FROM purchase_documents WHERE id=$1`, [documentId]))[0]
   const paid = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(amount),0) AS t FROM purchase_payments WHERE document_id=$1`, [documentId]))[0]?.t)
   const status = purchaseInvoiceStatus(num(d.total), paid)
@@ -240,7 +244,8 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the invoice before posting')
 
   const net = num(d.subtotal) - num(d.discount_total)
-  const lines = purchaseInvoicePostingLines(net, num(d.tax_total), num(d.total))
+  // 26.23: account codes flow through the configurable erp_settings map.
+  const lines = applyGlMap(purchaseInvoicePostingLines(net, num(d.tax_total), num(d.total)), await loadGlMap())
   if (!postingBalanced(lines)) throw new Error('Posting does not balance')
 
   // Resolve account ids by code (seeded standard chart).

@@ -5,6 +5,7 @@ import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
 import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
+import { reverseEntry } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { clientIp } from '@/lib/api/clientIp'
@@ -157,8 +158,24 @@ export async function PUT(req: NextRequest) {
     }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
-    await logAction(auth.user, `sales.doc.${op}`, 'sales_document', id)
-    return NextResponse.json({ ok: true })
+    // 26.23 (بند ۱.۱): confirming an invoice/credit note auto-posts it to the GL
+    // (idempotent — gl_entry_id guard). A closed fiscal period fails loudly.
+    let entryId: number | null = null
+    if (op === 'confirm' && ['invoice', 'credit_note'].includes(String(src.doc_type))) {
+      try {
+        entryId = (await postSalesInvoiceToGl(id, auth.user.id)).entryId
+      } catch (err) {
+        await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, src.status])
+        return badRequest(`Confirmed but not postable: ${err instanceof Error ? err.message : 'GL posting failed'}`)
+      }
+    }
+    // 26.23 (بند ۱.۳/۲.۱): voiding a GL-posted document books a reversal entry.
+    if (op === 'void' && src.gl_entry_id) {
+      const rev = await reverseEntry(Number(src.gl_entry_id), auth.user.id)
+      await logAction(auth.user, 'sales.doc.void.reversal', 'gl_journal_entry', rev.reversalId, { source: src.gl_entry_id }, { reversalId: rev.reversalId }, clientIp(req))
+    }
+    await logAction(auth.user, `sales.doc.${op}`, 'sales_document', id, { status: src.status }, { status, entryId }, clientIp(req))
+    return NextResponse.json({ ok: true, entryId })
   } catch (e) { return apiError(e, 'Operation failed') }
 }
 

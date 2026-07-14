@@ -8,6 +8,7 @@ import { pgQuery } from '@/lib/db'
 import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
+import { loadGlMap, applyGlMap } from './glPosting'
 
 export interface CustomerWithCredit {
   id: number; code: string; name: string; email: string | null; phone: string | null
@@ -148,7 +149,8 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
   const num = (n: number | null | undefined) => Number(n ?? 0)
   const net = num(d.subtotal) - num(d.discount_total)
   const kind = d.doc_type === 'credit_note' ? 'credit_note' : 'invoice'
-  const lines = salesInvoicePostingLines(net, num(d.tax_total), num(d.total), kind)
+  // 26.23: account codes flow through the configurable erp_settings map.
+  const lines = applyGlMap(salesInvoicePostingLines(net, num(d.tax_total), num(d.total), kind), await loadGlMap())
   if (!postingBalanced(lines)) throw new Error('Posting does not balance')
 
   const codes = [...new Set(lines.map(l => l.accountCode))]

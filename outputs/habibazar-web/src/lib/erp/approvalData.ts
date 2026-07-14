@@ -128,6 +128,13 @@ async function resolveActor(user: AdminUser, row: RequestRow, level: ApprovalLev
 
 /** Approve / reject / request-change at the current level (RBAC + delegation + audit). */
 export async function actOnRequest(id: number, user: AdminUser, decision: Decision, comment: string | undefined, ip: string | undefined): Promise<{ status: string }> {
+  {
+    const row0 = await getRow(id)
+    // 26.23: server-side separation of duties — the creator of a journal-entry
+    // posting request may never approve/reject their own entry.
+    if (row0?.docType === 'journal_entry' && row0.createdBy === user.id)
+      throw new Error('Separation of duties: the entry creator cannot approve their own posting')
+  }
   const row = await getRow(id)
   if (!row) throw new Error('Request not found')
   if (row.status !== 'pending' && row.status !== 'changes_requested') throw new Error(`Request is already ${row.status}`)
@@ -168,6 +175,11 @@ async function advanceDocument(row: RequestRow): Promise<void> {
     else if (row.refType === 'payment_orders') await pgQuery(`UPDATE payment_orders SET status='approved' WHERE id=$1 AND status='pending_approval'`, [row.refId])
     else if (row.refType === 'sales_documents') await pgQuery(`UPDATE sales_documents SET status='confirmed' WHERE id=$1 AND status='sent'`, [row.refId])
     else if (row.refType === 'gen_documents') await pgQuery(`UPDATE gen_documents SET status='issued' WHERE id=$1`, [row.refId])
+    else if (row.refType === 'gl_journal_entries') {
+      // 26.23 maker/checker: full approval posts the draft journal entry.
+      const { postEntryById } = await import('./glPosting')
+      await postEntryById(row.refId)
+    }
   } catch { /* document advance is best-effort; the approval itself is authoritative */ }
 }
 

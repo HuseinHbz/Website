@@ -46,6 +46,22 @@ export async function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
 
+    -- 26.23: CRM operational layer — activities timeline + lead→customer link.
+    CREATE TABLE IF NOT EXISTS crm_activities (
+      id SERIAL PRIMARY KEY,
+      lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL DEFAULT 'note' CHECK(kind IN ('call','meeting','email','note','task')),
+      body TEXT NOT NULL,
+      due_at TEXT,
+      done INTEGER NOT NULL DEFAULT 0,
+      assigned_to TEXT REFERENCES users(id),
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_activities_lead ON crm_activities(lead_id);
+    ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS converted_customer_id INTEGER;
+
     CREATE TABLE IF NOT EXISTS feature_flags (
       id SERIAL PRIMARY KEY,
       key TEXT NOT NULL UNIQUE,
@@ -580,7 +596,8 @@ export async function runMigrations() {
       ('doc_delivery_note','Document · Delivery Note','سند · حواله تحویل','{PREFIX}-{YEAR}-{COUNTER}','DN','yearly',6,1),
       ('doc_service_report','Document · Service Report','سند · گزارش خدمات','{PREFIX}-{YEAR}-{COUNTER}','SR','yearly',6,1),
       ('doc_completion_certificate','Document · Completion Certificate','سند · گواهی تکمیل','{PREFIX}-{YEAR}-{COUNTER}','CC','yearly',6,1),
-      ('doc_financial_report','Document · Financial Report','سند · گزارش مالی','{PREFIX}-{YEAR}-{COUNTER}','FR','yearly',6,1)
+      ('doc_financial_report','Document · Financial Report','سند · گزارش مالی','{PREFIX}-{YEAR}-{COUNTER}','FR','yearly',6,1),
+      ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1)
     ON CONFLICT (doc_type) DO NOTHING;
 
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
@@ -1019,6 +1036,16 @@ export async function runMigrations() {
     ALTER TABLE assets ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC NOT NULL DEFAULT 1;
 
     -- Phase 26.7: global ERP configuration (currency defaults, formatting).
+    -- 26.23: reusable journal-entry templates (save/load/copy in the editor).
+    CREATE TABLE IF NOT EXISTS gl_entry_templates (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      memo TEXT,
+      lines TEXT NOT NULL DEFAULT '[]',
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
     CREATE TABLE IF NOT EXISTS erp_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
@@ -1028,6 +1055,18 @@ export async function runMigrations() {
       ('default_currency', 'IRR'),
       ('display_currency', 'IRR'),
       ('decimal_precision', '0'),
+      -- 26.23: configurable GL posting map (defaults = the seeded chart).
+      ('gl_map_ar', '1100'),
+      ('gl_map_revenue', '4000'),
+      ('gl_map_vat', '2100'),
+      ('gl_map_ap', '2000'),
+      ('gl_map_inventory', '1200'),
+      ('gl_map_bank', '1010'),
+      -- 26.23: maker/checker for journal posting (off = backward compatible).
+      ('gl_posting_approval', 'off'),
+      ('gl_posting_approval_threshold', '500000000'),
+      -- 26.23: CRM follow-up SLA (days without activity on an open lead).
+      ('crm_sla_days', '7'),
       ('number_format', 'standard')
     ON CONFLICT (key) DO NOTHING;
 
@@ -2244,6 +2283,20 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_success_stories_org ON success_stories(organization_id);
     CREATE INDEX IF NOT EXISTS idx_inv_moves_location ON inv_moves(location_id);
     CREATE INDEX IF NOT EXISTS idx_numbering_audit_format ON numbering_audit(format_id);
+
+    -- 26.23: reversal linkage (void on a posted entry books a mirror entry).
+    ALTER TABLE gl_journal_entries ADD COLUMN IF NOT EXISTS reversal_of INTEGER;
+    ALTER TABLE gl_journal_entries ADD COLUMN IF NOT EXISTS reversed_by INTEGER;
+    -- 26.23: payments post to the GL too (Dr Bank/Cr AR · Dr AP/Cr Bank).
+    ALTER TABLE sales_payments ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
+    ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
+
+    -- 26.23: default maker/checker matrix rule for journal posting (only
+    -- consulted when erp_settings.gl_posting_approval = 'on').
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, levels, priority, active)
+      SELECT 'journal_entry', 'Journal posting approval', 'تأیید ثبت سند حسابداری', 0,
+             '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
+      WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='journal_entry');
 
     -- 26.22 (runs LAST so every seeded account exists): attach each leaf
     -- account to its Iranian-coding گروه root by leading digit (idempotent).

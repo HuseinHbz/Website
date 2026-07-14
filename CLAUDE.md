@@ -751,6 +751,36 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   +98/0098/98→0, email, national-code padding, ٬٫ separators) applied before
   validation. Live-PG verified (Persian-sheet xlsx → dry-run wrote nothing →
   real import + «۰۹۱۲…» phone normalized).
+- **Phase 26.23 — GL Integration Core + Operational CRM** (report:
+  `docs/governance/phase26.23-gl-integration-crm-report.md`). **Sub-ledger →
+  GL is now automatic**: confirming a sales invoice/credit note auto-posts it
+  (loud failure on a closed period), sales receipts post Dr Bank/Cr AR and
+  purchase payments Dr AP/Cr Bank (`sales_payments.gl_entry_id` /
+  `purchase_payments.gl_entry_id`, idempotent) — all through the new
+  `src/lib/erp/glPosting.ts` whose account codes flow through a
+  **configurable erp_settings map** (`gl_map_ar/revenue/vat/ap/inventory/bank`,
+  seeded to the standard chart) via pure `applyGlMap` over the existing
+  posting-line engines. **Audit-safe void**: voiding a posted entry (or a
+  GL-posted sales doc) books a REVERSAL entry with two-way linkage
+  (`gl_journal_entries.reversal_of ⇄ reversed_by`, idempotent `reverseEntry`);
+  journal DELETE now only accepts drafts. **Journal hardening**: entry_no from
+  the Numbering Engine (seeded gapless yearly `JE-{YYYY}-{seq:5}` format),
+  draft `update` op (balance re-validated + line-diff audit), copy-from-entry
+  + `gl_entry_templates`, and **maker/checker** (`gl_posting_approval` +
+  threshold in erp_settings, off by default): over-threshold posts create a
+  `journal_entry` approval request (seeded matrix rule), the maker cannot
+  approve their own entry (server-enforced in `actOnRequest`), full approval
+  posts via the `advanceDocument` hook → `postEntryById`. GL-entry link
+  columns in Sales/Purchasing lists; Finance journal UI gained the pending
+  queue/templates/copy/draft-edit. **Operational CRM**: `crm_activities`
+  (call/meeting/email/note/task + due/done/assignee) + CRUD API + timeline
+  drawer; owner + "My leads" filter; **lead→customer Convert** with email/
+  phone duplicate detection (`crm_leads.converted_customer_id`); **Kanban**
+  pipeline (HTML5 DnD, table/kanban switch persisted in `table_prefs.viewMode`);
+  follow-up **SLA** (`crm_sla_days`, default 7) → idempotent business_alerts +
+  dashboard counter (logging an activity auto-resolves the alert). Verified
+  live-PG 26/26 (full Lead→…→reversal→TB-balanced cycle) + regressions 45/45,
+  28/28, 9/9; 655 unit tests.
 - **Phase 26.22 — Role-Based QA, Theme, Coding & RBAC** (report:
   `docs/governance/phase26.22-qa-rbac-theme-report.md`). 14-role QA sweep → 7
   real defects fixed: the admin panel now mounts `ThemeProvider`

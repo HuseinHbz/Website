@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fmtMoney } from '@/lib/format'
 import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
@@ -365,6 +366,7 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
     { key: 'customerName', labelEn: 'Customer', labelFa: t('sales_cCustomer'), render: r => <span className="text-text-secondary">{r.customerName}</span> },
     { key: 'date', labelEn: 'Date', labelFa: t('sales_cDate'), type: 'date', render: r => <span className="text-text-tertiary text-xs">{r.date}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('sales_cStatus'), type: 'enum', options: ['draft', 'sent', 'confirmed', 'partial', 'paid', 'void'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: r => <Badge color={STATUS_COLOR[r.status]}>{t(`sales_st_${r.status}` as 'sales_st_draft')}</Badge> },
+    { key: 'glEntryId', labelEn: 'GL entry', labelFa: locale === 'fa' ? 'سند حسابداری' : 'GL entry', render: r => r.glEntryId ? <Link href={`/admin/finance?tab=journal&entry=${r.glEntryId}`} className="text-xs text-brand hover:underline font-mono">#{r.glEntryId}</Link> : <span className="text-xs text-text-tertiary">—</span> },
     { key: 'total', labelEn: 'Total', labelFa: t('sales_cTotal'), type: 'number', numeric: true, render: r => <span className="text-text-secondary text-xs">{fmtMoney(r.total, { max: 2, currency: r.currency })}{docType === 'invoice' && r.paid > 0 && <span className="text-text-tertiary"> ({fmtMoney(r.paid, { max: 2, currency: r.currency })})</span>}</span> },
   ]
   // Soft delete (super_admin/administrator; the server enforces RBAC).

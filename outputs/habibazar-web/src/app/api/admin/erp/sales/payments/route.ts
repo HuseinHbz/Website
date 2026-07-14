@@ -5,6 +5,7 @@ import { pgQuery } from '@/lib/db'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { logAction } from '@/lib/admin/audit'
 import { invoiceStatus } from '@/lib/erp/sales'
+import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -58,7 +59,11 @@ export async function POST(req: NextRequest) {
         await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`, [d.documentId, invoiceStatus(doc.total, paid.paid)])
       }
     }
-    await logAction(auth.user, 'sales.payment.create', 'sales_payment', row.id, null, { amount: d.amount })
-    return NextResponse.json({ id: row.id })
+    // 26.23 (بند ۱.۱): every customer receipt books Dr Bank / Cr AR (idempotent;
+    // a closed period leaves the payment recorded — self-heal can post later).
+    let entryId: number | null = null
+    try { entryId = (await postSalesPaymentToGl(row.id, auth.user.id)).entryId } catch { /* stays unposted */ }
+    await logAction(auth.user, 'sales.payment.create', 'sales_payment', row.id, null, { amount: d.amount, entryId })
+    return NextResponse.json({ id: row.id, entryId })
   } catch (e) { return apiError(e, 'Failed to record payment') }
 }

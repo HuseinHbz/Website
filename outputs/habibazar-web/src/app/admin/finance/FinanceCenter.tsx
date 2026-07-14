@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fmtMoney, setDefaultCurrency } from '@/lib/format'
 import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
@@ -196,12 +197,22 @@ function Journal({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boole
   const [memo, setMemo] = useState('')
   const [lines, setLines] = useState<Line[]>([{ accountId: 0, debit: 0, credit: 0 }, { accountId: 0, debit: 0, credit: 0 }])
   const [saving, setSaving] = useState(false)
+  // 26.23: draft editing, copy-from-entry, templates, maker/checker queue.
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [templates, setTemplates] = useState<{ id: number; name: string; memo: string | null; lines: string }[]>([])
+  const [tplName, setTplName] = useState('')
+  const [pending, setPending] = useState<{ id: number; entryId: number; title: string; amount: number; createdByName: string | null }[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const [e, a] = await Promise.all([fetch('/api/admin/erp/finance/journal').then(r => r.json()), fetch('/api/admin/erp/finance/accounts').then(r => r.json())])
       setEntries(e.entries ?? []); setAccounts((a.accounts ?? []).filter((x: Account) => x.active !== 0))
+      const [tp, pa] = await Promise.all([
+        fetch('/api/admin/erp/finance/journal?templates=1').then(r => r.json()).catch(() => ({})),
+        fetch('/api/admin/erp/finance/journal?pendingApprovals=1').then(r => r.json()).catch(() => ({})),
+      ])
+      setTemplates(tp.templates ?? []); setPending(pa.pending ?? [])
     } catch { toast(t('fin_loadFail'), 'error') } finally { setLoading(false) }
   }, [toast, t])
   useEffect(() => { load() }, [load])
@@ -211,16 +222,39 @@ function Journal({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boole
   const balanced = Math.abs(totalDebit - totalCredit) < 0.005 && totalDebit > 0
 
   function setLine(i: number, patch: Partial<Line>) { setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l)) }
-  function reset() { setDate(new Date().toISOString().slice(0, 10)); setMemo(''); setLines([{ accountId: 0, debit: 0, credit: 0 }, { accountId: 0, debit: 0, credit: 0 }]) }
+  function reset() { setDate(new Date().toISOString().slice(0, 10)); setMemo(''); setLines([{ accountId: 0, debit: 0, credit: 0 }, { accountId: 0, debit: 0, credit: 0 }]); setEditingId(null); setTplName('') }
+
+  // Load an existing entry's lines into the editor (draft edit or copy).
+  async function loadEntry(id: number, asEdit: boolean) {
+    const r = await fetch(`/api/admin/erp/finance/journal?id=${id}`)
+    if (!r.ok) return
+    const d = await r.json()
+    setDate(asEdit ? d.entry.date : new Date().toISOString().slice(0, 10))
+    setMemo(asEdit ? (d.entry.memo ?? '') : `${fa ? 'کپی از' : 'Copy of'} ${d.entry.entryNo}`)
+    setLines((d.lines ?? []).map((l: { accountId: number; debit: number; credit: number }) => ({ accountId: l.accountId, debit: l.debit, credit: l.credit })))
+    setEditingId(asEdit ? id : null)
+    setModal(true)
+  }
+  function loadTemplate(tpl: { memo: string | null; lines: string }) {
+    try {
+      const ls = JSON.parse(tpl.lines) as Line[]
+      setLines(ls.map(l => ({ accountId: l.accountId, debit: l.debit || 0, credit: l.credit || 0 })))
+      if (tpl.memo) setMemo(tpl.memo)
+    } catch { /* malformed template */ }
+  }
 
   async function submit(post: boolean) {
     const clean = lines.filter(l => l.accountId && (l.debit > 0 || l.credit > 0))
     if (clean.length < 2 || !balanced) { toast(t('fin_mustBalance'), 'error'); return }
     setSaving(true)
     try {
-      const r = await fetch('/api/admin/erp/finance/journal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, currency, memo, post, lines: clean }) })
+      const r = editingId
+        ? await fetch('/api/admin/erp/finance/journal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editingId, op: 'update', date, memo, lines: clean }) })
+        : await fetch('/api/admin/erp/finance/journal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, currency, memo, post, lines: clean, saveTemplate: tplName.trim() || undefined }) })
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'failed')
-      toast(post ? t('fin_posted') : t('fin_savedDraft'), 'success'); setModal(false); reset(); load()
+      if (d.pendingApproval) toast(fa ? 'سند در صف تأیید قرار گرفت (Maker/Checker)' : 'Entry queued for approval (maker/checker)', 'success')
+      else toast(post ? t('fin_posted') : t('fin_savedDraft'), 'success')
+      setModal(false); reset(); load()
     } catch (e) { toast(e instanceof Error ? e.message : t('fin_saveFail'), 'error') } finally { setSaving(false) }
   }
   async function op(id: number, o: 'post' | 'void') {
@@ -238,17 +272,36 @@ function Journal({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boole
   ]
   const journalActions: RowAction<Entry>[] = [
     { id: 'post', labelEn: 'Post', labelFa: t('fin_post'), icon: '✓', hidden: e => e.status !== 'draft', onClick: e => op(e.id, 'post') },
-    { id: 'void', labelEn: 'Void', labelFa: t('fin_void'), icon: '✕', danger: true, hidden: e => e.status !== 'posted', onClick: e => op(e.id, 'void') },
+    { id: 'editDraft', labelEn: 'Edit draft', labelFa: fa ? 'ویرایش پیش‌نویس' : 'Edit draft', icon: '✎', hidden: e => e.status !== 'draft', onClick: e => loadEntry(e.id, true) },
+    { id: 'copy', labelEn: 'Copy entry', labelFa: fa ? 'کپی از سند' : 'Copy entry', icon: '⧉', onClick: e => loadEntry(e.id, false) },
+    { id: 'void', labelEn: 'Void (reversal)', labelFa: fa ? 'ابطال (سند معکوس)' : 'Void (reversal)', icon: '✕', danger: true, hidden: e => e.status !== 'posted', onClick: e => op(e.id, 'void') },
   ]
   return (
     <>
+      {pending.length > 0 && (
+        <Card className="p-3 mb-4 border-warning/40">
+          <p className="text-xs font-semibold text-warning mb-1">{fa ? `${pending.length} سند در انتظار تأیید (Maker/Checker)` : `${pending.length} entr${pending.length === 1 ? 'y' : 'ies'} awaiting posting approval`}</p>
+          <div className="flex flex-wrap gap-2">
+            {pending.map(p => <Link key={p.id} href="/admin/approvals" className="text-2xs text-brand hover:underline">{p.title} · {money(p.amount)} · {p.createdByName ?? ''}</Link>)}
+          </div>
+        </Card>
+      )}
       <div className="flex justify-end mb-4"><Btn onClick={() => { reset(); setModal(true) }}>{t('fin_newEntry')}</Btn></div>
       <Card className="p-4">
         <DataTable tableId="finance-journal" columns={journalColumns} rows={entries} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={e => String(e.id)} rowActions={journalActions} exportName="journal-entries" emptyLabel={t('fin_noEntries')} />
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={t('fin_newEntry')} size="xl">
+      <Modal open={modal} onClose={() => setModal(false)} title={editingId ? (fa ? `ویرایش پیش‌نویس #${editingId}` : `Edit draft #${editingId}`) : t('fin_newEntry')} size="xl">
         <div className="space-y-4">
+          {!editingId && templates.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-text-tertiary">{fa ? 'الگو:' : 'Template:'}</span>
+              <select onChange={e => { const tpl = templates.find(x => String(x.id) === e.target.value); if (tpl) loadTemplate(tpl) }} defaultValue="" className="form-input !py-1.5 !px-2 text-xs w-auto">
+                <option value="" disabled>{fa ? 'بارگذاری الگو…' : 'Load a template…'}</option>
+                {templates.map(tp => <option key={tp.id} value={tp.id}>{tp.name}</option>)}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Input label={t('fin_fDate')} type="date" value={date} onChange={setDate} />
             <Select label={fa ? 'ارز' : 'Currency'} value={currency} onChange={setCurrency} options={['IRR', 'IRT', 'USD', 'EUR'].map(c => ({ value: c, label: c }))} />
@@ -270,9 +323,10 @@ function Journal({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boole
             <span className="text-sm text-text-secondary">{t('fin_totals')}: {money(totalDebit)} / {money(totalCredit)}</span>
             <Badge color={balanced ? 'green' : 'red'}>{balanced ? t('fin_balanced') : t('fin_unbalanced')}</Badge>
           </div>
+          {!editingId && <Input label={fa ? 'ذخیره به‌عنوان الگو (اختیاری)' : 'Save as template (optional)'} value={tplName} onChange={setTplName} />}
           <div className="flex gap-3">
-            <Btn onClick={() => submit(true)} disabled={saving || !balanced}>{t('fin_postEntry')}</Btn>
-            <Btn variant="secondary" onClick={() => submit(false)} disabled={saving || !balanced}>{t('fin_saveDraft')}</Btn>
+            {!editingId && <Btn onClick={() => submit(true)} disabled={saving || !balanced}>{t('fin_postEntry')}</Btn>}
+            <Btn variant="secondary" onClick={() => submit(false)} disabled={saving || !balanced}>{editingId ? (fa ? 'ذخیره تغییرات' : 'Save changes') : t('fin_saveDraft')}</Btn>
             <Btn variant="ghost" onClick={() => setModal(false)}>{t('fin_cancel')}</Btn>
           </div>
         </div>

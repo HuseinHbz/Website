@@ -17,6 +17,8 @@ const prefsSchema = z.object({
   pinned: z.record(z.string(), z.enum(['start', 'end'])).optional(),
   density: z.enum(['comfortable', 'compact']).optional(),
   pageSize: z.number().int().min(5).max(1000).optional(),
+  // 26.23: per-user CRM view mode (table / kanban) rides the same prefs blob.
+  viewMode: z.enum(['table', 'kanban']).optional(),
 }).strict()
 
 const putSchema = z.object({ tableId: z.string().max(60), prefs: prefsSchema })

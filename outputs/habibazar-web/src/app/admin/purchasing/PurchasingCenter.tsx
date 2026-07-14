@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
@@ -235,7 +236,8 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { key: 'date', labelEn: 'Date', labelFa: 'تاریخ' },
     { key: 'priority', labelEn: 'Priority', labelFa: 'اولویت', type: 'enum', render: d => <Badge color={PRIORITY_COLOR[d.priority] || 'slate'}>{rtl ? (PRIORITY_FA[d.priority] || d.priority) : d.priority}</Badge> },
     { key: 'total', labelEn: 'Total', labelFa: 'مبلغ', type: 'number', numeric: true, render: d => <span>{money(d.total)}</span> },
-    { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: d => <span className="flex items-center gap-1"><Badge color={STATUS_COLOR[d.status] || 'slate'}>{d.status}</Badge>{d.glEntryId && <Badge color="indigo">{lc(rtl, 'GL', 'دفتر')}</Badge>}</span> },
+    { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: d => <span className="flex items-center gap-1"><Badge color={STATUS_COLOR[d.status] || 'slate'}>{d.status}</Badge></span> },
+    { key: 'glEntryId', labelEn: 'GL entry', labelFa: 'سند حسابداری', render: d => d.glEntryId ? <Link href={`/admin/finance?tab=journal&entry=${d.glEntryId}`} className="text-xs text-brand hover:underline font-mono">#{d.glEntryId}</Link> : <span className="text-xs text-text-tertiary">—</span> },
   ]
   const rowActions: RowAction<PurDoc>[] = [
     { id: 'submit', labelEn: 'Submit', labelFa: 'ارسال', icon: '➤', hidden: d => d.status !== 'draft', onClick: d => op('doc.submit', { id: d.id }) },
