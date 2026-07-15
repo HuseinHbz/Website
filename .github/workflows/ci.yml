@@ -65,6 +65,36 @@ jobs:
       - name: Migrate + seed + smoke health
         run: npx tsx scripts/ci-live-pg.ts
 
+  regressions:
+    name: Enterprise regression suites (live-PG)
+    runs-on: ubuntu-latest
+    # 26.25b بند ۰.۱: EVERY future phase must keep the whole enterprise history
+    # green. Runs all committed verify-* / sim-* suites, each on its own DB.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      ADMIN_JWT_SECRET: ci-regressions-secret-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: outputs/habibazar-web/package-lock.json
+      - run: npm ci
+      - name: Run all regression suites
+        run: npm run regressions
+
   load-test:
     name: Load / stress + memory watch (soft gate)
     runs-on: ubuntu-latest

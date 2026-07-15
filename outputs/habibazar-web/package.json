@@ -24,7 +24,8 @@
     "test:e2e:headed": "playwright test --headed",
     "audit:ui": "node scripts/ui-consistency-audit.mjs",
     "audit:tenancy": "node scripts/tenancy-audit.mjs",
-    "audit:theme": "node scripts/theme-audit.mjs"
+    "audit:theme": "node scripts/theme-audit.mjs",
+    "regressions": "tsx scripts/ci-regressions.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
