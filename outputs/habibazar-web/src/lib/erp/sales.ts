@@ -193,3 +193,15 @@ export function validateReturnRequest(input: {
 export function canVoidInvoice(hasPayments: boolean): boolean {
   return !hasPayments
 }
+
+/**
+ * Validate a customer payment against an invoice (26.26 بند ۲, CFO hunt): reject
+ * paying a void/draft invoice and reject overpayment beyond the invoice total.
+ * PURE so the route's guard is unit-tested.
+ */
+export function validatePayment(input: { status: string; invoiceTotal: number; alreadyPaid: number; amount: number }): { ok: boolean; error?: string } {
+  if (input.status === 'void' || input.status === 'draft') return { ok: false, error: 'cannot pay a void/draft invoice' }
+  if (input.amount <= 0) return { ok: false, error: 'amount must be positive' }
+  if (round2(input.alreadyPaid + input.amount) > round2(input.invoiceTotal) + 0.001) return { ok: false, error: 'overpayment beyond the invoice total' }
+  return { ok: true }
+}

@@ -4,7 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { logAction } from '@/lib/admin/audit'
-import { invoiceStatus } from '@/lib/erp/sales'
+import { invoiceStatus, validatePayment } from '@/lib/erp/sales'
 import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
 
 export const dynamic = 'force-dynamic'
@@ -46,6 +46,17 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {
+    // 26.26 بند ۲ (CFO hunt): guard payments against a void/draft invoice and
+    // block overpayment beyond the invoice total (would silently create a negative
+    // AR / unmanaged customer credit). Only checked when the payment targets a doc.
+    if (d.documentId) {
+      const inv = (await pgQuery(`SELECT total::float AS total, status, doc_type AS "docType" FROM sales_documents WHERE id=$1`, [d.documentId]))[0] as { total: number; status: string; docType: string } | undefined
+      if (inv?.docType === 'invoice') {
+        const already = (await pgQuery(`SELECT COALESCE(SUM(amount),0)::float AS s FROM sales_payments WHERE document_id=$1`, [d.documentId]))[0] as { s: number }
+        const v = validatePayment({ status: inv.status, invoiceTotal: Number(inv.total), alreadyPaid: Number(already.s), amount: d.amount })
+        if (!v.ok) return badRequest(v.error === 'cannot pay a void/draft invoice' ? 'Cannot record a payment against a void/draft invoice' : `Overpayment: invoice total ${inv.total}, already paid ${already.s}, this ${d.amount}`)
+      }
+    }
     const rate = (await rialRateFor(d.currency)) ?? 1
     const row = (await pgQuery(
       `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by, currency, exchange_rate)

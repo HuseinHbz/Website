@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced, isInvoiceReturnable, remainingReturnable, validateReturnRequest, canVoidInvoice } from '../sales'
+import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced, isInvoiceReturnable, remainingReturnable, validateReturnRequest, canVoidInvoice, validatePayment } from '../sales'
 
 describe('sales line & document totals', () => {
   it('computes a line: qty×price, then discount, then tax on discounted net', () => {
@@ -125,5 +125,19 @@ describe('sales return validation (26.26 BUG-013)', () => {
   it('a paid invoice cannot be voided', () => {
     expect(canVoidInvoice(true)).toBe(false)
     expect(canVoidInvoice(false)).toBe(true)
+  })
+})
+
+describe('payment guard (26.26 بند ۲, CFO hunt)', () => {
+  it('rejects paying a void/draft invoice', () => {
+    expect(validatePayment({ status: 'void', invoiceTotal: 1000, alreadyPaid: 0, amount: 100 }).ok).toBe(false)
+    expect(validatePayment({ status: 'draft', invoiceTotal: 1000, alreadyPaid: 0, amount: 100 }).ok).toBe(false)
+  })
+  it('rejects overpayment beyond the invoice total', () => {
+    expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 800, amount: 300 }).ok).toBe(false)
+    expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 800, amount: 200 }).ok).toBe(true)
+  })
+  it('accepts a normal partial payment', () => {
+    expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 0, amount: 400 }).ok).toBe(true)
   })
 })

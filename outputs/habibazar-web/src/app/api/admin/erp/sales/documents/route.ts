@@ -136,6 +136,10 @@ export async function PUT(req: NextRequest) {
     if (!src) return badRequest('Not found')
     if (op === 'convert') {
       if (!toType) return badRequest('toType required')
+      // 26.26 بند ۲ (CFO hunt): a source may not be converted to the same target
+      // twice — re-converting a quote/order minted a DUPLICATE downstream document.
+      const dup = (await pgQuery(`SELECT 1 FROM sales_documents WHERE source_id=$1 AND doc_type=$2 AND status<>'void' LIMIT 1`, [id, toType]))[0]
+      if (dup) return badRequest(`Already converted to a ${toType}`)
       const docNo = await nextNumber(toType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[toType] })
       const newDoc = (await pgQuery(
         `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, updated_at)

@@ -139,6 +139,17 @@ async function main() {
   try { await convertDocument(pDraft, 'credit_note') } catch { draftBlocked = true }
   ok(draftBlocked, 'purchase return on a DRAFT invoice → rejected')
 
+  console.log('\n— بند ۲ (CFO hunt): payment + convert guards —')
+  const { validatePayment } = await import('@/lib/erp/sales')
+  ok(!validatePayment({ status: 'void', invoiceTotal: 1000, alreadyPaid: 0, amount: 100 }).ok, 'payment against a void invoice → rejected')
+  ok(!validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 900, amount: 200 }).ok, 'overpayment beyond total → rejected')
+  ok(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 900, amount: 100 }).ok, 'exact-to-total payment → accepted')
+  // dup-convert guard: a source with an existing non-void child of the target type is blocked
+  const q = await one<{ id: number }>(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at) VALUES ('quote','Q-1',$1,'2026-07-14','confirmed',100,100,1,${NOW}) RETURNING id`, [cA.id])
+  await pgQuery(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,source_id,exchange_rate,updated_at) VALUES ('order','SO-1',$1,'2026-07-14','draft',100,100,$2,1,${NOW})`, [cA.id, q.id])
+  const already = await one<{ x: number }>(`SELECT 1 AS x FROM sales_documents WHERE source_id=$1 AND doc_type='order' AND status<>'void' LIMIT 1`, [q.id])
+  ok(already?.x === 1, 'dup-convert guard detects an existing order child → second convert blocked')
+
   console.log(`\n${failed === 0 ? '✅ ALL' : '❌ ' + failed + ' FAILED /'} ${n} assertions`)
   process.exit(failed === 0 ? 0 : 1)
 }
