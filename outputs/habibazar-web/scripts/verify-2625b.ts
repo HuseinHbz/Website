@@ -9,6 +9,7 @@ import { seedDatabase } from '@/lib/db/seed'
 import { pgQuery } from '@/lib/db'
 import { autoLeadFromInbound, confirmInbound, rejectInbound } from '@/lib/crm/inboundData'
 import { isJournalEntryDeletable } from '@/lib/erp/ledger'
+import { createTicket, getTicket, addTicketMessage, setTicketStatus, scanTicketSla } from '@/lib/crm/ticketData'
 
 let n = 0, failed = 0
 const ok = (c: boolean, l: string) => { n++; if (c) console.log(`  ✅ ${n}. ${l}`); else { failed++; console.error(`  ❌ ${n}. ${l}`) } }
@@ -94,6 +95,46 @@ async function main() {
   ok(await del(draftId) === 200, 'route DELETE(draft) → 200 (deleted)')
   const gone = await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM gl_journal_entries WHERE id=$1`, [draftId])
   ok(gone.c === 0, 'the draft entry is actually gone; posted/void remain')
+
+  console.log('\n— بند ۱: support tickets — SLA + IDOR isolation —')
+  const cA = await one<{ id: number }>(`INSERT INTO sales_customers (code,name,kind,updated_at) VALUES ('TKA','A','company',${NOW}) RETURNING id`)
+  const cB = await one<{ id: number }>(`INSERT INTO sales_customers (code,name,kind,updated_at) VALUES ('TKB','B','company',${NOW}) RETURNING id`)
+  const tkA = await createTicket({ customerId: cA.id, subject: 'A needs help', body: 'my invoice is wrong', authorKind: 'customer', priority: 'urgent' })
+  const tkB = await createTicket({ customerId: cB.id, subject: 'B needs help', body: 'question', authorKind: 'customer', priority: 'low' })
+  ok(tkA.ticketNo.startsWith('TK-'), `ticket minted a number via the numbering engine (${tkA.ticketNo})`)
+  // IDOR: A can read own, B's returns null (→404 at the route)
+  ok((await getTicket(tkA.id, { includeInternal: false, customerId: cA.id })) != null, 'A reads own ticket ✔')
+  ok((await getTicket(tkB.id, { includeInternal: false, customerId: cA.id })) === null, "A reading B's ticket → null (404) ✔")
+  // internal notes never leak to the customer view
+  await addTicketMessage(tkA.id, { authorKind: 'agent', authorId: 'admin', body: 'internal: check GL', internal: true })
+  await addTicketMessage(tkA.id, { authorKind: 'agent', authorId: 'admin', body: 'We are looking into it.' })
+  const portalView = await getTicket(tkA.id, { includeInternal: false, customerId: cA.id })
+  ok(portalView!.messages.every(m => !m.internal), 'portal view NEVER contains internal notes ✔')
+  ok(portalView!.messages.some(m => m.body.includes('looking into it')), 'portal view DOES contain the public reply')
+  const adminView = await getTicket(tkA.id, { includeInternal: true })
+  ok(adminView!.messages.some(m => m.internal), 'admin view DOES contain internal notes')
+  // customer cannot post an internal note (forced public even if flagged)
+  await addTicketMessage(tkA.id, { authorKind: 'customer', body: 'still broken', internal: true as unknown as boolean, customerId: cA.id })
+  const last = (await pgQuery<{ internal: number }>(`SELECT internal FROM crm_ticket_messages WHERE ticket_id=$1 ORDER BY id DESC LIMIT 1`, [tkA.id]))[0]
+  ok(last.internal === 0, "a customer reply is NEVER stored as internal ✔")
+  // customer cannot mutate another customer's ticket
+  const crossReply = await addTicketMessage(tkB.id, { authorKind: 'customer', body: 'hijack', customerId: cA.id })
+  ok(crossReply.ok === false, "A cannot reply on B's ticket (IDOR) ✔")
+  // SLA: urgent ticket forced overdue → scan raises a breach alert + escalation
+  await pgQuery(`UPDATE crm_tickets SET created_at = to_char(now() - interval '5 days','YYYY-MM-DD HH24:MI:SS') WHERE id=$1`, [tkA.id])
+  const scan = await scanTicketSla()
+  ok(scan.breached >= 1, `SLA scan flags the overdue urgent ticket as breached (${scan.breached})`)
+  const tkAlert = await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM business_alerts WHERE kind='ticket_sla_breach' AND status<>'resolved'`)
+  ok(tkAlert.c >= 1, 'a ticket_sla_breach business_alert was raised')
+  const lvl = await one<{ sla_level: number }>(`SELECT sla_level FROM crm_tickets WHERE id=$1`, [tkA.id])
+  ok(lvl.sla_level >= 1, 'escalation stage advanced (sla_level)')
+  // pending pauses the clock: resolving from pending stamps resolved_at
+  await setTicketStatus(tkB.id, 'pending', 'admin')
+  const pendTk = await one<{ pending_since: string | null }>(`SELECT pending_since FROM crm_tickets WHERE id=$1`, [tkB.id])
+  ok(pendTk.pending_since != null, 'moving to pending sets pending_since (SLA clock paused)')
+  await setTicketStatus(tkB.id, 'resolved', 'admin')
+  const res = await one<{ resolved_at: string | null; pending_since: string | null }>(`SELECT resolved_at, pending_since FROM crm_tickets WHERE id=$1`, [tkB.id])
+  ok(res.resolved_at != null && res.pending_since === null, 'resolving folds the pause + stamps resolved_at')
 
   console.log(`\n${failed === 0 ? '✅ ALL' : '❌ ' + failed + ' FAILED /'} ${n} assertions`)
   process.exit(failed === 0 ? 0 : 1)

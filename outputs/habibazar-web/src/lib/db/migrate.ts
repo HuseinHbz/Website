@@ -597,7 +597,8 @@ export async function runMigrations() {
       ('doc_service_report','Document · Service Report','سند · گزارش خدمات','{PREFIX}-{YEAR}-{COUNTER}','SR','yearly',6,1),
       ('doc_completion_certificate','Document · Completion Certificate','سند · گواهی تکمیل','{PREFIX}-{YEAR}-{COUNTER}','CC','yearly',6,1),
       ('doc_financial_report','Document · Financial Report','سند · گزارش مالی','{PREFIX}-{YEAR}-{COUNTER}','FR','yearly',6,1),
-      ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1)
+      ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1),
+      ('ticket','Support Ticket','تیکت پشتیبانی','{PREFIX}-{YEAR}-{COUNTER}','TK','yearly',5,1)
     ON CONFLICT (doc_type) DO NOTHING;
 
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
@@ -2425,6 +2426,16 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
     CREATE INDEX IF NOT EXISTS idx_ticket_msgs ON crm_ticket_messages(ticket_id, created_at);
+    -- 26.25b بند ۱: SLA clock accounting (pause while waiting on the customer).
+    -- paused_hours accumulates business hours spent in 'pending'; pending_since is
+    -- set when the ticket enters 'pending' and cleared (folded into paused_hours)
+    -- when it leaves. sla_level tracks the highest escalation stage already fired.
+    ALTER TABLE crm_tickets ADD COLUMN IF NOT EXISTS paused_hours NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE crm_tickets ADD COLUMN IF NOT EXISTS pending_since TEXT;
+    ALTER TABLE crm_tickets ADD COLUMN IF NOT EXISTS sla_level INTEGER NOT NULL DEFAULT 0;
+    -- 26.25b بند ۱: portal knowledge base reuses ai_knowledge_base (NO new CMS) —
+    -- a public flag opts an article into the customer-facing help center.
+    ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS portal_public INTEGER NOT NULL DEFAULT 0;
 
     -- بند ۴: campaigns + recipients (send queue with retry) + consent/opt-out.
     CREATE TABLE IF NOT EXISTS crm_campaigns (

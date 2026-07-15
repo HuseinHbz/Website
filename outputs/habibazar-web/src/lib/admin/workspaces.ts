@@ -100,6 +100,7 @@ export const WORKSPACES: Workspace[] = [
       { labelEn: 'Organizations', labelFa: 'سازمان‌ها', href: '/admin/organizations', icon: '🏢' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
       { labelEn: 'Consultations', labelFa: 'مشاوره‌ها', href: '/admin/consultations', icon: '◎' },
+      { labelEn: 'Support Tickets', labelFa: 'تیکت‌های پشتیبانی', href: '/admin/crm/tickets', icon: '🎫' },
     ] }],
   },
   {
