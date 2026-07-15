@@ -2,12 +2,18 @@
 
 import Link from 'next/link'
 import { useAdminLocale } from '@/lib/admin/locale'
-import { WORKSPACES, workspaceHome } from '@/lib/admin/workspaces'
+import { WORKSPACES, workspaceHome, visibleWorkspaces } from '@/lib/admin/workspaces'
+import type { AdminUser } from '@/lib/admin/auth'
 
-export function WorkspaceHome() {
+export function WorkspaceHome({ role }: { role: AdminUser['role'] }) {
   const locale = useAdminLocale()
   const isRTL = locale === 'fa'
   const moduleCount = (w: (typeof WORKSPACES)[number]) => w.groups.reduce((s, g) => s + g.items.length, 0)
+  // BUG-011 (26.26): single source of truth — the dashboard grid and the sidebar
+  // switcher BOTH read visibleWorkspaces(role); the grid no longer shows every
+  // workspace regardless of RBAC (which both leaked unauthorized entries AND made
+  // the grid count differ from the role-filtered dropdown).
+  const workspaces = visibleWorkspaces(role)
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -20,7 +26,7 @@ export function WorkspaceHome() {
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {WORKSPACES.map(w => (
+        {workspaces.map(w => (
           <Link
             key={w.id}
             href={workspaceHome(w)}

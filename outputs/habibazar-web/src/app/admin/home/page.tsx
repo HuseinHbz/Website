@@ -8,7 +8,7 @@ export default async function WorkspaceHomePage() {
   if (!user) redirect('/admin/login')
   return (
     <AdminShell user={user} title="Workspaces">
-      <WorkspaceHome />
+      <WorkspaceHome role={user.role} />
     </AdminShell>
   )
 }

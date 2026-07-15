@@ -201,6 +201,9 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
                 <input ref={wsSearchRef} value={wsQuery} onChange={e => { setWsQuery(e.target.value); setWsSel(0) }}
                   placeholder={isRTL ? 'جستجوی فضا...' : 'Search workspaces...'} aria-label={isRTL ? 'جستجوی فضای کاری' : 'Search workspaces'}
                   className="w-full px-2.5 py-1.5 rounded-md text-xs bg-white/[0.04] border border-white/[0.08] text-text-primary placeholder:text-text-disabled outline-none focus:border-brand/40" />
+                {/* BUG-011 (26.26): explicit count so the scrollable list isn't
+                    mistaken for the whole set (was read as "only 6"). */}
+                <p className="text-4xs text-text-disabled px-1 pt-1">{workspaces.length} {isRTL ? 'فضای کاری — برای دیدن همه اسکرول کنید' : 'workspaces — scroll to see all'}</p>
               </div>
               {switcher.flat.length === 0 && <p className="px-3 py-3 text-xs text-text-tertiary text-center">{isRTL ? 'یافت نشد' : 'No workspaces'}</p>}
               {([['fav', switcher.favs, isRTL ? 'دلخواه' : 'Favorites'], ['recent', switcher.recent, isRTL ? 'اخیر' : 'Recent'], ['all', switcher.rest, isRTL ? 'همه' : 'All']] as const).map(([key, list, label]) => (

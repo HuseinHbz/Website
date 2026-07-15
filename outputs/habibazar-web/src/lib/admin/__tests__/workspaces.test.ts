@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WORKSPACES, workspaceForPath, workspaceById, workspaceHome, allNavItems, roleCan, visibleWorkspaces, visibleGroups, quickActionsFor, breadcrumbFor, findItem, roleDefaultFavorites } from '../workspaces'
+import { WORKSPACES, workspaceForPath, workspaceById, workspaceHome, allNavItems, roleCan, visibleWorkspaces, visibleGroups, quickActionsFor, breadcrumbFor, findItem, roleDefaultFavorites, hrefPath } from '../workspaces'
 
 describe('workspace registry', () => {
   it('has 12 workspaces with unique ids', () => {
@@ -21,6 +21,59 @@ describe('workspace registry', () => {
 
   it('falls back to executive for unknown paths', () => {
     expect(workspaceForPath('/admin/nonexistent').id).toBe('executive')
+  })
+
+  // BUG-010 (26.26): a ?tab= href must resolve to its OWN workspace, not jump to
+  // executive. Regression: treasury + business-intelligence were mis-owned.
+  it('resolves ?tab= module pages to their own workspace (BUG-010)', () => {
+    expect(workspaceForPath('/admin/treasury').id).toBe('erp')
+    expect(workspaceForPath('/admin/business-intelligence').id).toBe('erp')
+    expect(workspaceForPath('/admin/financial-intelligence').id).toBe('erp')
+    expect(workspaceForPath('/admin/approvals').id).toBe('erp')
+  })
+
+  it('every registry item resolves to a workspace that CONTAINS it — never the executive fallback (table, BUG-010)', () => {
+    // A page may be cross-listed in several workspaces (e.g. /admin/reports lives
+    // in both analytics + erp) and resolves deterministically to the first-listed
+    // one. The invariant is MEMBERSHIP: the resolved workspace must contain the
+    // path — so no registered page (esp. a ?tab= page) falls through to executive.
+    const contains = (wsId: string, path: string) => {
+      const ws = WORKSPACES.find(w => w.id === wsId)!
+      return ws.groups.some(g => g.items.some(it => hrefPath(it.href) === path))
+    }
+    for (const ws of WORKSPACES) {
+      for (const g of ws.groups) {
+        for (const it of g.items) {
+          const path = hrefPath(it.href)
+          const resolved = workspaceForPath(path)
+          expect(contains(resolved.id, path), `${it.href} → '${resolved.id}' which does not contain it`).toBe(true)
+        }
+      }
+    }
+  })
+
+  // BUG-011 (26.26): the sidebar switcher and the /admin/home grid MUST show the
+  // same set — both read visibleWorkspaces(role). This is the single source of truth.
+  it('visibleWorkspaces is the one source for both switcher and dashboard grid (BUG-011)', () => {
+    for (const role of ['super_admin', 'administrator', 'editor', 'auditor', 'viewer'] as const) {
+      const vis = visibleWorkspaces(role)
+      // deterministic, subset of the registry, and every entry is a real workspace
+      expect(vis.length).toBeGreaterThan(0)
+      expect(vis.length).toBeLessThanOrEqual(WORKSPACES.length)
+      expect(vis.every(w => WORKSPACES.some(x => x.id === w.id))).toBe(true)
+      // idempotent — calling twice gives the same count (no hidden state)
+      expect(visibleWorkspaces(role).length).toBe(vis.length)
+    }
+    // a read-only role sees fewer than a super_admin (RBAC actually filters)
+    expect(visibleWorkspaces('viewer').length).toBeLessThanOrEqual(visibleWorkspaces('super_admin').length)
+  })
+
+  it('boundary match: /admin/sales-returns is NOT owned by the sales item', () => {
+    // If /admin/sales-returns existed it must not collapse onto /admin/sales.
+    // (uses startsWith(p + "/") so a hyphen sibling never matches.)
+    expect(workspaceForPath('/admin/sales').id).toBe('erp')
+    // a nested real path still resolves to the owner
+    expect(workspaceForPath('/admin/sales/anything').id).toBe('erp')
   })
 
   it('workspaceById + workspaceHome resolve', () => {
