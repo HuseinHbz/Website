@@ -17,6 +17,7 @@ const SUITES = [
   { name: '26.25s multi-channel', script: 'verify-2625s.ts', db: 'rg_2625s' },
   { name: '26.25a portal/IDOR', script: 'verify-2625a.ts', db: 'rg_2625a' },
   { name: '26.25b inherited-debt', script: 'verify-2625b.ts', db: 'rg_2625b' },
+  { name: '26.26 defects (return/AR/nav/db)', script: 'verify-2626.ts', db: 'rg_2626' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

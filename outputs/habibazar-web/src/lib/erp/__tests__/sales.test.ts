@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced } from '../sales'
+import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced, isInvoiceReturnable, remainingReturnable, validateReturnRequest, canVoidInvoice, validatePayment } from '../sales'
 
 describe('sales line & document totals', () => {
   it('computes a line: qty×price, then discount, then tax on discounted net', () => {
@@ -83,5 +83,61 @@ describe('salesInvoicePostingLines (26.15.1 Sales → GL)', () => {
     const rev = lines.find(l => l.accountCode === '4000')!
     expect(ar.credit).toBe(1090) // AR reduced
     expect(rev.debit).toBe(1000) // revenue reversed
+  })
+})
+
+describe('sales return validation (26.26 BUG-013)', () => {
+  it('only confirmed/partial/paid invoices are returnable', () => {
+    expect(isInvoiceReturnable('confirmed')).toBe(true)
+    expect(isInvoiceReturnable('partial')).toBe(true)
+    expect(isInvoiceReturnable('paid')).toBe(true)
+    expect(isInvoiceReturnable('draft')).toBe(false)
+    expect(isInvoiceReturnable('sent')).toBe(false)
+    expect(isInvoiceReturnable('void')).toBe(false)
+  })
+
+  it('remainingReturnable never goes negative', () => {
+    expect(remainingReturnable(1000, 0)).toBe(1000)
+    expect(remainingReturnable(1000, 400)).toBe(600)
+    expect(remainingReturnable(1000, 1000)).toBe(0)
+    expect(remainingReturnable(1000, 1200)).toBe(0)
+  })
+
+  it('rejects a return on a draft/void invoice', () => {
+    expect(validateReturnRequest({ status: 'draft', invoiceTotal: 1000, priorReturned: 0, requestedAmount: 1000 }).ok).toBe(false)
+    expect(validateReturnRequest({ status: 'void', invoiceTotal: 1000, priorReturned: 0, requestedAmount: 1000 }).ok).toBe(false)
+  })
+
+  it('rejects cumulative returns exceeding the invoice total (idempotency)', () => {
+    expect(validateReturnRequest({ status: 'paid', invoiceTotal: 1000, priorReturned: 700, requestedAmount: 400 }).ok).toBe(false)
+    expect(validateReturnRequest({ status: 'paid', invoiceTotal: 1000, priorReturned: 700, requestedAmount: 300 }).ok).toBe(true)
+  })
+
+  it('accepts a valid partial return', () => {
+    const v = validateReturnRequest({ status: 'confirmed', invoiceTotal: 1000, priorReturned: 0, requestedAmount: 250 })
+    expect(v.ok).toBe(true); expect(v.amount).toBe(250)
+  })
+
+  it('rejects a zero/negative return', () => {
+    expect(validateReturnRequest({ status: 'paid', invoiceTotal: 1000, priorReturned: 0, requestedAmount: 0 }).ok).toBe(false)
+  })
+
+  it('a paid invoice cannot be voided', () => {
+    expect(canVoidInvoice(true)).toBe(false)
+    expect(canVoidInvoice(false)).toBe(true)
+  })
+})
+
+describe('payment guard (26.26 بند ۲, CFO hunt)', () => {
+  it('rejects paying a void/draft invoice', () => {
+    expect(validatePayment({ status: 'void', invoiceTotal: 1000, alreadyPaid: 0, amount: 100 }).ok).toBe(false)
+    expect(validatePayment({ status: 'draft', invoiceTotal: 1000, alreadyPaid: 0, amount: 100 }).ok).toBe(false)
+  })
+  it('rejects overpayment beyond the invoice total', () => {
+    expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 800, amount: 300 }).ok).toBe(false)
+    expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 800, amount: 200 }).ok).toBe(true)
+  })
+  it('accepts a normal partial payment', () => {
+    expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 0, amount: 400 }).ok).toBe(true)
   })
 })

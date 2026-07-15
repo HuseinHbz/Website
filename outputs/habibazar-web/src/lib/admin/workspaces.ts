@@ -283,12 +283,17 @@ export function workspaceForPath(pathname: string): Workspace {
   for (const ws of WORKSPACES) {
     for (const g of ws.groups) {
       for (const it of g.items) {
-        const h = it.href
-        const match = pathname === h || (h !== '/admin' && pathname.startsWith(h))
-        if (match && h.length > bestLen) { best = ws; bestLen = h.length }
+        // BUG-010 (26.26): compare the PATH part only — an href with `?tab=` never
+        // equals a pathname, so the old raw compare returned null → executive jump.
+        // Boundary-safe startsWith so /admin/sales-returns ≠ /admin/sales.
+        const p = hrefPath(it.href)
+        const match = pathname === p || (p !== '/admin' && pathname.startsWith(p + '/'))
+        if (match && p.length > bestLen) { best = ws; bestLen = p.length }
       }
     }
   }
+  // No registered item owns this path → keep the caller on a stable default rather
+  // than silently jumping workspaces. (Only truly-unknown admin paths reach here.)
   return best ?? WORKSPACES[0]
 }
 

@@ -158,3 +158,50 @@ export function salesInvoicePostingLines(net: number, tax: number, total: number
       ]
   return lines
 }
+
+// ── Sales return validation (Phase 26.26, BUG-013) ────────────────────────────
+// A return produces a credit note against a source invoice. PURE guards so the
+// route can reject bad returns deterministically (and unit-test them):
+//  - only a confirmed/partial/paid invoice may be returned (never draft/sent/void)
+//  - the cumulative returned amount may never exceed the invoice total (idempotency)
+export type ReturnableStatus = 'draft' | 'sent' | 'confirmed' | 'partial' | 'paid' | 'void'
+const RETURNABLE = new Set(['confirmed', 'partial', 'paid'])
+
+export function isInvoiceReturnable(status: string): boolean {
+  return RETURNABLE.has(status)
+}
+
+export function remainingReturnable(invoiceTotal: number, priorReturned: number): number {
+  return Math.max(0, round2(invoiceTotal - priorReturned))
+}
+
+export interface ReturnVerdict { ok: boolean; error?: string; amount: number }
+
+/** Validate a requested return amount against the invoice state. */
+export function validateReturnRequest(input: {
+  status: string; invoiceTotal: number; priorReturned: number; requestedAmount: number
+}): ReturnVerdict {
+  if (!isInvoiceReturnable(input.status)) return { ok: false, error: 'only a confirmed/partial/paid invoice can be returned', amount: 0 }
+  const remaining = remainingReturnable(input.invoiceTotal, input.priorReturned)
+  const amount = round2(input.requestedAmount)
+  if (amount <= 0) return { ok: false, error: 'nothing to return', amount: 0 }
+  if (amount > remaining + 0.001) return { ok: false, error: `return ${amount} exceeds remaining returnable ${remaining}`, amount }
+  return { ok: true, amount }
+}
+
+/** True when an invoice may still be voided (no settled payment against it). */
+export function canVoidInvoice(hasPayments: boolean): boolean {
+  return !hasPayments
+}
+
+/**
+ * Validate a customer payment against an invoice (26.26 بند ۲, CFO hunt): reject
+ * paying a void/draft invoice and reject overpayment beyond the invoice total.
+ * PURE so the route's guard is unit-tested.
+ */
+export function validatePayment(input: { status: string; invoiceTotal: number; alreadyPaid: number; amount: number }): { ok: boolean; error?: string } {
+  if (input.status === 'void' || input.status === 'draft') return { ok: false, error: 'cannot pay a void/draft invoice' }
+  if (input.amount <= 0) return { ok: false, error: 'amount must be positive' }
+  if (round2(input.alreadyPaid + input.amount) > round2(input.invoiceTotal) + 0.001) return { ok: false, error: 'overpayment beyond the invoice total' }
+  return { ok: true }
+}

@@ -4,7 +4,7 @@ import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
-import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
+import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid } from '@/lib/erp/salesData'
 import { reverseEntry } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from '@/lib/erp/currencyData'
@@ -117,7 +117,11 @@ export async function POST(req: NextRequest) {
   } catch (e) { return apiError(e, 'Failed to save document') }
 }
 
-const opSchema = z.object({ id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return', 'post']), toType: z.enum(DOC_TYPES).optional() })
+const opSchema = z.object({
+  id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return', 'post']), toType: z.enum(DOC_TYPES).optional(),
+  // BUG-013: optional partial-return selection (omit → full remaining return).
+  lines: z.array(z.object({ lineId: z.number().int().positive(), qty: z.number().positive() })).optional(),
+})
 
 // PUT — lifecycle: send/confirm/void, or convert a quote→order or order→invoice
 // (copies the lines into a new draft document that references the source).
@@ -126,12 +130,16 @@ export async function PUT(req: NextRequest) {
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, opSchema)
   if ('error' in parsed) return parsed.error
-  const { id, op, toType } = parsed.data
+  const { id, op, toType, lines } = parsed.data
   try {
     const src = (await pgQuery(`SELECT * FROM sales_documents WHERE id=$1`, [id]))[0] as Record<string, unknown> | undefined
     if (!src) return badRequest('Not found')
     if (op === 'convert') {
       if (!toType) return badRequest('toType required')
+      // 26.26 بند ۲ (CFO hunt): a source may not be converted to the same target
+      // twice — re-converting a quote/order minted a DUPLICATE downstream document.
+      const dup = (await pgQuery(`SELECT 1 FROM sales_documents WHERE source_id=$1 AND doc_type=$2 AND status<>'void' LIMIT 1`, [id, toType]))[0]
+      if (dup) return badRequest(`Already converted to a ${toType}`)
       const docNo = await nextNumber(toType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[toType] })
       const newDoc = (await pgQuery(
         `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, updated_at)
@@ -146,20 +154,14 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ id: newDoc.id, docNo })
     }
     if (op === 'return') {
-      // Sales return: create a credit note copying the invoice's lines,
-      // referencing the source. The original invoice is left unchanged.
-      if (src.doc_type !== 'invoice') return badRequest('Only an invoice can be returned')
-      const docNo = await nextNumber('credit_note', { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX.credit_note })
-      const cn = (await pgQuery(
-        `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
-         VALUES ('credit_note',$1,$2,to_char(now(),'YYYY-MM-DD'),'draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,${NOW}) RETURNING id`,
-        [docNo, src.customer_id, src.subtotal, src.discount_total, src.tax_total, src.total, id, `Return of ${src.doc_no}`, auth.user.id, src.currency ?? 'IRR', src.exchange_rate ?? 1, src.base_total ?? 0]))[0] as { id: number }
-      await pgQuery(
-        `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id)
-         SELECT $1, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id FROM sales_document_lines WHERE document_id=$2`,
-        [cn.id, id])
-      await logAction(auth.user, 'sales.doc.return', 'sales_document', id, null, { creditNoteId: cn.id }, clientIp(req))
-      return NextResponse.json({ id: cn.id, docNo })
+      // BUG-013 (26.26): guarded sales return via the data layer — only a
+      // confirmed/partial/paid invoice, cumulative return ≤ invoice total
+      // (idempotent), optional partial-line selection. The source invoice is
+      // never mutated; the credit note is settled when it is confirmed.
+      const res = await createSalesReturn(id, { lines, userId: auth.user.id })
+      if (!res.ok) return badRequest(res.error ?? 'Return not allowed')
+      await logAction(auth.user, 'sales.doc.return', 'sales_document', id, null, { creditNoteId: res.id, partial: !!lines }, clientIp(req))
+      return NextResponse.json({ id: res.id, docNo: res.docNo })
     }
     if (op === 'post') {
       // GL posting is an administrator action (mirrors purchasing's doc.post).
@@ -178,6 +180,12 @@ export async function PUT(req: NextRequest) {
         await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
       }
     }
+    // BUG-013 (26.26): a paid invoice may NOT be voided (deleting a settled
+    // financial doc breaks the audit trail) — the operator must return/refund first.
+    if (op === 'void' && String(src.doc_type) === 'invoice') {
+      const paid = Number(((await pgQuery(`SELECT COALESCE(SUM(amount),0)::float s FROM sales_payments WHERE document_id=$1 AND method<>'refund'`, [id]))[0] as { s: number }).s)
+      if (paid > 0) return badRequest('Cannot void a paid invoice — issue a return/refund first')
+    }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
     // 26.23 (بند ۱.۱): confirming an invoice/credit note auto-posts it to the GL
@@ -189,6 +197,12 @@ export async function PUT(req: NextRequest) {
       } catch (err) {
         await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, src.status])
         return badRequest(`Confirmed but not postable: ${err instanceof Error ? err.message : 'GL posting failed'}`)
+      }
+      // BUG-013 (26.26): confirming a RETURN credit note against a PAID invoice
+      // must settle it (refund → AR back to 0, or explicit customer credit + alert)
+      // — otherwise AR is left silently negative.
+      if (String(src.doc_type) === 'credit_note' && src.source_id) {
+        try { await settleReturnIfPaid(id, auth.user.id) } catch { /* alert/refund is best-effort; never blocks confirm */ }
       }
     }
     // 26.23 (بند ۱.۳/۲.۱): voiding a GL-posted document books a reversal entry.

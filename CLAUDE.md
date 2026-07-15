@@ -69,6 +69,21 @@
    settlements (Zarinpal callback / portal) use `'gateway'` so reconciliation can
    tell them apart. New transactional tables still MUST carry `company_id`
    (`audit:tenancy`). (پرداخت درگاه با متد gateway ثبت شود، نه card.)
+9. **Every admin path comparison uses `hrefPath()` — never the raw href (26.26
+   BUG-010).** An href with `?tab=`/query never equals a pathname, so comparing the
+   raw href silently fails and falls back to the first workspace. Strip the query
+   with `hrefPath(...)` and match on a path boundary (`pathname===p ||
+   pathname.startsWith(p+'/')`). The `audit:nav` gate fails the build if any nav
+   registry item resolves to a workspace that doesn't contain it. (هر مقایسهٔ مسیر
+   با hrefPath.)
+10. **A financial return/void must never leave a balance silently negative (26.26
+   BUG-013).** A return on a PAID invoice needs a second leg — a refund (negative
+   `sales_payment 'refund'` + Dr AR/Cr Bank → AR back to 0) or an explicit
+   customer-credit balance + a pending-settlement `business_alert`. Returns are
+   guarded (confirmed/partial/paid only, cumulative ≤ invoice total, idempotent);
+   a paid invoice cannot be voided; overpayment/void-invoice payments are rejected.
+   The same guards apply to the purchase side (debit note / AP). (برگشت/ابطال مالی
+   نباید مانده را خاموش منفی کند.)
 
 ---
 

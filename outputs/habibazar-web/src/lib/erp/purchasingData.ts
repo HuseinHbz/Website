@@ -223,6 +223,26 @@ export async function recordPayment(documentId: number, vendorId: number, amount
 export async function convertDocument(sourceId: number, toType: PurchaseDocType, userId?: string): Promise<number> {
   const src = await getDocument(sourceId)
   if (!src) throw new Error('Source not found')
+  // BUG-013 sibling (26.26): a purchase return/credit_note against an invoice must
+  // be guarded exactly like the sales side — only a confirmed/posted invoice, and
+  // the cumulative return may not exceed the invoice total (else AP goes negative).
+  if ((toType === 'credit_note' || toType === 'return') && src.doc_type === 'invoice') {
+    if (['draft', 'void'].includes(String(src.status))) throw new Error('Only a confirmed purchase invoice can be returned')
+    // convertDocument copies the FULL invoice, so any prior non-void return means
+    // the invoice is already fully returned → block the duplicate (idempotency).
+    const prior = num((await pgQuery<{ s: number }>(
+      `SELECT COALESCE(SUM(total),0)::float AS s FROM purchase_documents WHERE source_id=$1 AND doc_type IN ('credit_note','return') AND status<>'void'`, [sourceId]))[0]?.s)
+    if (prior > 0.001) throw new Error('This invoice has already been returned')
+    // If the invoice was already paid, the vendor owes us back — flag until settled.
+    const paid = num((await pgQuery<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE vendor_id=$1`, [src.vendor_id ?? 0]))[0]?.s)
+    if (paid > 0) {
+      await pgQuery(
+        `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, channels, fingerprint, updated_at)
+         VALUES ('purchase_return_pending','financial','warning','Purchase return awaiting vendor settlement','برگشت خرید در انتظار تسویه فروشنده',$1,'purchase_documents',$2,'["inapp"]',$3,to_char(now(),'YYYY-MM-DD HH24:MI:SS'))
+         ON CONFLICT (fingerprint) DO UPDATE SET updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS')`,
+        [`Vendor credit of ${num(src.total)} — apply to a future PO or record a refund receipt.`, sourceId, `purchase_return_pending:${sourceId}`])
+    }
+  }
   const lines = (src.lines as unknown as LineRow[]).map(l => ({ description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }))
   return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
 }
