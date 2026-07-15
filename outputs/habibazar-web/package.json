@@ -25,7 +25,9 @@
     "audit:ui": "node scripts/ui-consistency-audit.mjs",
     "audit:tenancy": "node scripts/tenancy-audit.mjs",
     "audit:theme": "node scripts/theme-audit.mjs",
-    "regressions": "tsx scripts/ci-regressions.ts"
+    "regressions": "tsx scripts/ci-regressions.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "reset:demo": "tsx scripts/reset-demo.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

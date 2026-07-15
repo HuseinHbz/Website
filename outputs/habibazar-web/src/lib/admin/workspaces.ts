@@ -95,6 +95,7 @@ export const WORKSPACES: Workspace[] = [
     id: 'crm', nameEn: 'CRM Platform', nameFa: 'پلتفرم CRM', icon: '📇',
     descEn: 'Leads, clients, contacts and consultations', descFa: 'سرنخ‌ها، مشتریان، تماس‌ها و مشاوره‌ها',
     groups: [{ en: 'Customers', fa: 'مشتریان', items: [
+      { labelEn: 'CRM Dashboard', labelFa: 'داشبورد CRM', href: '/admin/crm/dashboard', icon: '📊' },
       { labelEn: 'CRM — Leads', labelFa: 'مدیریت سرنخ‌ها', href: '/admin/crm', icon: '📇' },
       { labelEn: 'Clients', labelFa: 'مشتریان', href: '/admin/clients', icon: '🧑‍💼' },
       { labelEn: 'Organizations', labelFa: 'سازمان‌ها', href: '/admin/organizations', icon: '🏢' },
@@ -214,6 +215,7 @@ export const WORKSPACES: Workspace[] = [
     descEn: 'Settings, organization, integrations and platform config', descFa: 'تنظیمات، سازمان، یکپارچه‌سازی و پیکربندی پلتفرم',
     groups: [
       { en: 'Platform', fa: 'پلتفرم', items: [
+        { labelEn: 'Go-Live Checklist', labelFa: 'چک‌لیست راه‌اندازی', href: '/admin/settings/onboarding', icon: '🚀' },
         { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
         { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت (اسناد)', href: '/admin/company', icon: '🏢' },
         { labelEn: 'Currency Settings', labelFa: 'تنظیمات ارز', href: '/admin/finance?tab=currency', icon: '💱' },

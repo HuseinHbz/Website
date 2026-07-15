@@ -53,6 +53,22 @@
    STOP and ask first — never change branches on your own.
    (هیچ‌وقت برنچ را عوض نکن مگر من صریحاً گفته باشم؛ همیشه روی همین برنچ کاری بمان و
    بدون دستور من به برنچ دیگری checkout/push نکن.)
+6. **The full regression history stays green in CI (26.25b بند ۰.۱).** All seven+
+   committed live-PG regression suites (26.20 self-heal, 26.21 simulation, 26.23,
+   26.24, 26.24b, 26.25, 26.25s — plus 26.25a/26.25b) run in the CI `regressions`
+   job via `npm run regressions` (`scripts/ci-regressions.ts`, each suite on its own
+   DB). Every new phase MUST keep them all passing; add the new phase's suite to
+   the runner. (کل تاریخچهٔ رگرسیون باید در CI سبز بماند.)
+7. **The i18n gate is fixed by ADDING the key, never by deleting the `t()` usage
+   (26.25b بند ۰.۳).** If `audit:i18n` fails on a missing admin key, add the key to
+   both `fa`+`en` in `src/lib/admin/locale.tsx`. Removing the `t('…')` call or
+   hardcoding a single-language string to dodge the gate is forbidden. (رفع گیت
+   i18n فقط با افزودن کلید — نه حذف استفاده از t.)
+8. **A payment-gateway settlement is recorded with method `'gateway'`, never
+   `'card'` (26.25b بند ۰.۴).** Physical POS is `'card'`; online-gateway
+   settlements (Zarinpal callback / portal) use `'gateway'` so reconciliation can
+   tell them apart. New transactional tables still MUST carry `company_id`
+   (`audit:tenancy`). (پرداخت درگاه با متد gateway ثبت شود، نه card.)
 
 ---
 
@@ -864,6 +880,37 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   — a distinct cookie name, an opaque sha256-hashed token, and NO shared secret
   with the admin JWT (mutual 401).** Still open: tickets/SLA (26.25b), campaign/CRM
   dashboard/onboarding/pilot (26.25c).
+- **Phase 26.25b — R2 Final** (تکمیل نهایی R2; report:
+  `docs/governance/phase26.25b-r2-final-report.md`). Closes Release 2. **بند ۰
+  inherited-debt (10/10)**: **password → async `crypto.scrypt`** (`lib/admin/
+  password.ts`, libuv threadpool → 110ms/hash, 20-concurrent 643ms vs bcrypt
+  8313ms; legacy bcrypt hashes verify + **rehash-on-login**, no forced reset) →
+  Login row 🟢 by number; **`RATE_LIMIT_DISABLED` production-hard-gated**
+  (`rateLimitBypassActive`); i18n gate fixed by ADDING `nav_crm` (+ hardcoded-
+  Persian-JSX detector in `audit:i18n`); **`gateway` sales-payment method**
+  (portal/callback path, historical `card` migrated via `payment_transactions`,
+  POS `card` untouched); **inbound-lead flood cap + quarantine**
+  (`crm_inbound_messages`, pure `inboundPolicy`, unknown senders never enter
+  funnel/CAC until an operator confirms); **`crm_leads` source CHECK restored**
+  with `inbound_*`; **kanban touch** stage-selector; DELETE-journal route test;
+  Playwright `portal.spec.ts`. **CI `regressions` job** runs all 9 committed
+  live-PG suites (`scripts/ci-regressions.ts`, 206 assertions). **بند ۱ tickets/
+  SLA**: reuse `crm_tickets`/`crm_ticket_messages` + shared `bi/sla` (business
+  hours + jalali); pure `crm/tickets.ts` (SLA target by priority, state machine,
+  **clock pauses while pending**, escalation); `ticketData` (numbering TK-, IDOR-
+  scoped, agent public/internal + customer replies, `scanTicketSla` → idempotent
+  `business_alerts`); admin `/admin/crm/tickets` + portal Support/Help tabs +
+  **portal KB reusing `ai_knowledge_base.portal_public`**; routes `/api/admin/crm/
+  tickets`, `/api/portal/tickets(/[id])`, `/api/portal/kb`. **بند ۲**: CRM
+  Dashboard (`/admin/crm/dashboard`: funnel/no-activity/SLA-breach/AR-aging/
+  per-channel campaign + **MoM** via pure `momChange`), Onboarding wizard
+  (`/admin/settings/onboarding`: read-only Go-Live checklist w/ deep links, never
+  rebuilds settings), `npm run seed:demo`/`reset:demo` (`DEMO-`-prefixed, reset
+  touches ONLY demo rows), `docs/USER_GUIDE_FA.md` + `docs/PILOT_GO_LIVE.md`.
+  Gates: TS 0 · ESLint 0 · **738 tests** · 9 audits 0 · build clean · live-PG
+  **41/41** · regressions **9/9**. **New rules (working-rules 6–8): 7+ regression
+  suites mandatory in CI; i18n gate fixed by adding the key (never deleting `t`);
+  gateway payments recorded with method `'gateway'`.**
 - **Phase 26.23 — GL Integration Core + Operational CRM** (report:
   `docs/governance/phase26.23-gl-integration-crm-report.md`). **Sub-ledger →
   GL is now automatic**: confirming a sales invoice/credit note auto-posts it

@@ -10,6 +10,9 @@ import { pgQuery } from '@/lib/db'
 import { autoLeadFromInbound, confirmInbound, rejectInbound } from '@/lib/crm/inboundData'
 import { isJournalEntryDeletable } from '@/lib/erp/ledger'
 import { createTicket, getTicket, addTicketMessage, setTicketStatus, scanTicketSla } from '@/lib/crm/ticketData'
+import { seedDemo, resetDemo } from '@/lib/admin/demoData'
+import { crmDashboard } from '@/lib/crm/crmDashboardData'
+import { goLiveChecklist } from '@/lib/admin/onboarding'
 
 let n = 0, failed = 0
 const ok = (c: boolean, l: string) => { n++; if (c) console.log(`  ✅ ${n}. ${l}`); else { failed++; console.error(`  ❌ ${n}. ${l}`) } }
@@ -135,6 +138,27 @@ async function main() {
   await setTicketStatus(tkB.id, 'resolved', 'admin')
   const res = await one<{ resolved_at: string | null; pending_since: string | null }>(`SELECT resolved_at, pending_since FROM crm_tickets WHERE id=$1`, [tkB.id])
   ok(res.resolved_at != null && res.pending_since === null, 'resolving folds the pause + stamps resolved_at')
+
+  console.log('\n— بند ۲: demo data separation + CRM dashboard + onboarding —')
+  // A REAL customer that reset:demo must NEVER touch.
+  const real = await one<{ id: number }>(`INSERT INTO sales_customers (code,name,kind,updated_at) VALUES ('REAL-1','real co','company',${NOW}) RETURNING id`)
+  const seeded = await seedDemo()
+  ok(seeded.customers === 3 && seeded.invoices === 3 && seeded.tickets === 2, `seed:demo created a full DEMO- dataset (${JSON.stringify(seeded)})`)
+  const demoBefore = (await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM sales_customers WHERE code LIKE 'DEMO-%'`)).c
+  ok(demoBefore === 3, 'demo customers present before reset')
+  await resetDemo()
+  const demoAfter = (await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM sales_customers WHERE code LIKE 'DEMO-%'`)).c
+  ok(demoAfter === 0, 'reset:demo removed ALL demo customers')
+  const realSurvives = await one<{ id: number }>(`SELECT id FROM sales_customers WHERE id=$1`, [real.id])
+  ok(realSurvives != null, 'reset:demo left the REAL customer UNTOUCHED (separation proven)')
+  const demoDocs = (await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM sales_documents WHERE doc_no LIKE 'DEMO-%'`)).c
+  const demoTickets = (await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM crm_tickets WHERE ticket_no LIKE 'DEMO-%'`)).c
+  ok(demoDocs === 0 && demoTickets === 0, 'demo invoices + tickets also cleaned (children FK-safe)')
+
+  const dash = await crmDashboard()
+  ok(dash.funnel != null && dash.mom.newLeads != null && Array.isArray(dash.channels), 'CRM dashboard assembles (funnel + MoM + channels)')
+  const checklist = await goLiveChecklist()
+  ok(checklist.total >= 6 && typeof checklist.requiredReady === 'boolean', `go-live checklist assembles (${checklist.readyCount}/${checklist.total} ready)`)
 
   console.log(`\n${failed === 0 ? '✅ ALL' : '❌ ' + failed + ' FAILED /'} ${n} assertions`)
   process.exit(failed === 0 ? 0 : 1)
