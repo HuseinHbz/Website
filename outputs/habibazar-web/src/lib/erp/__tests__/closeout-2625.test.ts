@@ -99,3 +99,14 @@ describe('portal auth', () => {
     expect(ownsResource(7, null)).toBe(false)
   })
 })
+
+// ── 26.25a بند ۰.۳: concurrent-login shed guard ───────────────────────────────
+import { shouldShedLogin, MAX_CONCURRENT_LOGINS } from '@/lib/admin/loginGuard'
+describe('login concurrency guard (DoS mitigation)', () => {
+  it('sheds only at/above the cap', () => {
+    expect(shouldShedLogin(0)).toBe(false)
+    expect(shouldShedLogin(MAX_CONCURRENT_LOGINS - 1)).toBe(false)
+    expect(shouldShedLogin(MAX_CONCURRENT_LOGINS)).toBe(true)
+    expect(shouldShedLogin(2, 2)).toBe(true)
+  })
+})

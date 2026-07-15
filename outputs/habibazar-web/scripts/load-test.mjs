@@ -56,7 +56,8 @@ function classify(stats) {
 function bench(name, route, cookie) {
   const headers = route.auth && cookie ? ['-H', `cookie: ${cookie}`] : []
   const post = route.method === 'POST' ? ['-m', 'POST', '-H', 'content-type: application/json', '-b', route.body ?? '{}'] : []
-  const res = spawnSync('npx', ['--yes', 'autocannon', '-c', CONNECTIONS, '-d', DURATION, '-j', ...headers, ...post, route.url], { encoding: 'utf8' })
+  const conns = String(route.conns ?? CONNECTIONS)
+  const res = spawnSync('npx', ['--yes', 'autocannon', '-c', conns, '-d', DURATION, '-j', ...headers, ...post, route.url], { encoding: 'utf8' })
   if (res.status !== 0) { console.log(`  ${name.padEnd(14)} — autocannon unavailable`); return { bad: false } }
   try {
     const j = JSON.parse(res.stdout)
@@ -104,13 +105,22 @@ async function main() {
   const cookie = await login()
   const routes = [
     { name: 'health-live', url: `${BASE}/api/health?probe=live`, auth: false },
-    { name: 'login', url: `${BASE}/api/admin/auth/login`, method: 'POST', body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }), auth: false },
+    // 26.25a بند ۰.۳: login is bcrypt-bound (pure-JS, ~460ms/req blocks the loop)
+    // + protected by a concurrent-login cap → bench it at LOW concurrency for a
+    // meaningful per-request number, not a 20-way contention artifact.
+    { name: 'login', url: `${BASE}/api/admin/auth/login`, method: 'POST', body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }), auth: false, conns: 2 },
     { name: 'journal-list', url: `${BASE}/api/admin/erp/finance/journal`, auth: true },
     { name: 'sales-docs', url: `${BASE}/api/admin/erp/sales/documents?type=invoice`, auth: true },
     { name: 'overview', url: `${BASE}/api/admin/overview`, auth: true },
   ]
   let anyBad = false
-  for (const r of routes) { const out = bench(r.name, r, cookie); anyBad = anyBad || out.bad }
+  for (const r of routes) {
+    // 26.25a بند ۰.۲: warm up + cool down between routes so one route's stress
+    // never poisons the next route's p99 tail (the journal p99=5969ms artifact).
+    try { await fetch(r.url, r.method === 'POST' ? { method: 'POST', headers: { 'content-type': 'application/json', ...(r.auth && cookie ? { cookie } : {}) }, body: r.body } : { headers: r.auth && cookie ? { cookie } : {} }) } catch { /* warmup */ }
+    await new Promise(res => setTimeout(res, 1500))
+    const out = bench(r.name, r, cookie); anyBad = anyBad || out.bad
+  }
   if (MEM_WATCH_SECONDS > 0) await memWatch()
   if (anyBad) { console.log('\n❌ non-2xx responses (429/4xx/5xx) observed under load — numbers INVALID'); process.exit(1) }
   console.log('\n✅ all responses 2xx under the configured load — numbers valid')

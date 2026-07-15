@@ -5,6 +5,7 @@ import { runMigrations } from '@/lib/db/migrate'
 import { seedDatabase } from '@/lib/db/seed'
 import { logger } from '@/lib/logger'
 import { readJson } from '@/lib/api/respond'
+import { acquireLoginSlot, releaseLoginSlot } from '@/lib/admin/loginGuard'
 
 const schema = z.object({
   email: z.string().trim().email('invalid email').max(200),
@@ -23,6 +24,10 @@ async function ensureInit() {
 }
 
 export async function POST(req: NextRequest) {
+  // 26.25a بند ۰.۳: shed excess concurrent logins so a distributed flood cannot
+  // pin the event loop on pure-JS bcrypt (bounds blocking to the cap × hashCost).
+  if (!acquireLoginSlot())
+    return NextResponse.json({ error: 'Server busy — please retry shortly.' }, { status: 429, headers: { 'Retry-After': '2' } })
   try {
     await ensureInit()
     const parsed = await readJson(req, schema)
@@ -49,5 +54,7 @@ export async function POST(req: NextRequest) {
     const detail = `${e instanceof Error ? e.message : String(e)}${cause ? ` — ${cause}` : ''}`
     logger.error('Login route failed', { error: detail })
     return NextResponse.json({ error: 'Login failed — server error (see admin logs)' }, { status: 500 })
+  } finally {
+    releaseLoginSlot()
   }
 }
