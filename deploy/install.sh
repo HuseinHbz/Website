@@ -93,6 +93,18 @@ NEXT_PUBLIC_SITE_URL=https://habibazar.ir
 NEXT_PUBLIC_API_URL=https://habibazar.ir
 LOG_LEVEL=info
 NODE_ENV=production
+# ── Phase 26.25s multi-channel messaging (ALL OPTIONAL — no key ⇒ deterministic
+# sandbox, never breaks build/runtime). Prefer configuring these in the admin
+# panel (erp_settings); env vars are a fallback. Public webhook routes that must
+# be reachable through the reverse proxy:
+#   POST /api/webhooks/whatsapp   POST /api/webhooks/telegram   GET /api/unsubscribe
+# KAVENEGAR_API_KEY=
+# SMSIR_API_KEY=
+# WHATSAPP_TOKEN=
+# WHATSAPP_PHONE_ID=
+# WHATSAPP_VERIFY_TOKEN=
+# TELEGRAM_BOT_TOKEN=
+# TELEGRAM_WEBHOOK_SECRET=
 EOF
   chown "$APP_USER":"$APP_USER" "$ENV_FILE"
   warn "فایل .env.local ساخته شد — آدرس سایت را بررسی کنید: $ENV_FILE"

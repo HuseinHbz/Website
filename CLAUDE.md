@@ -808,6 +808,35 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   X-axis, right Y-axis, fa-IR digits) via pure tested `lib/admin/chartRtl.ts`
   (`faDigits`/`axisTickFormatter`/`rtlChartProps`, 3 tests). Gates: TS 0 · ESLint 0 ·
   **684 tests** · 9 audits 0 · build clean · regressions 45/45 · 26/26 · 24/24 · 28/28.
+- **Phase 26.25 (R2) — Go-Live pilot + CRM core** (report:
+  `docs/governance/phase26.25-crm-portal-pilot-report.md`; **in progress**).
+  **بند ۰**: fixed a real load-measurement bug — the 26.24b login numbers were
+  mostly 429 storms (login limiter 10/15min, api 120/min); `load-test.mjs` now
+  reports the full status distribution and FAILS on any non-2xx, a test-only
+  `RATE_LIMIT_DISABLED=1` server flag measures true throughput (valid: 0
+  429/4xx/5xx, RSS flat under load, login p50 8.4s = real bcrypt). DELETE-journal
+  guard → tested `isJournalEntryDeletable`. **بند ۱ Customer 360**: `customer360Data`
+  aggregates orders/payments/activities/tickets/source-lead/matched-public-requests
+  + balance/**AR aging** (pure `crm/aging.ts`) + **credit guard** wired into sales
+  confirm (off/warn/block via `erp_settings.credit_guard_mode`, business_alert on
+  breach). **Multi-channel campaigns (supplement 26.25s)**: unified
+  `MessageProvider` (`lib/messaging/`, same shape as the payment GatewayProvider)
+  over **SMS (Kavenegar+SMS.ir full, Melipayamak skeleton) · Email (reuses
+  nodemailer) · WhatsApp Cloud API (full: template+free-form, 24h window, signed
+  webhook, delivery receipts) · Telegram Bot (full: /start chat_id link, /stop,
+  inbound auto-lead)**; no credential ⇒ deterministic sandbox (blocked-external).
+  Pure `sendDecision.ts` (WA 24h window, telegram chat_id, opt-out, fallback chain,
+  backoff) + `webhookVerify.ts` (X-Hub-Signature-256 / telegram secret-token /
+  HMAC-signed expiring unsubscribe, all timing-safe). `crm_customer_channels`
+  (chat_id only via /start; last_inbound_at from webhook) + campaign multi-channel
+  migration (`channels[]`/`fallback_chain`/per-channel templates + recipient
+  delivery lifecycle, unique(campaign,customer,channel) idempotency). Per-channel
+  **attribution + CAC/ROI**; anonymous inbound → auto-lead. Public routes
+  `/api/webhooks/{whatsapp,telegram}` (signature-gated) + `/api/unsubscribe` +
+  admin `/api/admin/crm/campaigns`. New transactional tables carry `company_id`
+  (audit:tenancy). Gates: TS 0 · ESLint 0 · **712 tests** · 9 audits 0 · build
+  clean · live-PG 15/15 (multi-channel) + 14/14 (Customer 360). **Still open**:
+  customer portal (بند ۲), tickets/SLA (بند ۳), CRM dashboard/onboarding/docs (بند ۵).
 - **Phase 26.23 — GL Integration Core + Operational CRM** (report:
   `docs/governance/phase26.23-gl-integration-crm-report.md`). **Sub-ledger →
   GL is now automatic**: confirming a sales invoice/credit note auto-posts it
