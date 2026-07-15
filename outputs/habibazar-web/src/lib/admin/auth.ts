@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+import { verifyPassword, hashPassword } from './password'
 import { SignJWT, jwtVerify } from 'jose'
 import { nanoid } from 'nanoid'
 import { cookies } from 'next/headers'
@@ -54,8 +54,13 @@ export async function signIn(email: string, password: string, ipAddress?: string
 
   if (!user) return { error: 'Invalid credentials' }
 
-  const valid = await bcrypt.compare(password, user.passwordHash)
+  const { valid, needsRehash } = await verifyPassword(password, user.passwordHash)
   if (!valid) return { error: 'Invalid credentials' }
+  // 26.25b بند ۰.۲: transparently upgrade a legacy bcrypt hash to scrypt on a
+  // successful login (no forced password reset). Best-effort — never blocks login.
+  if (needsRehash) {
+    try { await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id)) } catch { /* upgrade is best-effort */ }
+  }
 
   if (user.totpEnabled && user.totpSecret) {
     if (!totpCode) return { requireTotp: true }
@@ -169,6 +174,5 @@ export function canDo(role: AdminUser['role'], action: 'manage_users' | 'manage_
   return perms[role]?.includes(action) ?? false
 }
 
-export async function hashPassword(password: string) {
-  return bcrypt.hash(password, 12)
-}
+// 26.25b بند ۰.۲: re-exported from the async-scrypt password module (was bcrypt).
+export { hashPassword }
