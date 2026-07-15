@@ -74,6 +74,14 @@ async function main() {
   const lock = await requestOtp('sms', '09120000001')
   await pgQuery(`UPDATE customer_portal_sessions SET otp_hash=$2, attempts=5 WHERE id=$1`, [lock.sessionId, sha256('222222')])
   ok((await verifyOtp(lock.sessionId!, '222222')).reason === 'too_many_attempts', 'attempt cap → locked out')
+  console.log('— بند ۲.۳: payment reduces the portal AR balance —')
+  const before = (await portalDashboard(A.id))!.balance
+  // A reconciled gateway receipt (verifyPayment path is proven in 26.24) lands in
+  // sales_payments; the portal dashboard subtracts it live.
+  await pgQuery(`INSERT INTO sales_payments (customer_id, document_id, date, amount, method, currency, exchange_rate) VALUES ($1,$2,'2026-07-14',2000000,'card','IRR',1)`, [A.id, invA.id])
+  const after = (await portalDashboard(A.id))!.balance
+  ok(after === before - 2000000, `AR balance drops after payment: ${before} → ${after} (−2,000,000)`)
+
   // Logout revokes the session.
   await revokeAllSessions(A.id)
   ok((await getPortalIdentity(good.token!)) === null, 'after logout, the session token is revoked (→401)')

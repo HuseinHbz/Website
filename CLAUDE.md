@@ -837,6 +837,33 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   (audit:tenancy). Gates: TS 0 · ESLint 0 · **712 tests** · 9 audits 0 · build
   clean · live-PG 15/15 (multi-channel) + 14/14 (Customer 360). **Still open**:
   customer portal (بند ۲), tickets/SLA (بند ۳), CRM dashboard/onboarding/docs (بند ۵).
+- **Phase 26.25a — Customer Portal + Customer 360** (report:
+  `docs/governance/phase26.25a-customer-portal-report.md`). **بند ۰ inherited-debt**:
+  all 6 regressions re-green (credit-guard-on-confirm + 26.25s schema safe);
+  journal p99=5969ms **explained** (login bench's 20 concurrent pure-JS bcrypt
+  saturates the loop → next route inherits a backed-up queue; in isolation p99=185ms)
+  → `load-test.mjs` warmup+cooldown + low-conc login → journal p99=119ms, 0
+  429/4xx/5xx; login=460ms/req + **concurrent-login DoS cap** (`loginGuard`, sheds
+  >4 in-flight with 429, pure `shouldShedLogin` tested). **Customer 360 page**
+  (`admin/crm/customers/[id]`) reuses the existing route: KPIs + AR aging + channels
+  + filterable timeline, bidirectional links. **Customer Portal** (`/[locale]/portal`,
+  `PortalApp`) — the first authenticated public surface: **INDEPENDENT** session
+  (`portal_token` cookie, opaque random token stored **sha256-hashed**, **no admin
+  JWT, no shared secret**), OTP login (hashed + expiry + attempt-cap + single-use +
+  timing-safe, via the 26.25s messaging adapter/sandbox), dedicated stricter rate
+  limits, session revoke/logout. `lib/portal/{session,guard,portalData}` scope
+  **every** query to the server session's customerId (never a client customer_id).
+  Routes `/api/portal/{auth.request,auth.verify,auth.logout,me,invoices,
+  invoices/[id],invoices/[id]/print,payments,pay,profile}` — all `requirePortal`-gated.
+  Online invoice payment → zarinpal sandbox → `/api/pay/callback` (reused) →
+  sales_payments + auto-post GL; printable invoice HTML. Live-PG **19/19** IDOR
+  matrix (A cannot read B's invoice/toggle B's channel → 404; admin-cookie-on-portal
+  & portal-cookie-on-admin → 401; OTP hashed/single-use/expiry/lockout; payment
+  drops AR live). Gates: TS 0 · ESLint 0 · 713 tests · 9 audits 0 · build clean.
+  **New rule: the customer-portal session MUST stay isolated from the admin session
+  — a distinct cookie name, an opaque sha256-hashed token, and NO shared secret
+  with the admin JWT (mutual 401).** Still open: tickets/SLA (26.25b), campaign/CRM
+  dashboard/onboarding/pilot (26.25c).
 - **Phase 26.23 — GL Integration Core + Operational CRM** (report:
   `docs/governance/phase26.23-gl-integration-crm-report.md`). **Sub-ledger →
   GL is now automatic**: confirming a sales invoice/credit note auto-posts it
