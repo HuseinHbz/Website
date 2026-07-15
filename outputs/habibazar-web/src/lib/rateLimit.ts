@@ -75,4 +75,10 @@ export const limiters = {
 
   /** Contact form: 5 req / hour per IP */
   contact: (ip: string) => rateLimit(`contact:${ip}`, { limit: 5, windowSec: 3600 }),
+
+  /** Portal OTP request: 5 / 15 min per IP (stricter than public API). */
+  portalOtp: (ip: string) => rateLimit(`potp:${ip}`, { limit: 5, windowSec: 900 }),
+
+  /** Portal OTP verify: 10 / 15 min per IP (attempt cap is also per-session). */
+  portalVerify: (ip: string) => rateLimit(`pver:${ip}`, { limit: 10, windowSec: 900 }),
 }
