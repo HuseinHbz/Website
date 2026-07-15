@@ -24,6 +24,7 @@ const TRANSACTIONAL = [
   'moadian_queue', 'payment_transactions',
   // 26.25: CRM transactional tables (tickets + campaign sends).
   'crm_tickets', 'crm_campaigns', 'crm_campaign_recipients',
+  'crm_customer_channels',
 ]
 
 // A table "has company_id" if it declares it inline in its CREATE TABLE body OR

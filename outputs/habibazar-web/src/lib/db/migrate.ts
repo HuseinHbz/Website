@@ -2474,6 +2474,52 @@ export async function runMigrations() {
       ('sms_sender','')
     ON CONFLICT (key) DO NOTHING;
 
+    -- ══ Phase 26.25s — multi-channel campaigns (sms · email · whatsapp · telegram) ══
+    -- بند ۴.۲: per-customer channel registry (chat_id filled only via /start).
+    CREATE TABLE IF NOT EXISTS crm_customer_channels (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES sales_customers(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL CHECK(channel IN ('sms','email','whatsapp','telegram')),
+      address TEXT NOT NULL,
+      verified INTEGER NOT NULL DEFAULT 0,
+      opt_in INTEGER NOT NULL DEFAULT 1,
+      consent_basis TEXT,
+      opt_out_at TEXT,
+      last_inbound_at TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE(channel, address)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cust_channels_cust ON crm_customer_channels(customer_id);
+    -- Idempotent backfill: existing customer phone/email → sms/email channels.
+    INSERT INTO crm_customer_channels (customer_id, channel, address, opt_in, consent_basis, updated_at)
+      SELECT id, 'sms', phone, 1, 'existing_customer', ${NOW} FROM sales_customers
+      WHERE phone IS NOT NULL AND phone<>'' ON CONFLICT (channel, address) DO NOTHING;
+    INSERT INTO crm_customer_channels (customer_id, channel, address, opt_in, consent_basis, updated_at)
+      SELECT id, 'email', email, 1, 'existing_customer', ${NOW} FROM sales_customers
+      WHERE email IS NOT NULL AND email<>'' ON CONFLICT (channel, address) DO NOTHING;
+
+    -- بند ۴.۴ migration: campaigns go multi-channel (keep the old single column).
+    ALTER TABLE crm_campaigns ADD COLUMN IF NOT EXISTS channels TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE crm_campaigns ADD COLUMN IF NOT EXISTS fallback_chain TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE crm_campaigns ADD COLUMN IF NOT EXISTS templates TEXT NOT NULL DEFAULT '{}';
+    UPDATE crm_campaigns SET channels = ('["' || channel || '"]') WHERE channels = '[]' AND channel IS NOT NULL;
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'sms';
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS provider_message_id TEXT;
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS queued_at TEXT;
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS delivered_at TEXT;
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS read_at TEXT;
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE crm_campaign_recipients DROP CONSTRAINT IF EXISTS crm_campaign_recipients_status_check;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_campaign_recip ON crm_campaign_recipients(campaign_id, customer_id, channel);
+
+    -- 26.25s settings seeds (idempotent): whatsapp + telegram provider config.
+    INSERT INTO erp_settings (key, value) VALUES
+      ('whatsapp_token',''), ('whatsapp_phone_id',''), ('whatsapp_verify_token',''), ('whatsapp_app_secret',''),
+      ('telegram_bot_token',''), ('telegram_webhook_secret','')
+    ON CONFLICT (key) DO NOTHING;
+
     -- 26.22 (runs LAST so every seeded account exists): attach each leaf
     -- account to its Iranian-coding گروه root by leading digit (idempotent).
     UPDATE gl_accounts a SET parent_id = g.id
