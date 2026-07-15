@@ -63,7 +63,7 @@ export async function customer360(customerId: number, asOf = new Date().toISOStr
 
   const g = async (sql: string, p: unknown[]): Promise<Record<string, unknown>[]> => pgQuery<Record<string, unknown>>(sql, p).catch(() => [])
 
-  const [orders, payments, gatewayTx, activities, tickets, sourceLead, contactReqs, consultReqs] = await Promise.all([
+  const [orders, payments, gatewayTx, activities, tickets, sourceLead, contactReqs, consultReqs, channels] = await Promise.all([
     g(`SELECT id, doc_no AS "docNo", doc_type AS "docType", date, status, total::float AS total, currency
         FROM sales_documents WHERE customer_id=$1 AND deleted_at IS NULL ORDER BY date DESC, id DESC LIMIT 100`, [customerId]),
     g(`SELECT id, date, amount::float AS amount, method, reference FROM sales_payments WHERE customer_id=$1 ORDER BY date DESC LIMIT 100`, [customerId]),
@@ -73,6 +73,7 @@ export async function customer360(customerId: number, asOf = new Date().toISOStr
     g(`SELECT id, name, source, status, score, value::float AS value FROM crm_leads WHERE converted_customer_id=$1 LIMIT 5`, [customerId]),
     email || phone ? g(`SELECT id, name, email, phone, message, created_at AS "createdAt" FROM contact_requests WHERE ($1<>'' AND email=$1) OR ($2<>'' AND phone=$2) ORDER BY created_at DESC LIMIT 20`, [email, phone]) : Promise.resolve([]),
     email || phone ? g(`SELECT id, name, email, phone, created_at AS "createdAt" FROM consultation_requests WHERE ($1<>'' AND email=$1) OR ($2<>'' AND phone=$2) ORDER BY created_at DESC LIMIT 20`, [email, phone]) : Promise.resolve([]),
+    g(`SELECT id, channel, address, verified, opt_in AS "optIn", opt_out_at AS "optOutAt" FROM crm_customer_channels WHERE customer_id=$1 ORDER BY channel`, [customerId]),
   ])
 
   // Unified, sortable timeline (بند ۱.۴).
@@ -90,6 +91,6 @@ export async function customer360(customerId: number, asOf = new Date().toISOStr
     customer, balance, aging,
     creditLimit: num(customer.creditLimit), paymentTerms: num(customer.paymentTerms),
     purchaseTotal, openInvoices: open,
-    orders, payments, gatewayTx, activities, tickets, sourceLead, contactReqs, consultReqs, timeline,
+    orders, payments, gatewayTx, activities, tickets, sourceLead, contactReqs, consultReqs, channels, timeline,
   }
 }

@@ -211,6 +211,7 @@ function Customers({ t, toast }: { t: T; toast: Toast }) {
     { key: 'available', labelEn: 'Available', labelFa: t('sales_cAvailable'), type: 'number', numeric: true, value: c => c.available ?? 0, render: c => <span className="text-text-secondary text-xs">{money(c.available)}</span> },
   ]
   const rowActions: RowAction<Customer>[] = [
+    { id: 'view360', labelEn: 'Customer 360', labelFa: lc2('Customer 360', 'پروندهٔ ۳۶۰'), icon: '👤', onClick: c => { window.location.href = `/admin/crm/customers/${c.id}` } },
     { id: 'edit', labelEn: 'Edit', labelFa: t('sales_edit'), icon: '✎', onClick: c => { setEditing({ ...c, active: !!c.active }); setModal(true) } },
     { id: 'statement', labelEn: 'Statement', labelFa: lc2('Statement', 'صورت‌حساب'), icon: '📑', onClick: c => setStmtFor(c) },
   ]
