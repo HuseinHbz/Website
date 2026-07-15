@@ -54,8 +54,10 @@ export async function verifyPayment(txId: number, userId?: string): Promise<{ ok
   let paymentId: number | undefined
   if (tx.document_id && tx.customer_id) {
     const pay = (await pgQuery<{ id: number }>(
+      // 26.25b بند ۰.۴: an online gateway settlement is method 'gateway' — NOT the
+      // physical-POS 'card' (which would be indistinguishable at reconciliation).
       `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, currency, exchange_rate)
-       VALUES ($1,$2,to_char(now(),'YYYY-MM-DD'),$3,'card',$4,'IRR',1) RETURNING id`,
+       VALUES ($1,$2,to_char(now(),'YYYY-MM-DD'),$3,'gateway',$4,'IRR',1) RETURNING id`,
       [tx.customer_id, tx.document_id, num(tx.amount), res.refId ?? `PAY-${txId}`]))[0]
     paymentId = pay.id
     // Recompute invoice paid-status + auto-post the receipt to the GL.

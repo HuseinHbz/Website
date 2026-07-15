@@ -189,6 +189,16 @@ export function LeadsManager() {
                     </div>
                     {l.lastActivityAt && <p className="text-3xs text-text-tertiary mt-1">🕒 {String(l.lastActivityAt).slice(0, 10)}</p>}
                     {l.convertedCustomerId && <p className="text-3xs text-success mt-0.5">{L(fa, 'Customer', 'مشتری')} #{l.convertedCustomerId}</p>}
+                    {/* 26.25b بند ۰.۸: HTML5 drag is broken on touch/mobile — this
+                        stage selector moves a lead without dragging (works everywhere). */}
+                    <select
+                      aria-label={L(fa, 'Move to stage', 'انتقال به مرحله')}
+                      value={l.status}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => { e.stopPropagation(); const s = e.target.value as Status; if (s !== l.status) move(l, s) }}
+                      className="mt-1.5 w-full text-3xs rounded-md bg-surface-2 border border-border px-1 py-0.5 text-text-secondary">
+                      {KANBAN_STAGES.map(s => <option key={s} value={s}>{stLabel(s)}</option>)}
+                    </select>
                   </div>
                 ))}
               </div>
