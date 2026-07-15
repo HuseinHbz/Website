@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Card, StatCard, Badge, PageHeader } from '@/components/admin/ui'
-import { useAdminLocale } from '@/lib/admin/locale'
+import { useAdminLocale, useT } from '@/lib/admin/locale'
 import { fmtMoney } from '@/lib/format'
 import { faDigits } from '@/lib/admin/chartRtl'
 
@@ -20,6 +20,7 @@ const lc = (fa: boolean, en: string, f: string) => (fa ? f : en)
 
 export function Customer360({ id }: { id: number }) {
   const locale = useAdminLocale()
+  const t = useT()
   const fa = locale === 'fa'
   const [d, setD] = useState<Data | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,7 +62,7 @@ export function Customer360({ id }: { id: number }) {
       <PageHeader
         title={`${c.name ?? ''}`}
         subtitle={`${lc(fa, 'Code', 'کد')} ${num(c.code)} · ${c.kind === 'company' ? lc(fa, 'Company', 'حقوقی') : lc(fa, 'Individual', 'حقیقی')}`}
-        action={<Link href="/admin/crm" className="text-sm text-brand hover:underline">← {lc(fa, 'CRM', 'CRM')}</Link>}
+        action={<Link href="/admin/crm" className="text-sm text-brand hover:underline">← {t('nav_crm')}</Link>}
       />
 
       {/* KPI row */}

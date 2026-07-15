@@ -286,3 +286,47 @@ server {
 | build ناموفق | `cat /var/log/habibazar-error.log` |
 | دیتابیس مشکل دارد | `sqlite3 data/habibazar.db ".tables"` |
 | فضا پر شده | `df -h` → `pm2 flush` برای پاکسازی لاگ |
+
+---
+
+## Release 2 — پرتال مشتری، تیکت، و پایلوت (26.25b)
+
+### مسیرهای جدید
+- **پرتال مشتری**: `/[locale]/portal` — سطح عمومیِ احرازهویت‌شده (کوکی مستقل
+  `portal_token`، ورود با کد یک‌بارمصرف). کاملاً از پنل ادمین جدا است.
+- **تیکت پشتیبانی**: ادمین `/admin/crm/tickets`، پرتال از تب «پشتیبانی».
+- **داشبورد CRM**: `/admin/crm/dashboard`.
+- **چک‌لیست راه‌اندازی**: `/admin/settings/onboarding`.
+
+### متغیرهای محیطی مرتبط با مشتری (blocked-external تا دریافت کلید)
+این‌ها را در `.env.local` یا از صفحهٔ تنظیمات وارد کنید؛ تا وقتی خالی‌اند، همان
+کانال در حالت sandbox کار می‌کند:
+- `SMTP_HOST/USER/PASS` — ایمیل (OTP پرتال + ارسال اسناد).
+- SMS: `sms_ir_api_key` یا `kavenegar_api_key` (تنظیمات) — OTP پرتال + کمپین.
+- درگاه پرداخت: `zarinpal_merchant_id` (تنظیمات ERP) — پرداخت آنلاین فاکتور.
+- واتساپ/تلگرام: `whatsapp_token`/`whatsapp_phone_id`/`whatsapp_app_secret`،
+  `telegram_bot_token`/`telegram_webhook_secret`.
+- مودیان: `moadian_private_key` + شناسهٔ حافظه — ارسال واقعی صورتحساب ایران.
+
+> **قانون پرداخت (26.25b):** تسویهٔ درگاه آنلاین با متد `gateway` ثبت می‌شود؛
+> `card` فقط برای POS فیزیکی است (برای صحت مغایرت‌گیری).
+
+### احراز هویت — رمز عبور
+از فاز 26.25b هش رمز عبور از bcrypt به **`crypto.scrypt` ناهمگام** منتقل شده است.
+هش‌های bcrypt قدیمی همچنان اعتبارسنجی می‌شوند و در **اولین ورود موفق** به‌صورت خودکار
+به scrypt ارتقا می‌یابند — نیازی به ریست اجباری رمز کاربران نیست.
+
+### قبل از هر گام پایلوت
+پشتیبان بگیرید و بازیابی را تست کنید:
+```
+bash deploy/backup.sh daily
+bash deploy/restore-drill.sh
+```
+راهنمای کامل: `docs/PILOT_GO_LIVE.md` و `docs/USER_GUIDE_FA.md`.
+
+### دادهٔ نمایشی
+`npm run seed:demo` دادهٔ نمونهٔ `DEMO-` می‌سازد؛ `npm run reset:demo` فقط همان‌ها
+را حذف می‌کند (دادهٔ واقعی دست‌نخورده می‌ماند).
+
+### رگرسیون CI
+قبل از هر استقرار، `npm run regressions` باید سبز باشد (۹ مجموعهٔ live-PG).

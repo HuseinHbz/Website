@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { faDigits } from '@/lib/admin/chartRtl'
 import { fmtMoney } from '@/lib/format'
 
-type View = 'dashboard' | 'invoices' | 'payments' | 'profile'
+type View = 'dashboard' | 'invoices' | 'payments' | 'tickets' | 'help' | 'profile'
 interface Dash { customer: { name: string; code: string }; balance: number; aging: { current: number; d31_60: number; d61_90: number; d90plus: number; total: number }; creditLimit: number; paymentTerms: number; openCount: number; channels: { id: number; channel: string; address: string; optIn: number }[] }
 interface Inv { id: number; docNo: string; date: string; dueDate: string | null; status: string; total: number; paid: number; currency: string }
 interface Pay { id: number; date: string; amount: number; method: string; reference: string | null; invoiceNo: string | null }
@@ -30,9 +30,9 @@ export function PortalApp({ locale }: { locale: 'fa' | 'en' }) {
   return (
     <Shell fa={fa}>
       <nav className="flex flex-wrap gap-1 mb-5 border-b border-border pb-3">
-        {(['dashboard', 'invoices', 'payments', 'profile'] as const).map(v => (
+        {(['dashboard', 'invoices', 'payments', 'tickets', 'help', 'profile'] as const).map(v => (
           <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${view === v ? 'bg-brand text-white' : 'text-text-secondary hover:bg-surface-2'}`}>
-            {v === 'dashboard' ? t('Dashboard', 'داشبورد') : v === 'invoices' ? t('My invoices', 'فاکتورهای من') : v === 'payments' ? t('My payments', 'پرداخت‌های من') : t('Profile', 'پروفایل')}
+            {v === 'dashboard' ? t('Dashboard', 'داشبورد') : v === 'invoices' ? t('My invoices', 'فاکتورهای من') : v === 'payments' ? t('My payments', 'پرداخت‌های من') : v === 'tickets' ? t('Support', 'پشتیبانی') : v === 'help' ? t('Help', 'راهنما') : t('Profile', 'پروفایل')}
           </button>
         ))}
         <button onClick={async () => { await fetch('/api/portal/auth/logout', { method: 'POST' }); setAuthed(false) }} className="ms-auto px-3 py-1.5 rounded-lg text-sm text-danger-text hover:bg-danger/5">{t('Log out', 'خروج')}</button>
@@ -40,6 +40,8 @@ export function PortalApp({ locale }: { locale: 'fa' | 'en' }) {
       {view === 'dashboard' && <Dashboard fa={fa} money={money} num={num} t={t} />}
       {view === 'invoices' && <Invoices fa={fa} money={money} num={num} t={t} />}
       {view === 'payments' && <Payments fa={fa} money={money} num={num} t={t} />}
+      {view === 'tickets' && <Tickets fa={fa} num={num} t={t} />}
+      {view === 'help' && <Help t={t} />}
       {view === 'profile' && <Profile fa={fa} t={t} />}
     </Shell>
   )
@@ -223,6 +225,107 @@ function Profile({ fa, t }: { fa: boolean; t: (en: string, f: string) => string 
         </Card>
       ))}
       <span className="sr-only">{fa ? 'پروفایل' : 'profile'}</span>
+    </div>
+  )
+}
+
+interface Tk { id: number; ticketNo: string | null; subject: string; priority: string; status: string; updatedAt: string; sla: { activeHours: number; targetHours: number; state: string } }
+interface TkMsg { id: number; authorKind: string; body: string; internal: boolean; createdAt: string }
+
+function Tickets({ fa, num, t }: { fa: boolean; num: (v: unknown) => string; t: (en: string, f: string) => string }) {
+  const [list, setList] = useState<Tk[]>([])
+  const [open, setOpen] = useState<{ subject: string; messages: TkMsg[]; status: string; sla: Tk['sla'] } | null>(null)
+  const [openId, setOpenId] = useState<number | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [subject, setSubject] = useState(''); const [bodyText, setBodyText] = useState(''); const [priority, setPriority] = useState('normal')
+  const [reply, setReply] = useState('')
+  const load = useCallback(() => { fetch('/api/portal/tickets').then(r => r.json()).then(d => setList(d.tickets ?? [])) }, [])
+  useEffect(() => { load() }, [load])
+  const view = async (id: number) => { const r = await fetch(`/api/portal/tickets/${id}`); if (r.ok) { setOpen(await r.json()); setOpenId(id) } }
+  const create = async () => {
+    if (subject.trim().length < 3 || bodyText.trim().length < 1) return
+    const r = await fetch('/api/portal/tickets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subject, body: bodyText, priority }) })
+    if (r.ok) { setCreating(false); setSubject(''); setBodyText(''); load() }
+  }
+  const sendReply = async () => {
+    if (!openId || reply.trim().length < 1) return
+    const r = await fetch(`/api/portal/tickets/${openId}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: reply }) })
+    if (r.ok) { setReply(''); view(openId); load() }
+  }
+  const stLabel = (s: string) => ({ new: t('New', 'جدید'), open: t('Open', 'باز'), pending: t('Awaiting you', 'در انتظار شما'), resolved: t('Resolved', 'حل‌شده'), closed: t('Closed', 'بسته') } as Record<string, string>)[s] ?? s
+
+  if (open && openId) return (
+    <div className="space-y-3">
+      <button onClick={() => { setOpen(null); setOpenId(null) }} className="text-xs text-brand">← {t('Back to tickets', 'بازگشت به تیکت‌ها')}</button>
+      <Card><div className="text-sm font-semibold">{open.subject}</div><div className="text-xs text-text-tertiary mt-1">{stLabel(open.status)} · SLA {num(open.sla.activeHours)}h / {num(open.sla.targetHours)}h</div></Card>
+      {open.messages.map(m => (
+        <Card key={m.id} className={m.authorKind === 'customer' ? 'bg-surface-2' : ''}>
+          <div className="text-2xs text-text-tertiary mb-1">{m.authorKind === 'customer' ? t('You', 'شما') : t('Support', 'پشتیبانی')} · {String(m.createdAt).slice(0, 16)}</div>
+          <p className="text-sm whitespace-pre-wrap">{m.body}</p>
+        </Card>
+      ))}
+      {open.status !== 'closed' && (
+        <Card className="space-y-2">
+          <textarea value={reply} onChange={e => setReply(e.target.value)} rows={3} placeholder={t('Reply…', 'پاسخ…')} className={inputCls} />
+          <button disabled={reply.trim().length < 1} onClick={sendReply} className="px-4 py-1.5 rounded-lg bg-brand text-white text-sm font-semibold disabled:opacity-50">{t('Send', 'ارسال')}</button>
+        </Card>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">{t('Support tickets', 'تیکت‌های پشتیبانی')}</h2>
+        <button onClick={() => setCreating(c => !c)} className="px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-semibold">{creating ? t('Cancel', 'لغو') : t('New ticket', 'تیکت جدید')}</button>
+      </div>
+      {creating && (
+        <Card className="space-y-2">
+          <Field label={t('Subject', 'موضوع')}><input className={inputCls} value={subject} onChange={e => setSubject(e.target.value)} /></Field>
+          <Field label={t('Priority', 'اولویت')}>
+            <select className={inputCls} value={priority} onChange={e => setPriority(e.target.value)}>
+              {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </Field>
+          <Field label={t('Message', 'پیام')}><textarea rows={4} className={inputCls} value={bodyText} onChange={e => setBodyText(e.target.value)} /></Field>
+          <button disabled={subject.trim().length < 3 || bodyText.trim().length < 1} onClick={create} className="px-4 py-1.5 rounded-lg bg-brand text-white text-sm font-semibold disabled:opacity-50">{t('Submit', 'ثبت')}</button>
+        </Card>
+      )}
+      {list.length === 0 && !creating && <p className="text-sm text-text-tertiary">{t('No tickets yet', 'هنوز تیکتی نیست')}</p>}
+      {list.map(tk => (
+        <Card key={tk.id} className="flex items-center justify-between cursor-pointer hover:border-brand/40" >
+          <button onClick={() => view(tk.id)} className="text-start flex-1">
+            <div className="text-sm font-medium">{tk.subject}</div>
+            <div className="text-2xs text-text-tertiary font-mono">{tk.ticketNo} · {stLabel(tk.status)}</div>
+          </button>
+          <span className={`text-2xs px-2 py-0.5 rounded-full ${tk.sla.state === 'breached' ? 'bg-danger/10 text-danger-text' : 'bg-surface-2 text-text-tertiary'}`}>{num(tk.sla.activeHours)}h</span>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+interface KbItem { id: number; title: string; type: string; excerpt: string }
+function Help({ t }: { t: (en: string, f: string) => string }) {
+  const [items, setItems] = useState<KbItem[]>([])
+  const [q, setQ] = useState('')
+  const [article, setArticle] = useState<{ title: string; content: string } | null>(null)
+  const load = useCallback((query: string) => { fetch(`/api/portal/kb?q=${encodeURIComponent(query)}`).then(r => r.json()).then(d => setItems(d.articles ?? [])) }, [])
+  useEffect(() => { const id = setTimeout(() => load(q), 250); return () => clearTimeout(id) }, [q, load])
+  const openArt = async (id: number) => { const r = await fetch(`/api/portal/kb?id=${id}`); if (r.ok) { const d = await r.json(); setArticle(d.article) } }
+  if (article) return (
+    <div className="space-y-3">
+      <button onClick={() => setArticle(null)} className="text-xs text-brand">← {t('Back to help', 'بازگشت به راهنما')}</button>
+      <Card><h2 className="text-sm font-semibold mb-2">{article.title}</h2><div className="text-sm whitespace-pre-wrap text-text-secondary">{article.content}</div></Card>
+    </div>
+  )
+  return (
+    <div className="space-y-3">
+      <input className={inputCls} value={q} onChange={e => setQ(e.target.value)} placeholder={t('Search the help center…', 'جستجو در مرکز راهنما…')} />
+      {items.length === 0 && <p className="text-sm text-text-tertiary">{t('No articles found', 'مقاله‌ای یافت نشد')}</p>}
+      {items.map(a => (
+        <Card key={a.id} className="cursor-pointer hover:border-brand/40"><button onClick={() => openArt(a.id)} className="text-start w-full"><div className="text-sm font-medium">{a.title}</div><div className="text-xs text-text-tertiary mt-0.5 line-clamp-2">{a.excerpt}</div></button></Card>
+      ))}
     </div>
   )
 }

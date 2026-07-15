@@ -68,6 +68,16 @@ export function assertEnv() {
     console.warn(`[ENV] ⚠ ${w}`)
   }
 
+  // 26.25b بند ۰.۵: a leaked rate-limit bypass is a serious hazard. It is already
+  // inert in production (see rateLimit.ts), but surface the misconfiguration loudly.
+  if (process.env.RATE_LIMIT_DISABLED === '1') {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[ENV] ⚠ RATE_LIMIT_DISABLED=1 is set in PRODUCTION and is being IGNORED (benchmark-only flag). Remove it from the environment.')
+    } else {
+      console.warn('[ENV] ⚠ RATE_LIMIT_DISABLED=1 — rate limiting is OFF (non-production benchmark mode).')
+    }
+  }
+
   if (!ok) {
     for (const e of errors) {
       console.error(`[ENV] ✕ ${e}`)

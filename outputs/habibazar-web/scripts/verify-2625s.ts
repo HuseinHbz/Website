@@ -7,7 +7,7 @@ import { runMigrations } from '@/lib/db/migrate'
 import { seedDatabase } from '@/lib/db/seed'
 import { pgQuery } from '@/lib/db'
 import { upsertChannel, linkTelegramChat, recordInbound, optOut } from '@/lib/crm/channelData'
-import { autoLeadFromInbound } from '@/lib/crm/inboundData'
+import { autoLeadFromInbound, confirmInbound } from '@/lib/crm/inboundData'
 import { createCampaign, enqueueRecipients, dispatchCampaign, campaignAnalytics, updateDeliveryStatus } from '@/lib/crm/campaignData'
 
 let n = 0, failed = 0
@@ -63,12 +63,19 @@ async function main() {
   await updateDeliveryStatus(waRecip.provider_message_id, 'delivered')
   ok((await one<{ status: string }>(`SELECT status FROM crm_campaign_recipients WHERE provider_message_id=$1`, [waRecip.provider_message_id])).status === 'delivered', 'WhatsApp delivered receipt updates recipient status')
 
-  console.log('— بند ۴.۵: anonymous inbound → auto-lead + attribution —')
-  const lead = await autoLeadFromInbound('telegram', '99900001', 'سلام قیمت؟')
-  ok(lead.leadId !== undefined, `anonymous telegram inbound created lead #${lead.leadId}`)
-  // dedup: same sender again → same lead
-  const lead2 = await autoLeadFromInbound('telegram', '99900001', 'again')
-  ok(lead2.leadId === lead.leadId, 'repeat inbound from same sender is idempotent (no twin lead)')
+  console.log('— بند ۴.۵ (hardened by 26.25b بند ۰.۶): anonymous inbound → QUARANTINE → confirm → attribution —')
+  // NOTE: 26.25b hardened this path — anonymous inbound is now QUARANTINED
+  // (pending_review) and only becomes a lead when an operator confirms it, so a
+  // rotating-sender flood cannot mint unbounded fake leads / poison CAC.
+  const inbound = await autoLeadFromInbound('telegram', '99900001', 'سلام قیمت؟')
+  ok(inbound.quarantinedId !== undefined && inbound.leadId === undefined, `anonymous telegram inbound QUARANTINED (msg #${inbound.quarantinedId}) — not a lead yet`)
+  // dedup: same sender again while pending → same quarantine row (no twin)
+  const inbound2 = await autoLeadFromInbound('telegram', '99900001', 'again')
+  ok(inbound2.quarantinedId === inbound.quarantinedId, 'repeat inbound from same sender is idempotent (no twin quarantine)')
+  // operator confirms → the lead is created + carries attribution
+  const conf = await confirmInbound(inbound.quarantinedId!)
+  const lead = { leadId: conf.leadId }
+  ok(lead.leadId !== undefined, `confirm → CRM lead #${lead.leadId} enters the funnel`)
   // attribute a converted lead to the campaign → CAC
   await pgQuery(`UPDATE crm_leads SET campaign_id=$1, converted_customer_id=$2 WHERE id=$3`, [campId, cust.id, lead.leadId])
   const inv = await one<{ id: number }>(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at) VALUES ('invoice','INV-MC-1',$1,'2026-07-14','confirmed',8000000,8000000,1,${NOW}) RETURNING id`, [cust.id])

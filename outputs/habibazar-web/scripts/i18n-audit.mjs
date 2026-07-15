@@ -69,16 +69,49 @@ for (const [key, file] of used) {
 }
 const orphan = [...defined.keys()].filter((k) => !used.has(k))
 
+// ── 26.25b بند ۰.۳: hardcoded-string detector ──────────────────────────────
+// The i18n gate previously only caught MISSING keys — so a developer could dodge
+// it by deleting the t('…') call and hardcoding text instead (backwards). This
+// flags admin components that render BARE Persian (Arabic-script) JSX text that is
+// NOT wrapped in a bilingual construct (t('…'), lc(fa,…) or a { fa, en } object).
+// Reported informationally: the codebase's established convention is the inline
+// `lc(fa, en, fa)` pattern (both languages present), so a hard-fail would
+// false-positive across hundreds of legitimate call sites. The signal here is a
+// Persian literal with NO English counterpart on the same line — the real leak.
+const PERSIAN = /[؀-ۿ]/
+const hardcoded = []
+for (const f of files) {
+  if (f === LOCALE) continue
+  const text = readFileSync(f, 'utf8')
+  if (!ADMIN_LOCALE_IMPORT.test(text)) continue
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!PERSIAN.test(line)) continue
+    // Skip lines that already carry a bilingual construct or an English pair.
+    if (/\bt\(\s*['"]/.test(line)) continue                 // t('key')
+    if (/lc\(\s*fa\b/.test(line)) continue                   // lc(fa, en, fa)
+    if (/\bfa:\s*['"`].*\ben:\s*['"`]/.test(line)) continue  // { fa:'…', en:'…' }
+    if (/\ben:\s*['"`].*\bfa:\s*['"`]/.test(line)) continue
+    if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue            // comment
+    // A JSX text node or string attribute holding bare Persian → likely a leak.
+    if (/>[^<>{]*[؀-ۿ]|(?:title|label|placeholder|aria-label)=\{?['"][^'"]*[؀-ۿ]/.test(line)) {
+      hardcoded.push({ file: f.slice(SRC.length - 3), line: i + 1 })
+    }
+  }
+}
+
 const report = {
   definedKeys: defined.size,
   referencedStaticKeys: used.size,
   missing,
   emptyTranslation,
   orphanCount: orphan.length,
+  hardcodedCount: hardcoded.length,
 }
 
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ ...report, orphan }, null, 2))
+  console.log(JSON.stringify({ ...report, orphan, hardcoded }, null, 2))
 } else {
   console.log('\n  Translation-Key Integrity — Report')
   console.log('  ' + '─'.repeat(48))
@@ -87,8 +120,10 @@ if (process.argv.includes('--json')) {
   console.log(`  ✗ Missing keys ............. ${missing.length}`)
   console.log(`  ✗ Empty fa/en translation .. ${emptyTranslation.length}`)
   console.log(`  • Orphan keys (informational) ${report.orphanCount}`)
+  console.log(`  • Hardcoded Persian JSX (informational) ${report.hardcodedCount}`)
   for (const x of missing) console.log(`   - MISSING  t('${x.key}')  (${x.file})`)
   for (const x of emptyTranslation) console.log(`   - EMPTY    '${x.key}'  (${x.file})`)
+  for (const x of hardcoded.slice(0, 20)) console.log(`   · HARDCODED ${x.file}:${x.line}`)
   console.log('')
 }
 

@@ -37,7 +37,14 @@ export interface RateLimitResult {
 // hard error to enable this in a real production deployment — the flag exists so
 // `scripts/load-test.mjs` measures true 2xx throughput instead of 429 storms.
 // Never set RATE_LIMIT_DISABLED=1 outside a throwaway benchmark environment.
-const RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_DISABLED === '1'
+// 26.25b بند ۰.۵: RATE_LIMIT_DISABLED is a benchmark-only knob and is a security
+// hazard if it ever leaks into a real deployment. It is HARD-GATED to non-production
+// — in production the flag is ignored even when set to '1'. `rateLimitBypassActive`
+// is exported so instrumentation can loudly warn on a misconfiguration.
+export function rateLimitBypassActive(): boolean {
+  return process.env.RATE_LIMIT_DISABLED === '1' && process.env.NODE_ENV !== 'production'
+}
+const RATE_LIMIT_DISABLED = rateLimitBypassActive()
 
 export function rateLimit(key: string, opts: RateLimitOptions): RateLimitResult {
   const now = Date.now()

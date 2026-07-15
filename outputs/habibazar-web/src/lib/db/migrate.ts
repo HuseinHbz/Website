@@ -597,7 +597,8 @@ export async function runMigrations() {
       ('doc_service_report','Document · Service Report','سند · گزارش خدمات','{PREFIX}-{YEAR}-{COUNTER}','SR','yearly',6,1),
       ('doc_completion_certificate','Document · Completion Certificate','سند · گواهی تکمیل','{PREFIX}-{YEAR}-{COUNTER}','CC','yearly',6,1),
       ('doc_financial_report','Document · Financial Report','سند · گزارش مالی','{PREFIX}-{YEAR}-{COUNTER}','FR','yearly',6,1),
-      ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1)
+      ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1),
+      ('ticket','Support Ticket','تیکت پشتیبانی','{PREFIX}-{YEAR}-{COUNTER}','TK','yearly',5,1)
     ON CONFLICT (doc_type) DO NOTHING;
 
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
@@ -2425,6 +2426,16 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
     CREATE INDEX IF NOT EXISTS idx_ticket_msgs ON crm_ticket_messages(ticket_id, created_at);
+    -- 26.25b بند ۱: SLA clock accounting (pause while waiting on the customer).
+    -- paused_hours accumulates business hours spent in 'pending'; pending_since is
+    -- set when the ticket enters 'pending' and cleared (folded into paused_hours)
+    -- when it leaves. sla_level tracks the highest escalation stage already fired.
+    ALTER TABLE crm_tickets ADD COLUMN IF NOT EXISTS paused_hours NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE crm_tickets ADD COLUMN IF NOT EXISTS pending_since TEXT;
+    ALTER TABLE crm_tickets ADD COLUMN IF NOT EXISTS sla_level INTEGER NOT NULL DEFAULT 0;
+    -- 26.25b بند ۱: portal knowledge base reuses ai_knowledge_base (NO new CMS) —
+    -- a public flag opts an article into the customer-facing help center.
+    ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS portal_public INTEGER NOT NULL DEFAULT 0;
 
     -- بند ۴: campaigns + recipients (send queue with retry) + consent/opt-out.
     CREATE TABLE IF NOT EXISTS crm_campaigns (
@@ -2514,14 +2525,56 @@ export async function runMigrations() {
     ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE crm_campaign_recipients DROP CONSTRAINT IF EXISTS crm_campaign_recipients_status_check;
     CREATE UNIQUE INDEX IF NOT EXISTS uq_campaign_recip ON crm_campaign_recipients(campaign_id, customer_id, channel);
-    -- Allow channel-sourced inbound leads (inbound_whatsapp/inbound_telegram) —
-    -- the fixed source check was too narrow for auto-created inbound leads (بند ۴.۵).
+    -- 26.25b بند ۰.۷: the 26.25s migration DROPped the source CHECK to let
+    -- inbound_* leads in, which left the column accepting ANY string (no DB-level
+    -- guard, so a poisoned webhook could store arbitrary garbage sources). Restore
+    -- an EXPLICIT allow-list that now also includes the inbound_* channel sources.
+    -- Idempotent: normalise any stray value, then (re)create the named constraint.
+    UPDATE crm_leads SET source = 'other'
+      WHERE source NOT IN ('website','referral','consultation','contact_form','event','social','email','other',
+                           'inbound_whatsapp','inbound_telegram','inbound_sms','inbound_email','campaign');
     ALTER TABLE crm_leads DROP CONSTRAINT IF EXISTS crm_leads_source_check;
+    ALTER TABLE crm_leads ADD CONSTRAINT crm_leads_source_check CHECK (source IN (
+      'website','referral','consultation','contact_form','event','social','email','other',
+      'inbound_whatsapp','inbound_telegram','inbound_sms','inbound_email','campaign'));
+
+    -- 26.25b بند ۰.۴: add a distinct 'gateway' payment method so an online
+    -- payment-gateway settlement is NOT recorded as a physical POS 'card' swipe
+    -- (that ambiguity broke reconciliation). Fix historical gateway-path rows using
+    -- payment_transactions as evidence — never touch a real POS 'card' record.
+    ALTER TABLE sales_payments DROP CONSTRAINT IF EXISTS sales_payments_method_check;
+    ALTER TABLE sales_payments ADD CONSTRAINT sales_payments_method_check
+      CHECK (method IN ('cash','bank','card','cheque','gateway','other'));
+    UPDATE sales_payments p SET method = 'gateway'
+      WHERE p.method = 'card' AND EXISTS (
+        SELECT 1 FROM payment_transactions t
+        WHERE t.sales_payment_id = p.id AND t.status IN ('paid','verified'));
 
     -- 26.25s settings seeds (idempotent): whatsapp + telegram provider config.
     INSERT INTO erp_settings (key, value) VALUES
       ('whatsapp_token',''), ('whatsapp_phone_id',''), ('whatsapp_verify_token',''), ('whatsapp_app_secret',''),
       ('telegram_bot_token',''), ('telegram_webhook_secret','')
+    ON CONFLICT (key) DO NOTHING;
+
+    -- 26.25b بند ۰.۶: inbound-lead flood control. Unknown-sender inbound is
+    -- QUARANTINED here (pending_review) and never enters the CRM funnel/CAC until
+    -- an operator confirms; a per-window rate cap blocks excess (status='blocked').
+    CREATE TABLE IF NOT EXISTS crm_inbound_messages (
+      id SERIAL PRIMARY KEY,
+      channel TEXT NOT NULL,
+      address TEXT NOT NULL,
+      body TEXT,
+      status TEXT NOT NULL DEFAULT 'pending_review'
+        CHECK(status IN ('pending_review','confirmed','rejected','blocked')),
+      lead_id INTEGER,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_inbound_status ON crm_inbound_messages(status);
+    CREATE INDEX IF NOT EXISTS idx_inbound_window ON crm_inbound_messages(channel, created_at);
+    INSERT INTO erp_settings (key, value) VALUES
+      ('inbound_cap_global','200'), ('inbound_cap_channel','100'), ('inbound_cap_window','60')
     ON CONFLICT (key) DO NOTHING;
 
     -- 26.22 (runs LAST so every seeded account exists): attach each leaf

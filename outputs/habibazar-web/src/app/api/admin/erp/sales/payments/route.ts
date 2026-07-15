@@ -32,7 +32,7 @@ const schema = z.object({
   documentId: z.number().int().positive().optional(),
   date: z.string().min(1).max(30),
   amount: z.number().positive(),
-  method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']).default('cash'),
+  method: z.enum(['cash', 'bank', 'card', 'cheque', 'gateway', 'other']).default('cash'),
   reference: z.string().max(120).optional(),
   note: z.string().max(500).optional(),
   currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).default('IRR'),

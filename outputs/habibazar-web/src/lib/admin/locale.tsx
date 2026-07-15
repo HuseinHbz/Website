@@ -54,6 +54,12 @@ const T: Record<string, { fa: string; en: string }> = {
   tags:        { fa: 'برچسب‌ها', en: 'Tags' },
   priority:    { fa: 'اولویت', en: 'Priority' },
   locale:      { fa: 'زبان', en: 'Locale' },
+  // 26.25b بند ۰.۳: the CORRECT fix for a missing key is to ADD it (a 26.25a
+  // change removed a t('nav_crm') usage to dodge the audit — backwards). These are
+  // the CRM nav/label keys, referenced from the Customer 360 page.
+  nav_crm:        { fa: 'مدیریت ارتباط با مشتری', en: 'CRM' },
+  nav_customers:  { fa: 'مشتریان', en: 'Customers' },
+  crm_customer360:{ fa: 'نمای ۳۶۰ مشتری', en: 'Customer 360' },
   level:       { fa: 'سطح', en: 'Level' },
   category:    { fa: 'دسته', en: 'Category' },
   year:        { fa: 'سال', en: 'Year' },

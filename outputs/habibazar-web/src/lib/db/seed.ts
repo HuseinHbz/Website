@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@/lib/admin/password'
 import { nanoid } from 'nanoid'
 import { eq, sql } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
@@ -15,7 +15,7 @@ export async function seedDatabase() {
   // Super admin user (idempotent)
   const existingUser = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, 'admin@habibazar.com')).limit(1)
   if (existingUser.length === 0) {
-    const hash = await bcrypt.hash('HBZ@Admin2025!', 12)
+    const hash = await hashPassword('HBZ@Admin2025!') // async scrypt (26.25b بند ۰.۲)
     await db.insert(s.users).values({ id: nanoid(), name: 'Husein Habibazar', email: 'admin@habibazar.com', passwordHash: hash, role: 'super_admin' }).onConflictDoNothing()
   }
 
