@@ -51,7 +51,7 @@ export async function recordInbound(channel: Channel, address: string): Promise<
 export async function optOut(channel: Channel, address: string, reason = 'user'): Promise<void> {
   const addr = channel === 'email' ? address.toLowerCase() : normalizeTarget('sms', address)
   await pgQuery(`UPDATE crm_customer_channels SET opt_in=0, opt_out_at=${NOW}, updated_at=${NOW} WHERE channel=$1 AND address=$2`, [channel, addr])
-  await pgQuery(`INSERT INTO crm_optouts (channel, target, reason, created_at) VALUES ($1,$2,$3,${NOW}) ON CONFLICT (channel, target) DO NOTHING`, [channel, addr])
+  await pgQuery(`INSERT INTO crm_optouts (channel, target, reason, created_at) VALUES ($1,$2,$3,${NOW}) ON CONFLICT (channel, target) DO NOTHING`, [channel, addr, reason])
 }
 
 /** The server-side opt-out set for a channel (normalized targets). */

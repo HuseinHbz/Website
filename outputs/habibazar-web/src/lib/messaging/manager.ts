@@ -27,7 +27,12 @@ export async function resolveChannel(channel: Channel): Promise<ChannelResolutio
     const p = PROVIDERS[providerId]
     return { providerId, cfg, live: !!p && p.verifyConfig(cfg) }
   }
-  if (channel === 'email') return { providerId: 'smtp', cfg: {}, live: true }
+  if (channel === 'email') {
+    // Email reuses nodemailer/SMTP; when no SMTP host is configured it falls back
+    // to the deterministic sandbox (like the other channels) — never a silent drop.
+    const s = await pgQuery<{ value: string }>(`SELECT value FROM site_settings WHERE key='smtp_host'`).catch(() => [])
+    return { providerId: 'smtp', cfg: {}, live: !!s[0]?.value }
+  }
   if (channel === 'whatsapp') {
     const s = await settings(['whatsapp_token', 'whatsapp_phone_id'])
     const cfg: MessageConfig = { token: pick(s, 'whatsapp_token', 'WHATSAPP_TOKEN'), phoneNumberId: pick(s, 'whatsapp_phone_id', 'WHATSAPP_PHONE_ID') }
@@ -45,7 +50,7 @@ export async function resolveChannel(channel: Channel): Promise<ChannelResolutio
  */
 export async function dispatch(channel: Channel, msg: OutboundMessage): Promise<SendResult & { providerId: string; live: boolean }> {
   const r = await resolveChannel(channel)
-  const provider = r.live ? PROVIDERS[r.providerId] : (channel === 'email' ? PROVIDERS.smtp : sandboxProvider(channel))
+  const provider = r.live ? PROVIDERS[r.providerId] : sandboxProvider(channel)
   const res = await provider.send(msg, r.cfg)
   return { ...res, providerId: provider.id, live: r.live }
 }

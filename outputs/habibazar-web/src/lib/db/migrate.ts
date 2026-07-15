@@ -2506,6 +2506,7 @@ export async function runMigrations() {
     ALTER TABLE crm_campaigns ADD COLUMN IF NOT EXISTS templates TEXT NOT NULL DEFAULT '{}';
     UPDATE crm_campaigns SET channels = ('["' || channel || '"]') WHERE channels = '[]' AND channel IS NOT NULL;
     ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'sms';
+    ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS reason TEXT;
     ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS provider_message_id TEXT;
     ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS queued_at TEXT;
     ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS delivered_at TEXT;
@@ -2513,6 +2514,9 @@ export async function runMigrations() {
     ALTER TABLE crm_campaign_recipients ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE crm_campaign_recipients DROP CONSTRAINT IF EXISTS crm_campaign_recipients_status_check;
     CREATE UNIQUE INDEX IF NOT EXISTS uq_campaign_recip ON crm_campaign_recipients(campaign_id, customer_id, channel);
+    -- Allow channel-sourced inbound leads (inbound_whatsapp/inbound_telegram) —
+    -- the fixed source check was too narrow for auto-created inbound leads (بند ۴.۵).
+    ALTER TABLE crm_leads DROP CONSTRAINT IF EXISTS crm_leads_source_check;
 
     -- 26.25s settings seeds (idempotent): whatsapp + telegram provider config.
     INSERT INTO erp_settings (key, value) VALUES
