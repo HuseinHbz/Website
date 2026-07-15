@@ -85,6 +85,27 @@ export async function postSalesPaymentToGl(paymentId: number, userId?: string): 
   return { entryId: e.id, alreadyPosted: false }
 }
 
+/**
+ * Customer refund (sales-return settlement, 26.26 BUG-013) → Dr AR / Cr Bank for
+ * the ABS amount (money returned to the customer brings AR back to 0). The refund
+ * is stored as a NEGATIVE sales_payment so the sub-ledger `paid` drops; here we
+ * post its GL. Idempotent per payment via gl_entry_id.
+ */
+export async function postCustomerRefundToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
+  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null }>(
+    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer
+     FROM sales_payments p LEFT JOIN sales_customers c ON c.id=p.customer_id WHERE p.id=$1`, [paymentId]))[0]
+  if (!p) throw new Error('Payment not found')
+  if (p.gl_entry_id) return { entryId: p.gl_entry_id, alreadyPosted: true }
+  const amt = Math.abs(num(p.amount))
+  const map = await loadGlMap()
+  const [ar, bank] = await Promise.all([accountIdByCode(map.ar), accountIdByCode(map.bank)])
+  const e = await insertPostedEntry(p.date, `Customer refund${p.customer ? ` — ${p.customer}` : ''}`, `SREF-${paymentId}`, amt, userId,
+    [{ accountId: ar, debit: amt, credit: 0 }, { accountId: bank, debit: 0, credit: amt }])
+  await pgQuery(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
+  return { entryId: e.id, alreadyPosted: false }
+}
+
 /** Purchase payment → Dr AP / Cr Bank (idempotent per payment). */
 export async function postPurchasePaymentToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
   const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; vendor: string | null }>(

@@ -2544,7 +2544,12 @@ export async function runMigrations() {
     -- payment_transactions as evidence — never touch a real POS 'card' record.
     ALTER TABLE sales_payments DROP CONSTRAINT IF EXISTS sales_payments_method_check;
     ALTER TABLE sales_payments ADD CONSTRAINT sales_payments_method_check
-      CHECK (method IN ('cash','bank','card','cheque','gateway','other'));
+      CHECK (method IN ('cash','bank','card','cheque','gateway','refund','other'));
+    -- 26.26 BUG-013: sales-return settlement policy — 'refund' pays money back
+    -- (a negative sales_payment + GL Dr AR/Cr Bank → AR back to 0); 'credit' leaves
+    -- the customer credit balance and raises a pending-settlement alert.
+    INSERT INTO erp_settings (key, value) VALUES ('sales_return_settlement','credit')
+    ON CONFLICT (key) DO NOTHING;
     UPDATE sales_payments p SET method = 'gateway'
       WHERE p.method = 'card' AND EXISTS (
         SELECT 1 FROM payment_transactions t
