@@ -25,7 +25,12 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
   const searchParams = useSearchParams()
   const activeTab = searchParams?.get('tab') ?? null
   const router = useRouter()
-  const ws = workspaceForPath(pathname)
+  // BUG-010 second root (26.26b بند ۲.۱): resolve the workspace context-aware —
+  // a cross-listed page keeps the user in the workspace they were already in,
+  // instead of jumping to the first-listed owner (the reported Treasury/BI jump).
+  const lastWsRef = useRef<string | null>(null)
+  const ws = workspaceForPath(pathname, lastWsRef.current)
+  useEffect(() => { lastWsRef.current = ws.id }, [ws.id])
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [wsQuery, setWsQuery] = useState('')
   const [wsSel, setWsSel] = useState(0)

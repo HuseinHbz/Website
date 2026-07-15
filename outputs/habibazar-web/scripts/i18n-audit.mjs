@@ -101,6 +101,15 @@ for (const f of files) {
   }
 }
 
+// 26.26b بند ۱.۳: locked baseline. The hardcoded-Persian count may only go DOWN.
+// An INCREASE is now a hard failure (no more silent unbounded debt). Lower the
+// number in scripts/i18n-baseline.json whenever you remove hardcoded strings.
+let HARDCODED_BASELINE = Infinity
+try {
+  HARDCODED_BASELINE = JSON.parse(readFileSync(join(ROOT, 'scripts', 'i18n-baseline.json'), 'utf8')).hardcodedBaseline
+} catch { /* no baseline file → treat as unlocked (should not happen in CI) */ }
+const hardcodedRegressed = hardcoded.length > HARDCODED_BASELINE
+
 const report = {
   definedKeys: defined.size,
   referencedStaticKeys: used.size,
@@ -108,6 +117,8 @@ const report = {
   emptyTranslation,
   orphanCount: orphan.length,
   hardcodedCount: hardcoded.length,
+  hardcodedBaseline: HARDCODED_BASELINE,
+  hardcodedRegressed,
 }
 
 if (process.argv.includes('--json')) {
@@ -120,11 +131,11 @@ if (process.argv.includes('--json')) {
   console.log(`  ✗ Missing keys ............. ${missing.length}`)
   console.log(`  ✗ Empty fa/en translation .. ${emptyTranslation.length}`)
   console.log(`  • Orphan keys (informational) ${report.orphanCount}`)
-  console.log(`  • Hardcoded Persian JSX (informational) ${report.hardcodedCount}`)
+  console.log(`  ${hardcodedRegressed ? '✗' : '•'} Hardcoded Persian JSX ...... ${report.hardcodedCount}  (baseline ${HARDCODED_BASELINE}${hardcodedRegressed ? ' — REGRESSED, over baseline' : ', locked'})`)
   for (const x of missing) console.log(`   - MISSING  t('${x.key}')  (${x.file})`)
   for (const x of emptyTranslation) console.log(`   - EMPTY    '${x.key}'  (${x.file})`)
-  for (const x of hardcoded.slice(0, 20)) console.log(`   · HARDCODED ${x.file}:${x.line}`)
+  if (hardcodedRegressed) for (const x of hardcoded.slice(0, 30)) console.log(`   · HARDCODED ${x.file}:${x.line}`)
   console.log('')
 }
 
-process.exit(missing.length + emptyTranslation.length > 0 ? 1 : 0)
+process.exit(missing.length + emptyTranslation.length > 0 || hardcodedRegressed ? 1 : 0)

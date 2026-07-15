@@ -273,19 +273,42 @@ export function resolveActiveHref(pathname: string, hrefs: string[], activeTab?:
   return best
 }
 
-/** The workspace that owns a path (longest-matching href; first workspace wins ties). */
-export function workspaceForPath(pathname: string): Workspace {
+/** True when a workspace contains a nav item whose path matches `pathname`. */
+function workspaceOwnsPath(ws: Workspace, pathname: string): boolean {
+  return ws.groups.some(g => g.items.some(it => {
+    const p = hrefPath(it.href)
+    return pathname === p || (p !== '/admin' && pathname.startsWith(p + '/'))
+  }))
+}
+
+/**
+ * The workspace that owns a path (longest-matching href; first workspace wins ties).
+ *
+ * BUG-010 second root (26.26b بند ۲.۱): many pages are **cross-listed** in several
+ * workspaces (e.g. `/admin/dashboard` in both Executive and Analytics, `/admin/
+ * reports` in Analytics + ERP). Context-free resolution always returns the
+ * first-listed owner, so a user IN Analytics who clicks a cross-listed item was
+ * yanked to Executive — exactly the reported jump. When `currentWorkspaceId` is
+ * supplied and that workspace also owns the path, we KEEP the user there; only
+ * when the current workspace does not own it do we fall back to longest-match.
+ */
+export function workspaceForPath(pathname: string, currentWorkspaceId?: string | null): Workspace {
   // A workspace dashboard (/admin/dashboards/<id>) belongs to that workspace.
   const dash = pathname.match(/^\/admin\/dashboards\/([a-z]+)/)
   if (dash) { const w = workspaceById(dash[1]); if (w) return w }
+  // Context-aware: stay in the current workspace if it owns this path (cross-listing).
+  if (currentWorkspaceId) {
+    const cur = workspaceById(currentWorkspaceId)
+    if (cur && workspaceOwnsPath(cur, pathname)) return cur
+  }
   let best: Workspace | null = null
   let bestLen = -1
   for (const ws of WORKSPACES) {
     for (const g of ws.groups) {
       for (const it of g.items) {
-        // BUG-010 (26.26): compare the PATH part only — an href with `?tab=` never
-        // equals a pathname, so the old raw compare returned null → executive jump.
-        // Boundary-safe startsWith so /admin/sales-returns ≠ /admin/sales.
+        // Compare the PATH part only — an href with `?tab=` never equals a pathname,
+        // so the old raw compare returned null → executive jump. Boundary-safe
+        // startsWith so /admin/sales-returns ≠ /admin/sales.
         const p = hrefPath(it.href)
         const match = pathname === p || (p !== '/admin' && pathname.startsWith(p + '/'))
         if (match && p.length > bestLen) { best = ws; bestLen = p.length }

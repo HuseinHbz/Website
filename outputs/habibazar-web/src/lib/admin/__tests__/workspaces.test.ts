@@ -68,6 +68,42 @@ describe('workspace registry', () => {
     expect(visibleWorkspaces('viewer').length).toBeLessThanOrEqual(visibleWorkspaces('super_admin').length)
   })
 
+  // BUG-010 second root (26.26b بند ۲.۱): context-aware resolution keeps a user in
+  // their current workspace for a CROSS-LISTED page, instead of jumping to the
+  // first-listed owner (the reported Treasury/BI/dashboard jump).
+  it('context-aware: a cross-listed page keeps the user in their current workspace (بند ۲.۱)', () => {
+    // /admin/dashboard is listed in BOTH executive and analytics.
+    expect(workspaceForPath('/admin/dashboard').id).toBe('executive')            // context-free → first owner
+    expect(workspaceForPath('/admin/dashboard', 'analytics').id).toBe('analytics') // in Analytics → stay
+    expect(workspaceForPath('/admin/dashboard', 'executive').id).toBe('executive')
+    // /admin/reports is in analytics + erp.
+    expect(workspaceForPath('/admin/reports', 'analytics').id).toBe('analytics')
+    expect(workspaceForPath('/admin/reports', 'erp').id).toBe('erp')
+  })
+
+  it('context does NOT override when the current workspace does not own the path', () => {
+    // Treasury is only in erp; being "in" analytics must not keep you there.
+    expect(workspaceForPath('/admin/treasury', 'analytics').id).toBe('erp')
+    // an unknown current id is ignored
+    expect(workspaceForPath('/admin/treasury', 'nonsense').id).toBe('erp')
+  })
+
+  it('strong assertion: every NON-cross-listed item resolves to exactly its workspace (بند ۲.۲)', () => {
+    // Build the set of paths that appear in more than one workspace.
+    const owners = new Map<string, Set<string>>()
+    for (const ws of WORKSPACES) for (const g of ws.groups) for (const it of g.items) {
+      const p = hrefPath(it.href); if (!owners.has(p)) owners.set(p, new Set())
+      owners.get(p)!.add(ws.id)
+    }
+    for (const ws of WORKSPACES) for (const g of ws.groups) for (const it of g.items) {
+      const p = hrefPath(it.href)
+      if (owners.get(p)!.size === 1) {
+        // single-owner → the STRONG invariant: resolves to exactly this workspace.
+        expect(workspaceForPath(p).id, `${it.href} single-owner`).toBe(ws.id)
+      }
+    }
+  })
+
   it('boundary match: /admin/sales-returns is NOT owned by the sales item', () => {
     // If /admin/sales-returns existed it must not collapse onto /admin/sales.
     // (uses startsWith(p + "/") so a hyphen sibling never matches.)

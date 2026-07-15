@@ -50,9 +50,20 @@
    current working branch (`feature/v2-enterprise-upgrade`). Do not `git checkout`,
    `switch`, create, rename, or push to any other branch without an explicit
    instruction from the maintainer. If a workflow seems to need a different branch,
-   STOP and ask first — never change branches on your own.
-   (هیچ‌وقت برنچ را عوض نکن مگر من صریحاً گفته باشم؛ همیشه روی همین برنچ کاری بمان و
-   بدون دستور من به برنچ دیگری checkout/push نکن.)
+   STOP and ask first — never change branches on your own. **Even if the execution
+   environment restricts pushing to the main branch (e.g. it designates a side
+   branch and opens a PR), that is a REAL constraint to SURFACE and ASK about — not
+   to silently work around (26.26b بند ۰.۳).** (هیچ‌وقت برنچ را عوض نکن مگر من صریحاً
+   گفته باشم؛ اگر محیط اجرا push به برنچ اصلی را محدود می‌کند، همان را صریح اعلام کن و
+   بپرس — دور نزن.)
+   - **⛔ force-push is FORBIDDEN** without my explicit approval in the same message
+     (26.26b R2). `git push -f` / `--force` / `--force-with-lease` all require a
+     direct go-ahead. A normal fast-forward push is fine.
+   - **Editing a regression test's assertion must be logged in
+     `docs/governance/contract-changes.md`** (26.26b بند ۱.۱). A regression suite
+     guards a behavioural contract; changing what it asserts silently removes the
+     guardian. Record old assertion → new assertion → what is no longer guaranteed →
+     reason → approver. Silent assertion changes are forbidden (R5).
 6. **The full regression history stays green in CI (26.25b بند ۰.۱).** All seven+
    committed live-PG regression suites (26.20 self-heal, 26.21 simulation, 26.23,
    26.24, 26.24b, 26.25, 26.25s — plus 26.25a/26.25b) run in the CI `regressions`

@@ -1,0 +1,14 @@
+{
+  "hardcodedBaseline": 28,
+  "note": "26.26b بند۱.۳ locked baseline — audit:i18n FAILS if hardcoded Persian JSX count exceeds this. Reducing it is encouraged; lower this number when you do. Never raise it.",
+  "files": [
+    "src/app/admin/about/AboutEditor.tsx",
+    "src/app/admin/approvals/ApprovalCenter.tsx",
+    "src/app/admin/backup/BackupManager.tsx",
+    "src/app/admin/blog/BlogManager.tsx",
+    "src/app/admin/certifications/CertificationsManager.tsx",
+    "src/app/admin/dashboard/AnalyticsPanel.tsx",
+    "src/app/admin/import-center/ImportCenter.tsx",
+    "src/app/admin/operations/OperationsCenter.tsx"
+  ]
+}

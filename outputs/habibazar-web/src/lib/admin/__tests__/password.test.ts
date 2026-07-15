@@ -1,7 +1,18 @@
 import { describe, it, expect, afterEach } from 'vitest'
+import { scrypt as scryptCb } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { hashPassword, verifyPassword, isBcryptHash } from '../password'
 import { rateLimitBypassActive } from '@/lib/rateLimit'
+
+// Build a self-describing scrypt hash with EXPLICIT (non-default) params, to prove
+// verifyPassword reads N/r/p from the stored string — not from a module constant.
+function scryptHashWith(password: string, N: number, r: number, p: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const salt = Buffer.from('00112233445566778899aabbccddeeff', 'hex')
+    scryptCb(password, salt, 64, { N, r, p, maxmem: 128 * 1024 * 1024 }, (e, d) =>
+      e ? reject(e) : resolve(`scrypt$${N}$${r}$${p}$${salt.toString('hex')}$${(d as Buffer).toString('hex')}`))
+  })
+}
 
 describe('password — scrypt hashing (26.25b بند ۰.۲)', () => {
   it('round-trips: a scrypt hash verifies its own password, rejects a wrong one', async () => {
@@ -16,6 +27,19 @@ describe('password — scrypt hashing (26.25b بند ۰.۲)', () => {
     const bad = await verifyPassword('wrong-password', hash)
     expect(bad.valid).toBe(false)
     expect(bad.needsRehash).toBe(false)
+  })
+
+  it('is self-describing: a hash with DIFFERENT params still verifies (26.26b بند ۱.۴)', async () => {
+    // Default module params are N=32768,r=8,p=1. Craft a hash with N=16384 — if
+    // verify used the module constant it would fail; it must read the stored params.
+    const legacyParams = await scryptHashWith('SelfDescribe!', 16384, 8, 1)
+    expect(legacyParams).toMatch(/^scrypt\$16384\$8\$1\$/)
+    const ok = await verifyPassword('SelfDescribe!', legacyParams)
+    expect(ok.valid).toBe(true)   // proves params are read FROM the hash string
+    expect((await verifyPassword('wrong', legacyParams)).valid).toBe(false)
+    // and an even-lower-cost variant also verifies (param change never breaks hashes)
+    const other = await scryptHashWith('SelfDescribe!', 8192, 8, 2)
+    expect((await verifyPassword('SelfDescribe!', other)).valid).toBe(true)
   })
 
   it('produces a distinct salt per hash (same password → different digest)', async () => {
