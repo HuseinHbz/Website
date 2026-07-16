@@ -87,6 +87,28 @@
    pathname.startsWith(p+'/')`). The `audit:nav` gate fails the build if any nav
    registry item resolves to a workspace that doesn't contain it. (هر مقایسهٔ مسیر
    با hrefPath.)
+11. **A reversing GL entry keeps the ORIGINAL posted; never set it `status='void'`
+   (26.26b BUG-020).** Balance sums count `status='posted'` only. If `reverseEntry`
+   voids the original *and* posts a reversal, the void'd original is excluded while
+   the reversal still counts — so every account nets to **−original instead of 0**
+   (voiding a 100 payment left bank at −100). Correct reversing-entry accounting:
+   keep the original `posted`, post the balanced reversal, mark reversed-ness via
+   `reversed_by`/`reversal_of` (two-way link) alone. Both entries stay posted and net
+   to zero, with a full audit trail. (رگرسیون: `verify-2626b-cfo.ts`.)
+12. **Admin `page.tsx` files MUST render `<AdminShell>` (26.26b BUG-014, `audit:shell`).**
+   Every page under `src/app/admin/` except `login/page.tsx` must import AND render
+   `AdminShell` (server component: `getAdminUser()` → redirect if null → shell). A page
+   that renders its component bare shows up broken (no nav, content past the edge) even
+   with a green build. `audit:shell` fails the build on any violation.
+13. **Integration credentials (مودیان/gateway/SMS/WhatsApp/Telegram) have a real UI at
+   `/admin/settings/integrations`; secrets are WRITE-ONLY (26.26b BUG-015).** The API
+   returns only a masked hint (`•••• 1234`), never the stored value; audit logs the key
+   + set/cleared, never the secret. "blocked-external" is only honest for a provider
+   whose **UI is complete and awaiting only the customer's key** — not for one with no
+   UI. Report must split the two.
+14. **Money is shaped to the UI locale (26.26b BUG-018).** `formatCurrency`/`fmtMoney`
+   emit Persian digits in fa (module default set from AdminShell + per-call `locale`).
+   Never mix «۱ مشتری» with «0 ریال» — all numbers follow the active locale.
 10. **A financial return/void must never leave a balance silently negative (26.26
    BUG-013).** A return on a PAID invoice needs a second leg — a refund (negative
    `sales_payment 'refund'` + Dr AR/Cr Bank → AR back to 0) or an explicit
