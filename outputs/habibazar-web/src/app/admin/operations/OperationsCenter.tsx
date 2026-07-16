@@ -52,7 +52,10 @@ export function OperationsCenter() {
   const opsLocale = useAdminLocale()
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
-  const [updated, setUpdated] = useState<Date>(new Date())
+  // 26.26c بند ۴ (BUG-021): start null and set only after mount — a `new Date()`
+  // initial value rendered as a locale time string mismatches SSR vs client
+  // (React #418 hydration error).
+  const [updated, setUpdated] = useState<Date | null>(null)
   const [tab, setTab] = useState<'overview' | 'infrastructure' | 'errors'>('overview')
 
   const load = useCallback(async () => {
@@ -69,7 +72,7 @@ export function OperationsCenter() {
 
   return (
     <div>
-      <PageHeader title={t('operationsTitle')} subtitle={`Last updated: ${updated.toLocaleTimeString()}`} />
+      <PageHeader title={t('operationsTitle')} subtitle={updated ? `Last updated: ${updated.toLocaleTimeString()}` : t('operationsTitle')} />
 
       <div className="flex gap-2 mb-6 flex-wrap items-center">
         {TABS.map((x) => (

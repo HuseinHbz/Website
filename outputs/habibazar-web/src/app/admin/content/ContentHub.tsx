@@ -62,7 +62,7 @@ export function ContentHub() {
     { key: 'titleEn', labelEn: 'Content', labelFa: t('content'), render: item => <div><div className="font-medium text-text-primary">{item.titleEn}</div><div className="text-xs text-text-tertiary">{item.slug}</div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: item => <span className="text-text-secondary">{TYPE_ICONS[item.type]} {item.type}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: item => <Badge color={STATUS_COLORS[item.status] || 'slate'}>{item.status}</Badge> },
-    { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true, render: item => <span className="text-text-secondary">{item.views.toLocaleString()}</span> },
+    { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true, render: item => <span className="text-text-secondary">{item.views.toLocaleString('en-US')}</span> },
     { key: 'publishedAt', labelEn: 'Published', labelFa: t('published'), type: 'date', render: item => <span className="text-text-tertiary text-xs">{item.publishedAt?.slice(0, 10) || '—'}</span> },
   ]
   const rowActions: RowAction<ContentItem>[] = [
@@ -75,7 +75,7 @@ export function ContentHub() {
       <ToastContainer />
       <PageHeader
         title={t('contentHubTitle')}
-        subtitle={`${stats.total} items · ${stats.published} published · ${stats.views.toLocaleString()} views`}
+        subtitle={`${stats.total} items · ${stats.published} published · ${stats.views.toLocaleString('en-US')} views`}
         action={<Btn onClick={() => setEditing({ type: 'blog', status: 'draft', featured: false })}>{t('addContent')}</Btn>}
       />
 
