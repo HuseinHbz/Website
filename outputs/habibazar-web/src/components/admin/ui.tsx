@@ -27,7 +27,9 @@ export function StatCard({
         <p className="text-overline">{label}</p>
         {icon && <span className="text-lg text-text-tertiary" style={color ? { color } : undefined} aria-hidden>{icon}</span>}
       </div>
-      <p className="text-3xl font-bold text-text-primary tracking-tight">{value}</p>
+      {/* break-words + min-w-0 so a long money value (e.g. fa Rial) wraps instead
+          of overflowing the grid cell's right edge (26.26b BUG-019). */}
+      <p className="text-3xl font-bold text-text-primary tracking-tight break-words min-w-0">{value}</p>
       {delta && <p className="text-xs text-success-text font-medium mt-2">{delta}</p>}
     </div>
   )

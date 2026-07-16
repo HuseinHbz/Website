@@ -1,11 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Card } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
+
+// Recharts is code-split (26.26b بند ۲.۱): lazy-loaded so /admin/dashboard no
+// longer statically bundles recharts (was 121 kB / 292 kB First Load).
+const chartLoading = () => <div className="h-48 flex items-center justify-center text-text-disabled text-sm">…</div>
+const TrafficAreaChart = dynamic(() => import('./AnalyticsCharts').then(m => m.TrafficAreaChart), { ssr: false, loading: chartLoading })
+const ActionPieChart = dynamic(() => import('./AnalyticsCharts').then(m => m.ActionPieChart), { ssr: false, loading: chartLoading })
 
 interface DashData {
   stats: {
@@ -151,24 +157,7 @@ export function AnalyticsPanel() {
           </div>
         </div>
         {dailySlice.length > 0 ? (
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={dailySlice}>
-              <defs>
-                <linearGradient id="vGrad2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-              <XAxis dataKey="date" tick={{ fill: '#4a4a6a', fontSize: 11 }} tickLine={false} />
-              <YAxis tick={{ fill: '#4a4a6a', fontSize: 11 }} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{ background: '#111122', border: '1px solid #2a2a3e', borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: '#9090b0' }}
-              />
-              <Area type="monotone" dataKey="count" name="بازدید" stroke="#6366f1" fill="url(#vGrad2)" strokeWidth={2} dot={{ r: 3, fill: '#6366f1' }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <TrafficAreaChart data={dailySlice} />
         ) : (
           <div className="h-48 flex items-center justify-center text-text-disabled text-sm">هنوز داده‌ای ثبت نشده</div>
         )}
@@ -212,14 +201,7 @@ export function AnalyticsPanel() {
           <h3 className="text-sm font-semibold text-text-primary mb-4">توزیع عملیات‌های اخیر</h3>
           {actionPieData.length > 0 ? (
             <div className="flex items-center gap-6">
-              <PieChart width={160} height={160}>
-                <Pie data={actionPieData} cx={75} cy={75} innerRadius={45} outerRadius={70} dataKey="value" stroke="none">
-                  {actionPieData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: '#111122', border: '1px solid #2a2a3e', borderRadius: 8, fontSize: 11 }} />
-              </PieChart>
+              <ActionPieChart data={actionPieData} colors={PIE_COLORS} />
               <div className="flex-1 space-y-2">
                 {actionPieData.map((entry, i) => (
                   <div key={i} className="flex items-center gap-2">
