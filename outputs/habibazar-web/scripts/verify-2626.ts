@@ -6,6 +6,8 @@ import { runMigrations } from '@/lib/db/migrate'
 import { seedDatabase } from '@/lib/db/seed'
 import { pgQuery } from '@/lib/db'
 import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid } from '@/lib/erp/salesData'
+import { loadTallies } from '@/lib/erp/ledgerData'
+import { trialBalance } from '@/lib/erp/ledger'
 
 let n = 0, failed = 0
 const ok = (c: boolean, l: string) => { n++; if (c) console.log(`  ✅ ${n}. ${l}`); else { failed++; console.error(`  ❌ ${n}. ${l}`) } }
@@ -22,21 +24,14 @@ async function arOf(cid: number): Promise<number> {
      )::float AS ar`, [cid])
   return Math.round(Number(r.ar) * 100) / 100
 }
-// GL balance of the AR control account 1100 (whole ledger; single customer here).
-async function glAr(): Promise<number> {
-  const r = await one<{ b: number }>(
-    `SELECT COALESCE(SUM(l.debit-l.credit),0)::float AS b FROM gl_journal_lines l
-     JOIN gl_accounts a ON a.id=l.account_id JOIN gl_journal_entries e ON e.id=l.entry_id
-     WHERE a.code='1100' AND e.status='posted'`)
-  return Math.round(Number(r.b) * 100) / 100
+// GL account balances via the PRODUCTION trialBalance/loadTallies (26.26c بند ۲.۱)
+// — not hand-SQL status filters (the class of query that hid BUG-020).
+async function glBalOf(code: string): Promise<number> {
+  const r = trialBalance(await loadTallies()).rows.find(x => x.code === code)
+  return r ? Math.round((r.debit - r.credit) * 100) / 100 : 0
 }
-async function bankGl(): Promise<number> {
-  const r = await one<{ b: number }>(
-    `SELECT COALESCE(SUM(l.debit-l.credit),0)::float AS b FROM gl_journal_lines l
-     JOIN gl_accounts a ON a.id=l.account_id JOIN gl_journal_entries e ON e.id=l.entry_id
-     WHERE a.code='1010' AND e.status='posted'`)
-  return Math.round(Number(r.b) * 100) / 100
-}
+const glAr = () => glBalOf('1100')
+const bankGl = () => glBalOf('1010')
 async function mkInvoice(cid: number, no: string, total: number): Promise<number> {
   const inv = await one<{ id: number }>(
     `INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at)

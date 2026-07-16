@@ -109,6 +109,18 @@
 14. **Money is shaped to the UI locale (26.26b BUG-018).** `formatCurrency`/`fmtMoney`
    emit Persian digits in fa (module default set from AdminShell + per-call `locale`).
    Never mix «۱ مشتری» with «0 ریال» — all numbers follow the active locale.
+15. **Proof scripts must ASSERT through production functions, and assert BALANCES
+   not just balance (26.26c بند ۲).** Financial claims in `scripts/verify-*.ts` /
+   `sim-*.ts` must be computed by the SAME functions production uses — `trialBalance`
+   from `ledger.ts` (via `loadTallies`), `postSalesInvoiceToGl`, etc. — never
+   hand-SQL that re-interprets status. Hand-SQL is allowed only for **data
+   preparation**, never for an assertion. Specifically: a status filter that DIFFERS
+   from production (`IN ('posted','void')`) is forbidden in an assertion — that exact
+   query hid BUG-020 for four phases. And "trial balance balanced" is a WEAK claim
+   (every entry self-balances, so Σdebit=Σcredit stays true while individual account
+   balances are wrong); every financial suite must ALSO assert the **expected balance
+   of key accounts** (bank/AR/AP/revenue) — the assertion that actually catches a
+   BUG-020-class defect.
 10. **A financial return/void must never leave a balance silently negative (26.26
    BUG-013).** A return on a PAID invoice needs a second leg — a refund (negative
    `sales_payment 'refund'` + Dr AR/Cr Bank → AR back to 0) or an explicit

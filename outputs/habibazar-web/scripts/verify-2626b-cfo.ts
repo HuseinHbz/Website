@@ -19,18 +19,19 @@ import { pgQuery } from '@/lib/db'
 import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
 import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
 import { createPeriod, transitionPeriod, assertPostable } from '@/lib/erp/accountingData'
+import { loadTallies } from '@/lib/erp/ledgerData'
+import { trialBalance } from '@/lib/erp/ledger'
 
 let n = 0, failed = 0
 const ok = (c: boolean, l: string) => { n++; if (c) console.log(`  ✅ ${n}. ${l}`); else { failed++; console.error(`  ❌ ${n}. ${l}`) } }
 const one = async <T>(sql: string, p: unknown[] = []) => (await pgQuery<T>(sql, p))[0]
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 
+// 26.26c بند ۲.۱: balances read through the PRODUCTION trialBalance/loadTallies —
+// never hand-SQL that re-interprets status (that class of query hid BUG-020).
 const glBal = async (code: string): Promise<number> => {
-  const r = await one<{ b: number }>(
-    `SELECT COALESCE(SUM(l.debit-l.credit),0)::float AS b FROM gl_journal_lines l
-     JOIN gl_accounts a ON a.id=l.account_id JOIN gl_journal_entries e ON e.id=l.entry_id
-     WHERE a.code=$1 AND e.status='posted'`, [code])
-  return Math.round(Number(r.b) * 100) / 100
+  const r = trialBalance(await loadTallies()).rows.find(x => x.code === code)
+  return r ? Math.round((r.debit - r.credit) * 100) / 100 : 0
 }
 const entryCount = async (): Promise<number> =>
   Number((await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM gl_journal_entries WHERE status='posted'`)).c)

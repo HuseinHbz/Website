@@ -85,12 +85,16 @@ async function main() {
   // 26.26b BUG-020 (CC-003): a reversed entry now STAYS 'posted' (its reversal
   // nets it to zero); "reversed" is carried by reversed_by, not status='void'.
   ok(link.status === 'posted' && link.reversed_by === rev.reversalId && revRow.reversal_of === post.entryId && revRow.status === 'posted', 'two-way linkage reversal_of ⇄ reversed_by (original stays posted, net zero)')
-  // AR net effect of invoice+reversal = 0.
+  // AR net effect of the invoice+reversal PAIR = 0. Scoped to the two entries but
+  // with the PRODUCTION status filter `status='posted'` (26.26c بند ۲.۲) — NOT the
+  // old `IN ('posted','void')`, which was the exact query that hid BUG-020. Under
+  // the bug the original would be status='void' → excluded → the pair sums to
+  // −original ≠ 0 and THIS assertion fails. (Verified: reverts red on pre-fix code.)
   const arNet = await one<{ t: number }>(
     `SELECT COALESCE(SUM(l.debit-l.credit),0)::float AS t FROM gl_journal_lines l
      JOIN gl_journal_entries e ON e.id=l.entry_id JOIN gl_accounts a ON a.id=l.account_id
-     WHERE a.code='1100' AND e.id IN ($1,$2) AND e.status IN ('posted','void')`, [post.entryId, rev.reversalId])
-  ok(Math.abs(num(arNet.t)) < 0.001, 'invoice + reversal net to zero on AR')
+     WHERE a.code='1100' AND e.id IN ($1,$2) AND e.status='posted'`, [post.entryId, rev.reversalId])
+  ok(Math.abs(num(arNet.t)) < 0.001, `invoice + reversal net to zero on AR (posted-only pair = ${num(arNet.t)})`)
   // Delete guard: a voided entry may never be physically deleted (route logic mirrored).
   const st = await one<{ status: string }>(`SELECT status FROM gl_journal_entries WHERE id=$1`, [post.entryId])
   ok(st.status !== 'draft', 'voided entry is not draft → the route rejects DELETE (only drafts deletable)')
