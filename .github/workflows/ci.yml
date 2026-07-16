@@ -146,3 +146,52 @@ jobs:
       - name: Stop server
         if: always()
         run: kill "$(cat server.pid)" 2>/dev/null || true
+
+  e2e:
+    name: Playwright E2E (portal + auth + admin)
+    runs-on: ubuntu-latest
+    # 26.26b بند ۳.۲: the portal/auth specs were only type-checked before; this
+    # job actually RUNS them. workers:1 + RATE_LIMIT_DISABLED avoid the in-memory
+    # login-limiter contention that flakes concurrent auth-heavy specs.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hbz_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/hbz_e2e
+      ADMIN_JWT_SECRET: ci-e2e-secret-placeholder
+      NODE_ENV: production
+      RATE_LIMIT_DISABLED: '1'
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: outputs/habibazar-web/package-lock.json
+      - run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Start server + wait on health
+        run: |
+          npx next start -p 3000 > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3000/api/health && break
+            sleep 2
+          done
+      - name: Run E2E (workers=1)
+        run: npx playwright test --workers=1
+      - name: Stop server
+        if: always()
+        run: kill "$(cat server.pid)" 2>/dev/null || true

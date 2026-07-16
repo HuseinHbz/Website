@@ -1,6 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { existsSync } from 'node:fs'
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+// Use the pre-provisioned Chromium when it exists (this sandbox / remote env);
+// otherwise fall back to Playwright's own installed browser (CI installs it),
+// by leaving executablePath undefined. (26.26b بند ۳.۲)
+const CHROMIUM_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH || '/opt/pw-browsers/chromium'
+const chromiumExecutable = existsSync(CHROMIUM_PATH) ? CHROMIUM_PATH : undefined
 
 export default defineConfig({
   testDir: './e2e',
@@ -25,7 +31,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || '/opt/pw-browsers/chromium',
+        ...(chromiumExecutable ? { executablePath: chromiumExecutable } : {}),
       },
     },
   ],
