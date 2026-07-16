@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, fmtMoney, setDefaultCurrency, getDefaultCurrency, formatMoney, convertFromBase } from '../format'
+import { formatCurrency, fmtMoney, setDefaultCurrency, getDefaultCurrency, formatMoney, convertFromBase, setDefaultLocale, toFaDigits } from '../format'
 
 describe('formatCurrency standard (26.7)', () => {
   it('formats Rial and Toman with fa suffixes and no decimals', () => {
@@ -26,6 +26,27 @@ describe('formatCurrency standard (26.7)', () => {
   it('keeps signed and dashZero semantics', () => {
     expect(fmtMoney(-250, { signed: true })).toBe('-250 ریال')
     expect(fmtMoney(0, { dashZero: true })).toBe('—')
+  })
+})
+
+describe('BUG-018 (26.26b) — fa locale shapes money digits to Persian', () => {
+  it('emits Persian digits in fa locale via per-call override', () => {
+    expect(formatCurrency(1_234_000, 'IRR', { locale: 'fa' })).toBe('۱,۲۳۴,۰۰۰ ریال')
+    expect(formatCurrency(0, 'IRR', { locale: 'fa' })).toBe('۰ ریال')
+    expect(formatCurrency(1000, 'USD', { locale: 'fa' })).toBe('$۱,۰۰۰')
+  })
+  it('keeps Latin digits in en locale', () => {
+    expect(formatCurrency(1_234_000, 'IRR', { locale: 'en' })).toBe('1,234,000 ریال')
+  })
+  it('honours the module default locale set from AdminShell', () => {
+    setDefaultLocale('fa')
+    expect(fmtMoney(2500)).toBe('۲,۵۰۰ ریال')
+    setDefaultLocale('en')
+    expect(fmtMoney(2500)).toBe('2,500 ریال')
+  })
+  it('toFaDigits is a pure Latin→Persian digit map', () => {
+    expect(toFaDigits('0 ریال')).toBe('۰ ریال')
+    expect(toFaDigits('1,000,000')).toBe('۱,۰۰۰,۰۰۰')
   })
 })
 

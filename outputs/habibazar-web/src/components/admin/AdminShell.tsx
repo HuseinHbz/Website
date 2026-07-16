@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { setDefaultCurrency } from '@/lib/format'
+import { setDefaultCurrency, setDefaultLocale } from '@/lib/format'
 import { usePathname } from 'next/navigation'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
@@ -35,6 +35,9 @@ export function AdminShell({ user, title, children }: Props) {
     const stored = localStorage.getItem('admin_locale') as 'fa' | 'en' | null
     if (stored) setLocale(stored)
   }, [])
+
+  // BUG-018 (26.26b): shape money digits to match the UI locale (fa → Persian digits).
+  useEffect(() => { setDefaultLocale(locale) }, [locale])
 
   // Auto-collapse sidebar on small screens
   useEffect(() => {

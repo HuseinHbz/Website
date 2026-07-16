@@ -13,12 +13,25 @@ export type CurrencyCode = string
 /** Module-level default — set once per session from `/api/admin/erp/settings`. */
 let DEFAULT_CURRENCY: CurrencyCode = 'IRR'
 let DEFAULT_PRECISION = 0
+/** Module-level display locale — set from AdminShell so money digits match the UI. */
+let DEFAULT_LOCALE: 'fa' | 'en' = 'en'
 
 export function setDefaultCurrency(code: CurrencyCode | undefined | null, precision?: number) {
   if (code) DEFAULT_CURRENCY = code
   if (precision != null && Number.isFinite(precision)) DEFAULT_PRECISION = Math.max(0, Math.min(4, precision))
 }
 export function getDefaultCurrency(): CurrencyCode { return DEFAULT_CURRENCY }
+
+/** Set the display locale used for money digit shaping (fa → Persian digits). */
+export function setDefaultLocale(locale: 'fa' | 'en' | string | undefined | null) {
+  DEFAULT_LOCALE = locale === 'fa' ? 'fa' : 'en'
+}
+
+const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
+/** Convert Latin digits in a string to Persian digits (fa-IR). Pure. */
+export function toFaDigits(input: string): string {
+  return input.replace(/[0-9]/g, d => FA_DIGITS[Number(d)])
+}
 
 export interface MoneyOptions {
   /** Currency code (default: the configured display currency). */
@@ -31,6 +44,8 @@ export interface MoneyOptions {
   signed?: boolean
   /** Render a zero/nullish amount as an em dash. */
   dashZero?: boolean
+  /** Digit shaping locale (default: the configured display locale). fa → Persian digits. */
+  locale?: 'fa' | 'en'
 }
 
 /** Symbol/label per currency: prefix symbols for USD/EUR, fa suffix for ریال/تومان. */
@@ -44,12 +59,13 @@ const SUFFIX: Record<string, string> = { IRR: 'ریال', IRT: 'تومان', AED
 export function formatCurrency(n: number | null | undefined, currency?: CurrencyCode, opts: Omit<MoneyOptions, 'currency'> = {}): string {
   const code = currency || DEFAULT_CURRENCY
   const zeroDecimal = code === 'IRR' || code === 'IRT'
-  const { max = zeroDecimal ? 0 : DEFAULT_PRECISION, min = 0, signed = false, dashZero = false } = opts
+  const { max = zeroDecimal ? 0 : DEFAULT_PRECISION, min = 0, signed = false, dashZero = false, locale = DEFAULT_LOCALE } = opts
   const v = n ?? 0
   if (dashZero && !v) return '—'
   const abs = signed ? Math.abs(v) : v
   const sign = signed && v < 0 ? '-' : ''
-  const num = abs.toLocaleString(undefined, { minimumFractionDigits: min, maximumFractionDigits: max })
+  let num = abs.toLocaleString('en-US', { minimumFractionDigits: min, maximumFractionDigits: max })
+  if (locale === 'fa') num = toFaDigits(num)
   if (PREFIX[code]) return `${sign}${PREFIX[code]}${num}`
   return `${sign}${num} ${SUFFIX[code] ?? code}`
 }

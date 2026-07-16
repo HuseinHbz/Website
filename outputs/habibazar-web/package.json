@@ -15,7 +15,7 @@
     "audit:links": "node scripts/link-integrity-audit.mjs",
     "audit:i18n": "node scripts/i18n-audit.mjs",
     "audit:pgcompat": "node scripts/pg-compat-audit.mjs",
-    "audit": "npm run audit:tokens && npm run audit:content && npm run audit:reuse && npm run audit:deps && npm run audit:links && npm run audit:i18n && npm run audit:ui && npm run audit:tenancy && npm run audit:theme && npm run audit:nav",
+    "audit": "npm run audit:tokens && npm run audit:content && npm run audit:reuse && npm run audit:deps && npm run audit:links && npm run audit:i18n && npm run audit:ui && npm run audit:tenancy && npm run audit:theme && npm run audit:nav && npm run audit:shell",
     "db:migrate:pg": "node scripts/migrate-to-postgres.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -28,7 +28,8 @@
     "regressions": "tsx scripts/ci-regressions.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "reset:demo": "tsx scripts/reset-demo.ts",
-    "audit:nav": "tsx scripts/nav-audit.ts"
+    "audit:nav": "tsx scripts/nav-audit.ts",
+    "audit:shell": "node scripts/shell-audit.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -217,6 +217,7 @@ export const WORKSPACES: Workspace[] = [
       { en: 'Platform', fa: 'پلتفرم', items: [
         { labelEn: 'Go-Live Checklist', labelFa: 'چک‌لیست راه‌اندازی', href: '/admin/settings/onboarding', icon: '🚀' },
         { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
+        { labelEn: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', href: '/admin/settings/integrations', icon: '🔌' },
         { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت (اسناد)', href: '/admin/company', icon: '🏢' },
         { labelEn: 'Currency Settings', labelFa: 'تنظیمات ارز', href: '/admin/finance?tab=currency', icon: '💱' },
         { labelEn: 'Document Settings', labelFa: 'تنظیمات اسناد', href: '/admin/documents?view=designer', icon: '📑' },

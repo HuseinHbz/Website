@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, StatCard, PageHeader, Badge } from '@/components/admin/ui'
-import { useAdminLocale } from '@/lib/admin/locale'
+import { useAdminLocale, useT } from '@/lib/admin/locale'
 import { faDigits } from '@/lib/admin/chartRtl'
 import { fmtMoney } from '@/lib/format'
 
@@ -21,6 +21,7 @@ const STAGES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']
 
 export function CrmDashboard() {
   const locale = useAdminLocale()
+  const t = useT()
   const fa = locale === 'fa'
   const num = (v: unknown) => (fa ? faDigits(String(v ?? '')) : String(v ?? ''))
   const [d, setD] = useState<Data | null>(null)
@@ -54,7 +55,7 @@ export function CrmDashboard() {
               const v = d.funnel.byStatus[s] ?? 0
               return (
                 <div key={s} className="flex items-center gap-2">
-                  <span className="w-20 text-xs text-text-secondary">{s}</span>
+                  <span className="w-20 text-xs text-text-secondary">{t(`lead_st_${s}`)}</span>
                   <div className="flex-1 bg-surface-2 rounded-full h-4 overflow-hidden">
                     <div className={`h-full ${s === 'won' ? 'bg-success' : s === 'lost' ? 'bg-danger' : 'bg-brand'}`} style={{ width: `${(v / maxStage) * 100}%` }} />
                   </div>
