@@ -72,6 +72,14 @@ async function main() {
   // BUG-020: the reversal must NET the payment to zero (original stays posted).
   ok(await glBal('1010') === bank0, `S3: after reversal, bank restored to ${bank0} (→ ${await glBal('1010')}) — NOT −4,000,000 (the fixed BUG-020)`)
   ok(await glBal('1100') === arGl0, `S3: after reversal, AR restored to ${arGl0} (→ ${await glBal('1100')})`)
+  // بند ۱.۲ re-void guard: re-reversing the original is idempotent (no 2nd reversal);
+  // reversing the REVERSAL entry throws (would un-reverse → double-wrong balance).
+  const revId = (await one<{ reversed_by: number }>(`SELECT reversed_by FROM gl_journal_entries WHERE id=$1`, [payEntry.gl_entry_id])).reversed_by
+  ok((await reverseEntry(payEntry.gl_entry_id)).alreadyReversed, 'S3 guard: re-reversing an already-reversed entry is idempotent (no second reversal)')
+  let reversalReverseBlocked = false
+  try { await reverseEntry(revId) } catch { reversalReverseBlocked = true }
+  ok(reversalReverseBlocked, 'S3 guard: reversing a REVERSAL entry is rejected (throws)')
+  ok(await glBal('1010') === bank0 && await glBal('1100') === arGl0, 'S3 guard: balances unchanged by the blocked/idempotent re-void attempts')
 
   // ── S2: over-payment is visible as negative sub-ledger AR (customer credit) ─
   const cust2 = await one<{ id: number }>(

@@ -142,10 +142,13 @@ export async function postEntryById(id: number): Promise<{ ok: boolean; error?: 
  * already-reversed entry returns the existing reversal.
  */
 export async function reverseEntry(entryId: number, userId?: string, asOf?: string): Promise<{ reversalId: number; alreadyReversed: boolean }> {
-  const e = (await pgQuery<{ status: string; entry_no: string; total: number; reversed_by: number | null }>(
-    `SELECT status, entry_no, total::float AS total, reversed_by FROM gl_journal_entries WHERE id=$1`, [entryId]))[0]
+  const e = (await pgQuery<{ status: string; entry_no: string; total: number; reversed_by: number | null; reversal_of: number | null }>(
+    `SELECT status, entry_no, total::float AS total, reversed_by, reversal_of FROM gl_journal_entries WHERE id=$1`, [entryId]))[0]
   if (!e) throw new Error('Entry not found')
   if (e.reversed_by) return { reversalId: e.reversed_by, alreadyReversed: true }
+  // 26.26c بند ۱.۲: a reversal entry can never itself be reversed — that would
+  // un-reverse the original and re-apply its (already-cancelled) balance effect.
+  if (e.reversal_of) throw new Error('A reversal entry cannot itself be reversed')
   if (e.status !== 'posted') throw new Error('Only posted entries can be reversed')
   const lines = await pgQuery<{ account_id: number; debit: number; credit: number; memo: string | null }>(
     `SELECT account_id, debit::float AS debit, credit::float AS credit, memo FROM gl_journal_lines WHERE entry_id=$1 ORDER BY line_no, id`, [entryId])

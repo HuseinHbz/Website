@@ -146,7 +146,7 @@ export async function PUT(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {
-    const e = (await pgQuery(`SELECT status, date, total::float AS total, created_by AS "createdBy", entry_no AS "entryNo" FROM gl_journal_entries WHERE id=$1`, [d.id]))[0] as { status: string; date: string; total: number; createdBy: string | null; entryNo: string } | undefined
+    const e = (await pgQuery(`SELECT status, date, total::float AS total, created_by AS "createdBy", entry_no AS "entryNo", reversed_by AS "reversedBy", reversal_of AS "reversalOf" FROM gl_journal_entries WHERE id=$1`, [d.id]))[0] as { status: string; date: string; total: number; createdBy: string | null; entryNo: string; reversedBy: number | null; reversalOf: number | null } | undefined
     if (!e) return badRequest('Not found')
     const ip = clientIp(req)
 
@@ -184,6 +184,11 @@ export async function PUT(req: NextRequest) {
 
     // op === 'void' — بند ۲.۱: a posted entry is neutralised by a REVERSAL entry.
     if (e.status !== 'posted') return badRequest('Only posted entries can be voided')
+    // 26.26c بند ۱.۲ re-void guard: an already-reversed entry must not be reversed
+    // again (a second reversal would double-negate the balances), and a reversal
+    // entry itself must not be reversed (that would un-reverse the original).
+    if (e.reversedBy) return badRequest('This entry has already been reversed')
+    if (e.reversalOf) return badRequest('A reversal entry cannot itself be voided')
     const rev = await reverseEntry(d.id, auth.user.id)
     await logAction(auth.user, 'gl.entry.void', 'gl_journal_entry', d.id, { status: 'posted' }, { status: 'void', reversalId: rev.reversalId }, ip)
     return NextResponse.json({ ok: true, reversalId: rev.reversalId })

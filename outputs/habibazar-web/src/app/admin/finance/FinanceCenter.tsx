@@ -14,7 +14,7 @@ type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
 
 interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
 interface Line { accountId: number; debit: number; credit: number; memo?: string }
-interface Entry { id: number; entryNo: string; date: string; memo: string | null; status: string; total: number; createdAt?: string; postedAt?: string | null }
+interface Entry { id: number; entryNo: string; date: string; memo: string | null; status: string; total: number; createdAt?: string; postedAt?: string | null; reversedBy?: number | null; reversalOf?: number | null }
 interface SLine { id: number; code: string; nameEn: string; nameFa?: string | null; amount: number }
 interface TBRow { id: number; code: string; nameEn: string; nameFa?: string | null; type: AType; debit: number; credit: number }
 interface Reports {
@@ -268,14 +268,22 @@ function Journal({ t, fa, toast, autoNew = false, onAutoNew }: { t: T; fa: boole
     { key: 'entryNo', labelEn: 'No.', labelFa: t('fin_cNo'), render: e => <span className="font-mono text-xs text-text-secondary">{e.entryNo}</span> },
     { key: 'date', labelEn: 'Date', labelFa: t('fin_cDate'), type: 'date', render: e => <span className="text-text-tertiary text-xs">{e.date}</span> },
     { key: 'memo', labelEn: 'Memo', labelFa: t('fin_cMemo'), render: e => <span className="text-text-secondary text-xs">{e.memo || '—'}</span> },
-    { key: 'status', labelEn: 'Status', labelFa: t('fin_cStatus'), type: 'enum', options: ['draft', 'posted', 'void'].map(x => ({ value: x, labelEn: x, labelFa: t(`fin_st_${x}` as 'fin_st_posted') })), render: e => <Badge color={e.status === 'posted' ? 'green' : e.status === 'void' ? 'slate' : 'yellow'}>{t(`fin_st_${e.status}` as 'fin_st_posted')}</Badge> },
+    { key: 'status', labelEn: 'Status', labelFa: t('fin_cStatus'), type: 'enum', options: ['draft', 'posted', 'void'].map(x => ({ value: x, labelEn: x, labelFa: t(`fin_st_${x}` as 'fin_st_posted') })), render: e => (
+      <span className="flex items-center gap-1 flex-wrap">
+        <Badge color={e.status === 'posted' ? 'green' : e.status === 'void' ? 'slate' : 'yellow'}>{t(`fin_st_${e.status}` as 'fin_st_posted')}</Badge>
+        {/* 26.26c بند ۱.۱: reversed original / reversal entry are visibly marked (both directions). */}
+        {e.reversedBy ? <span title={`${t('fin_reversed_hint')} #${e.reversedBy}`}><Badge color="yellow">{t('fin_reversed')} → #{e.reversedBy}</Badge></span> : null}
+        {e.reversalOf ? <span title={`${t('fin_reversal_hint')} #${e.reversalOf}`}><Badge color="blue">{t('fin_reversal')} ← #{e.reversalOf}</Badge></span> : null}
+      </span>
+    ) },
     { key: 'total', labelEn: 'Total', labelFa: t('fin_cTotal'), type: 'number', numeric: true, render: e => <span className="text-text-secondary text-xs">{money(e.total)}</span> },
   ]
   const journalActions: RowAction<Entry>[] = [
     { id: 'post', labelEn: 'Post', labelFa: t('fin_post'), icon: '✓', hidden: e => e.status !== 'draft', onClick: e => op(e.id, 'post') },
     { id: 'editDraft', labelEn: 'Edit draft', labelFa: fa ? 'ویرایش پیش‌نویس' : 'Edit draft', icon: '✎', hidden: e => e.status !== 'draft', onClick: e => loadEntry(e.id, true) },
     { id: 'copy', labelEn: 'Copy entry', labelFa: fa ? 'کپی از سند' : 'Copy entry', icon: '⧉', onClick: e => loadEntry(e.id, false) },
-    { id: 'void', labelEn: 'Void (reversal)', labelFa: fa ? 'ابطال (سند معکوس)' : 'Void (reversal)', icon: '✕', danger: true, hidden: e => e.status !== 'posted', onClick: e => op(e.id, 'void') },
+    // 26.26c بند ۱.۲: no void action on an already-reversed entry or a reversal entry.
+    { id: 'void', labelEn: 'Void (reversal)', labelFa: fa ? 'ابطال (سند معکوس)' : 'Void (reversal)', icon: '✕', danger: true, hidden: e => e.status !== 'posted' || !!e.reversedBy || !!e.reversalOf, onClick: e => op(e.id, 'void') },
   ]
   return (
     <>

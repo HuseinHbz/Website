@@ -1545,6 +1545,10 @@ const T: Record<string, { fa: string; en: string }> = {
   fin_st_draft:     { fa: 'پیش‌نویس', en: 'Draft' },
   fin_st_posted:    { fa: 'ثبت‌شده', en: 'Posted' },
   fin_st_void:      { fa: 'ابطال‌شده', en: 'Void' },
+  fin_reversed:     { fa: 'معکوس‌شده', en: 'Reversed' },
+  fin_reversal:     { fa: 'سند معکوس', en: 'Reversal' },
+  fin_reversed_hint: { fa: 'این سند معکوس شده — سند معکوس:', en: 'Reversed — see reversal entry:' },
+  fin_reversal_hint: { fa: 'سند معکوسِ سند اصلی:', en: 'Reversal of entry:' },
   // accounts tab
   fin_newAccount:   { fa: 'حساب جدید', en: 'New Account' },
   fin_editAccount:  { fa: 'ویرایش حساب', en: 'Edit Account' },
