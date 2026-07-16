@@ -10,6 +10,8 @@ const chromiumExecutable = existsSync(CHROMIUM_PATH) ? CHROMIUM_PATH : undefined
 
 export default defineConfig({
   testDir: './e2e',
+  // 26.26c بند ۳: log in once, reuse the session (no per-test login → no limiter).
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -24,6 +26,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     locale: 'fa',
+    // Default: every spec starts authenticated via the saved admin session.
+    storageState: 'e2e/.auth/admin.json',
   },
 
   projects: [

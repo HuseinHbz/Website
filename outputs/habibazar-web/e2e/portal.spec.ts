@@ -8,7 +8,6 @@
 import { test, expect, request as pwRequest } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { Client } from 'pg'
-import { adminLogin } from './helpers'
 
 const DB = process.env.DATABASE_URL
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -20,17 +19,22 @@ test.describe(DB ? 'customer portal role' : 'customer portal role (skipped — n
   test.skip(!DB, 'DATABASE_URL required to seed portal fixtures')
 
   let custA = 0, custB = 0, invA = 0, invB = 0, sessionId = 0
-  const phoneA = '09120000901'
+  // 26.26c بند ۳: unique per-run fixture identity + afterAll cleanup so the spec is
+  // self-isolating (a re-run on the same DB no longer collides on E2E-A/E2E-INV-A).
+  const RUN = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`
+  const codeA = `E2E-A-${RUN}`, codeB = `E2E-B-${RUN}`
+  const phoneA = `0912${String(Date.now()).slice(-7)}`
+  const phoneB = `0913${String(Date.now()).slice(-7)}`
   const code = '424242'
 
   test.beforeAll(async () => {
     const c = new Client({ connectionString: DB })
     await c.connect()
-    const A = await c.query(`INSERT INTO sales_customers (code,name,kind,phone,updated_at) VALUES ('E2E-A','مشتری الف','company',$1,${NOW}) RETURNING id`, [phoneA])
-    const B = await c.query(`INSERT INTO sales_customers (code,name,kind,phone,updated_at) VALUES ('E2E-B','مشتری ب','company','09120000902',${NOW}) RETURNING id`)
+    const A = await c.query(`INSERT INTO sales_customers (code,name,kind,phone,updated_at) VALUES ($1,'مشتری الف','company',$2,${NOW}) RETURNING id`, [codeA, phoneA])
+    const B = await c.query(`INSERT INTO sales_customers (code,name,kind,phone,updated_at) VALUES ($1,'مشتری ب','company',$2,${NOW}) RETURNING id`, [codeB, phoneB])
     custA = A.rows[0].id; custB = B.rows[0].id
-    const iA = await c.query(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at) VALUES ('invoice','E2E-INV-A',$1,'2026-07-14','confirmed',5000000,5000000,1,${NOW}) RETURNING id`, [custA])
-    const iB = await c.query(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at) VALUES ('invoice','E2E-INV-B',$1,'2026-07-14','confirmed',7000000,7000000,1,${NOW}) RETURNING id`, [custB])
+    const iA = await c.query(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at) VALUES ('invoice',$2,$1,'2026-07-14','confirmed',5000000,5000000,1,${NOW}) RETURNING id`, [custA, `E2E-INV-A-${RUN}`])
+    const iB = await c.query(`INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,total,exchange_rate,updated_at) VALUES ('invoice',$2,$1,'2026-07-14','confirmed',7000000,7000000,1,${NOW}) RETURNING id`, [custB, `E2E-INV-B-${RUN}`])
     invA = iA.rows[0].id; invB = iB.rows[0].id
     // A pending OTP session for A with a KNOWN code hash (so verify runs the real route).
     const s = await c.query(
@@ -38,6 +42,18 @@ test.describe(DB ? 'customer portal role' : 'customer portal role (skipped — n
        VALUES ($1,'otp',$2,$3, to_char(now() + interval '5 minutes','YYYY-MM-DD HH24:MI:SS'),0,0,${NOW},${NOW}) RETURNING id`,
       [custA, phoneA, sha256(code)])
     sessionId = s.rows[0].id
+    await c.end()
+  })
+
+  // 26.26c بند ۳: remove this run's fixtures so the spec leaves the DB as it found it.
+  test.afterAll(async () => {
+    if (!DB) return
+    const c = new Client({ connectionString: DB })
+    await c.connect()
+    await c.query(`DELETE FROM customer_portal_sessions WHERE customer_id = ANY($1)`, [[custA, custB]])
+    await c.query(`DELETE FROM sales_payments WHERE customer_id = ANY($1)`, [[custA, custB]])
+    await c.query(`DELETE FROM sales_documents WHERE customer_id = ANY($1)`, [[custA, custB]])
+    await c.query(`DELETE FROM sales_customers WHERE id = ANY($1)`, [[custA, custB]])
     await c.end()
   })
 
@@ -53,7 +69,7 @@ test.describe(DB ? 'customer portal role' : 'customer portal role (skipped — n
     const me = await ctx.get('/api/portal/me')
     expect(me.status()).toBe(200)
     const meBody = await me.json()
-    expect(meBody.customer?.code).toBe('E2E-A')
+    expect(meBody.customer?.code).toBe(codeA)
 
     // 3) own invoice → 200
     const own = await ctx.get(`/api/portal/invoices/${invA}`)
@@ -80,8 +96,9 @@ test.describe(DB ? 'customer portal role' : 'customer portal role (skipped — n
   })
 
   test('admin role smoke: seeded admin can open a workspace', async ({ page }) => {
-    await adminLogin(page)
+    // 26.26c بند ۳: rely on the shared admin storageState (no per-test re-login).
     await page.goto('/admin/crm')
     await expect(page).toHaveURL(/\/admin\/crm/)
+    await expect(page.getByRole('main')).toBeVisible()
   })
 })

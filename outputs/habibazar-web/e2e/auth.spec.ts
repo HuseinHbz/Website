@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test'
 import { adminLogin, ADMIN_EMAIL, ADMIN_PASS } from './helpers'
 
 test.describe('Authentication', () => {
+  // 26.26c بند ۳: the auth suite exercises the real login flow, so it must start
+  // UNauthenticated (override the shared admin storageState).
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test('admin login page renders', async ({ page }) => {
     await page.goto('/admin/login')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -14,7 +18,9 @@ test.describe('Authentication', () => {
     await page.getByLabel(/email/i).fill('wrong@example.com')
     await page.getByLabel(/password/i).fill('wrongpassword')
     await page.getByRole('button', { name: /login|sign in|ورود/i }).click()
-    await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 5000 })
+    // 26.26c بند ۳: scope to the form's error alert — a bare [role="alert"] also
+    // matches Next's empty __next-route-announcer__ (strict-mode violation).
+    await expect(page.locator('[role="alert"]').filter({ hasText: /\S/ })).toBeVisible({ timeout: 5000 })
   })
 
   test('protected admin route redirects to login when unauthenticated', async ({ page }) => {

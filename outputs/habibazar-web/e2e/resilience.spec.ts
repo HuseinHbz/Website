@@ -5,6 +5,11 @@ import { test, expect } from '@playwright/test'
  * These tests verify the app degrades gracefully, not that failures don't occur.
  */
 test.describe('Resilience & Graceful Degradation', () => {
+  // 26.26c بند ۳: these probe public + UNauthenticated behaviour (e.g. admin API
+  // must 401 without a token), so run on a clean state — not the shared admin
+  // storageState, which would smuggle a valid token into "without token".
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test('API returns structured error on invalid input, not crash', async ({ request }) => {
     const res = await request.post('/api/consultation', {
       data: {},
