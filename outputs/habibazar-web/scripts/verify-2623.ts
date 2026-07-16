@@ -82,7 +82,9 @@ async function main() {
   ok((await reverseEntry(post.entryId, ADMIN)).alreadyReversed, 'reversing again returns the same reversal (idempotent)')
   const link = await one<{ status: string; reversed_by: number }>(`SELECT status, reversed_by FROM gl_journal_entries WHERE id=$1`, [post.entryId])
   const revRow = await one<{ reversal_of: number; status: string }>(`SELECT reversal_of, status FROM gl_journal_entries WHERE id=$1`, [rev.reversalId])
-  ok(link.status === 'void' && link.reversed_by === rev.reversalId && revRow.reversal_of === post.entryId && revRow.status === 'posted', 'two-way linkage reversal_of ⇄ reversed_by')
+  // 26.26b BUG-020 (CC-003): a reversed entry now STAYS 'posted' (its reversal
+  // nets it to zero); "reversed" is carried by reversed_by, not status='void'.
+  ok(link.status === 'posted' && link.reversed_by === rev.reversalId && revRow.reversal_of === post.entryId && revRow.status === 'posted', 'two-way linkage reversal_of ⇄ reversed_by (original stays posted, net zero)')
   // AR net effect of invoice+reversal = 0.
   const arNet = await one<{ t: number }>(
     `SELECT COALESCE(SUM(l.debit-l.credit),0)::float AS t FROM gl_journal_lines l

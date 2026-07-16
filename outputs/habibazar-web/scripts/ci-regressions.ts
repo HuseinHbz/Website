@@ -18,6 +18,7 @@ const SUITES = [
   { name: '26.25a portal/IDOR', script: 'verify-2625a.ts', db: 'rg_2625a' },
   { name: '26.25b inherited-debt', script: 'verify-2625b.ts', db: 'rg_2625b' },
   { name: '26.26 defects (return/AR/nav/db)', script: 'verify-2626.ts', db: 'rg_2626' },
+  { name: '26.26b CFO hunt (BUG-020 reversal/overpay/closed-period)', script: 'verify-2626b-cfo.ts', db: 'rg_2626b' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

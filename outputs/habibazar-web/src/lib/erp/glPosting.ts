@@ -153,6 +153,13 @@ export async function reverseEntry(entryId: number, userId?: string, asOf?: stri
   const rev = await insertPostedEntry(date, `Reversal of ${e.entry_no}`, `REV-${entryId}`, num(e.total), userId,
     reversalLines(lines.map(l => ({ accountId: l.account_id, debit: l.debit, credit: l.credit, memo: l.memo }))))
   await pgQuery(`UPDATE gl_journal_entries SET reversal_of=$2 WHERE id=$1`, [rev.id, entryId])
-  await pgQuery(`UPDATE gl_journal_entries SET status='void', reversed_by=$2 WHERE id=$1`, [entryId, rev.id])
+  // 26.26b BUG-020: a reversing entry must KEEP the original posted so the two
+  // balanced entries (original + reversal) net to zero on the ledger. The old
+  // code also set the original to status='void', excluding it from posted-only
+  // balance sums — so with the reversal still posted, every account netted to
+  // −original instead of 0 (e.g. voiding a 100 payment left bank at −100). The
+  // "reversed" state is carried by reversed_by (two-way link) alone; status
+  // stays 'posted' (standard reversing-entry accounting, full audit trail).
+  await pgQuery(`UPDATE gl_journal_entries SET reversed_by=$2 WHERE id=$1`, [entryId, rev.id])
   return { reversalId: rev.id, alreadyReversed: false }
 }
