@@ -73,7 +73,7 @@ bash /var/www/habibazar/deploy/health-check.sh
 **Symptoms:** Deployment succeeded but app crashes on start.
 
 ```bash
-WEB_DIR=/var/www/habibazar/outputs/habibazar-web
+WEB_DIR=/var/www/habibazar
 
 # Option A: Restore from .next.bak snapshot (created by update.sh before each build)
 ls -la "$WEB_DIR/.next.bak"   # confirm it exists
@@ -99,7 +99,7 @@ pm2 reload habibazar
 **Symptoms:** App returns errors, health check shows DB `down`.
 
 ```bash
-DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+DB=/var/www/habibazar/data/habibazar.db
 
 # Step 1: Check integrity
 sqlite3 "$DB" "PRAGMA integrity_check;"
@@ -139,17 +139,17 @@ git clone https://github.com/HuseinHbz/Website.git /var/www/habibazar
 sudo bash /var/www/habibazar/deploy/install.sh
 
 # 2. Restore .env.local from secure storage
-cp /path/to/secure/.env.local /var/www/habibazar/outputs/habibazar-web/.env.local
+cp /path/to/secure/.env.local /var/www/habibazar/.env.local
 
 # 3. Restore database from backup
-DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+DB=/var/www/habibazar/data/habibazar.db
 BACKUP=/path/to/backup/habibazar.db
 pm2 stop habibazar
 cp "$BACKUP" "$DB"
 chown hbz:hbz "$DB"
 
 # 4. Rebuild and start
-cd /var/www/habibazar/outputs/habibazar-web
+cd /var/www/habibazar
 sudo -u hbz npm run build
 pm2 start habibazar
 
@@ -164,8 +164,8 @@ pm2 start habibazar
 ## Scenario 5: Compromised Admin Credentials
 
 ```bash
-ENV_FILE=/var/www/habibazar/outputs/habibazar-web/.env.local
-DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+ENV_FILE=/var/www/habibazar/.env.local
+DB=/var/www/habibazar/data/habibazar.db
 
 # Step 1: Immediately rotate JWT secret (invalidates ALL sessions)
 NEW_SECRET=$(openssl rand -hex 32)

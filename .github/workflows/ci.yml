@@ -2,15 +2,12 @@ name: CI
 
 # Phase 26.24 (بند ۲.۱): typecheck + lint + unit tests + build + all governance
 # audits on every push/PR, plus live-PostgreSQL verification in a service
-# container. The app lives in outputs/habibazar-web (defaults.run.working-directory).
+# container. The app lives at the repo root (flattened in Phase 26.26d).
 on:
   push:
     branches: [feature/v2-enterprise-upgrade, main]
   pull_request:
 
-defaults:
-  run:
-    working-directory: outputs/habibazar-web
 
 jobs:
   quality:
@@ -22,7 +19,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - name: TypeScript
         run: npx tsc --noEmit
@@ -60,7 +57,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - name: Migrate + seed + smoke health
         run: npx tsx scripts/ci-live-pg.ts
@@ -90,7 +87,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - name: Run all regression suites
         run: npm run regressions
@@ -124,7 +121,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - name: Build
         run: npm run build
@@ -176,7 +173,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: outputs/habibazar-web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium

@@ -82,7 +82,7 @@ else
 fi
 
 # ─── ۶ب. فایل .env.local ──────────────────────────────────────────────────────
-ENV_FILE="$APP_DIR/outputs/habibazar-web/.env.local"
+ENV_FILE="$APP_DIR/.env.local"
 if [[ ! -f "$ENV_FILE" ]]; then
   step "ساخت .env.local..."
   JWT_SECRET=$(openssl rand -hex 32)
@@ -118,7 +118,7 @@ else
 fi
 
 # ─── ۷. npm install + build ──────────────────────────────────────────────────
-WEB_DIR="$APP_DIR/outputs/habibazar-web"
+WEB_DIR="$APP_DIR"
 cd "$WEB_DIR"
 
 step "نصب پکیج‌ها (همه — شامل devDependencies برای build)..."

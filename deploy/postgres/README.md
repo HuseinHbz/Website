@@ -8,7 +8,7 @@ from SQLite to PostgreSQL on Debian 12 / Ubuntu 24.04.
 > `npm run audit:pgcompat` = 0 and it was verified end-to-end (auth, CMS, admin
 > APIs, public SSR, backup engine). `better-sqlite3` remains only as a
 > devDependency for the one-time SQLite→PG migration reader. See
-> `outputs/habibazar-web/docs/governance/phase20-postgres-migration.md`.
+> `docs/governance/phase20-postgres-migration.md`.
 
 ## Scripts
 
@@ -20,7 +20,7 @@ from SQLite to PostgreSQL on Debian 12 / Ubuntu 24.04.
 | `restore-postgresql.sh` | Restores a `pg_dump` (custom or plain) into a freshly recreated database. |
 | `rollback-to-sqlite.sh` | One-command revert to the checksum-verified pre-migration SQLite snapshot. |
 
-The migration engine itself is `outputs/habibazar-web/scripts/migrate-to-postgres.mjs`
+The migration engine itself is `scripts/migrate-to-postgres.mjs`
 (`npm run db:migrate:pg`): introspect → FK-topological order → value-preserving
 schema → batched load → sequence sync → row-count + checksum validation → JSON report.
 

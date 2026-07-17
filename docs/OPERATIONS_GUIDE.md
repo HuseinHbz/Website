@@ -89,7 +89,7 @@ ls -lt /var/backups/habibazar/
 
 ### Restore from backup
 ```bash
-APP_DIR=/var/www/habibazar/outputs/habibazar-web
+APP_DIR=/var/www/habibazar
 BACKUP=/var/backups/habibazar/YYYYMMDD_HHMMSS
 
 # Stop app
@@ -108,7 +108,7 @@ curl http://localhost:3000/api/health
 
 ### Rotate admin JWT secret (invalidates all sessions)
 ```bash
-ENV_FILE=/var/www/habibazar/outputs/habibazar-web/.env.local
+ENV_FILE=/var/www/habibazar/.env.local
 
 # Generate new secret
 NEW_SECRET=$(openssl rand -hex 32)
@@ -134,7 +134,7 @@ pm2 restart habibazar
 
 ### Database locked / corruption
 ```bash
-DB=/var/www/habibazar/outputs/habibazar-web/data/habibazar.db
+DB=/var/www/habibazar/data/habibazar.db
 
 # Check DB integrity
 sqlite3 "$DB" "PRAGMA integrity_check;"
@@ -152,7 +152,7 @@ pm2 restart habibazar
 ```bash
 # update.sh auto-restores .next.bak if build fails.
 # For manual recovery:
-cd /var/www/habibazar/outputs/habibazar-web
+cd /var/www/habibazar
 [[ -d .next.bak ]] && mv .next.bak .next
 pm2 reload habibazar
 ```

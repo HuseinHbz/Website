@@ -34,7 +34,7 @@ done
 # git safe.directory برای جلوگیری از خطای dubious ownership
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 
-WEB_DIR="$APP_DIR/outputs/habibazar-web"
+WEB_DIR="$APP_DIR"
 ENV_FILE="$WEB_DIR/.env.local"
 
 # The app runs on PostgreSQL (Phase 20). For installs migrating from the old
@@ -85,7 +85,7 @@ if [[ "$SKIP_BUILD" == "false" ]]; then
   fi
 
   # ─── npm ci ──────────────────────────────────────────────────────────────────
-  if git -C "$APP_DIR" diff "$PREV_COMMIT" HEAD -- outputs/habibazar-web/package.json outputs/habibazar-web/package-lock.json 2>/dev/null | grep -q . || [[ ! -d node_modules/eslint ]]; then
+  if git -C "$APP_DIR" diff "$PREV_COMMIT" HEAD -- package.json package-lock.json 2>/dev/null | grep -q . || [[ ! -d node_modules/eslint ]]; then
     step "نصب پکیج‌ها (همه + devDeps برای build)..."
     sudo -u "$APP_USER" npm ci
     info "پکیج‌ها آپدیت شدند"

@@ -18,8 +18,8 @@ APP_DIR="${APP_DIR:-/var/www/habibazar}"
 PM2_NAME="${PM2_NAME:-habibazar}"
 PG_DB="${PG_DB:-habibazar}"
 PG_USER="${PG_USER:-habibazar}"
-ENV_FILE="${APP_DIR}/outputs/habibazar-web/.env.local"
-SQLITE="${DB_PATH:-${APP_DIR}/outputs/habibazar-web/data/habibazar.db}"
+ENV_FILE="${APP_DIR}/.env.local"
+SQLITE="${DB_PATH:-${APP_DIR}/data/habibazar.db}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 log() { printf '\033[1;34m[reset-rebuild]\033[0m %s\n' "$*"; }
@@ -75,9 +75,9 @@ log "    tables after rebuild: ${TCOUNT}"
 
 if [[ -f "$SQLITE" ]]; then
   log "4/5 legacy SQLite found → migrating all rows into the fresh schema"
-  cd "${APP_DIR}/outputs/habibazar-web"
+  cd "${APP_DIR}"
   DATABASE_URL="$DATABASE_URL" node scripts/migrate-to-postgres.mjs --sqlite "$SQLITE" --pg "$DATABASE_URL" \
-    --report "${APP_DIR}/outputs/habibazar-web/data/migration-report-${STAMP}.json"
+    --report "${APP_DIR}/data/migration-report-${STAMP}.json"
 else
   log "4/5 no legacy SQLite file — keeping the freshly seeded data"
 fi

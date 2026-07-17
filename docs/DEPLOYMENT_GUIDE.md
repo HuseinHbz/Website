@@ -4,7 +4,7 @@
 
 ```
 Website/
-├── outputs/habibazar-web/   ← کد Next.js (سایت + پنل ادمین)
+├──    ← کد Next.js (سایت + پنل ادمین)
 │   ├── data/habibazar.db    ← دیتابیس SQLite (auto-created)
 │   ├── public/uploads/      ← فایل‌های آپلود شده
 │   └── .env.local           ← متغیرهای محیطی (باید ساخته شود)
@@ -52,7 +52,7 @@ sudo bash deploy/install.sh
 ### مرحله ۳ — تنظیم `.env.local`
 
 ```bash
-nano /var/www/habibazar/outputs/habibazar-web/.env.local
+nano /var/www/habibazar/.env.local
 ```
 
 ```env
@@ -65,7 +65,7 @@ NODE_ENV=production
 
 بعد از تغییر env، rebuild:
 ```bash
-cd /var/www/habibazar/outputs/habibazar-web
+cd /var/www/habibazar
 sudo -u hbz npm run build
 pm2 reload habibazar
 ```
@@ -122,7 +122,7 @@ sudo bash deploy/update.sh --skip-build
 ## Rollback دستی
 
 ```bash
-cd /var/www/habibazar/outputs/habibazar-web
+cd /var/www/habibazar
 
 # برگشت به snapshot build
 mv .next .next.failed
@@ -185,7 +185,7 @@ sudo deploy/postgres/rollback-to-sqlite.sh
 > برابر صفر و به‌صورت end-to-end تأیید شد. `better-sqlite3` فقط به‌عنوان
 > devDependency برای ابزار یک‌بارهٔ مهاجرت باقی مانده است. جزئیات:
 > `deploy/postgres/README.md` و
-> `outputs/habibazar-web/docs/governance/phase20-postgres-migration.md`.
+> `docs/governance/phase20-postgres-migration.md`.
 
 ---
 
@@ -250,13 +250,13 @@ server {
     gzip_types text/plain text/css application/json application/javascript;
 
     location /_next/static/ {
-        alias /var/www/habibazar/outputs/habibazar-web/.next/static/;
+        alias /var/www/habibazar/.next/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
     location /uploads/ {
-        alias /var/www/habibazar/outputs/habibazar-web/public/uploads/;
+        alias /var/www/habibazar/public/uploads/;
         expires 7d;
     }
 

@@ -137,9 +137,12 @@ Bilingual (FA/EN) personal/enterprise site for **Husein Habibazar** (HBZ),
 infrastructure architect. **One** Next.js 15 app serves both the public site
 and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle).
 
-- Repo layout: the app is at **`outputs/habibazar-web/`** (run all npm commands there).
-- On the server the repo is cloned to `/var/www/Website`; the app is installed/run
-  from `/var/www/habibazar`.
+- Repo layout: the app lives at the **repo root** (run all npm commands from the
+  root — the old nested app-directory layout was removed in Phase 26.26d).
+- On the server the live clone is `/var/www/habibazar` (PM2 cwd = repo root).
+- Ops rule: server shell scripts live in `deploy/` (run by root on the server);
+  npm-run tsx/mjs tooling (audits, regressions, seed, reset-erp-data, fix-bug020)
+  lives in `scripts/` (needs node_modules + the `@/` alias — run from the root).
 - Default working branch: **`feature/v2-enterprise-upgrade`**.
 
 ## Tech stack
@@ -158,7 +161,7 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   legacy CMS routes are guarded by `guardJson` — see Conventions), **nodemailer** (SMTP, dynamic import), **qrcode**.
 - Tests: **vitest** (unit), **@playwright/test** (E2E). Lint: `eslint-config-next`.
 
-## Directory map (`outputs/habibazar-web/src`)
+## Directory map (`src`)
 - `app/[locale]/(marketing)/…` — public pages (FA/EN), RTL-aware. Root layout
   `app/[locale]/layout.tsx` sets `<html lang dir>` + fonts + providers.
 - `app/admin/…` — admin CMS (separate root layout, English UI). ~50 sections,
@@ -1451,7 +1454,7 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
 - Roles: `super_admin | administrator | editor` (`canDo(role, action)`).
 - Seeded admin: **`admin@habibazar.com` / `HBZ@Admin2025!`** (change after first login).
 
-## Testing & validation (run in `outputs/habibazar-web`)
+## Testing & validation (run at the repo root)
 - `npm run type-check` · `npm run lint` · `npm run test` (vitest) ·
   `npm run build` · `npm audit` · `npm run test:e2e` (playwright).
 - E2E seeds/logs in via the seeded admin above (see `e2e/helpers.ts`).

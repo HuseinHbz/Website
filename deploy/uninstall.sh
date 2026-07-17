@@ -25,7 +25,7 @@ set -uo pipefail   # عمداً بدون -e: می‌خواهیم پاکسازی 
 # ─── تنظیمات (باید با install.sh یکسان باشد) ─────────────────────────────────
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
-WEB_DIR="$APP_DIR/outputs/habibazar-web"
+WEB_DIR="$APP_DIR"
 DB_FILE="$WEB_DIR/data/habibazar.db"
 BACKUP_DIR="/var/backups/habibazar"
 NGINX_SITE="habibazar"
