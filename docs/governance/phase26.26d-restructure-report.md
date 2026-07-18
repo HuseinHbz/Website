@@ -82,7 +82,7 @@ construct is vitest's `path.resolve(__dirname,'src')`, which moves with the file
 No edits were needed.
 
 ## بند ۵ — server migration guide
-`docs/MIGRATION-FLATTEN.md` — the 10-step runbook: clone-ambiguity resolution →
+`deploy/RESTRUCTURE_RUNBOOK_FA.md` — the 10-step runbook: clone-ambiguity resolution →
 pg_dump + full-tree tar → preserve `.env.local` → preserve `public/uploads/` →
 `git reset --hard` to the new structure → restore env+uploads at the **root** →
 remove `outputs/ node_modules .next` → `npm ci && npm run build` → **fix-pm2
@@ -96,5 +96,5 @@ by the Next route `src/app/uploads/[...path]/route.ts`.
 
 ## Changelog
 Move commit (926 renames) · reference commit (15 files) · `deploy/restart.sh` (new) ·
-`deploy/README.md` (new) · `docs/MIGRATION-FLATTEN.md` (new) · CLAUDE.md (layout +
+`deploy/README.md` (new) · `deploy/RESTRUCTURE_RUNBOOK_FA.md` (new) · CLAUDE.md (layout +
 ops rule) · this report.

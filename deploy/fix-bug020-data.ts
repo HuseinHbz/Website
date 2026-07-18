@@ -22,8 +22,8 @@
  *     never hand-rolled SQL that could re-interpret status.
  *
  * Usage:
- *   DATABASE_URL=… npx tsx scripts/fix-bug020-data.ts            # dry-run
- *   DATABASE_URL=… npx tsx scripts/fix-bug020-data.ts --apply --confirm
+ *   DATABASE_URL=… npx tsx deploy/fix-bug020-data.ts            # dry-run
+ *   DATABASE_URL=… npx tsx deploy/fix-bug020-data.ts --apply --confirm
  */
 import { pgQuery } from '@/lib/db'
 import { loadTallies } from '@/lib/erp/ledgerData'

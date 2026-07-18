@@ -28,7 +28,7 @@ The script **refuses to write** unless a successful backup exists in the last 24
 
 ### 2. Dry-run — see the scope, change nothing
 ```bash
-DATABASE_URL="$DATABASE_URL" npx tsx scripts/fix-bug020-data.ts
+DATABASE_URL="$DATABASE_URL" npx tsx deploy/fix-bug020-data.ts
 ```
 Read the output:
 - **Victim count** — `reversed_by IS NOT NULL AND status='void'`.
@@ -40,7 +40,7 @@ If the victim count is **0**, stop — there is nothing to repair (a valid resul
 
 ### 3. Apply — restore the reversed originals to `posted`
 ```bash
-DATABASE_URL="$DATABASE_URL" npx tsx scripts/fix-bug020-data.ts --apply --confirm
+DATABASE_URL="$DATABASE_URL" npx tsx deploy/fix-bug020-data.ts --apply --confirm
 ```
 (Both `--apply` and `--confirm` are required. If step 1's backup is older than 24h,
 add `--i-have-a-backup`.)

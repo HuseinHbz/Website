@@ -140,9 +140,11 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
 - Repo layout: the app lives at the **repo root** (run all npm commands from the
   root — the old nested app-directory layout was removed in Phase 26.26d).
 - On the server the live clone is `/var/www/habibazar` (PM2 cwd = repo root).
-- Ops rule: server shell scripts live in `deploy/` (run by root on the server);
-  npm-run tsx/mjs tooling (audits, regressions, seed, reset-erp-data, fix-bug020)
-  lives in `scripts/` (needs node_modules + the `@/` alias — run from the root).
+- Ops rule: OPERATIONAL scripts — server shell scripts AND operational tsx tools
+  (`reset-erp-data.ts`, `fix-bug020-data.ts`) — live in `deploy/`; dev/test/CI
+  tooling (audits, regressions verify-*/sim-*, seed, load-test) lives in
+  `scripts/`. The tsx tools need node_modules + the `@/` alias, so ALWAYS run
+  them from the repo root: `npx tsx deploy/reset-erp-data.ts`.
 - Default working branch: **`feature/v2-enterprise-upgrade`**.
 
 ## Tech stack

@@ -21,8 +21,8 @@
  *   • Runs inside one transaction; writes a `logAction` audit record.
  *
  * Usage:
- *   DATABASE_URL=… npx tsx scripts/reset-erp-data.ts                       # preview
- *   DATABASE_URL=… npx tsx scripts/reset-erp-data.ts --apply --confirm     # wipe
+ *   DATABASE_URL=… npx tsx deploy/reset-erp-data.ts                       # preview
+ *   DATABASE_URL=… npx tsx deploy/reset-erp-data.ts --apply --confirm     # wipe
  */
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
@@ -90,7 +90,7 @@ async function main() {
 
   if (!APPLY) {
     console.log('  DRY-RUN — nothing changed. To actually wipe:')
-    console.log('    npx tsx scripts/reset-erp-data.ts --apply --confirm --i-have-a-backup\n')
+    console.log('    npx tsx deploy/reset-erp-data.ts --apply --confirm --i-have-a-backup\n')
     process.exit(0)
   }
   if (!CONFIRM) { console.error('  ✗ --apply requires --confirm. Aborted (no changes).'); process.exit(2) }
