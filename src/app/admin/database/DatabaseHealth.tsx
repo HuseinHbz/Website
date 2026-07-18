@@ -7,7 +7,7 @@ import { DataTable } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
 // BUG-012 (26.26): storage now carries REAL PostgreSQL metrics (bloat/autovacuum/
-// connections/WAL) instead of the SQLite PRAGMA fields (pageSize/pageCount/
+// connections/WAL) instead of the legacy SQLite fields (pageSize/pageCount/
 // freelistPages) that node-postgres never returned → the old UI crashed the whole
 // page on `data.storage.pageCount.toLocaleString()`. Every access here is guarded.
 interface Health {

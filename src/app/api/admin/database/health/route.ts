@@ -28,7 +28,7 @@ export async function GET() {
     const fkEnabled = true
 
     // ── Storage (REAL PostgreSQL metrics — BUG-012 26.26) ────────────────────
-    // The UI used to render SQLite PRAGMA concepts (pageSize/pageCount/freelist)
+    // The UI used to render legacy SQLite storage concepts (pageSize/pageCount/freelist)
     // that node-postgres never returns → undefined.toLocaleString() crashed the
     // whole page. Replaced with genuine PG health signals.
     const dbBytes = Number(((await pgQuery('SELECT pg_database_size(current_database())::bigint b'))[0] as { b: string }).b)
@@ -103,7 +103,7 @@ export async function GET() {
       integrity: { integrity, quick, fkEnabled, fkViolations },
       storage: {
         journalMode, walLevel, logicalBytes: dbBytes, freeBytes, fileBytes: dbBytes, walBytes,
-        // Real PostgreSQL health signals (replaced the SQLite PRAGMA fields).
+        // Real PostgreSQL health signals (replaced the legacy SQLite fields).
         deadTuples, liveTuples, bloatPct, activeConnections, lastVacuum, lastAnalyze, autovacuumCount,
       },
       census: { tables: tables.length, indexes: indexCount, totalRows },

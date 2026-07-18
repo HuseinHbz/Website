@@ -19,7 +19,6 @@ PM2_NAME="${PM2_NAME:-habibazar}"
 PG_DB="${PG_DB:-habibazar}"
 PG_USER="${PG_USER:-habibazar}"
 ENV_FILE="${APP_DIR}/.env.local"
-SQLITE="${DB_PATH:-${APP_DIR}/data/habibazar.db}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 log() { printf '\033[1;34m[reset-rebuild]\033[0m %s\n' "$*"; }
@@ -73,14 +72,7 @@ done
 TCOUNT=$(psql "$DATABASE_URL" -tAqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null || echo 0)
 log "    tables after rebuild: ${TCOUNT}"
 
-if [[ -f "$SQLITE" ]]; then
-  log "4/5 legacy SQLite found → migrating all rows into the fresh schema"
-  cd "${APP_DIR}"
-  DATABASE_URL="$DATABASE_URL" node scripts/migrate-to-postgres.mjs --sqlite "$SQLITE" --pg "$DATABASE_URL" \
-    --report "${APP_DIR}/data/migration-report-${STAMP}.json"
-else
-  log "4/5 no legacy SQLite file — keeping the freshly seeded data"
-fi
+log "4/5 (removed in INFRA-1) legacy SQLite data-migration step no longer exists — the platform is PostgreSQL-only"
 
 log "5/5 verifying"
 DATABASE_URL="$DATABASE_URL" bash "$(dirname "$0")/verify-postgresql.sh" || true

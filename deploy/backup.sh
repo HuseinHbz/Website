@@ -12,7 +12,7 @@
 #   monthly → full                 (retention 730d / 24m)
 #   yearly  → full                 (retention 3650d / 10y)
 #
-# Each backup is: consistent SQLite snapshot (+integrity check) → tar.gz →
+# Each backup is: consistent PostgreSQL dump (pg_dump -Fc, INFRA-1) → tar.gz →
 # AES-256 encrypted (openssl, pbkdf2) → sha256 checksummed → verified →
 # old backups in the bucket pruned by age → status written for monitoring.
 #
@@ -27,7 +27,6 @@ set -uo pipefail
 APP_USER="${APP_USER:-hbz}"
 APP_DIR="${APP_DIR:-/var/www/habibazar}"
 WEB_DIR="$APP_DIR"
-DB_PATH="${DB_PATH:-$WEB_DIR/data/habibazar.db}"
 UPLOADS_DIR="$WEB_DIR/public/uploads"
 ENV_FILE="$WEB_DIR/.env.local"
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/habibazar}"
@@ -58,10 +57,20 @@ die() { log "ERROR: $1"; write_status "failed" "$1"; exit 1; }
 
 [[ -n "${RETENTION_MIN[$BUCKET]:-}" ]] || die "unknown bucket: $BUCKET (hourly|daily|weekly|monthly|yearly)"
 mkdir -p "$(dirname "$LOG_FILE")" "$BACKUP_ROOT/$BUCKET"
-[[ -f "$DB_PATH" ]] || die "database not found: $DB_PATH"
-command -v sqlite3 >/dev/null || die "sqlite3 not installed"
+command -v pg_dump >/dev/null || die "pg_dump not installed"
 command -v openssl >/dev/null || die "openssl not installed"
-[[ -f "$KEY_FILE" ]] || die "encryption key not found: $KEY_FILE (run install.sh)"
+# DATABASE_URL از .env.local (منبع حقیقت اتصال PG)
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  [[ -f "$ENV_FILE" ]] || die ".env.local not found: $ENV_FILE"
+  DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\"')"
+fi
+[[ -n "$DATABASE_URL" ]] || die "DATABASE_URL not set (env or .env.local)"
+if [[ ! -f "$KEY_FILE" ]]; then
+  # کلید نبود → بساز و بلند اعلام کن (بدون کلید، restore غیرممکن است — جای امن نگه دارید)
+  umask 077; openssl rand -hex 32 > "$KEY_FILE" || die "cannot create key file: $KEY_FILE"
+  chown "$APP_USER":"$APP_USER" "$KEY_FILE" 2>/dev/null || true
+  log "WARN: encryption key was missing — GENERATED a new one at $KEY_FILE. Copy it somewhere safe NOW; old backups (if any) used a different key."
+fi
 
 STAMP="$(date '+%Y%m%d-%H%M%S')"
 STAGING="$(mktemp -d)"
@@ -69,14 +78,15 @@ trap 'rm -rf "$STAGING"' EXIT
 
 log "starting $BUCKET backup"
 
-# ── 1. Database — consistent snapshot + integrity check ──────────────────────
-sqlite3 "$DB_PATH" ".backup '$STAGING/database.sqlite'" || die "sqlite .backup failed"
-INTEG="$(sqlite3 "$STAGING/database.sqlite" 'PRAGMA integrity_check;' 2>&1)"
-[[ "$INTEG" == "ok" ]] || die "integrity_check failed: $INTEG"
-log "database snapshot ok (integrity: ok)"
+# ── 1. Database — consistent PostgreSQL dump + restorability check ───────────
+pg_dump "$DATABASE_URL" -Fc -f "$STAGING/database.pgdump" || die "pg_dump failed"
+pg_restore --list "$STAGING/database.pgdump" >/dev/null 2>&1 || die "dump unreadable (pg_restore --list failed)"
+TABLES_IN_DUMP="$(pg_restore --list "$STAGING/database.pgdump" | grep -c 'TABLE DATA' || true)"
+[[ "${TABLES_IN_DUMP:-0}" -gt 0 ]] || die "dump contains no table data"
+log "database dump ok ($TABLES_IN_DUMP tables with data)"
 
 # ── 2. Full backups also capture media + config ──────────────────────────────
-CONTENTS="database.sqlite"
+CONTENTS="database.pgdump"
 if [[ "$BUCKET" != "hourly" ]]; then
   [[ -d "$UPLOADS_DIR" ]] && cp -a "$UPLOADS_DIR" "$STAGING/uploads" 2>/dev/null && CONTENTS="$CONTENTS uploads"
   mkdir -p "$STAGING/config"; CONTENTS="$CONTENTS config"

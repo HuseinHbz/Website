@@ -10,15 +10,14 @@
 #     --with-config  also restore env.local / nginx / pm2 config (careful!)
 #     --yes          skip the confirmation prompt
 #
-# Steps: verify sha256 → decrypt (AES-256) → extract → PRAGMA integrity_check →
-# (test: report) OR (restore: snapshot current DB, then restore db + media).
+# Steps: verify sha256 → decrypt (AES-256) → extract → pg_restore --list check →
+# (test: report) OR (restore: pg_dump safety snapshot, then pg_restore + media).
 # =============================================================================
 set -uo pipefail
 
 APP_USER="${APP_USER:-hbz}"
 APP_DIR="${APP_DIR:-/var/www/habibazar}"
 WEB_DIR="$APP_DIR"
-DB_PATH="${DB_PATH:-$WEB_DIR/data/habibazar.db}"
 UPLOADS_DIR="$WEB_DIR/public/uploads"
 ENV_FILE="$WEB_DIR/.env.local"
 KEY_FILE="${BACKUP_KEY_FILE:-/home/$APP_USER/.backup-key}"
@@ -44,6 +43,9 @@ done
 [[ -n "$BACKUP" ]] || die "usage: restore.sh <backup.tar.gz.enc> [--test|--db-only|--with-config|--yes]"
 [[ -f "$BACKUP" ]] || die "backup not found: $BACKUP"
 [[ -f "$KEY_FILE" ]] || die "encryption key not found: $KEY_FILE"
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  [[ -f "$ENV_FILE" ]] && DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\"')"
+fi
 
 # ── 1. Verify checksum ───────────────────────────────────────────────────────
 if [[ -f "$BACKUP.sha256" ]]; then
@@ -60,14 +62,14 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 step "رمزگشایی و استخراج..."
 openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -in "$BACKUP" -pass "file:$KEY_FILE" 2>/dev/null \
   | tar -xzf - -C "$WORK" || die "decryption/extract failed (wrong key or corrupt backup)"
-[[ -f "$WORK/database.sqlite" ]] || die "backup does not contain database.sqlite"
+[[ -f "$WORK/database.pgdump" ]] || die "backup does not contain database.pgdump (legacy SQLite backups need the pre-INFRA-1 restore.sh)"
 
-# ── 3. Integrity check the restored DB ───────────────────────────────────────
+# ── 3. Integrity check the dump ──────────────────────────────────────────────
 step "بررسی یکپارچگی دیتابیس..."
-INTEG="$(sqlite3 "$WORK/database.sqlite" 'PRAGMA integrity_check;' 2>&1)"
-[[ "$INTEG" == "ok" ]] || die "restored DB failed integrity_check: $INTEG"
-TABLES="$(sqlite3 "$WORK/database.sqlite" "SELECT count(*) FROM sqlite_master WHERE type='table';")"
-info "دیتابیس سالم است (integrity: ok، جداول: $TABLES)"
+pg_restore --list "$WORK/database.pgdump" >/dev/null 2>&1 || die "dump unreadable (pg_restore --list failed)"
+TABLES="$(pg_restore --list "$WORK/database.pgdump" | grep -c 'TABLE DATA' || true)"
+[[ "${TABLES:-0}" -gt 0 ]] || die "dump contains no table data"
+info "دیتابیس سالم است (pg_restore list: ok، جداول با داده: $TABLES)"
 
 # ── 4a. TEST mode — isolated validation only ─────────────────────────────────
 if [[ "$TEST" == true ]]; then
@@ -90,18 +92,17 @@ if [[ "$ASSUME_YES" != true ]]; then
   [[ "$c" == "RESTORE" ]] || { warn "لغو شد"; exit 0; }
 fi
 
-# Snapshot the current DB before overwriting
-if [[ -f "$DB_PATH" ]]; then
-  SNAP="$DB_PATH.pre-restore-$(date +%Y%m%d-%H%M%S)"
-  cp "$DB_PATH" "$SNAP" && info "snapshot دیتابیس فعلی: $SNAP"
-fi
+[[ -n "${DATABASE_URL:-}" ]] || die "DATABASE_URL not set (env or .env.local) — cannot restore"
+command -v pg_restore >/dev/null || die "pg_restore not installed"
 
-step "بازگردانی دیتابیس..."
-mkdir -p "$(dirname "$DB_PATH")"
-# Remove stale WAL/SHM so the restored file is authoritative
-rm -f "$DB_PATH-wal" "$DB_PATH-shm"
-cp "$WORK/database.sqlite" "$DB_PATH"
-chown "$APP_USER":"$APP_USER" "$DB_PATH" 2>/dev/null || true
+# Safety snapshot of the CURRENT database before overwriting
+SNAP="/var/backups/habibazar/pre-restore-$(date +%Y%m%d-%H%M%S).pgdump"
+mkdir -p "$(dirname "$SNAP")"
+pg_dump "$DATABASE_URL" -Fc -f "$SNAP" && info "snapshot دیتابیس فعلی: $SNAP" || warn "snapshot فعلی گرفته نشد (DB خالی/در دسترس نیست؟) — ادامه"
+
+step "بازگردانی دیتابیس (pg_restore --clean)..."
+pg_restore -d "$DATABASE_URL" --clean --if-exists --no-owner "$WORK/database.pgdump" \
+  || die "pg_restore failed — دیتابیس ممکن است ناقص باشد؛ snapshot: $SNAP"
 info "دیتابیس بازگردانی شد"
 
 if [[ "$DB_ONLY" != true && -d "$WORK/uploads" ]]; then
@@ -119,4 +120,4 @@ if [[ "$WITH_CONFIG" == true && -d "$WORK/config" ]]; then
 fi
 
 echo ""
-info "بازیابی کامل شد. سرویس را ری‌استارت کنید: sudo -u $APP_USER pm2 reload habibazar"
+info "بازیابی کامل شد. سرویس را ری‌استارت کنید: sudo bash $APP_DIR/deploy/restart.sh"

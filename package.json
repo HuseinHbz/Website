@@ -16,7 +16,6 @@
     "audit:i18n": "node scripts/i18n-audit.mjs",
     "audit:pgcompat": "node scripts/pg-compat-audit.mjs",
     "audit": "npm run audit:tokens && npm run audit:content && npm run audit:reuse && npm run audit:deps && npm run audit:links && npm run audit:i18n && npm run audit:ui && npm run audit:tenancy && npm run audit:theme && npm run audit:nav && npm run audit:shell",
-    "db:migrate:pg": "node scripts/migrate-to-postgres.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -53,7 +52,6 @@
   "devDependencies": {
     "@playwright/test": "^1.49.0",
     "@types/bcryptjs": "^2.4.6",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.1",
     "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.20.0",
@@ -62,7 +60,6 @@
     "@types/react-dom": "^19.0.1",
     "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.4.20",
-    "better-sqlite3": "^12.11.1",
     "drizzle-kit": "^0.30.6",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.19",
