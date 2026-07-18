@@ -39,3 +39,4 @@ test-results/
 playwright-report/
 .lighthouseci/
 data/backups-engine/
+deploy/.install.conf

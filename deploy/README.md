@@ -18,11 +18,15 @@
 | `restart.sh` | ری‌استارت امن: `pm2 delete` + `start` از کانفیگ + health-gate — **بعد از تغییر cwd یا env، reload کافی نیست** | بعد از تغییر `.env.local`، مهاجرت مسیر، یا وقتی reload جواب نمی‌دهد | `pm2.config.js` موجود (از fix-pm2) |
 | `fix-pm2.sh` | بازسازی `start.sh` + `pm2.config.js` از صفر و restart تمیز | وقتی کانفیگ PM2 خراب/کهنه است (مثلاً cwd قدیمی) | build موجود |
 | `health-check.sh` | بررسی سلامت سرویس/DB/دیسک | هر وقت، بی‌ضرر | — |
-| `backup.sh [bucket]` | بکاپ رمزنگاری‌شدهٔ DB + uploads + کانفیگ (AES-256 + sha256 + verify) | دستی؛ بکاپ خودکار با BackupEngine داخل اپ است | کلید `/home/hbz/.backup-key` (install.sh می‌سازد) |
+| `backup.sh [bucket]` | بکاپ رمزنگاری‌شدهٔ **pg_dump** + uploads + کانفیگ (AES-256 + sha256 + verify) | دستی؛ بکاپ خودکار با BackupEngine داخل اپ است | کلید `/home/hbz/.backup-key` (نبود → خودش می‌سازد و هشدار می‌دهد) |
 | `restore.sh <file.enc>` | بازگردانی بکاپ (`--test` = تمرین ایزوله بدون دست‌زدن به سیستم زنده) | بازیابی فاجعه | فایل بکاپ + کلید |
 | `restore-drill.sh` | تمرین بازیابی: dump → DB موقت → validate → trial balance (چاپ RTO) | دوره‌ای | PostgreSQL |
 | `deploy-blue-green.sh` | استقرار بدون داون‌تایم روی جفت‌پورت + health-gate + rollback یک‌خطی | ریلیزهای پرریسک | نصب سالم |
 | `uninstall.sh` | حذف کامل (PM2، nginx، اپ، لاگ، کاربر) با بکاپ ایمنی و تأیید تایپی | فقط برچیدن سرور | روت |
+| `migrate-data.sh` | مهاجرت کامل دادهٔ PG مبدأ→مقصد + اثبات برابری رکورد‌به‌رکورد (dry-run پیش‌فرض، `--confirm` واقعی) | جابه‌جایی دیتابیس/سرور | `SOURCE_URL` و `TARGET_URL` |
+| `nginx/render-nginx.sh` | تولید conf از قالب با دامنهٔ اصلی + ریدایرکت‌ها؛ با `--install`: نصب + `nginx -t` + reload **(اجرا روی سرور)** | نصب اولیه/تغییر دامنه | روت برای `--install` |
+| `reset-erp-data.ts` | پاک‌کردن دادهٔ ERP (dry-run پیش‌فرض) — `npx tsx deploy/reset-erp-data.ts` از ریشه | شروع دوبارهٔ ثبت داده | بکاپ |
+| `fix-bug020-data.ts` | ترمیم دادهٔ BUG-020 — `npx tsx deploy/fix-bug020-data.ts` از ریشه | فقط دادهٔ قبل از فیکس 26.26b | بکاپ |
 | `start.sh` / `pm2.config.js` | فایل‌های generated توسط fix-pm2 — دستی ویرایش نکنید | — | — |
 
 ## postgres/
@@ -42,3 +46,16 @@
 
 اگر سرور هنوز ساختار تودرتوی قدیمی (`outputs/…`) را دارد، **قبل از هر آپدیتی**
 راهنمای ۱۰گامی `deploy/RESTRUCTURE_RUNBOOK_FA.md` را اجرا کنید.
+
+## nginx (بند ۵ — INFRA-1)
+
+- قالب: `deploy/nginx/habibazar.conf.template` · تولید/نصب: `deploy/nginx/render-nginx.sh`
+- install.sh دامنهٔ اصلی و دامنه‌های ریدایرکت را می‌گیرد (env `PRIMARY_DOMAIN`/`REDIRECT_DOMAINS`
+  یا تعاملی) و در `deploy/.install.conf` ذخیره می‌کند — دفعات بعد نمی‌پرسد.
+- تصمیم هدرها: CSP/HSTS/XFO/XCTO را **اپ** می‌زند (next.config، فاز 26.24) — nginx هدر امنیتی
+  اضافه نمی‌کند (بدون تکرار). rate-limit هم فقط در اپ.
+- وب‌هوک‌های عمومی (`/api/webhooks/*`، `/api/pay/callback`، `/api/unsubscribe`) از proxy اصلی
+  عبور می‌کنند — allowlist/basic-auth رویشان ممنوع.
+- **اجرا روی سرور:** `nginx -t` و certbot فقط روی سرور واقعی معنا دارند:
+  `sudo bash deploy/nginx/render-nginx.sh --install` سپس
+  `certbot --nginx -d <primary> -d <redirects>` (تمدید خودکار با systemd timer).
