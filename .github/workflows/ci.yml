@@ -166,7 +166,10 @@ jobs:
       ADMIN_JWT_SECRET: ci-e2e-secret-placeholder
       NODE_ENV: production
       RATE_LIMIT_DISABLED: '1'
-      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      # localhost (not 127.0.0.1): the portal cookie is Secure in production and
+      # Playwright's request context only keeps Secure cookies on a trustworthy
+      # origin — localhost qualifies, 127.0.0.1 does not (26.26d finding).
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

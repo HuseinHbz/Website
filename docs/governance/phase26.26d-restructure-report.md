@@ -1,4 +1,7 @@
-# Phase 26.26d — repo flatten: `outputs/habibazar-web` → root (report)
+# Phase 26.26d / 26.M1 / INFRA-1 — infrastructure restructure (report)
+
+One migration executed under three successive prompts (26.26d flatten →
+26.M1 additions → INFRA-1 data/nginx layer); this is the single canonical report.
 
 **Branch:** `claude/bold-lamport-a1d6tg` → PR to `feature/v2-enterprise-upgrade`.
 Pure structural refactor — zero feature/content changes; the move commit is a
@@ -73,7 +76,26 @@ included; a 16th hit was an accidentally-committed `node_modules/.vite` cache fi
   run from repo root).
 
 ## بند ۴ — gates (all from the repo root)
-<!-- GATES -->
+| Gate | Result |
+|---|---|
+| `npm ci` from repo root | ✔ clean |
+| TypeScript | **0 errors** |
+| ESLint | **0 warnings** |
+| Unit tests | **771/771** (77 files) |
+| Governance audits | **11/11 = 0** (incl. `audit:pgcompat` **0 hits** after residue removal) |
+| `npm run build` | clean — **136 static pages** (exact pre-move count preserved) |
+| Regression suites | **11/11 green** (`npm run regressions`, incl. 26.21 sim + 26.26b CFO 15/15) |
+| E2E | **66 passed / 0 failed** in ONE clean `--workers=1` run |
+| `bash -n` on every `deploy/*.sh` + `deploy/postgres/*.sh` | ✔ |
+| CI on the side branch | queued on push — ci.yml fully root-relative (verified line-by-line) |
+
+**E2E defect found & fixed during the gate run:** the portal spec failed at
+`GET /api/portal/me` → 401 — the `portal_token` cookie is `Secure` in
+production and Playwright's request context only retains Secure cookies on a
+trustworthy origin: `http://localhost` qualifies, `http://127.0.0.1` does
+NOT. `ci.yml`'s `PLAYWRIGHT_BASE_URL` used 127.0.0.1 → switched to
+`http://localhost:3000` (environment fix; no product code or assertion
+changed). Verified by A/B: same server, 127.0.0.1 → 401, localhost → 200.
 
 Path-assumption check: `playwright.config.ts` / `vitest.config.ts` /
 `tsconfig.json` / `tsconfig.e2e.json` / `drizzle.config.ts` / `next.config.mjs` /
@@ -92,7 +114,28 @@ Explicit note: **nginx untouched** — it only proxies the port; uploads are ser
 by the Next route `src/app/uploads/[...path]/route.ts`.
 
 ## Attestation table
-<!-- ATTEST -->
+| شناسه | وضعیت | شاهد (خروجی خام/عدد/کامیت) | توضیح |
+|---|---|---|---|
+| 26.26d ۰.۱ ابهام دو کلون | انجام شد | ترمینال maintainer: `/var/www/Website` کلون دومِ 9↑/153↓؛ `pm2.config.js` cwd داخل `/var/www/habibazar` | گام ۰ runbook |
+| 26.26d ۰.۲ فهرست ارجاعات | انجام شد | grep → ۱۵ فایل واقعی (فهرست بالا) + ۱ فایل cache اشتباهاً track شده | |
+| 26.26d ۰.۳ شمارش پایه | انجام شد | `git ls-files outputs/habibazar-web` = **926**؛ کل repo = 957 | معیار R3 |
+| 26.26d ۱ جابه‌جایی (R3/R4) | انجام شد | کامیت `996fece`: **926 rename (R)** با `git mv`؛ `git ls-files | grep -c outputs/` = **0** | هیچ فایلی گم نشد |
+| 26.26d ۲ به‌روزرسانی ۱۵ فایل | انجام شد | کامیت `01e3577`؛ باگ خاموش update.sh (diff مسیر قدیمی package.json) فیکس | grep نهایی = **صفر** |
+| 26.26d ۳.۱ یک deploy | انجام شد | rollback-phase26.1[1-4].sql به deploy/postgres؛ پوشهٔ دوم حذف | |
+| 26.26d ۳.۲ restart.sh | انجام شد | `deploy/restart.sh` — delete+start (نه reload) + گارد cwd کهنه + health-gate ۳۰ث | کامیت `e521f03` |
+| 26.26d ۳.۳ deploy/README.md | انجام شد | جدول چه/کِی/پیش‌نیاز همهٔ اسکریپت‌ها + قاعدهٔ تفکیک | |
+| 26.26d ۴ گیت‌ها | انجام شد | جدول Gates بالا — TS 0 · ESLint 0 · 771 · 11×0 · 136 صفحه · 11/11 رگرسیون · E2E 66/66 | R5/R6 |
+| 26.26d ۵ راهنمای سرور | انجام شد | `deploy/RESTRUCTURE_RUNBOOK_FA.md` (۱۰ گام + rollback + نکتهٔ nginx) | |
+| 26.M1 تگ pre-restructure | انجام شد | `pre-restructure` → `6f0faaa` (آخرین کامیت قبل از جابه‌جایی) | بازگشت یک‌خطی |
+| 26.M1 ابزار عملیاتی tsx → deploy | انجام شد | `git mv` reset-erp-data.ts + fix-bug020-data.ts؛ ارجاعات/usage به‌روز | کامیت `8b2cfa5` |
+| 26.M1 bash -n همهٔ deploy | انجام شد | «bash -n: ALL deploy scripts OK» | |
+| 26.M1/INFRA-1 اثبات دست‌نخوردگی داده | انجام شد | ci-live-pg (migrate+seed) ۲بار روی DB تمیز: **198 جدول، seedها یکسان، صفر تغییر** | مهاجرت فقط فایل‌سیستم است |
+| INFRA-1 ۲ بازماندهٔ SQLite | انجام شد | better-sqlite3+@types حذف؛ migrate-to-postgres.mjs/sqlite-to-postgresql.sh/rollback-to-sqlite.sh حذف؛ **audit:pgcompat = 0 hits** | باقی‌مانده فقط peer-meta اختیاری drizzle در lock |
+| INFRA-1 backup/restore → PG | انجام شد | backup.sh حالا pg_dump -Fc + pg_restore --list verify + تولید خودکار کلید گم‌شده (خطای maintainer)؛ restore.sh → pg_restore --clean + snapshot ایمنی | قبلاً فایل SQLite کهنه را بکاپ می‌گرفتند |
+| INFRA-1 ۳ migrate-data.sh + برابری | انجام شد | **198 جدول، 253=253 رکورد مو به مو**؛ sequence ادامه می‌یابد (id بعدی > max، بدون تکرار/شروع از ۱)؛ trialBalance تولیدی دو طرف برابر؛ اجرای دوباره idempotent | dry-run پیش‌فرض، اختلاف → exit 1 (R5) |
+| INFRA-1 ۵ nginx دامنه‌محور | انجام شد | قالب+generator؛ رندر نمونه: primary→proxy، redirect→301، تک‌دامنه بدون بلوک ریدایرکت، دامنهٔ نامعتبر reject؛ install.sh سیم‌کشی شد | تصمیم هدر: فقط اپ (بدون تکرار)؛ وب‌هوک‌ها باز؛ `nginx -t` روی سرور (اینجا باینری nginx نیست — در README علامت «اجرا روی سرور») |
+| INFRA-1 گیت‌ها (بند ۶) | انجام شد | همان جدول Gates + fix محیطیِ E2E (Secure-cookie/127.0.0.1) | |
+| برنچ | انجام شد + قید محیطی | کار روی `claude/bold-lamport-a1d6tg` (برنچ جانبی تعیین‌شدهٔ محیط اجرا) از نوک feature/v2؛ PR به feature/v2 | محیط فقط این برنچ را برای push مجاز می‌داند — نام‌های `chore/restructure-root`/`infra/production-restructure` قابل استفاده نبود؛ ایزوله‌سازی همان است |
 
 ## Changelog
 Move commit (926 renames) · reference commit (15 files) · `deploy/restart.sh` (new) ·
