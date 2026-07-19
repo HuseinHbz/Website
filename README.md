@@ -8,8 +8,7 @@
 ## معماری
 
 ```
-outputs/
-└── habibazar-web/     ← Next.js 15 App Router (سایت عمومی + ادمین پنل)
+src/                   ← Next.js 15 App Router (سایت عمومی + ادمین پنل)
 deploy/                ← اسکریپت‌های نصب، آپدیت و تعمیر (install/update/fix-pm2)
 docs/                  ← مستندات عملیاتی و راهنماها
 ```
@@ -181,7 +180,7 @@ node --version   # باید 18+ باشد
 
 ### متغیرهای محیطی
 
-فایل `.env.local` در پوشه `outputs/habibazar-web` بسازید:
+فایل `.env.local` در ریشهٔ پروژه بسازید:
 
 ```bash
 # Required
@@ -240,7 +239,7 @@ sudo bash deploy/update.sh
 ## توسعه محلی
 
 ```bash
-cd outputs/habibazar-web
+# (از ریشهٔ پروژه)
 cp .env.example .env.local
 # ویرایش .env.local و تنظیم ADMIN_JWT_SECRET
 
@@ -256,7 +255,7 @@ npm run dev
 ## ساختار فایل‌ها
 
 ```
-outputs/habibazar-web/
+
 ├── src/
 │   ├── app/
 │   │   ├── [locale]/               ← صفحات عمومی (FA/EN)

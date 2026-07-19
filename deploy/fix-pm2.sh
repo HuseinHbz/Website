@@ -9,7 +9,7 @@ set -euo pipefail
 
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
-WEB_DIR="$APP_DIR/outputs/habibazar-web"
+WEB_DIR="$APP_DIR"
 ENV_FILE="$WEB_DIR/.env.local"
 APP_PORT="3000"
 

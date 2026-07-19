@@ -33,7 +33,7 @@ echo ""
 # ─── ۱. وابستگی‌های سیستم ────────────────────────────────────────────────────
 step "نصب وابستگی‌های سیستم..."
 apt-get update -qq
-apt-get install -y -qq curl git nginx ufw sqlite3
+apt-get install -y -qq curl git nginx ufw
 info "وابستگی‌های سیستم نصب شد"
 
 # ─── ۲. Node.js ──────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ else
 fi
 
 # ─── ۶ب. فایل .env.local ──────────────────────────────────────────────────────
-ENV_FILE="$APP_DIR/outputs/habibazar-web/.env.local"
+ENV_FILE="$APP_DIR/.env.local"
 if [[ ! -f "$ENV_FILE" ]]; then
   step "ساخت .env.local..."
   JWT_SECRET=$(openssl rand -hex 32)
@@ -118,7 +118,7 @@ else
 fi
 
 # ─── ۷. npm install + build ──────────────────────────────────────────────────
-WEB_DIR="$APP_DIR/outputs/habibazar-web"
+WEB_DIR="$APP_DIR"
 cd "$WEB_DIR"
 
 step "نصب پکیج‌ها (همه — شامل devDependencies برای build)..."
@@ -208,44 +208,11 @@ else
 fi
 info "PM2 راه‌اندازی شد"
 
-# ─── ۱۰. Nginx ───────────────────────────────────────────────────────────────
-step "پیکربندی Nginx..."
-cat > /etc/nginx/sites-available/habibazar <<EOF
-server {
-    listen 80;
-    server_name habibazar.ir www.habibazar.ir;
-
-    client_max_body_size 50M;
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-
-    location /_next/static/ {
-        alias ${WEB_DIR}/.next/static/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # /uploads/ is served by the Next.js app (src/app/uploads/[...path]/route.ts)
-    # so freshly uploaded files always work — no nginx static alias needed.
-
-    location / {
-        proxy_pass http://127.0.0.1:${APP_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 60s;
-    }
-}
-EOF
-
-ln -sf /etc/nginx/sites-available/habibazar /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
+# ─── ۱۰. Nginx (دامنه‌محور — INFRA-1 بند ۵) ─────────────────────────────────
+step "پیکربندی Nginx (دامنهٔ اصلی + ریدایرکت‌ها)..."
+# دامنه‌ها از env (PRIMARY_DOMAIN / REDIRECT_DOMAINS) یا deploy/.install.conf یا پرسش تعاملی
+PRIMARY_DOMAIN="${PRIMARY_DOMAIN:-}" REDIRECT_DOMAINS="${REDIRECT_DOMAINS:-}" APP_PORT="$APP_PORT" APP_DIR="$APP_DIR" \
+  bash "$APP_DIR/deploy/nginx/render-nginx.sh" --install || error "پیکربندی nginx شکست خورد"
 info "Nginx پیکربندی شد"
 
 # ─── ۱۱. Firewall ────────────────────────────────────────────────────────────

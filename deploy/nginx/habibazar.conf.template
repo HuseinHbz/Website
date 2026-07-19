@@ -1,0 +1,66 @@
+# =============================================================================
+# HBZ Website — قالب nginx (INFRA-1 بند ۵) — توسط deploy/nginx/render-nginx.sh پر می‌شود
+# =============================================================================
+# تصمیم هدرهای امنیتی (بند ۵.۳): CSP/HSTS/X-Frame-Options/X-Content-Type-Options را
+# **اپ** می‌زند (next.config.mjs، فاز 26.24). nginx هیچ هدر امنیتی اضافه نمی‌کند تا
+# هدر تکراری ساخته نشود. rate-limit هم در اپ است (loginGuard/limiters) — nginx عمداً
+# limiter ندارد تا آن را کور نکند.
+#
+# مسیرهای عمومی وب‌هوک (/api/webhooks/*، /api/pay/callback، /api/unsubscribe) از همان
+# proxy اصلی عبور می‌کنند — هیچ allowlist/basic-auth روی آن‌ها نگذارید وگرنه
+# تلگرام/واتساپ/زرین‌پال قطع می‌شوند.
+#
+# HTTPS: این قالب پایهٔ HTTP است + مسیر ACME باز؛ بعد از نصب،
+# `certbot --nginx -d <primary> -d <redirects>` بلوک ۴۴۳ و ریدایرکت ۸۰→۴۴۳ را
+# خودش اضافه می‌کند (idempotent، تمدید خودکار با systemd timer certbot).
+
+# ── دامنه(های) ریدایرکت → 301 دائم به دامنهٔ اصلی (حافظ مسیر) ────────────────
+server {
+    listen 80;
+    server_name {{REDIRECT_DOMAINS}};
+
+    # تمدید certbot باید همیشه جواب بگیرد
+    location /.well-known/acme-challenge/ { root /var/www/letsencrypt; }
+
+    location / { return 301 $scheme://{{PRIMARY_DOMAIN}}$request_uri; }
+}
+
+# ── دامنهٔ اصلی → اپ (PM2 روی پورت {{APP_PORT}}) ────────────────────────────
+server {
+    listen 80;
+    server_name {{PRIMARY_DOMAIN}};
+
+    # آپلود فایل (تیکت/رسانه/پیوست) — پیش‌فرض 1M nginx خیلی کم است
+    client_max_body_size 50M;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    location /.well-known/acme-challenge/ { root /var/www/letsencrypt; }
+
+    # asset های استاتیک Next مستقیم از دیسک (immutable)
+    location /_next/static/ {
+        alias {{APP_DIR}}/.next/static/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # /uploads/ را خود Next سرو می‌کند (src/app/uploads/[...path]/route.ts) —
+    # فایل تازه‌آپلودشده بلافاصله کار می‌کند؛ alias استاتیک نگذارید.
+
+    location / {
+        proxy_pass http://127.0.0.1:{{APP_PORT}};
+        proxy_http_version 1.1;
+        # SSE/WebSocket (کنسول لاگ زنده /api/admin/logs/stream و مشابه)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_buffering off;
+        # هدرهای پراکسی — rate-limit مبتنی بر IP و تشخیص https اپ به این‌ها متکی است
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 120s;
+    }
+}
