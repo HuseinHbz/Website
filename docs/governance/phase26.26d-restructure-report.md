@@ -87,7 +87,7 @@ included; a 16th hit was an accidentally-committed `node_modules/.vite` cache fi
 | Regression suites | **11/11 green** (`npm run regressions`, incl. 26.21 sim + 26.26b CFO 15/15) |
 | E2E | **66 passed / 0 failed** in ONE clean `--workers=1` run |
 | `bash -n` on every `deploy/*.sh` + `deploy/postgres/*.sh` | ✔ |
-| CI on the side branch | queued on push — ci.yml fully root-relative (verified line-by-line) |
+| CI on the side branch | **GREEN** — run #196 `success` on `d455c37`: https://github.com/HuseinHbz/Website/actions/runs/29675844770 (all 5 jobs incl. load-test + e2e) |
 
 **E2E defect found & fixed during the gate run:** the portal spec failed at
 `GET /api/portal/me` → 401 — the `portal_token` cookie is `Secure` in
@@ -141,3 +141,18 @@ by the Next route `src/app/uploads/[...path]/route.ts`.
 Move commit (926 renames) · reference commit (15 files) · `deploy/restart.sh` (new) ·
 `deploy/README.md` (new) · `deploy/RESTRUCTURE_RUNBOOK_FA.md` (new) · CLAUDE.md (layout +
 ops rule) · this report.
+
+## CI-greening addendum (the "most important proof")
+Three PRE-EXISTING CI defects (the last three feature/v2 runs were red on them)
+were diagnosed and fixed to reach green:
+1. `npm ci` omitted devDependencies under job-level `NODE_ENV: production`
+   (tailwindcss missing → build dead) → `npm ci --include=dev` in load-test + e2e.
+2. Load test raced an empty schema — the health endpoint's DB probe is `SELECT 1`,
+   which succeeds on an empty DB → both jobs now run `scripts/ci-live-pg.ts`
+   (migrate+seed) BEFORE `next start`.
+3. The login stage stormed at full duration assuming `RATE_LIMIT_DISABLED` worked
+   server-side — inert in production since 26.25b → 15,627×429. Login now benched
+   as 7 sequential samples inside the 10/15min limiter budget; the
+   fail-on-any-non-2xx contract is unchanged (**CC-004** in contract-changes.md).
+Plus the Secure-cookie/127.0.0.1 E2E environment fix (localhost) recorded above.
+Final: **CI run #196 = success** — https://github.com/HuseinHbz/Website/actions/runs/29675844770
