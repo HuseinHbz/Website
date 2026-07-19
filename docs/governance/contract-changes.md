@@ -70,3 +70,19 @@ guaranteed, what the new one guarantees, why, and who approved it.
 ---
 
 **Rule (CLAUDE.md):** never change a regression assertion without an entry here.
+
+## CC-004 — load-test login stage: storm-under-bypass → limiter-budgeted samples (INFRA-1)
+- **Old assertion behavior:** the login stage benchmarked at concurrency 2 for the
+  full duration, assuming `RATE_LIMIT_DISABLED=1` was honored by the server; any
+  non-2xx (including the 429s that assumption produced) failed the run.
+- **New assertion behavior:** login is benchmarked as 7 sequential samples inside
+  the 10/15min login-limiter budget (+1 for the auth helper); any non-2xx still
+  fails the run. A thrown client-side fetch (no HTTP response) is retried once
+  before counting.
+- **What is no longer guaranteed:** login throughput (req/s) under storm — that
+  number was never real anyway: since 26.25b the server hard-ignores the bypass in
+  production, so the storm path measured only the limiter (15,627×429 in CI).
+  Latency percentiles (p50/p95/p99) are still measured and asserted 2xx-only.
+- **Reason:** 26.25b's production hard-gate made the 26.25 storm design
+  unsatisfiable on `next start` (always production). CI was red on this since.
+- **Approver:** maintainer (via INFRA-1 "CI must be green" gate); recorded per rule 5.

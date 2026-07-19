@@ -71,6 +71,38 @@ function bench(name, route, cookie) {
   } catch { console.log(`  ${name.padEnd(14)} — parse error`); return { bad: false } }
 }
 
+// INFRA-1: the server HARD-IGNORES RATE_LIMIT_DISABLED in production (26.25b),
+// and `next start` is always production — so a duration-based login storm is
+// guaranteed to be shed by the 10/15min login limiter (the 15k-429 CI failure).
+// Bench limiter-guarded routes with a FIXED sequential sample inside the
+// limiter budget instead; any non-2xx still fails the run (contract intact).
+async function benchSamples(name, route, cookie, n) {
+  const times = []
+  const b = { '2xx': 0, '429': 0, '4xx': 0, '5xx': 0 }
+  const hit = () => fetch(route.url, route.method === 'POST'
+    ? { method: 'POST', headers: { 'content-type': 'application/json', ...(route.auth && cookie ? { cookie } : {}) }, body: route.body }
+    : { headers: route.auth && cookie ? { cookie } : {} })
+  for (let i = 0; i < n; i++) {
+    const t0 = Date.now()
+    let res
+    try { res = await hit() } catch {
+      // a thrown fetch is a client-side transport hiccup, not an HTTP response —
+      // retry once before letting it count against the run
+      try { res = await hit() } catch { b['5xx']++; continue }
+    }
+    times.push(Date.now() - t0)
+    if (res.status < 400) b['2xx']++
+    else if (res.status === 429) b['429']++
+    else if (res.status < 500) b['4xx']++
+    else b['5xx']++
+  }
+  times.sort((a, c) => a - c)
+  const q = p => times.length ? times[Math.min(times.length - 1, Math.floor(p * times.length))] : 0
+  const bad = b['429'] > 0 || b['4xx'] > 0 || b['5xx'] > 0
+  console.log(`  ${name.padEnd(14)} p50 ${String(q(0.5)).padStart(5)}ms  p95(p97.5) ${String(q(0.95)).padStart(5)}ms  p99 ${String(q(0.99)).padStart(5)}ms  (${n} sequential samples — limiter-budgeted)  |  2xx ${b['2xx']}  429 ${b['429']}  4xx ${b['4xx']}  5xx ${b['5xx']}${bad ? '  ❌' : ''}`)
+  return { bad }
+}
+
 async function memWatch() {
   // Keep the server BUSY while sampling RSS so the slope reflects sustained load,
   // not post-build GC settling (26.25 بند ۰.۳).
@@ -101,14 +133,18 @@ async function memWatch() {
 
 async function main() {
   console.log(`Load test → ${BASE}  (${CONNECTIONS} conns × ${DURATION}s each)`)
-  console.log(`rate-limit bypass on server: ${process.env.RATE_LIMIT_DISABLED === '1' ? 'YES' : 'NO — 429s expected & counted as failures'}\n`)
+  // 26.25b: the flag is inert on a production server regardless of env — never
+  // assume the storm path is safe; login is always benched inside its budget.
+  console.log(`rate-limit bypass requested: ${process.env.RATE_LIMIT_DISABLED === '1' ? 'yes (inert on production servers — 26.25b hard gate)' : 'no'}\n`)
   const cookie = await login()
   const routes = [
     { name: 'health-live', url: `${BASE}/api/health?probe=live`, auth: false },
     // 26.25a بند ۰.۳: login is bcrypt-bound (pure-JS, ~460ms/req blocks the loop)
     // + protected by a concurrent-login cap → bench it at LOW concurrency for a
     // meaningful per-request number, not a 20-way contention artifact.
-    { name: 'login', url: `${BASE}/api/admin/auth/login`, method: 'POST', body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }), auth: false, conns: 2 },
+    // login limiter is 10/15min per IP: 1 (auth helper) + 7 samples stays inside
+    // the budget → zero expected 429s even with the limiter fully active.
+    { name: 'login', url: `${BASE}/api/admin/auth/login`, method: 'POST', body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }), auth: false, samples: 7 },
     { name: 'journal-list', url: `${BASE}/api/admin/erp/finance/journal`, auth: true },
     { name: 'sales-docs', url: `${BASE}/api/admin/erp/sales/documents?type=invoice`, auth: true },
     { name: 'overview', url: `${BASE}/api/admin/overview`, auth: true },
@@ -117,6 +153,11 @@ async function main() {
   for (const r of routes) {
     // 26.25a بند ۰.۲: warm up + cool down between routes so one route's stress
     // never poisons the next route's p99 tail (the journal p99=5969ms artifact).
+    if (r.samples) {
+      // limiter-budgeted route: NO extra warmup hit (it would eat the budget)
+      const out = await benchSamples(r.name, r, cookie, r.samples); anyBad = anyBad || out.bad
+      continue
+    }
     try { await fetch(r.url, r.method === 'POST' ? { method: 'POST', headers: { 'content-type': 'application/json', ...(r.auth && cookie ? { cookie } : {}) }, body: r.body } : { headers: r.auth && cookie ? { cookie } : {} }) } catch { /* warmup */ }
     await new Promise(res => setTimeout(res, 1500))
     const out = bench(r.name, r, cookie); anyBad = anyBad || out.bad
