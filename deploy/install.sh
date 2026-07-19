@@ -258,10 +258,11 @@ sudo -u "$APP_USER" pm2 start "$PM2_CONF"
 sudo -u "$APP_USER" pm2 save
 
 # pm2 startup — استخراج دقیق دستور sudo و اجرا
-STARTUP_OUT=$(pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1)
+# ⛔ pm2 startup ممکن است غیرصفر برگردد؛ نباید کل نصب را بکشد (set -e)
+STARTUP_OUT=$(pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1 || true)
 STARTUP_CMD=$(echo "$STARTUP_OUT" | grep "^sudo " | head -1)
 if [[ -n "$STARTUP_CMD" ]]; then
-  bash -c "$STARTUP_CMD"
+  bash -c "$STARTUP_CMD" || warn "pm2 startup اجرا نشد — بعداً دستی: pm2 startup systemd -u $APP_USER --hp /home/$APP_USER"
 else
   systemctl enable "pm2-$APP_USER" 2>/dev/null || true
 fi
