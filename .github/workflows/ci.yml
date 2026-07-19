@@ -127,13 +127,16 @@ jobs:
       - run: npm ci --include=dev
       - name: Build
         run: npm run build
+      - name: Migrate + seed BEFORE the server starts (no startup race)
+        # the health endpoint's DB probe is SELECT 1, which succeeds on an EMPTY
+        # database — waiting on it cannot guarantee the schema exists. Provision
+        # deterministically instead (same path the live-pg job uses).
+        run: npx tsx scripts/ci-live-pg.ts
       - name: Start server (next start) + wait on health
         run: |
           npx next start -p 3000 > server.log 2>&1 &
           echo $! > server.pid
           for i in $(seq 1 60); do
-            # plain /api/health probes the DB — waits until instrumentation has
-            # migrated+seeded, so the load test never hits an empty schema.
             curl -sf http://127.0.0.1:3000/api/health && break
             sleep 2
           done
@@ -188,6 +191,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Build
         run: npm run build
+      - name: Migrate + seed BEFORE the server starts (no startup race)
+        run: npx tsx scripts/ci-live-pg.ts
       - name: Start server + wait on health
         run: |
           npx next start -p 3000 > server.log 2>&1 &
