@@ -31,16 +31,28 @@ echo "════════════════════════�
 echo ""
 
 # ─── ۱. وابستگی‌های سیستم ────────────────────────────────────────────────────
-step "نصب وابستگی‌های سیستم..."
-apt-get update -qq
-apt-get install -y -qq curl git nginx ufw
-info "وابستگی‌های سیستم نصب شد"
+step "بررسی وابستگی‌های سیستم..."
+MISSING_PKGS=""
+for p in curl git nginx ufw; do
+  dpkg -s "$p" &>/dev/null || MISSING_PKGS="$MISSING_PKGS $p"
+done
+if [[ -n "$MISSING_PKGS" ]]; then
+  step "نصب پکیج‌های ناموجود:$MISSING_PKGS"
+  apt-get update -qq
+  # shellcheck disable=SC2086
+  apt-get install -y -qq $MISSING_PKGS
+  info "پکیج‌های ناموجود نصب شد"
+else
+  info "همهٔ وابستگی‌های سیستم از قبل نصب‌اند — رد شد"
+fi
 
 # ─── ۲. Node.js ──────────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt "$NODE_VERSION" ]]; then
   step "نصب Node.js $NODE_VERSION..."
   curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - 2>/dev/null
   apt-get install -y nodejs 2>/dev/null
+else
+  info "Node.js از قبل نصب است (>= $NODE_VERSION) — رد شد"
 fi
 info "Node.js $(node -v) | npm $(npm -v)"
 
@@ -48,6 +60,8 @@ info "Node.js $(node -v) | npm $(npm -v)"
 if ! command -v pm2 &>/dev/null; then
   step "نصب PM2..."
   npm install -g pm2 --silent
+else
+  info "PM2 از قبل نصب است — رد شد"
 fi
 info "PM2 $(pm2 -v)"
 
@@ -60,14 +74,30 @@ info "کاربر $APP_USER آماده است"
 
 # ─── ۵. clone مخزن ──────────────────────────────────────────────────────────
 if [[ -d "$APP_DIR/.git" ]]; then
-  warn "مخزن از قبل وجود دارد — برای آپدیت از update.sh استفاده کنید"
+  # idempotent: مخزن هست → همگام با remote همان branch (نه خطا، نه ردشدن خاموش).
+  # .env.local و public/uploads در گیت نیستند و دست‌نخورده می‌مانند.
+  git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+  CUR="$(git -C "$APP_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  git -C "$APP_DIR" fetch origin "$BRANCH" -q || error "fetch از remote شکست خورد"
+  REMOTE="$(git -C "$APP_DIR" rev-parse --short "origin/$BRANCH")"
+  if [[ "$CUR" == "$REMOTE" ]]; then
+    info "مخزن از قبل روی همان نسخه است ($CUR) — رد شد"
+  else
+    step "همگام‌سازی مخزن: $CUR → $REMOTE (branch: $BRANCH)"
+    git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
+    # بازماندهٔ ساختار تودرتوی قدیمی (قبل از flatten 26.26d) را پاک کن
+    [[ -d "$APP_DIR/outputs" ]] && rm -rf "$APP_DIR/outputs" && info "بازماندهٔ outputs/ قدیمی حذف شد"
+    chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+    info "مخزن همگام شد ($REMOTE)"
+  fi
 else
   step "clone مخزن از branch $BRANCH..."
-  git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$APP_DIR"
+  git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
   chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
   git config --global --add safe.directory "$APP_DIR"
   info "مخزن clone شد"
 fi
+[[ -f "$APP_DIR/package.json" ]] || error "package.json در ریشهٔ $APP_DIR نیست — branch اشتباه است؟ ($BRANCH)"
 
 # ─── ۶الف. PostgreSQL (runtime database) ─────────────────────────────────────
 # The app runs exclusively on PostgreSQL (Phase 20). Provision it if the DSN
@@ -121,17 +151,46 @@ fi
 WEB_DIR="$APP_DIR"
 cd "$WEB_DIR"
 
-step "نصب پکیج‌ها (همه — شامل devDependencies برای build)..."
-sudo -u "$APP_USER" npm ci
-info "پکیج‌ها نصب شدند"
+# idempotent: اگر همان کامیت + همان package-lock قبلاً با موفقیت build شده، رد شو
+STATE_FILE="$APP_DIR/.install-state"
+CUR_COMMIT="$(git -C "$APP_DIR" rev-parse HEAD)"
+LOCK_HASH="$(sha256sum "$APP_DIR/package-lock.json" | awk '{print $1}')"
+WANT_STATE="$CUR_COMMIT $LOCK_HASH"
+if [[ -f "$STATE_FILE" && "$(cat "$STATE_FILE")" == "$WANT_STATE" && -f "$APP_DIR/.next/BUILD_ID" ]]; then
+  info "پکیج‌ها و build برای همین نسخه از قبل آماده‌اند — رد شد"
+else
+  step "نصب پکیج‌ها (همه — شامل devDependencies برای build)..."
+  sudo -u "$APP_USER" npm ci --include=dev
+  info "پکیج‌ها نصب شدند"
 
-step "build پروژه (ممکن است چند دقیقه طول بکشد)..."
-sudo -u "$APP_USER" bash -c "set -a; source $ENV_FILE; set +a; npm run build"
-info "build کامل شد"
+  step "build پروژه (ممکن است چند دقیقه طول بکشد)..."
+  sudo -u "$APP_USER" bash -c "set -a; source $ENV_FILE; set +a; npm run build"
+  info "build کامل شد"
 
-step "حذف devDependencies بعد از build..."
-sudo -u "$APP_USER" npm prune --omit=dev 2>/dev/null || true
-info "devDependencies حذف شد"
+  step "حذف devDependencies بعد از build..."
+  sudo -u "$APP_USER" npm prune --omit=dev 2>/dev/null || true
+  info "devDependencies حذف شد"
+
+  echo "$WANT_STATE" > "$STATE_FILE"
+  chown "$APP_USER":"$APP_USER" "$STATE_FILE"
+fi
+
+# ─── ۷.۵ همگام‌سازی schema دیتابیس (idempotent) ─────────────────────────────
+# migrate.ts سراسر CREATE TABLE IF NOT EXISTS / ALTER ایمن است: جداول و دادهٔ
+# موجود دست نمی‌خورد، فقط جدول/ستون/seed ناموجود اضافه می‌شود. tsx به devDeps
+# نیاز دارد؛ چون بالا prune شد، از npx (نصب موقت) استفاده می‌کنیم.
+step "همگام‌سازی schema دیتابیس (جداول موجود حفظ، ناموجودها اضافه)..."
+TB_BEFORE="$(sudo -u postgres psql -tA -d habibazar -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null ||   psql "$DATABASE_URL" -tA -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null || echo '?')"
+if sudo -u "$APP_USER" bash -c "set -a; source $ENV_FILE; set +a; cd '$APP_DIR' && npx --yes tsx scripts/ci-live-pg.ts" >/dev/null 2>&1; then
+  TB_AFTER="$(psql "$DATABASE_URL" -tA -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null || echo '?')"
+  if [[ "$TB_BEFORE" == "$TB_AFTER" ]]; then
+    info "schema دیتابیس کامل بود ($TB_AFTER جدول) — چیزی تغییر نکرد"
+  else
+    info "schema همگام شد: $TB_BEFORE → $TB_AFTER جدول (فقط ناموجودها اضافه شد)"
+  fi
+else
+  warn "همگام‌سازی صریح schema اجرا نشد — اشکالی ندارد: اپ موقع بالا آمدن خودش migrate می‌کند (idempotent)"
+fi
 
 # ─── ۸. پوشه داده ────────────────────────────────────────────────────────────
 mkdir -p "$WEB_DIR/data"
