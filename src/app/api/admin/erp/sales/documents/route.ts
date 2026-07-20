@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
@@ -30,7 +30,7 @@ const PREFIX: Record<string, string> = { quote: 'QT', order: 'SO', invoice: 'INV
 
 // GET — list documents of a type (?type=), or one document with its lines (?id=).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.sales', 'read')
   if ('error' in auth) return auth.error
   try {
     const id = Number(req.nextUrl.searchParams.get('id'))
@@ -79,7 +79,7 @@ const createSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.sales', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, createSchema)
   if ('error' in parsed) return parsed.error
@@ -126,7 +126,7 @@ const opSchema = z.object({
 // PUT — lifecycle: send/confirm/void, or convert a quote→order or order→invoice
 // (copies the lines into a new draft document that references the source).
 export async function PUT(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.sales', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, opSchema)
   if ('error' in parsed) return parsed.error
@@ -154,6 +154,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ id: newDoc.id, docNo })
     }
     if (op === 'return') {
+      { const deny = await requireOp(auth.user, 'erp.sales:return', 'edit'); if (deny) return deny }
       // BUG-013 (26.26): guarded sales return via the data layer — only a
       // confirmed/partial/paid invoice, cumulative return ≤ invoice total
       // (idempotent), optional partial-line selection. The source invoice is
@@ -164,6 +165,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ id: res.id, docNo: res.docNo })
     }
     if (op === 'post') {
+      { const deny = await requireOp(auth.user, 'erp.sales:post', 'edit'); if (deny) return deny }
       // GL posting is an administrator action (mirrors purchasing's doc.post).
       if (!['administrator', 'super_admin'].includes(auth.user.role)) return badRequest('Only administrators can post to the GL')
       const res = await postSalesInvoiceToGl(id, auth.user.id)
@@ -174,6 +176,7 @@ export async function PUT(req: NextRequest) {
     // rejects an over-limit confirm; warn mode allows it and raises an alert;
     // no limit (0) never blocks (backward compatible).
     if (op === 'confirm' && String(src.doc_type) === 'invoice') {
+      { const deny = await requireOp(auth.user, 'erp.sales:confirm', 'edit'); if (deny) return deny }
       const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
       if (decision.exceeded) {
         if (decision.mode === 'block') return badRequest(`Credit limit exceeded: limit ${decision.limit.toLocaleString()}, projected balance ${decision.projected.toLocaleString()}`)
@@ -183,9 +186,12 @@ export async function PUT(req: NextRequest) {
     // BUG-013 (26.26): a paid invoice may NOT be voided (deleting a settled
     // financial doc breaks the audit trail) — the operator must return/refund first.
     if (op === 'void' && String(src.doc_type) === 'invoice') {
+      { const deny = await requireOp(auth.user, 'erp.sales:void', 'edit'); if (deny) return deny }
       const paid = Number(((await pgQuery(`SELECT COALESCE(SUM(amount),0)::float s FROM sales_payments WHERE document_id=$1 AND method<>'refund'`, [id]))[0] as { s: number }).s)
       if (paid > 0) return badRequest('Cannot void a paid invoice — issue a return/refund first')
     }
+    if (op === 'confirm') { const deny = await requireOp(auth.user, 'erp.sales:confirm', 'edit'); if (deny) return deny }
+    if (op === 'void') { const deny = await requireOp(auth.user, 'erp.sales:void', 'edit'); if (deny) return deny }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
     // 26.23 (بند ۱.۱): confirming an invoice/credit note auto-posts it to the GL
@@ -219,7 +225,7 @@ export async function PUT(req: NextRequest) {
 // excludes editors). Records who/when/why; the row stays for the audit trail
 // and is voided so every financial aggregate keeps excluding it.
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.sales', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive(), reason: z.string().max(500).optional() }))
   if ('error' in parsed) return parsed.error

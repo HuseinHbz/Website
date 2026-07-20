@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { runCompletion, AiConfigError } from '@/lib/ai/engine'
 import { treasuryOverview } from '@/lib/treasury/analyticsData'
@@ -17,7 +17,7 @@ const schema = z.object({ question: z.string().min(2).max(2000), locale: z.enum(
  * gives a risk level + explanation + recommendation. NEVER modifies transactions.
  */
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.treasury', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

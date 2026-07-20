@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, forbidden, unauthorized } from '@/lib/api/respond'
+import { apiError, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { readdir, stat, mkdir, unlink, readFile } from 'fs/promises'
 import { spawn } from 'child_process'
 import path from 'path'
@@ -66,6 +66,7 @@ export async function POST() {
   try {
     const user = await getAdminUser()
     if (!user) return unauthorized()
+    { const deny = await checkTreePermission(user, 'backup.backup', 'write'); if (deny) return deny }
     await mkdir(BACKUP_DIR, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19)
     const name = `db-backup-${stamp}.dump`

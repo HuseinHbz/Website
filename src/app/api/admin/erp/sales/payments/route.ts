@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { logAction } from '@/lib/admin/audit'
@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 
 // GET — payments ledger (optionally for one customer ?customerId=).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.sales', 'read')
   if ('error' in auth) return auth.error
   try {
     const cid = Number(req.nextUrl.searchParams.get('customerId')) || 0
@@ -40,8 +40,9 @@ const schema = z.object({
 
 // POST — record a payment. If it targets an invoice, recompute its paid status.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.sales', 'write', 'edit')
   if ('error' in auth) return auth.error
+  { const deny = await requireOp(auth.user, 'erp.sales:payment_create', 'edit'); if (deny) return deny }
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
   const d = parsed.data

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 // GET — the move ledger, optionally filtered by product (?productId=).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.inventory', 'read')
   if ('error' in auth) return auth.error
   try {
     const productId = Number(req.nextUrl.searchParams.get('productId')) || 0
@@ -45,7 +45,7 @@ const moveSchema = z.object({
  *  transfer writes TWO rows (issue from source, receipt into destination).
  */
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.inventory', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, moveSchema)
   if ('error' in parsed) return parsed.error

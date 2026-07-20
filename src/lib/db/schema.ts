@@ -1088,20 +1088,6 @@ export const partners = pgTable('partners', {
 
 export type Partner = typeof partners.$inferSelect
 
-// ─── Phase 7: RBAC Role Assignments ──────────────────────────────────────────
-
-export const roleAssignments = pgTable('role_assignments', {
-  id: serial('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role').notNull(),
-  scope: text('scope', { enum: ['global', 'workspace', 'site', 'department'] }).notNull().default('global'),
-  scopeId: text('scope_id'),
-  grantedBy: text('granted_by').references(() => users.id),
-  expiresAt: text('expires_at'),
-  active: boolean('active').notNull().default(true),
-  createdAt: text('created_at').notNull().$defaultFn(tsNow),
-})
-
 // ─── Phase 7: Global Search Index ────────────────────────────────────────────
 
 export const searchIndex = pgTable('search_index', {

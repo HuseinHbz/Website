@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { mediaFiles } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'brand.media', 'write'); if (deny) return deny }
   const formData = await req.formData()
   const file = formData.get('file') as File | null
   const folder = (formData.get('folder') as string) || 'general'

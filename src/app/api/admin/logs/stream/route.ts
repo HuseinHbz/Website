@@ -1,4 +1,4 @@
-import { requireAdmin, unauthorized } from '@/lib/api/respond'
+import { unauthorized, requirePermission } from '@/lib/api/respond'
 import { logBus, type SystemLog } from '@/lib/logs/bus'
 
 // Server-Sent Events endpoint — streams log entries live into the admin
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: Request) {
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('operations.logs-monitoring', 'read', 'manage_settings')
   if ('error' in auth) return unauthorized()
 
   const encoder = new TextEncoder()

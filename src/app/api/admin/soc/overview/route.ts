@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { riskLevel, riskScore, type SecuritySignals } from '@/lib/soc/risk'
 
@@ -16,7 +16,7 @@ async function count(sql: string, params: unknown[] = []): Promise<number> {
 
 export async function GET() {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('security.soc', 'read', 'manage_settings')
     if ('error' in auth) return auth.error
     const since = new Date(Date.now() - 86_400_000).toISOString()
 

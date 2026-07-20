@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { masterDataOverview, detectDuplicates, relationIntegrity, mergeCustomers } from '@/lib/masterdata/masterDataData'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 // GET — Master-Data Governance (Phase 26.16): per-domain completeness score,
 // duplicate record groups, and cross-module relation integrity. Read-only.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.master-data', 'read')
   if ('error' in auth) return auth.error
   try {
     const view = req.nextUrl.searchParams.get('view') ?? 'overview'
@@ -29,7 +29,7 @@ const mergeSchema = z.object({
 
 // POST — merge a duplicate customer into a primary (administrator only, audited).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.master-data', 'write', 'edit')
   if ('error' in auth) return auth.error
   if (!['administrator', 'super_admin'].includes(auth.user.role)) return badRequest('Only administrators can merge master-data records')
   const parsed = await readJson(req, mergeSchema)

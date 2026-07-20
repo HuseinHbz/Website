@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { loadTallies, listCompanies, bookIntercompany } from '@/lib/erp/ledgerData'
@@ -13,7 +13,7 @@ const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 // GET — trial balance + income statement + balance sheet from posted entries.
 // ?company=<id> scopes to one company; omitted/all = consolidated group books.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     const raw = req.nextUrl.searchParams.get('company')
@@ -36,7 +36,7 @@ const body = z.discriminatedUnion('action', [companyCreate, icTransfer])
 
 // POST — register a company/branch for branch accounting. RBAC + audit.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

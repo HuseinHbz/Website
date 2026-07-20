@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 
 // Database Health / Center — read-only diagnostics for the admin panel:
@@ -13,7 +13,7 @@ const CRITICAL = ['users', 'admin_sessions', 'site_settings', 'audit_logs', 'sys
 
 export async function GET() {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('operations.database', 'read', 'manage_settings')
     if ('error' in auth) return auth.error
 
     // ── Integrity & consistency ──────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import {
   INTEGRATION_PROVIDERS, INTEGRATION_KEYS, SECRET_KEYS,
@@ -17,7 +17,7 @@ export const runtime = 'nodejs'
  * value of a secret.
  */
 export async function GET() {
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('system.settings.integrations', 'read', 'manage_settings')
   if ('error' in auth) return auth.error
   try {
     const status = await readIntegrationStatus()
@@ -37,8 +37,9 @@ const testSchema = z.object({
 const schema = z.discriminatedUnion('action', [saveSchema, testSchema])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('system.settings.integrations', 'write', 'manage_settings')
   if ('error' in auth) return auth.error
+  { const deny = await requireOp(auth.user, 'system.settings.integrations:write', 'manage_settings'); if (deny) return deny }
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
   const d = parsed.data

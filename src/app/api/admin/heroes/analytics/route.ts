@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { summarizeHeroEvents, type HeroEvent } from '@/lib/hero/analytics'
 
@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 
 // GET — hero analytics KPIs from real hero_events (last 30 days).
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('brand.hero', 'read')
   if ('error' in auth) return auth.error
   try {
     const rows = await pgQuery<{ hero_id: number; type: string; value: number | null }>(

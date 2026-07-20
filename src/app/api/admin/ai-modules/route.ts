@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, unauthorized } from '@/lib/api/respond'
+import { guardJson, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { aiModules } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -15,6 +15,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'ai.ai-control', 'write'); if (deny) return deny }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await guardJson(req) as { id: number; enabled?: boolean; nameEn?: string; nameFa?: string; descriptionEn?: string; descriptionFa?: string; icon?: string; color?: string; systemPrompt?: string; sortOrder?: number }
   const db = getDb()

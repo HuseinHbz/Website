@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { backupEngine } from '@/lib/backup/engine'
 
 // Manual backup trigger from the Admin Panel. Kicks the internal BackupEngine in
@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 export async function POST() {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('backup.backup', 'write', 'manage_settings')
     if ('error' in auth) return auth.error
     if (backupEngine.isRunning) {
       return NextResponse.json({ started: false, reason: 'a backup is already running' }, { status: 409 })

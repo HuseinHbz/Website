@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { exportFormats, exportCsv, importFormats } from '@/lib/numbering/io'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 // GET — export format definitions. ?format=json (default) | csv (download).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.numbering', 'read')
   if ('error' in auth) return auth.error
   try {
     if (req.nextUrl.searchParams.get('format') === 'csv') {
@@ -28,7 +28,7 @@ const importSchema = z.object({ formats: z.array(z.record(z.string(), z.unknown(
 // POST — import (upsert) format definitions from a JSON payload. Counters
 // untouched. Importing config is administrator-only (manage_settings).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('erp.numbering', 'write', 'manage_settings')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, importSchema)
   if ('error' in parsed) return parsed.error

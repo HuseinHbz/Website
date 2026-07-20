@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, requirePermission, readJson, badRequest } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import {
   generateDocumentNumber, previewDocumentNumber, validateDocumentNumber,
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const required = d.action === 'reset'
     ? 'manage_settings' as const
     : (d.action === 'generate' || d.action === 'reserve' || d.action === 'release') ? 'edit' as const : undefined
-  const auth = await requireAdmin(required)
+  const auth = await requirePermission('erp.numbering', 'write', required)
   if ('error' in auth) return auth.error
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
   try {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { dispatchConnector, type ConnectorRow } from '@/lib/integration/dispatch'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 // GET — recent dispatches (?connectorId=) or the dead-letter queue (?dlq=1).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.integration-hub', 'read')
   if ('error' in auth) return auth.error
   try {
     const dlq = req.nextUrl.searchParams.get('dlq')
@@ -42,7 +42,7 @@ const schema = z.object({
 
 // POST — dispatch a payload through a connector, or re-dispatch a dead-letter item.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.integration-hub', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

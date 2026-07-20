@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 
 // GET — the chart of accounts with each account's posted balance.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     if (req.nextUrl.searchParams.get('tree') === '1') return NextResponse.json(await chartOfAccounts())
@@ -42,7 +42,7 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 export const PUT = POST
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.finance', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

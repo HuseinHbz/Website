@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { COST_CATEGORIES, REVENUE_CATEGORIES } from '@/lib/erp/costing'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 // GET — a project's costing detail (?id=) or the portfolio rollup (?overview=1).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.project-management', 'read')
   if ('error' in auth) return auth.error
   try {
     if (req.nextUrl.searchParams.get('overview')) return NextResponse.json(await costingPortfolio())
@@ -34,7 +34,7 @@ const schema = z.object({
 
 // POST — add a cost or revenue entry.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.project-management', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.project-management', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

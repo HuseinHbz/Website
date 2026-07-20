@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES } from '@/lib/erp/documents'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 // GET — the generated-document catalog (optionally filtered by type).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.documents', 'read')
   if ('error' in auth) return auth.error
   try {
     const type = req.nextUrl.searchParams.get('type')
@@ -40,7 +40,7 @@ const schema = z.object({
 
 // POST — generate a document (from a sales source or a manual composition).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.documents', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
 // PUT — void a document.
 export async function PUT(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.documents', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

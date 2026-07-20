@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { PAYMENT_TYPES } from '@/lib/treasury/payments'
 import { createPayment, listPayments, submitPayment, processPayment } from '@/lib/treasury/paymentData'
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(); if ('error' in auth) return auth.error
+  const auth = await requirePermission('erp.treasury', 'read'); if ('error' in auth) return auth.error
   try { return NextResponse.json({ payments: await listPayments(req.nextUrl.searchParams.get('status') ?? undefined) }) } catch (e) { return apiError(e, 'Failed to load payments') }
 }
 const schema = z.discriminatedUnion('action', [
@@ -18,7 +18,7 @@ const schema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('process'), id: z.number().int().positive() }),
 ])
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit'); if ('error' in auth) return auth.error
+  const auth = await requirePermission('erp.treasury', 'write', 'edit'); if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema); if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {

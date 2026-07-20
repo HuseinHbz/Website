@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { createPayment, verifyPayment } from '@/lib/erp/payments/paymentData'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 // GET — recent gateway transactions.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.payments', 'read')
   if ('error' in auth) return auth.error
   try {
     const rows = await pgQuery(
@@ -31,7 +31,7 @@ const schema = z.discriminatedUnion('action', [
 
 // POST — create a gateway payment for a sales invoice → redirect URL, or verify.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.payments', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

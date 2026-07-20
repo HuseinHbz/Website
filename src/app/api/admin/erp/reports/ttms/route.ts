@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { ttmsReport, ttmsCsv } from '@/lib/erp/ttms'
 import { jalaliQuarter } from '@/lib/erp/jalali'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 // GET — گزارش معاملات فصلی for ?jYear=&quarter= (defaults to the current
 // Persian quarter). ?format=csv streams the tax-portal importable file.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.reports', 'read')
   if ('error' in auth) return auth.error
   try {
     const now = jalaliQuarter(new Date().toISOString())

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { listPeriods, createPeriod, transitionPeriod, postOpeningBalance, runYearEndClosing, chartOfAccounts } from '@/lib/erp/accountingData'
@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 // GET — fiscal periods (+ chart-of-accounts tree for the opening/closing forms).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     if (req.nextUrl.searchParams.get('view') === 'accounts') return NextResponse.json(await chartOfAccounts())
@@ -25,7 +25,7 @@ const closingRun = z.object({ action: z.literal('closing.run'), fiscalPeriodId: 
 const body = z.discriminatedUnion('action', [periodCreate, periodTransition, openingPost, closingRun])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('manage_settings') // accounting-core actions are admin-only
+  const auth = await requirePermission('erp.finance', 'write', 'manage_settings') // accounting-core actions are admin-only
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error
@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ id })
       }
       case 'period.transition': {
+        { const opKey = d.to === 'open' ? 'erp.finance:reopen_period' : 'erp.finance:close_period'
+          const deny = await requireOp(auth.user, opKey, 'manage_settings'); if (deny) return deny }
         const r = await transitionPeriod(d.id, d.to, auth.user.id)
         if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
         await logAction(auth.user, 'gl.period.transition', 'gl_fiscal_period', d.id, null, { to: d.to }, ip)

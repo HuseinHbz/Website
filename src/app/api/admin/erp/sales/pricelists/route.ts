@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { listPriceLists, priceListItems, savePriceList, setPriceListItem, deletePriceList } from '@/lib/erp/priceListData'
@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 // GET — price lists, or one list's items (?items=<id>).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.sales', 'read')
   if ('error' in auth) return auth.error
   try {
     const items = Number(req.nextUrl.searchParams.get('items'))
@@ -25,7 +25,7 @@ const del = z.object({ action: z.literal('delete'), id: z.number().int() })
 const body = z.discriminatedUnion('action', [save, setItem, del])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.sales', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { analyzeApprovalProcess, analyzeDocProcess, snapshotProcess } from '@/lib/bi/processData'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.business-intelligence', 'read')
   if ('error' in auth) return auth.error
   try {
     const p = req.nextUrl.searchParams.get('process') ?? 'approval'
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.business-intelligence', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ action: z.literal('snapshot'), period: z.string().min(4).max(7) }))
   if ('error' in parsed) return parsed.error

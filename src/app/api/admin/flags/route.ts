@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest, guardJson } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, guardJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { isEnabled, type Flag } from '@/lib/flags/evaluate'
@@ -21,7 +21,7 @@ const schema = z.object({
 
 export async function GET() {
   try {
-    const auth = await requireAdmin()
+    const auth = await requirePermission('system.flags', 'read')
     if ('error' in auth) return auth.error
     const rows = await pgQuery(
       `SELECT id, key, description, enabled, rollout_percent AS "rolloutPercent", updated_at AS "updatedAt"
@@ -39,7 +39,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('system.flags', 'write', 'manage_settings')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, schema)
     if ('error' in parsed) return parsed.error
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('system.flags', 'write', 'manage_settings')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, schema)
     if ('error' in parsed) return parsed.error
@@ -87,7 +87,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('system.flags', 'write', 'manage_settings')
     if ('error' in auth) return auth.error
     const { id } = await guardJson(req).catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')

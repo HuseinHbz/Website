@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { FORECAST_METHODS, FORECAST_METRICS } from '@/lib/erp/forecast'
 import { runForecast, saveForecast, listForecasts } from '@/lib/erp/financialIntelligenceData'
@@ -13,7 +13,7 @@ const method = z.enum(FORECAST_METHODS)
 
 // GET ?run=1&metric=&method=&horizon= | (default: saved forecasts)
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   const sp = req.nextUrl.searchParams
   try {
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 const schema = z.object({ action: z.literal('save'), nameEn: z.string().min(1).max(120), nameFa: z.string().max(120).optional(), metric, method, horizon: z.number().int().min(1).max(12).default(3), currency: z.string().max(8).optional() })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

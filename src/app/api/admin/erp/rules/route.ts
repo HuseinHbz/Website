@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { validateRuleSet, type RuleSet } from '@/lib/rules/engine'
@@ -13,7 +13,7 @@ interface RuleRow { id: number; key: string; nameEn: string; nameFa: string | nu
 
 // GET — list rule sets, or one with its version history (?id=).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.rules', 'read')
   if ('error' in auth) return auth.error
   try {
     const id = Number(req.nextUrl.searchParams.get('id'))
@@ -52,7 +52,7 @@ function checkDef(json: string): { ok: true; def: RuleSet } | { ok: false; error
 
 // POST — create a rule set (version 1).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.rules', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, createSchema)
   if ('error' in parsed) return parsed.error
@@ -85,7 +85,7 @@ const opSchema = z.object({
 
 // PUT — add a version, roll the active version back, activate/archive, edit meta.
 export async function PUT(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.rules', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, opSchema)
   if ('error' in parsed) return parsed.error
@@ -128,7 +128,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.rules', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

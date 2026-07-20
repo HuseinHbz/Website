@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { DOC_TYPES } from '@/lib/approval/matrix'
@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 
 // GET ?tab=pending|approved|rejected|delegated|expired | ?id= | ?view=analytics
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.approvals', 'read')
   if ('error' in auth) return auth.error
   const sp = req.nextUrl.searchParams
   try {
@@ -35,7 +35,7 @@ const schema = z.discriminatedUnion('action', [
 ])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.approvals', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -48,6 +48,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(r)
     }
     if (d.action === 'decide') {
+      { const opKey = d.decision === 'approved' ? 'erp.approvals:approve' : 'erp.approvals:reject'
+        const deny = await requireOp(auth.user, opKey, 'edit'); if (deny) return deny }
       const r = await actOnRequest(d.id, auth.user, d.decision, d.comment, ip)
       await logAction(auth.user, `approval.${d.decision}`, 'approval_requests', d.id, null, { decision: d.decision }, ip)
       return NextResponse.json(r)

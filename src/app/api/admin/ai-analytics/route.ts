@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { aiConversations, aiModules } from '@/lib/db/schema'
 import { desc } from 'drizzle-orm'
@@ -7,6 +8,7 @@ import { getAdminUser } from '@/lib/admin/auth'
 export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  { const deny = await checkTreePermission(user, 'analytics.ai-analytics', 'read'); if (deny) return deny }
 
   const db = getDb()
   const convs = await db.select().from(aiConversations).orderBy(desc(aiConversations.createdAt)).limit(500)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { listCurrencies, latestRates, rateHistory, setRate, rialRateFor } from '@/lib/erp/currencyData'
 import { convert } from '@/lib/erp/currency'
@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 // GET — currencies + latest rates (+ ?history=CODE, + ?convert=amount&from&to)
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     const sp = req.nextUrl.searchParams
@@ -35,7 +35,7 @@ const body = z.discriminatedUnion('action', [setRateSchema])
 
 // POST — set/override an exchange rate (Rial value of one unit). RBAC + audit.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
@@ -17,7 +17,7 @@ const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 
 // GET — list entries, one entry with lines (?id=), or saved templates (?templates=1).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     if (req.nextUrl.searchParams.get('pendingApprovals')) {
@@ -89,7 +89,7 @@ async function makerCheckerGate(entryId: number, total: number, userId: string):
 // POST — create a journal entry (draft or posted). Numbered by the Numbering
 // Engine (gapless yearly JE format, بند ۳.۱); optional template save (۳.۳).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, createSchema)
   if ('error' in parsed) return parsed.error
@@ -140,7 +140,7 @@ const opSchema = z.discriminatedUnion('op', [
 
 // PUT — post (maker/checker-aware), void (reversal entry), or update a draft.
 export async function PUT(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, opSchema)
   if ('error' in parsed) return parsed.error
@@ -168,6 +168,8 @@ export async function PUT(req: NextRequest) {
     }
 
     if (d.op === 'post') {
+      const deny = await requireOp(auth.user, 'erp.finance:post', 'edit')
+      if (deny) return deny
       if (e.status !== 'draft') return badRequest('Only draft entries can be posted')
       // بند ۴: separation of duties — over-threshold posts go to the approval
       // queue; the maker can never approve their own entry (enforced in approvals).
@@ -182,6 +184,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    { const deny = await requireOp(auth.user, 'erp.finance:void', 'edit')
+      if (deny) return deny }
     // op === 'void' — بند ۲.۱: a posted entry is neutralised by a REVERSAL entry.
     if (e.status !== 'posted') return badRequest('Only posted entries can be voided')
     // 26.26c بند ۱.۲ re-void guard: an already-reversed entry must not be reversed
@@ -198,8 +202,9 @@ export async function PUT(req: NextRequest) {
 // DELETE — بند ۲.۲: ONLY drafts are physically deletable. A voided entry was
 // posted once and stays forever (its reversal is the correction).
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.finance', 'write', 'delete')
   if ('error' in auth) return auth.error
+  { const deny = await requireOp(auth.user, 'erp.finance:delete', 'delete'); if (deny) return deny }
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error
   try {
