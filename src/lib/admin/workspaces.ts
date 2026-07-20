@@ -359,14 +359,36 @@ export function canSeeItem(role: string, ws: Workspace, item: WsItem): boolean {
   if (!canSeeWorkspace(role, ws)) return false
   return !item.requires || roleCan(role, item.requires)
 }
-/** Workspaces a role may see. */
-export function visibleWorkspaces(role: string): Workspace[] {
-  return WORKSPACES.filter(w => canSeeWorkspace(role, w))
+
+// ── 26.27: tree-grant awareness (client-safe mirror of the pure engine) ──────
+export type GrantLevel = 'none' | 'read' | 'write'
+export type GrantMap = Record<string, GrantLevel>
+/** effective level for a dotted key: explicit none anywhere on the chain wins,
+ *  else most specific explicit value, else null (role default — R5). */
+export function grantLevelFor(grants: GrantMap | undefined, key: string): GrantLevel | null {
+  if (!grants) return null
+  const parts = key.split('.')
+  const chain: string[] = []
+  for (let i = parts.length; i >= 1; i--) chain.push(parts.slice(0, i).join('.'))
+  for (const k of chain) if (grants[k] === 'none') return 'none'
+  for (const k of chain) { const v = grants[k]; if (v !== undefined) return v }
+  return null
 }
-/** A workspace's groups with items filtered by role (empty groups dropped). */
-export function visibleGroups(role: string, ws: Workspace): WsGroup[] {
+function itemKey(ws: Workspace, item: WsItem): string {
+  const p = hrefPath(item.href)
+  const rest = p === '/admin' ? 'home' : p.replace(/^\/admin\//, '').replace(/\//g, '.')
+  const q = item.href.split('?')[1]
+  const tab = q ? /(?:^|&)tab=([^&]+)/.exec(q)?.[1] : undefined
+  return tab ? `${ws.id}.${rest}.${tab}` : `${ws.id}.${rest}`
+}
+/** Workspaces a role may see — a tree grant of none hides the workspace entirely. */
+export function visibleWorkspaces(role: string, grants?: GrantMap): Workspace[] {
+  return WORKSPACES.filter(w => canSeeWorkspace(role, w) && grantLevelFor(grants, w.id) !== 'none')
+}
+/** Groups with items filtered by role AND tree grants (none-nodes never render). */
+export function visibleGroups(role: string, ws: Workspace, grants?: GrantMap): WsGroup[] {
   return ws.groups
-    .map(g => ({ ...g, items: g.items.filter(it => canSeeItem(role, ws, it)) }))
+    .map(g => ({ ...g, items: g.items.filter(it => canSeeItem(role, ws, it) && grantLevelFor(grants, itemKey(ws, it)) !== 'none') }))
     .filter(g => g.items.length > 0)
 }
 

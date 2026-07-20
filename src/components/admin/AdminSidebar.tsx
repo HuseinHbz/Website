@@ -59,8 +59,17 @@ export function AdminSidebar({ collapsed, onToggle, locale, isRTL, role, onOpenC
     }
   }
 
-  const groups = useMemo(() => visibleGroups(role, ws), [role, ws])
-  const workspaces = useMemo(() => visibleWorkspaces(role), [role])
+  // 26.27: explicit tree grants — a none node never renders in the nav
+  const [grants, setGrants] = useState<Record<string, 'none' | 'read' | 'write'> | undefined>(undefined)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/admin/auth/me').then(r => r.ok ? r.json() : null).then(j => {
+      if (alive && j?.grants && Object.keys(j.grants).length > 0) setGrants(j.grants)
+    }).catch(() => { /* role-default nav */ })
+    return () => { alive = false }
+  }, [])
+  const groups = useMemo(() => visibleGroups(role, ws, grants), [role, ws, grants])
+  const workspaces = useMemo(() => visibleWorkspaces(role, grants), [role, grants])
 
   // Advanced switcher: search + favorites + recent + all (permission-filtered).
   const switcher = useMemo(() => {

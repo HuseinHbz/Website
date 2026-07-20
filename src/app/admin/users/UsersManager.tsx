@@ -110,6 +110,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
   ]
   const userActions: RowAction<User>[] = [
     { id: 'edit', labelEn: 'Edit', labelFa: 'ویرایش', icon: '✎', onClick: u => { setEditing({ ...u, password: '', department: u.department ?? '' }); setModal(true) } },
+    { id: 'perms', labelEn: 'Permissions', labelFa: 'دسترسی‌ها', icon: '🌳', onClick: u => { window.location.href = `/admin/users/${u.id}/permissions` } },
     { id: 'toggle', labelEn: 'Enable/Disable', labelFa: 'فعال/غیرفعال', icon: '⇄', hidden: u => u.id === currentUserId, onClick: u => toggleActive(u) },
     { id: 'del', labelEn: 'Delete', labelFa: 'حذف', icon: '🗑', danger: true, hidden: u => u.id === currentUserId, onClick: u => del(u.id) },
   ]
