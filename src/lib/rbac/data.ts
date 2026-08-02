@@ -41,14 +41,14 @@ export async function setGrant(actorId: string, userId: string, key: string, lev
   const old = (await pgQuery<{ level: string }>(
     `SELECT level FROM rbac_user_grants WHERE user_id=$1 AND permission_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
     [userId, key, companyId ?? null]))[0]?.level ?? null
-  if (level === null) {
-    await pgQuery(`DELETE FROM rbac_user_grants WHERE user_id=$1 AND permission_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
-      [userId, key, companyId ?? null])
-  } else {
+  // 26.28 fix: ON CONFLICT never fires when company_id IS NULL (SQL NULLs are
+  // distinct in a plain UNIQUE constraint) → duplicate rows. DELETE+INSERT is
+  // NULL-safe and idempotent.
+  await pgQuery(`DELETE FROM rbac_user_grants WHERE user_id=$1 AND permission_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
+    [userId, key, companyId ?? null])
+  if (level !== null) {
     await pgQuery(
-      `INSERT INTO rbac_user_grants (user_id, permission_key, level, company_id, granted_by)
-       VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (user_id, permission_key, company_id) DO UPDATE SET level=EXCLUDED.level, granted_by=EXCLUDED.granted_by`,
+      `INSERT INTO rbac_user_grants (user_id, permission_key, level, company_id, granted_by) VALUES ($1,$2,$3,$4,$5)`,
       [userId, key, level, companyId ?? null, actorId])
   }
   await pgQuery(`INSERT INTO rbac_audit (actor_id, target_user_id, permission_key, old_value, new_value, company_id)
@@ -61,14 +61,12 @@ export async function setOp(actorId: string, userId: string, opKey: string, allo
   const old = (await pgQuery<{ allowed: boolean }>(
     `SELECT allowed FROM rbac_user_ops WHERE user_id=$1 AND op_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
     [userId, opKey, companyId ?? null]))[0]?.allowed
-  if (allowed === null) {
-    await pgQuery(`DELETE FROM rbac_user_ops WHERE user_id=$1 AND op_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
-      [userId, opKey, companyId ?? null])
-  } else {
+  // NULL-safe replace (see setGrant — ON CONFLICT is a no-op for NULL company_id)
+  await pgQuery(`DELETE FROM rbac_user_ops WHERE user_id=$1 AND op_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
+    [userId, opKey, companyId ?? null])
+  if (allowed !== null) {
     await pgQuery(
-      `INSERT INTO rbac_user_ops (user_id, op_key, allowed, company_id, granted_by)
-       VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (user_id, op_key, company_id) DO UPDATE SET allowed=EXCLUDED.allowed, granted_by=EXCLUDED.granted_by`,
+      `INSERT INTO rbac_user_ops (user_id, op_key, allowed, company_id, granted_by) VALUES ($1,$2,$3,$4,$5)`,
       [userId, opKey, allowed, companyId ?? null, actorId])
   }
   await pgQuery(`INSERT INTO rbac_audit (actor_id, target_user_id, permission_key, old_value, new_value, company_id)
@@ -86,13 +84,12 @@ export async function rowScopeFor(userId: string, key: string, companyId?: numbe
 
 export async function setRowScope(actorId: string, userId: string, key: string, scope: 'all' | 'own' | 'department' | 'company' | null, companyId?: number | null): Promise<void> {
   if (!isValidKey(key)) throw new Error(`Unknown permission key: ${key}`)
-  if (scope === null) {
-    await pgQuery(`DELETE FROM rbac_row_scope WHERE user_id=$1 AND permission_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
-      [userId, key, companyId ?? null])
-  } else {
+  // NULL-safe replace (see setGrant)
+  await pgQuery(`DELETE FROM rbac_row_scope WHERE user_id=$1 AND permission_key=$2 AND company_id IS NOT DISTINCT FROM $3`,
+    [userId, key, companyId ?? null])
+  if (scope !== null) {
     await pgQuery(
-      `INSERT INTO rbac_row_scope (user_id, permission_key, scope, company_id) VALUES ($1,$2,$3,$4)
-       ON CONFLICT (user_id, permission_key, company_id) DO UPDATE SET scope=EXCLUDED.scope`,
+      `INSERT INTO rbac_row_scope (user_id, permission_key, scope, company_id) VALUES ($1,$2,$3,$4)`,
       [userId, key, scope, companyId ?? null])
   }
   await pgQuery(`INSERT INTO rbac_audit (actor_id, target_user_id, permission_key, old_value, new_value, company_id)

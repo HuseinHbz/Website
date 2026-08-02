@@ -2646,6 +2646,22 @@ export async function runMigrations() {
       ('Employee', 'کارمند', '{"executive":"read","crm.crm.tickets":"write","erp":"none","system":"none","security":"none","backup":"none"}', '{}', '{"crm.crm.tickets":"own"}', true)
     ON CONFLICT (name) DO NOTHING;
 
+    -- 26.28: NULL company_id defeats the plain UNIQUE constraint (SQL NULLs are
+    -- distinct) → duplicates were possible. Dedupe (keep the newest row) and add
+    -- NULL-safe unique indexes so the invariant holds at the DB level too.
+    DELETE FROM rbac_user_grants a USING rbac_user_grants b
+      WHERE a.id < b.id AND a.user_id=b.user_id AND a.permission_key=b.permission_key
+        AND a.company_id IS NOT DISTINCT FROM b.company_id;
+    DELETE FROM rbac_user_ops a USING rbac_user_ops b
+      WHERE a.id < b.id AND a.user_id=b.user_id AND a.op_key=b.op_key
+        AND a.company_id IS NOT DISTINCT FROM b.company_id;
+    DELETE FROM rbac_row_scope a USING rbac_row_scope b
+      WHERE a.id < b.id AND a.user_id=b.user_id AND a.permission_key=b.permission_key
+        AND a.company_id IS NOT DISTINCT FROM b.company_id;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_grants_nullsafe ON rbac_user_grants(user_id, permission_key, COALESCE(company_id,-1));
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_ops_nullsafe ON rbac_user_ops(user_id, op_key, COALESCE(company_id,-1));
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_scope_nullsafe ON rbac_row_scope(user_id, permission_key, COALESCE(company_id,-1));
+
     -- ── Phase 26.27 بند ۵: 2FA hardening ────────────────────────────────────
     CREATE TABLE IF NOT EXISTS admin_recovery_codes (
       id SERIAL PRIMARY KEY,

@@ -77,6 +77,48 @@ test('auditor: reads 200, any write 403 server-side', async ({ baseURL }) => {
   expect((await ctx.get('/api/admin/erp/finance/overview')).status()).toBe(200)
   const w = await ctx.post('/api/admin/erp/sales/customers', { data: { name: 'X' } })
   expect(w.status(), 'auditor write blocked').toBe(403)
+  // 26.28 بند ۰.۱/۰.۲ — the two closed holes: read-only user cannot write nav/workspaces
+  const nav = await ctx.post('/api/admin/navigation', { data: { labelEn: 'x', href: '/x' } })
+  expect(nav.status(), 'navigation POST blocked for read grant').toBe(403)
+  const ws = await ctx.post('/api/admin/workspaces', { data: { name: 'x' } })
+  expect(ws.status(), 'workspaces POST blocked for read grant').toBe(403)
+  // 26.28 بند ۳ — sensitive-field cover: cost fields ABSENT from the raw payload
+  const prod = await (await ctx.get('/api/admin/erp/inventory/products')).json()
+  const rows = (prod.products ?? []) as Record<string, unknown>[]
+  expect(prod.costMasked, 'cost masked flag set').toBeTruthy()
+  for (const r of rows.slice(0, 5)) {
+    expect('value' in r, 'value key absent').toBeFalsy()
+    expect('avgCost' in r, 'avgCost key absent').toBeFalsy()
+  }
+  await ctx.dispose()
+})
+
+test('unauthenticated: navigation GET is no longer open', async ({ baseURL }) => {
+  const ctx = await pwRequest.newContext({ baseURL, storageState: { cookies: [], origins: [] } })
+  const r = await ctx.get('/api/admin/navigation', { maxRedirects: 0 })
+  expect([401, 302, 307].includes(r.status()), `got ${r.status()}`).toBeTruthy()
+  await ctx.dispose()
+})
+
+test('scope=own: rep sees only their leads; foreign lead timeline → 404; widgets follow the tree', async ({ request, baseURL }) => {
+  // grant emp crm write + scope=own via the real permissions API (admin context)
+  await request.post(`/api/admin/users/${ids.emp}/permissions`, { data: { action: 'grant', key: 'crm', level: 'write' } })
+  await request.post(`/api/admin/users/${ids.emp}/permissions`, { data: { action: 'scope', key: 'crm.crm', scope: 'own' } })
+  // two leads: one owned by emp, one by the admin
+  const mine = await (await request.post('/api/admin/crm/leads', { data: { name: 'E2E mine', ownerId: ids.emp } })).json()
+  const theirs = await (await request.post('/api/admin/crm/leads', { data: { name: 'E2E theirs' } })).json()
+
+  const ctx = await login(baseURL!, 'rbac-emp@test.ir')
+  const list = await (await ctx.get('/api/admin/crm/leads')).json()
+  const leadIds = (list.leads ?? []).map((l: { id: number }) => l.id)
+  expect(leadIds, 'own lead listed').toContain(mine.id)
+  expect(leadIds, 'foreign lead filtered out server-side').not.toContain(theirs.id)
+  // بند ۲.۲ — direct access to a foreign record: 404, not 403
+  const act = await ctx.get(`/api/admin/crm/activities?leadId=${theirs.id}`)
+  expect(act.status(), 'foreign lead timeline → 404 (existence not leaked)').toBe(404)
+  // بند ۰.۴ — widget data follows the TREE (erp none → denied payload)
+  const wd = await (await ctx.get('/api/admin/dashboards/data?ids=kpi_revenue')).json()
+  expect(wd.data?.kpi_revenue?.kind, 'erp-none user gets denied widget payload').toBe('denied')
   await ctx.dispose()
 })
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { setDefaultCurrency, setDefaultLocale } from '@/lib/format'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
 import { CommandPalette } from './CommandPalette'
@@ -161,9 +162,9 @@ function TwoFaGate({ locale }: { locale: 'fa' | 'en' }) {
             : 'Your account holds sensitive financial operations; they stay blocked (403) until you enable 2FA.'}
         </p>
       </div>
-      <a href="/admin/security" className="shrink-0 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-colors">
+      <Link href="/admin/security" className="shrink-0 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-colors">
         {locale === 'fa' ? 'فعال‌سازی 2FA ←' : 'Enable 2FA →'}
-      </a>
+      </Link>
     </div>
   )
 }
