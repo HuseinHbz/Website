@@ -1539,6 +1539,12 @@ start the app, `wait-on /api/health`, then run.
   default matches `claude/*`, `codex/*`, `tmp/*`, `wip/*` (a temporary agent branch),
   the scripts fall back to `PROD_BRANCH` with a loud warning instead of deploying
   half-finished code; `--allow-agent-branch` overrides deliberately.
+- **No silent aborts in deploy scripts.** `install.sh`/`update.sh` run under
+  `set -Eeuo pipefail` with an `ERR` trap that prints the failing step, line number,
+  command and exit code (a bare `set -e` exit shows nothing — that is what made the
+  `pm2 startup` failure look like "it just cancels"). Both also tee a full transcript
+  to `/var/log/habibazar-{install,update}-<timestamp>.log`, and trap Ctrl+C with a
+  clear message.
 - **The production clone is not an editing workspace.** `install.sh`/`update.sh`
   force-checkout over local edits to tracked files (backing the diff up to
   `/root/habibazar-local-changes-*.patch` first) and set `core.fileMode false`, so a

@@ -11,7 +11,8 @@
 # کشف می‌شود). اگر default موقتاً روی شاخهٔ کاری (claude/* …) باشد، با هشدار به
 # PROD_BRANCH برمی‌گردد تا تولید کد نیمه‌کاره نگیرد.
 # =============================================================================
-set -euo pipefail
+# -E : تلهٔ ERR در توابع/subshellها هم اجرا شود (جلوگیری از خروج خاموش)
+set -Eeuo pipefail
 
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
@@ -24,12 +25,38 @@ BRANCH_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/branch.env"
 BRANCH="${HBZ_BRANCH:-}"   # خالی = بعداً از default مخزن کشف می‌شود
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+CURRENT_STEP="شروع"
 info()  { echo -e "${GREEN}[✔]${NC} $*"; }
-step()  { echo -e "${CYAN}[→]${NC} $*"; }
+step()  { CURRENT_STEP="$*"; echo -e "${CYAN}[→]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
 error() { echo -e "${RED}[✘]${NC} $*"; exit 1; }
 
+# هیچ خروج خاموشی: هر دستور شکست‌خورده با مرحله/خط/دستور/کد گزارش می‌شود.
+on_error() {
+  local code=$? line="${1:-?}" cmd="${BASH_COMMAND:-?}"
+  echo ""
+  echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+  echo -e "${RED}[✘] آپدیت متوقف شد${NC}"
+  echo -e "${RED}    مرحله  : ${CURRENT_STEP}${NC}"
+  echo -e "${RED}    خط     : ${line}${NC}"
+  echo -e "${RED}    دستور  : ${cmd}${NC}"
+  echo -e "${RED}    کد خروج: ${code}${NC}"
+  [[ -n "${LOG_FILE:-}" ]] && echo -e "${YELLOW}    لاگ کامل: ${LOG_FILE}${NC}"
+  echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+  exit "$code"
+}
+trap 'on_error $LINENO' ERR
+trap 'echo -e "\n${YELLOW}[!] با Ctrl+C لغو شد (مرحله: ${CURRENT_STEP})${NC}"; exit 130' INT TERM
+
 [[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/update.sh"
+
+# لاگ کامل روی دیسک
+if [[ -z "${HBZ_UPDATE_LOGGING:-}" ]]; then
+  export HBZ_UPDATE_LOGGING=1
+  LOG_FILE="/var/log/habibazar-update-$(date +%Y%m%d-%H%M%S).log"
+  touch "$LOG_FILE" 2>/dev/null && exec > >(tee -a "$LOG_FILE") 2>&1 || LOG_FILE=""
+  [[ -n "$LOG_FILE" ]] && echo "[i] لاگ کامل آپدیت: $LOG_FILE"
+fi
 [[ ! -d "$APP_DIR/.git" ]] && error "مخزن یافت نشد: $APP_DIR — ابتدا install.sh اجرا کنید"
 
 ALLOW_AGENT_BRANCH=false

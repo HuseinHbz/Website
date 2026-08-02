@@ -6,7 +6,8 @@
 #   sudo bash deploy/install.sh                  # شاخهٔ تولید (deploy/branch.env)
 #   sudo bash deploy/install.sh main             # branch خاص
 # =============================================================================
-set -euo pipefail
+# -E : تلهٔ ERR در توابع/subshellها هم اجرا شود (بدون آن، خطاها خاموش می‌مانند)
+set -Eeuo pipefail
 
 # ─── تنظیمات ─────────────────────────────────────────────────────────────────
 APP_USER="hbz"
@@ -22,12 +23,41 @@ APP_PORT="3000"
 NODE_VERSION="20"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+CURRENT_STEP="شروع"
 info()  { echo -e "${GREEN}[✔]${NC} $*"; }
-step()  { echo -e "${CYAN}[→]${NC} $*"; }
+step()  { CURRENT_STEP="$*"; echo -e "${CYAN}[→]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
 error() { echo -e "${RED}[✘]${NC} $*"; exit 1; }
 
+# ─── هیچ خروج خاموشی: هر دستور شکست‌خورده گزارش می‌شود ───────────────────────
+# با set -e، یک دستور ساده که کد غیرصفر برگرداند اسکریپت را بدون هیچ پیامی
+# می‌بندد (دقیقاً همان «کنسل می‌شود و خطا نشان نمی‌دهد»). این تله آن را به یک
+# گزارش کامل تبدیل می‌کند: مرحله، شماره خط، خود دستور و کد خروج.
+on_error() {
+  local code=$? line="${1:-?}" cmd="${BASH_COMMAND:-?}"
+  echo ""
+  echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+  echo -e "${RED}[✘] نصب متوقف شد${NC}"
+  echo -e "${RED}    مرحله  : ${CURRENT_STEP}${NC}"
+  echo -e "${RED}    خط     : ${line}${NC}"
+  echo -e "${RED}    دستور  : ${cmd}${NC}"
+  echo -e "${RED}    کد خروج: ${code}${NC}"
+  [[ -n "${LOG_FILE:-}" ]] && echo -e "${YELLOW}    لاگ کامل: ${LOG_FILE}${NC}"
+  echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+  exit "$code"
+}
+trap 'on_error $LINENO' ERR
+trap 'echo -e "\n${YELLOW}[!] با Ctrl+C لغو شد (مرحله: ${CURRENT_STEP})${NC}"; exit 130' INT TERM
+
 [[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/install.sh"
+
+# ─── لاگ کامل روی دیسک (برای وقتی خروجی ترمینال بسته/کوتاه شد) ──────────────
+if [[ -z "${HBZ_INSTALL_LOGGING:-}" ]]; then
+  export HBZ_INSTALL_LOGGING=1
+  LOG_FILE="/var/log/habibazar-install-$(date +%Y%m%d-%H%M%S).log"
+  touch "$LOG_FILE" 2>/dev/null && exec > >(tee -a "$LOG_FILE") 2>&1 || LOG_FILE=""
+  [[ -n "$LOG_FILE" ]] && echo "[i] لاگ کامل نصب: $LOG_FILE"
+fi
 
 # ─── تعیین شاخه: default مخزن (مگر صریحاً override شده باشد) ────────────────
 if [[ -z "$BRANCH" ]]; then
