@@ -80,8 +80,16 @@ step "نسخه فعلی: $PREV_COMMIT (branch: $PREV_BRANCH)"
 
 # ─── git pull ─────────────────────────────────────────────────────────────────
 step "دریافت آخرین تغییرات از branch $BRANCH..."
+sudo -u "$APP_USER" git -C "$APP_DIR" config core.fileMode false 2>/dev/null || true
 sudo -u "$APP_USER" git -C "$APP_DIR" fetch origin "$BRANCH"
-sudo -u "$APP_USER" git -C "$APP_DIR" checkout "$BRANCH"
+# مثل install.sh: تغییرات محلی روی فایل‌های تحت گیت، checkout را abort می‌کرد.
+if ! sudo -u "$APP_USER" git -C "$APP_DIR" diff --quiet; then
+  PATCH="/root/habibazar-local-changes-$(date +%Y%m%d-%H%M%S).patch"
+  sudo -u "$APP_USER" git -C "$APP_DIR" diff HEAD > "$PATCH" 2>/dev/null || true
+  warn "تغییرات محلی کنار گذاشته شد (بکاپ: $PATCH)"
+fi
+sudo -u "$APP_USER" git -C "$APP_DIR" checkout -f "$BRANCH" 2>/dev/null \
+  || sudo -u "$APP_USER" git -C "$APP_DIR" checkout -f -B "$BRANCH" "origin/$BRANCH"
 sudo -u "$APP_USER" git -C "$APP_DIR" reset --hard "origin/$BRANCH"
 
 NEW_COMMIT=$(git -C "$APP_DIR" rev-parse --short HEAD)

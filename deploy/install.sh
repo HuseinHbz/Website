@@ -81,6 +81,8 @@ if [[ -d "$APP_DIR/.git" ]]; then
   # idempotent: مخزن هست → همگام با remote همان branch (نه خطا، نه ردشدن خاموش).
   # .env.local و public/uploads در گیت نیستند و دست‌نخورده می‌مانند.
   git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+  # کلون تولید محل ویرایش نیست؛ chmod +x روی اسکریپت‌ها نباید diff بسازد.
+  git -C "$APP_DIR" config core.fileMode false 2>/dev/null || true
   CUR="$(git -C "$APP_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
   git -C "$APP_DIR" fetch origin "$BRANCH" -q || error "fetch از remote شکست خورد"
   REMOTE="$(git -C "$APP_DIR" rev-parse --short "origin/$BRANCH")"
@@ -88,7 +90,18 @@ if [[ -d "$APP_DIR/.git" ]]; then
     info "مخزن از قبل روی همان نسخه است ($CUR) — رد شد"
   else
     step "همگام‌سازی مخزن: $CUR → $REMOTE (branch: $BRANCH)"
-    git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
+    # تغییرات محلی روی فایل‌های تحت گیت، همگام‌سازی را قفل می‌کرد (checkout abort).
+    # اینجا کلون تولید است: تغییرات کنار گذاشته می‌شوند، اما اول در /root بکاپ
+    # می‌گیریم تا چیزی خاموش از بین نرود. فایل‌های خارج از گیت (.env.local،
+    # public/uploads، data/) اصلاً دست نمی‌خورند.
+    if ! git -C "$APP_DIR" diff --quiet || ! git -C "$APP_DIR" diff --cached --quiet; then
+      PATCH="/root/habibazar-local-changes-$(date +%Y%m%d-%H%M%S).patch"
+      git -C "$APP_DIR" diff HEAD > "$PATCH" 2>/dev/null || true
+      warn "تغییرات محلی روی فایل‌های تحت گیت پیدا شد — کنار گذاشته می‌شود"
+      warn "بکاپ آن‌ها: $PATCH"
+    fi
+    git -C "$APP_DIR" checkout -q -f -B "$BRANCH" "origin/$BRANCH"
+    git -C "$APP_DIR" reset -q --hard "origin/$BRANCH"
     # بازماندهٔ ساختار تودرتوی قدیمی (قبل از flatten 26.26d) را پاک کن
     [[ -d "$APP_DIR/outputs" ]] && rm -rf "$APP_DIR/outputs" && info "بازماندهٔ outputs/ قدیمی حذف شد"
     chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
