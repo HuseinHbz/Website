@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 
@@ -13,7 +13,7 @@ const toTpl = (r: TplRow) => ({ id: r.id, key: r.key, nameEn: r.name_en, nameFa:
 
 // GET — designer template catalog.
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.documents', 'read')
   if ('error' in auth) return auth.error
   try {
     const rows = await pgQuery<TplRow>(`SELECT * FROM doc_templates ORDER BY active DESC, key`)
@@ -44,7 +44,7 @@ const remove = z.object({ action: z.literal('delete'), id: z.number().int() })
 const body = z.discriminatedUnion('action', [create, update, remove])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.documents', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

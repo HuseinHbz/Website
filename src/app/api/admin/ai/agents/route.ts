@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 import { listAgents, getAgent, buildAgentRun } from '@/lib/ai/agents'
@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 
 // GET — the agent catalog (definitions only; no secrets). RBAC-gated.
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('ai.ai-agents', 'read')
   if ('error' in auth) return auth.error
   // Strip the full system prompt from the list payload — the UI shows metadata +
   // examples; the prompt is an internal implementation detail.
@@ -27,7 +27,7 @@ const runSchema = z.object({
 
 // POST — run one agent on a task via the shared AI engine. RBAC-gated + audited.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('ai.ai-agents', 'write', 'edit')
   if ('error' in auth) return auth.error
 
   const parsed = await readJson(req, runSchema)

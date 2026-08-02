@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 
@@ -11,7 +11,7 @@ const KINDS = ['call', 'meeting', 'email', 'note', 'task'] as const
 
 // GET — activity timeline for one lead (?leadId=), newest first.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('crm.crm', 'read')
   if ('error' in auth) return auth.error
   try {
     const leadId = Number(req.nextUrl.searchParams.get('leadId'))
@@ -35,7 +35,7 @@ const createSchema = z.object({
 
 // POST — log an activity on a lead (touches the lead's updated_at → SLA reset).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('crm.crm', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, createSchema)
   if ('error' in parsed) return parsed.error
@@ -64,7 +64,7 @@ const updateSchema = z.object({
 
 // PUT — edit / complete an activity.
 export async function PUT(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('crm.crm', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, updateSchema)
   if ('error' in parsed) return parsed.error
@@ -83,7 +83,7 @@ export async function PUT(req: NextRequest) {
 
 // DELETE — remove an activity (delete permission).
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('crm.crm', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

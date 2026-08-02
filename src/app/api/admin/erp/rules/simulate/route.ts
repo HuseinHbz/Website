@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { runRules, validateRuleSet, type RuleSet } from '@/lib/rules/engine'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,7 @@ const schema = z.object({
 
 // POST — simulate/test a rule set against sample facts (returns matches + trace).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.rules', 'write')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

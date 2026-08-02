@@ -2268,7 +2268,6 @@ export async function runMigrations() {
     -- owner_id/…) are intentionally left unindexed — they are almost never
     -- filtered on and indexing them only adds write cost + bloat.
     CREATE INDEX IF NOT EXISTS idx_admin_sessions_user ON admin_sessions(user_id);
-    CREATE INDEX IF NOT EXISTS idx_role_assignments_user ON role_assignments(user_id);
     CREATE INDEX IF NOT EXISTS idx_hero_rules_hero ON hero_rules(hero_id);
     CREATE INDEX IF NOT EXISTS idx_page_sections_page ON page_sections(page_id);
     CREATE INDEX IF NOT EXISTS idx_page_sections_section ON page_sections(section_id);
@@ -2581,6 +2580,98 @@ export async function runMigrations() {
     INSERT INTO erp_settings (key, value) VALUES
       ('inbound_cap_global','200'), ('inbound_cap_channel','100'), ('inbound_cap_window','60')
     ON CONFLICT (key) DO NOTHING;
+
+    -- ── Phase 26.27: tree RBAC (grants/ops/scopes/templates/audit) ──────────
+    CREATE TABLE IF NOT EXISTS rbac_user_grants (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      permission_key TEXT NOT NULL,
+      level TEXT NOT NULL CHECK(level IN ('none','read','write')),
+      company_id INTEGER,
+      granted_by TEXT,
+      granted_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE(user_id, permission_key, company_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_rbac_grants_user ON rbac_user_grants(user_id);
+    CREATE TABLE IF NOT EXISTS rbac_user_ops (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      op_key TEXT NOT NULL,
+      allowed BOOLEAN NOT NULL DEFAULT true,
+      company_id INTEGER,
+      granted_by TEXT,
+      granted_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE(user_id, op_key, company_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_rbac_ops_user ON rbac_user_ops(user_id);
+    CREATE TABLE IF NOT EXISTS rbac_row_scope (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      permission_key TEXT NOT NULL,
+      scope TEXT NOT NULL DEFAULT 'all' CHECK(scope IN ('all','own','department','company')),
+      company_id INTEGER,
+      UNIQUE(user_id, permission_key, company_id)
+    );
+    CREATE TABLE IF NOT EXISTS rbac_role_templates (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      name_fa TEXT NOT NULL,
+      grants TEXT NOT NULL DEFAULT '{}',
+      ops TEXT NOT NULL DEFAULT '{}',
+      row_scopes TEXT NOT NULL DEFAULT '{}',
+      is_system BOOLEAN NOT NULL DEFAULT false,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS rbac_audit (
+      id SERIAL PRIMARY KEY,
+      actor_id TEXT NOT NULL,
+      target_user_id TEXT NOT NULL,
+      permission_key TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_rbac_audit_target ON rbac_audit(target_user_id);
+    -- بند ۴: seeded role templates (system templates; apply-then-customize)
+    INSERT INTO rbac_role_templates (name, name_fa, grants, ops, row_scopes, is_system) VALUES
+      ('CEO', 'مدیرعامل', '{"executive":"read","erp":"read","crm":"read","analytics":"read","brand":"read","content":"read","documentation":"read"}', '{}', '{}', true),
+      ('CFO', 'مدیر مالی', '{"erp":"write","executive":"read","analytics":"read","system":"none","backup":"none"}', '{"erp.finance:post":true,"erp.finance:void":true,"erp.finance:delete":true,"erp.finance:close_period":true,"erp.finance:reopen_period":true,"erp.sales:confirm":true,"erp.sales:void":true,"erp.sales:return":true,"erp.sales:post":true,"erp.sales:payment_create":true,"erp.sales:refund":true,"erp.purchasing:confirm":true,"erp.purchasing:void":true,"erp.purchasing:post":true,"erp.treasury:reconcile":true,"erp.treasury:cheque_state":true,"erp.approvals:approve":true,"erp.approvals:reject":true,"erp.moadian:submit":true}', '{}', true),
+      ('Finance Specialist', 'کارشناس مالی', '{"erp.finance":"write","erp.sales":"write","erp.purchasing":"write","erp.inventory":"read","executive":"read"}', '{"erp.finance:post":false,"erp.sales:confirm":false,"erp.purchasing:confirm":false}', '{}', true),
+      ('Auditor', 'حسابرس', '{"executive":"read","erp":"read","crm":"read","analytics":"read","security":"read","operations":"read","brand":"read","content":"read","documentation":"read"}', '{}', '{}', true),
+      ('HR Manager', 'مدیر منابع انسانی', '{"system.organization":"write","crm":"read","executive":"read"}', '{}', '{}', true),
+      ('Marketing Manager', 'مدیر مارکتینگ', '{"crm":"write","brand":"write","content":"write","analytics":"read","executive":"read"}', '{}', '{}', true),
+      ('IT Manager', 'مدیر IT', '{"system":"write","security":"write","backup":"write","operations":"write","ai":"write","executive":"read"}', '{}', '{}', true),
+      ('Shareholder', 'سهامدار', '{"executive":"read","analytics":"read","erp":"none","crm":"none","system":"none","security":"none","backup":"none","operations":"none","brand":"none","content":"none","ai":"none","documentation":"none"}', '{}', '{}', true),
+      ('Employee', 'کارمند', '{"executive":"read","crm.crm.tickets":"write","erp":"none","system":"none","security":"none","backup":"none"}', '{}', '{"crm.crm.tickets":"own"}', true)
+    ON CONFLICT (name) DO NOTHING;
+
+    -- ── Phase 26.27 بند ۵: 2FA hardening ────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_recovery_codes_user ON admin_recovery_codes(user_id);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step BIGINT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_fail_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_locked_until TEXT;
+    -- بند ۵.۵ policy switch (OFF by default → R5 backward compat + E2E unchanged)
+    INSERT INTO erp_settings (key, value) VALUES ('2fa_required_sensitive','0')
+    ON CONFLICT (key) DO NOTHING;
+
+    -- ── Phase 26.27 بند ۶ ABAC: customer ownership for row scope (scope=own) ──
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS owner_id TEXT REFERENCES users(id);
+    UPDATE sales_customers c SET owner_id = l.owner_id
+      FROM crm_leads l
+      WHERE c.owner_id IS NULL AND l.converted_customer_id = c.id AND l.owner_id IS NOT NULL;
+
+    -- بند ۰.۱: role_assignments was a dormant Phase-7 skeleton (role-per-scope
+    -- model, zero call sites). Its shape does not fit node-level tree grants —
+    -- dropped so one model remains (decision (ب), recorded in the phase report).
+    DROP TABLE IF EXISTS role_assignments;
 
     -- 26.22 (runs LAST so every seeded account exists): attach each leaf
     -- account to its Iranian-coding گروه root by leading digit (idempotent).

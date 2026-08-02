@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { loadDocumentRow, renderDocument } from '@/lib/erp/documentData'
 import { sendMail } from '@/lib/notifications'
@@ -17,7 +17,7 @@ const schema = z.object({
 
 /** Email a generated document (print-ready HTML attached) via the CMS SMTP. */
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.documents', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

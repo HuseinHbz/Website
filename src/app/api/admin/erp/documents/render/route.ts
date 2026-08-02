@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, readJson } from '@/lib/api/respond'
+import { readJson, requirePermission } from '@/lib/api/respond'
 import { z } from 'zod'
 import QRCode from 'qrcode'
 import { renderDocument, loadCompanyProfile } from '@/lib/erp/documentData'
@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 // GET ?id=[&template=key] — the print-ready HTML for a document (opened in a new
 // tab to print / save as PDF). `template` overrides the stored designer template.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.documents', 'read')
   if ('error' in auth) return auth.error
   const id = Number(req.nextUrl.searchParams.get('id'))
   if (!id) return new NextResponse('id required', { status: 400 })
@@ -30,7 +30,7 @@ const previewSchema = z.object({ config: z.record(z.string(), z.unknown()) })
 // POST — Invoice Designer live preview: renders a demo invoice with the draft
 // template config + the real company profile (no document is stored).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.documents', 'write')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, previewSchema)
   if ('error' in parsed) return parsed.error

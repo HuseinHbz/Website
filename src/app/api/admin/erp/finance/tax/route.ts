@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { listTaxProfiles, saveTaxProfile, deleteTaxProfile, computeProfile } from '@/lib/erp/taxData'
@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 // GET — tax profiles (+ ?preview=<base>&profile=<id> live compute via the engine).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     const profiles = await listTaxProfiles()
@@ -35,7 +35,7 @@ const del = z.object({ action: z.literal('delete'), id: z.number().int() })
 const body = z.discriminatedUnion('action', [save, del])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('erp.finance', 'write', 'manage_settings')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

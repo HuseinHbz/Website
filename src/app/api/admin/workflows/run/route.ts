@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { logBus } from '@/lib/logs/bus'
@@ -74,7 +74,7 @@ const runSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin('edit')
+    const auth = await requirePermission('erp.workflows', 'write', 'edit')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, runSchema)
     if ('error' in parsed) return parsed.error
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAdmin()
+    const auth = await requirePermission('erp.workflows', 'read')
     if ('error' in auth) return auth.error
     const workflowId = Number(req.nextUrl.searchParams.get('workflowId'))
     if (!workflowId) return badRequest('workflowId required')

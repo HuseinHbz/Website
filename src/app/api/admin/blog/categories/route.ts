@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { blogCategories } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
@@ -14,6 +14,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'content.blog', 'write'); if (deny) return deny }
   const body = await guardJson(req)
   const db = getDb()
   const result = await db.insert(blogCategories).values(body).returning()
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'content.blog', 'write'); if (deny) return deny }
   const { id, ...data } = await guardJson(req)
   const db = getDb()
   await db.update(blogCategories).set(data).where(eq(blogCategories.id, id))

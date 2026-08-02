@@ -2238,6 +2238,21 @@ const T: Record<string, { fa: string; en: string }> = {
   dash_roleSaved: { fa: 'پیش‌فرض نقش ذخیره شد.', en: 'Role default saved.' },
   dash_refreshEvery: { fa: 'به‌روزرسانی خودکار', en: 'Auto-refresh' },
   dash_refreshOff: { fa: 'خاموش', en: 'Off' },
+  perm_load_failed: { fa: 'خطا در بارگذاری دسترسی‌ها', en: 'Failed to load permissions' },
+  perm_change_failed: { fa: 'تغییر دسترسی انجام نشد', en: 'Permission change failed' },
+  perm_collapse: { fa: 'بستن', en: 'Collapse' },
+  perm_expand: { fa: 'بازکردن', en: 'Expand' },
+  perm_denied_subtree: { fa: 'این شاخه منع شده است', en: 'This subtree is denied' },
+  perm_inherited_from: { fa: 'ارث‌برده از', en: 'Inherited from' },
+  perm_role_default: { fa: 'پیش‌فرض نقش', en: 'Role default' },
+  perm_back_to_inherit: { fa: 'بازگشت به ارث‌بری', en: 'Back to inheritance' },
+  perm_sensitive_ops: { fa: 'عملیات حساس', en: 'Sensitive ops' },
+  perm_search: { fa: 'جستجو در درخت دسترسی…', en: 'Search the permission tree…' },
+  perm_apply_template: { fa: 'اعمال قالب نقش…', en: 'Apply role template…' },
+  perm_copy_prompt: { fa: 'شناسهٔ کاربر مبدأ را وارد کنید', en: 'Enter the source user id' },
+  perm_copy_from: { fa: 'کپی از کاربر دیگر', en: 'Copy from user' },
+  perm_preview: { fa: 'این کاربر می‌بیند', en: 'This user sees' },
+  perm_preview_none: { fa: 'هیچ ورک‌اسپیسی', en: 'no workspaces' },
 }
 
 export function useT() {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, badRequest, requireAdmin } from '@/lib/api/respond'
+import { apiError, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 
 // Export filtered logs as JSON or CSV for the Logs & Monitoring module.
@@ -17,7 +17,7 @@ function csvCell(v: unknown): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('operations.logs-monitoring', 'read', 'manage_settings')
     if ('error' in auth) return auth.error
     const sp = req.nextUrl.searchParams
     const format = (sp.get('format') || 'json').toLowerCase()

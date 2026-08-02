@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
@@ -46,7 +46,7 @@ const schema = z.object({
 
 export async function GET() {
   try {
-    const auth = await requireAdmin()
+    const auth = await requirePermission('erp.assets', 'read')
     if ('error' in auth) return auth.error
     const assets = await loadAssets()
     return NextResponse.json({ assets, stats: assetKpisFrom(assets) })
@@ -71,7 +71,7 @@ function values(d: z.infer<typeof schema>) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin('edit')
+    const auth = await requirePermission('erp.assets', 'write', 'edit')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, schema)
     if ('error' in parsed) return parsed.error
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireAdmin('edit')
+    const auth = await requirePermission('erp.assets', 'write', 'edit')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, schema)
     if ('error' in parsed) return parsed.error
@@ -118,7 +118,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = await requireAdmin('delete')
+    const auth = await requirePermission('erp.assets', 'write', 'delete')
     if ('error' in auth) return auth.error
     const { id } = await req.json().catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')

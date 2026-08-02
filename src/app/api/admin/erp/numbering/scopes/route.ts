@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 // GET — list scopes (companies/branches/warehouses/departments), optional ?kind=.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.numbering', 'read')
   if ('error' in auth) return auth.error
   const kind = req.nextUrl.searchParams.get('kind')
   try {
@@ -34,7 +34,7 @@ const schema = z.object({
 
 // POST — create or update a scope entry.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.numbering', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE — remove a scope. ?id=
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.numbering', 'write', 'delete')
   if ('error' in auth) return auth.error
   const id = Number(req.nextUrl.searchParams.get('id'))
   if (!id) return badRequest('id required')

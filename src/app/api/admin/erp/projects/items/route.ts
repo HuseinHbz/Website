@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { TASK_STATUSES, TASK_PRIORITIES } from '@/lib/erp/projects'
@@ -36,7 +36,7 @@ const timesheetSchema = z.object({
 const body = z.discriminatedUnion('kind', [taskSchema, taskMoveSchema, milestoneSchema, timesheetSchema])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.project-management', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error
@@ -83,7 +83,7 @@ const delSchema = z.object({ kind: z.enum(['task', 'milestone', 'timesheet']), i
 const TABLE: Record<string, string> = { task: 'pm_tasks', milestone: 'pm_milestones', timesheet: 'pm_timesheets' }
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.project-management', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, delSchema)
   if ('error' in parsed) return parsed.error

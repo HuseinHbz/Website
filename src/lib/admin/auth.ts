@@ -64,7 +64,22 @@ export async function signIn(email: string, password: string, ipAddress?: string
 
   if (user.totpEnabled && user.totpSecret) {
     if (!totpCode) return { requireTotp: true }
-    if (!verifyTotpCode(totpCode, user.totpSecret)) return { error: 'Invalid authentication code' }
+    // 26.27 بند ۵ — recovery-code login (5.1) else guarded TOTP (5.2 replay + 5.3 lock)
+    const { verifyTotpGuarded, consumeRecoveryCode } = await import('./totpSecurity')
+    if (/^[0-9a-fA-F]{10}$/.test(totpCode)) {
+      const ok = await consumeRecoveryCode(user.id, totpCode)
+      if (!ok) return { error: 'Invalid authentication code' }
+      try {
+        const { logger } = await import('@/lib/logger')
+        logger.security('2FA recovery code used at login', { source: 'auth', userId: user.id, ip: ipAddress })
+        const { sendMail } = await import('@/lib/notifications')
+        await sendMail({ to: user.email, subject: 'HBZ Admin — recovery code used', html: `<p>A 2FA recovery code was used to sign in to your account (${user.email}) at ${new Date().toISOString()} from IP ${ipAddress || 'unknown'}. If this was not you, reset your 2FA immediately.</p>` })
+      } catch { /* alerting is best-effort */ }
+    } else {
+      const verdict = await verifyTotpGuarded(user.id, user.totpSecret, totpCode)
+      if (verdict === 'locked') return { error: 'Too many attempts — try again later' }
+      if (verdict !== 'ok') return { error: 'Invalid authentication code' }
+    }
   }
 
   const sessionId = nanoid()

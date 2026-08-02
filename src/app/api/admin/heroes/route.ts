@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import type { AdminUser } from '@/lib/admin/auth'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
@@ -16,7 +16,7 @@ const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'
 
 // GET — list heroes (with validation status), or ?id= for one + its versions.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('brand.hero', 'read')
   if ('error' in auth) return auth.error
   try {
     const id = req.nextUrl.searchParams.get('id')
@@ -54,7 +54,7 @@ const body = z.discriminatedUnion('action', [createSchema, updateSchema, lifecyc
 const STATUS_FLOW: Record<string, HeroStatus> = { submit: 'review', approve: 'approved', unpublish: 'approved', archive: 'archived' }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('brand.hero', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

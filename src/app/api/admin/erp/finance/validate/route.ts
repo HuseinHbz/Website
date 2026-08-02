@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { scanLedgerIntegrity } from '@/lib/erp/accountingValidationData'
 
 export const dynamic = 'force-dynamic'
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 // the General Ledger for unbalanced/one-sided/missing-account/zero-total entries.
 // ?status=all includes drafts; default scans posted entries only.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     const status = req.nextUrl.searchParams.get('status') === 'all' ? 'all' : 'posted'

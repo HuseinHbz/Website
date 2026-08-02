@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { summarize, type UsageRow } from '@/lib/ai/analytics'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 // GET — AI usage analytics summary (real telemetry from ai_usage).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('ai.ai-agents', 'read')
   if ('error' in auth) return auth.error
   try {
     const days = Math.min(90, Math.max(1, Number(req.nextUrl.searchParams.get('days')) || 30))
@@ -40,7 +40,7 @@ const feedbackSchema = z.object({
 
 // POST — thumbs up/down feedback on a specific AI response.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('ai.ai-agents', 'write')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, feedbackSchema)
   if ('error' in parsed) return parsed.error

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { apiError, guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { certifications } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
@@ -17,6 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {      const user = await getAdminUser()
       if (!user) return unauthorized()
+      { const deny = await checkTreePermission(user, 'brand.certifications', 'write'); if (deny) return deny }
       const body = await guardJson(req)
       const db = getDb()
       const result = await db.insert(certifications).values({ ...body, updatedBy: user?.id }).returning()
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {      const user = await getAdminUser()
       if (!user) return unauthorized()
+      { const deny = await checkTreePermission(user, 'brand.certifications', 'write'); if (deny) return deny }
       const { id, ...data } = await guardJson(req)
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
       const db = getDb()

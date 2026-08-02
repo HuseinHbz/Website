@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { listBusinessAlerts, scanBusinessAlerts, setBusinessAlertStatus } from '@/lib/bi/alertsData'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.business-intelligence', 'read')
   if ('error' in auth) return auth.error
   try { return NextResponse.json({ alerts: await listBusinessAlerts(req.nextUrl.searchParams.get('domain') ?? undefined, req.nextUrl.searchParams.get('status') ?? 'open') }) }
   catch (e) { return apiError(e, 'Failed to load alerts') }
@@ -20,7 +20,7 @@ const schema = z.discriminatedUnion('action', [
 ])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.business-intelligence', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

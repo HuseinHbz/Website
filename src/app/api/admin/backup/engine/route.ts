@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { backupEngine, BACKUP_ROOT, BACKUP_ENV } from '@/lib/backup/engine'
 import { usingDedicatedKey } from '@/lib/backup/crypto'
@@ -17,7 +17,7 @@ interface CatalogRow {
 
 export async function GET() {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('backup.backup', 'read', 'manage_settings')
     if ('error' in auth) return auth.error
 
     const catalog = await pgQuery(

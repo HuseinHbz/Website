@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { listDelegations, createDelegation, revokeDelegation } from '@/lib/erp/approvalData'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.approvals', 'read')
   if ('error' in auth) return auth.error
   try { return NextResponse.json({ delegations: await listDelegations() }) } catch (e) { return apiError(e, 'Failed to load delegations') }
 }
@@ -19,8 +19,9 @@ const schema = z.discriminatedUnion('action', [
 ])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.approvals', 'write', 'edit')
   if ('error' in auth) return auth.error
+  { const deny = await requireOp(auth.user, 'erp.approvals:delegate', 'edit'); if (deny) return deny }
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
   const d = parsed.data

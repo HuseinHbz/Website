@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, badRequest, requireAdmin } from '@/lib/api/respond'
+import { apiError, badRequest, requirePermission } from '@/lib/api/respond'
 import { REPORTS, runReport } from '@/lib/reports/reportData'
 import { toCsv } from '@/lib/reports/pivot'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 // GET — without `id`: the report catalog. With `id`: run that report and return
 // its columns/rows/summary as JSON, or as a CSV download when `format=csv`.
 export async function GET(req: Request) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.reports', 'read')
   if ('error' in auth) return auth.error
   const url = new URL(req.url)
   const id = url.searchParams.get('id')

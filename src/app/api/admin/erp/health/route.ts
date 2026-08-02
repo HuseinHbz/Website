@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { healthOverview } from '@/lib/health/healthData'
@@ -15,7 +15,7 @@ export const runtime = 'nodejs'
 // financial/security/performance/workflow/data-quality health + risk score,
 // plus the last self-heal run. Read-only.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('operations.health', 'read')
   if ('error' in auth) return auth.error
   try {
     const view = req.nextUrl.searchParams.get('view')
@@ -55,7 +55,7 @@ async function healthSnapshot(): Promise<string> {
 // auto-fixes reuse each module's own idempotent ops; administrator-gated).
 // advise: AI Operational Advisor through the SHARED runCompletion (advisory only).
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('operations.health', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, runSchema)
   if ('error' in parsed) return parsed.error

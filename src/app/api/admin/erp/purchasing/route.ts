@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import {
   listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition,
@@ -17,7 +17,7 @@ export const runtime = 'nodejs'
 const DOC_TYPES = ['request', 'rfq', 'quotation', 'order', 'receipt', 'invoice', 'return', 'credit_note'] as const
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.purchasing', 'read')
   if ('error' in auth) return auth.error
   try {
     const sp = req.nextUrl.searchParams
@@ -55,7 +55,7 @@ const portalRevoke = z.object({ action: z.literal('vendor.portalRevoke'), vendor
 const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost, docConfirm, docVoid, docReceive, portalLink, portalRevoke])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.purchasing', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error
@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ revoked: n })
       }
       case 'doc.post': {
+        { const deny = await requireOp(auth.user, 'erp.purchasing:post', 'edit'); if (deny) return deny }
         // Posting to the double-entry GL is an accounting action — administrator only.
         if (!['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'Posting to the GL requires an administrator' }, { status: 403 })
         const res = await postPurchaseInvoiceToGl(d.id, uid)
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(res)
       }
       case 'doc.confirm': {
+        { const deny = await requireOp(auth.user, 'erp.purchasing:confirm', 'edit'); if (deny) return deny }
         // 26.24b BUG-008: confirming a purchase invoice AUTO-POSTS it to the GL
         // (Cr Accounts Payable), mirroring sales. A closed period fails loudly and
         // the status rolls back so AP can never drift negative on later payment.
@@ -117,6 +119,7 @@ export async function POST(req: NextRequest) {
         } catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : 'Confirm failed' }, { status: 400 }) }
       }
       case 'doc.void': {
+        { const deny = await requireOp(auth.user, 'erp.purchasing:void', 'edit'); if (deny) return deny }
         // Voiding a GL-posted purchase invoice books a balanced reversal entry.
         const res = await voidPurchaseInvoice(d.id, uid)
         await logAction(auth.user, 'erp.purchase.void', 'purchase_documents', String(d.id), null, { status: res.status, reversalId: res.reversalId }, ip)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import {
@@ -28,7 +28,7 @@ const toItem = (r: PresetRow) => ({
 
 // GET — list presets (filters) | ?view=analytics | ?view=export (signed package) | ?id= detail+versions
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('brand.hero', 'read')
   if ('error' in auth) return auth.error
   try {
     const sp = req.nextUrl.searchParams
@@ -76,7 +76,7 @@ const importPkg = z.object({ action: z.literal('import'), pkg: z.record(z.string
 const body = z.discriminatedUnion('action', [create, update, toggle, rollback, bulk, importPkg])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('brand.hero', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

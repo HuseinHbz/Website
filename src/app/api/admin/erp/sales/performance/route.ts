@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { performanceData, setTarget } from '@/lib/erp/salesData'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 /** Sales performance: monthly invoiced vs target, commission, trend forecast. */
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.sales', 'read')
   if ('error' in auth) return auth.error
   try {
     const months = Math.min(24, Math.max(3, Number(req.nextUrl.searchParams.get('months')) || 12))
@@ -25,7 +25,7 @@ const schema = z.object({
 
 /** Set/replace the monthly sales target + commission rate. */
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.sales', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

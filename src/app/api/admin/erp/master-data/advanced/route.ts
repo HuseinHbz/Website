@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { categoryTree, createCategory, updateCategory, moveCategory, mergeCategory, archiveCategory, migrateLegacyCategories } from '@/lib/masterdata/categoryData'
@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 
 // GET — Master-Data Advanced (Phase 26.17): ?module=categories|suppliers|versions|dimensions|issues
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.master-data', 'read')
   if ('error' in auth) return auth.error
   const sp = req.nextUrl.searchParams
   const mod = sp.get('module')
@@ -45,7 +45,7 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.master-data', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

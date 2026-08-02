@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { runCompletion, AiConfigError } from '@/lib/ai/engine'
 import { buildAssistPrompt, type AssistAction, type AssistTone, type AssistLocale } from '@/lib/hero/aiAssist'
@@ -37,7 +37,7 @@ const body = z.discriminatedUnion('kind', [contentSchema, animSchema])
 // engine (provider manager + RAG + telemetry). Animation suggestions are the
 // deterministic recommendation engine (no LLM needed). RBAC-gated + audited.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('brand.hero', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 
 // Historical log query for the Logs & Monitoring module: filter by level /
@@ -27,7 +27,7 @@ function where(f: Filters): { sql: string; params: unknown[] } {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('operations.logs-monitoring', 'read', 'manage_settings')
     if ('error' in auth) return auth.error
     const sp = req.nextUrl.searchParams
     const f: Filters = {

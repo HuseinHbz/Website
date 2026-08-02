@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest, guardJson } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, guardJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { scoreLead, pipelineStats, LEAD_SOURCES, LEAD_STATUSES, type LeadStatus } from '@/lib/crm/leads'
@@ -25,9 +25,12 @@ const upsertSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAdmin()
+    const auth = await requirePermission('crm.crm', 'read')
     if ('error' in auth) return auth.error
-    const mine = req.nextUrl.searchParams.get('mine') === '1'
+    // بند ۶.۱ ABAC — scope=own restricts the list server-side (not a UI filter)
+    const { rowScopeFor } = await import('@/lib/rbac/data')
+    const scope = await rowScopeFor(auth.user.id, 'crm.crm')
+    const mine = scope === 'own' || req.nextUrl.searchParams.get('mine') === '1'
     const rows = await pgQuery(
       `SELECT l.id, l.name, l.email, l.phone, l.company, l.source, l.status, l.score, l.value, l.notes,
               l.owner_id AS "ownerId", u.name AS "ownerName", l.converted_customer_id AS "convertedCustomerId",
@@ -61,7 +64,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin('edit')
+    const auth = await requirePermission('crm.crm', 'write', 'edit')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, upsertSchema)
     if ('error' in parsed) return parsed.error
@@ -83,7 +86,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireAdmin('edit')
+    const auth = await requirePermission('crm.crm', 'write', 'edit')
     if ('error' in auth) return auth.error
     const parsed = await readJson(req, upsertSchema)
     if ('error' in parsed) return parsed.error
@@ -91,6 +94,13 @@ export async function PUT(req: NextRequest) {
     if (!d.id) return badRequest('id required')
     const existing = (await pgQuery(`SELECT * FROM crm_leads WHERE id=$1`, [d.id]))[0] as Record<string, unknown> | undefined
     if (!existing) return badRequest('lead not found')
+    // بند ۶.۱ — scope=own: another user's record answers 404 (existence not leaked, 26.25a pattern)
+    {
+      const { rowScopeFor } = await import('@/lib/rbac/data')
+      if ((await rowScopeFor(auth.user.id, 'crm.crm')) === 'own' && existing.owner_id !== auth.user.id) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      }
+    }
     const merged = { ...existing, ...d, source: d.source ?? (existing.source as string), status: d.status ?? (existing.status as string), value: d.value ?? (existing.value as number) }
     const score = scoreLead(merged as never)
     await pgQuery(
@@ -109,10 +119,17 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = await requireAdmin('delete')
+    const auth = await requirePermission('crm.crm', 'write', 'delete')
     if ('error' in auth) return auth.error
     const { id } = await guardJson(req).catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')
+    {
+      const { rowScopeFor } = await import('@/lib/rbac/data')
+      if ((await rowScopeFor(auth.user.id, 'crm.crm')) === 'own') {
+        const own = (await pgQuery<{ owner_id: string | null }>(`SELECT owner_id FROM crm_leads WHERE id=$1`, [id]))[0]
+        if (!own || own.owner_id !== auth.user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      }
+    }
     await pgQuery(`DELETE FROM crm_leads WHERE id=$1`, [id])
     await logAction(auth.user, 'DELETE', 'crm_leads', id)
     return NextResponse.json({ ok: true })

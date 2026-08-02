@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
-import { apiError } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { analyticsEvents, contactRequests, consultationRequests, blogPosts, projects, services, auditLogs } from '@/lib/db/schema'
 import { sql, eq, gte, desc } from 'drizzle-orm'
 
 export async function GET() {
+  const auth = await requirePermission('executive.dashboard', 'read')
+  if ('error' in auth) return auth.error
   try {
   const db = getDb()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()

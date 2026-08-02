@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { apiError, guardJson, forbidden, unauthorized, checkTreePermission, requireOp } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
@@ -44,9 +44,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {      const me = await getAdminUser()
       if (!me) return unauthorized()
+      { const deny = await checkTreePermission(me, 'security.users', 'write'); if (deny) return deny }
       if (me?.role !== 'super_admin' && me?.role !== 'administrator') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
+      { const deny = await requireOp(me, 'security.users:create', 'manage_users'); if (deny) return deny }
       const { name, email, password, role, department } = await guardJson(req)
       if (!name || !email || !password) return NextResponse.json({ error: 'Name, email, password required' }, { status: 400 })
       if (role && !VALID_ROLES.includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
@@ -71,12 +73,14 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {      const me = await getAdminUser()
       if (!me) return unauthorized()
+      { const deny = await checkTreePermission(me, 'security.users', 'write'); if (deny) return deny }
       if (me?.role !== 'super_admin' && me?.role !== 'administrator') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
       const { id, password, ...data } = await guardJson(req)
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
       if (data.role && !VALID_ROLES.includes(data.role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+      if (data.role) { const deny = await requireOp(me, 'security.users:role_change', 'manage_users'); if (deny) return deny }
       const db = getDb()
       const updateData: Record<string, unknown> = { ...data }
       if (password) updateData.passwordHash = await hashPassword(password)

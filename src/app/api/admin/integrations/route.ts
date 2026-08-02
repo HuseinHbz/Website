@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, unauthorized } from '@/lib/api/respond'
+import { guardJson, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { integrations } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -9,6 +9,7 @@ import { logAction } from '@/lib/admin/audit'
 export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  { const deny = await checkTreePermission(user, 'system.integrations', 'read'); if (deny) return deny }
   const db = getDb()
   return NextResponse.json(await db.select().from(integrations).orderBy(integrations.sortOrder))
 }
@@ -16,6 +17,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'system.integrations', 'write'); if (deny) return deny }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, ...data } = await guardJson(req)
   const db = getDb()

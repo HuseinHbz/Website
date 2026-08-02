@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { loadAsset } from '@/lib/erp/assetData'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 // GET ?id= — the full lifecycle of one asset: details + assignment history +
 // maintenance/calibration schedule & history + activity timeline.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.assets', 'read')
   if ('error' in auth) return auth.error
   try {
     const id = Number(req.nextUrl.searchParams.get('id'))
@@ -55,7 +55,7 @@ const body = z.discriminatedUnion('kind', [assignSchema, maintSchema, maintDoneS
 
 // POST — add an assignment, add a maintenance/calibration record, or mark one done.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.assets', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { CONNECTOR_TYPES, validateConnector, redactConfig, isExecutable, type ConnectorConfig, type ConnectorType } from '@/lib/integration/engine'
@@ -11,7 +11,7 @@ const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 
 // GET — list connectors (config redacted) with per-connector dispatch counts.
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.integration-hub', 'read')
   if ('error' in auth) return auth.error
   try {
     const rows = (await pgQuery(
@@ -40,7 +40,7 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.integration-hub', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 export const PUT = POST
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.integration-hub', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

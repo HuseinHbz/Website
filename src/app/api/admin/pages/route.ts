@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { apiError, guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { pages, pageSections, sections } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const me = await getAdminUser()
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    { const deny = await checkTreePermission(me, 'brand.pages', 'read'); if (deny) return deny }
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
   try {
     const me = await getAdminUser()
     if (!me) return unauthorized()
+    { const deny = await checkTreePermission(me, 'brand.pages', 'write'); if (deny) return deny }
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (me.role === 'editor') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -75,6 +77,7 @@ export async function PUT(req: NextRequest) {
   try {
     const me = await getAdminUser()
     if (!me) return unauthorized()
+    { const deny = await checkTreePermission(me, 'brand.pages', 'write'); if (deny) return deny }
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (me.role === 'editor') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

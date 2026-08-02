@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES } from '@/lib/approval/matrix'
 import { listMatrixRows, upsertMatrixRule, deleteMatrixRule } from '@/lib/erp/approvalData'
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.approvals', 'read')
   if ('error' in auth) return auth.error
   try { return NextResponse.json({ rules: await listMatrixRows() }) } catch (e) { return apiError(e, 'Failed to load matrix') }
 }
@@ -23,7 +23,7 @@ const schema = z.discriminatedUnion('action', [
 
 export async function POST(req: NextRequest) {
   // Matrix defines who can approve — administrator only.
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('erp.approvals', 'write', 'manage_settings')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { erpSettings, setErpSetting, SUPPORTED_CURRENCIES } from '@/lib/erp/settings'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 /** Global ERP configuration (currency defaults, formatting). */
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('system.settings', 'read')
   if ('error' in auth) return auth.error
   try {
     return NextResponse.json({ ...(await erpSettings(true)), supportedCurrencies: SUPPORTED_CURRENCIES })
@@ -24,7 +24,7 @@ const schema = z.object({
 })
 
 export async function PUT(req: NextRequest) {
-  const auth = await requireAdmin('manage_settings')
+  const auth = await requirePermission('system.settings', 'write', 'manage_settings')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

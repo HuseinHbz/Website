@@ -121,6 +121,20 @@
    balances are wrong); every financial suite must ALSO assert the **expected balance
    of key accounts** (bank/AR/AP/revenue) — the assertion that actually catches a
    BUG-020-class defect.
+16. **Every admin API route MUST call `requirePermission` with a registry key
+   (26.27, `audit:rbac`).** The permission key is declared IN THE ROUTE CODE — never
+   derived from a header, URL or body (the x-pathname design is rejected: spoofable).
+   Exceptions (auth/login, nav-prefs, …) live in the short explicit EXCEPTIONS list in
+   `scripts/rbac-route-map.ts`. New modules/tabs in `workspaces.ts` get tree nodes
+   automatically; new sensitive ops must be registered in `SENSITIVE_OPS`
+   (`src/lib/rbac/registry.ts`).
+17. **A sensitive op is NEVER implied by `write` (26.27).** Operations like
+   `:post`/`:void`/`:confirm`/`:close_period` require an explicit `requireOp(user,
+   '<module>:<op>', legacyAction)` inside that op's branch — including create-and-post
+   fast paths. Tree decisions: explicit `none` anywhere on the chain kills the whole
+   subtree (deny dominates), the most specific explicit level wins, and a user with
+   ZERO rbac rows behaves EXACTLY like the legacy role (R5). Regression:
+   `scripts/verify-2627-rbac.ts` (suite 12 in `npm run regressions`).
 10. **A financial return/void must never leave a balance silently negative (26.26
    BUG-013).** A return on a PAID invoice needs a second leg — a refund (negative
    `sales_payment 'refund'` + Dr AR/Cr Bank → AR back to 0) or an explicit
@@ -945,6 +959,26 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   — a distinct cookie name, an opaque sha256-hashed token, and NO shared secret
   with the admin JWT (mutual 401).** Still open: tickets/SLA (26.25b), campaign/CRM
   dashboard/onboarding/pilot (26.25c).
+- **Phase 26.27 — Tree RBAC + ABAC + 2FA hardening** (report:
+  `docs/governance/phase26.27-rbac-2fa-report.md`, guide: `RBAC_GUIDE_FA.md`).
+  Node-level permission tree (workspace → module → tab → op) GENERATED from
+  `WORKSPACES` (`src/lib/rbac/registry.ts`, 128 nodes + 27 `SENSITIVE_OPS`); pure
+  decision engine (`engine.ts`: deny-dominates → most-specific → inherit → null =
+  legacy role, R5); tables `rbac_user_grants/ops/row_scope/role_templates/audit`
+  (dormant `role_assignments` dropped); every admin route migrated to
+  `requirePermission(key, need, legacyAction)` + manual `requireOp` on financial op
+  branches — new **`audit:rbac`** gate (157 guarded · 14 exceptions · 0 failures).
+  Tree UI `/admin/users/[id]/permissions` (three-state nodes, inheritance
+  provenance, op checkboxes, 9 seeded role templates, copy-from-user, what-user-sees
+  preview) + users×modules CSV matrix; nav/menu grant-aware (none never renders).
+  ABAC: `rbac_row_scope` (scope=own → owner-filtered lists, foreign id → 404) +
+  sensitive-field masking (`erp.inventory:cost_view` strips cost from the API).
+  2FA hardened: AES-256-GCM secrets at rest (legacy plaintext still verifies),
+  TOTP replay guard (`totp_last_step`), 5-fail/10-min lock, 10 sha256-hashed
+  single-use recovery codes (login + email alert), `security.users:reset_2fa` op,
+  optional `2fa_required_sensitive` policy (default OFF). Proof:
+  `verify-2627-rbac.ts` 41/41 (regression suite #12) + 4-user Playwright E2E; all
+  11 prior regressions green unchanged (R5). 787 unit tests · 12 audits 0.
 - **Phase 26.25b — R2 Final** (تکمیل نهایی R2; report:
   `docs/governance/phase26.25b-r2-final-report.md`). Closes Release 2. **بند ۰
   inherited-debt (10/10)**: **password → async `crypto.scrypt`** (`lib/admin/

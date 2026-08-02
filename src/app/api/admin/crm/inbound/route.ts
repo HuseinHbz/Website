@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { listQuarantine, confirmInbound, rejectInbound } from '@/lib/crm/inboundData'
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('crm.crm', 'read')
   if ('error' in auth) return auth.error
   try {
     const status = req.nextUrl.searchParams.get('status') || 'pending_review'
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 const body = z.object({ action: z.enum(['confirm', 'reject']), id: z.number().int().positive() })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('crm.crm', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { goLiveChecklist } from '@/lib/admin/onboarding'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('system.settings.onboarding', 'read')
   if ('error' in auth) return auth.error
   try {
     return NextResponse.json(await goLiveChecklist())

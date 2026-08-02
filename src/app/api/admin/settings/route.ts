@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, guardJson } from '@/lib/api/respond'
+import { apiError, guardJson, requirePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { siteSettings } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  try {      const auth = await requireAdmin('manage_settings')
+  try {      const auth = await requirePermission('system.settings', 'write', 'manage_settings')
       if ('error' in auth) return auth.error
       const user = auth.user
       const body = await guardJson(req) as Record<string, string>

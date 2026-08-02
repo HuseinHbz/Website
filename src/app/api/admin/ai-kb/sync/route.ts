@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiError, requireAdmin } from '@/lib/api/respond'
+import { apiError, requirePermission } from '@/lib/api/respond'
 import { syncKnowledgeFromCms } from '@/lib/ai/sync'
 import { logAction } from '@/lib/admin/audit'
 
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 export async function POST() {
   try {
-    const auth = await requireAdmin('manage_settings')
+    const auth = await requirePermission('ai.ai-kb', 'write', 'manage_settings')
     if ('error' in auth) return auth.error
     const result = await syncKnowledgeFromCms(auth.user.id)
     await logAction(auth.user, 'SYNC', 'ai_knowledge_base', undefined, undefined, result)

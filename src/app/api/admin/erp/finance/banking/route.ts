@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import {
   listAccounts, createAccount, importStatement, statementLines, autoMatch, setLineStatus, reconSummary,
@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 
 // GET — ?view=accounts | cheques | petty | statement&account= (+ summaries)
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     const sp = req.nextUrl.searchParams
@@ -44,7 +44,7 @@ const pettyAdd = z.object({ action: z.literal('petty.add'), kind: z.enum(['float
 const body = z.discriminatedUnion('action', [accountCreate, stmtImport, stmtAuto, stmtSet, chequeCreate, chequeMove, pettyAdd])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { CC_KINDS } from '@/lib/erp/costCenter'
 import { listCostCenters, createCostCenter, updateCostCenter, deleteCostCenter, costCenterOverview } from '@/lib/erp/costCenterData'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 // GET — cost centers (?view=overview → live revenue/cost/profit roll-up).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.finance', 'read')
   if ('error' in auth) return auth.error
   try {
     const scope = await scopedCostCenterIds(auth.user)
@@ -29,7 +29,7 @@ const schema = z.discriminatedUnion('action', [
 ])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.finance', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

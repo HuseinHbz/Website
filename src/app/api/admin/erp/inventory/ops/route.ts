@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import {
@@ -19,7 +19,7 @@ export const runtime = 'nodejs'
 
 // GET — inventory ops views (Phase 26.19).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.inventory', 'read')
   if ('error' in auth) return auth.error
   const sp = req.nextUrl.searchParams
   try {
@@ -68,7 +68,7 @@ const schema = z.object({
 const isAdmin = (role: string) => ['administrator', 'super_admin'].includes(role)
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.inventory', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error

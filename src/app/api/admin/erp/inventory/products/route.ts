@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { loadProductLevels } from '@/lib/erp/inventoryData'
@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 // `?picker=1[&q=...]` returns a lightweight, server-limited search (SKU/barcode/
 // name) for the enterprise product picker — never loads the whole catalog (26.15).
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.inventory', 'read')
   if ('error' in auth) return auth.error
   try {
     const sp = req.nextUrl.searchParams
@@ -30,6 +30,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ products: rows, picker: true })
     }
     const products = await loadProductLevels()
+    // بند ۶.۲ ABAC — sensitive fields (unit cost / valuation) are REMOVED from
+    // the API response for rbac-managed users without erp.inventory:cost_view.
+    const { sensitiveFieldVisible } = await import('@/lib/rbac/data')
+    if (!(await sensitiveFieldVisible(auth.user.id, 'erp.inventory:cost_view'))) {
+      const masked = products.map(p => {
+        const rest = { ...(p as unknown as Record<string, unknown>) }
+        delete rest.value; delete rest.avgCost
+        return rest
+      })
+      return NextResponse.json({ products: masked, kpis: inventoryKpis(products), costMasked: true })
+    }
     return NextResponse.json({ products, kpis: inventoryKpis(products) })
   } catch (e) { return apiError(e, 'Failed to load products') }
 }
@@ -58,7 +69,7 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.inventory', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -107,7 +118,7 @@ export async function POST(req: NextRequest) {
 export const PUT = POST
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin('delete')
+  const auth = await requirePermission('erp.inventory', 'write', 'delete')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error

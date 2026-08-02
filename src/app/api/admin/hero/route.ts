@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiError, guardJson, unauthorized } from '@/lib/api/respond'
+import { apiError, guardJson, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { heroContent } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -19,6 +19,7 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await getAdminUser()
     if (!user) return unauthorized()
+    { const deny = await checkTreePermission(user, 'brand.hero', 'write'); if (deny) return deny }
     const body = await guardJson(req)
     const { locale, ...data } = body
     if (!locale) return NextResponse.json({ error: 'locale required' }, { status: 400 })

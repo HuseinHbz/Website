@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson } from '@/lib/api/respond'
+import { apiError, readJson, requirePermission } from '@/lib/api/respond'
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { experimentResult, type VariantCounts } from '@/lib/hero/experiment'
@@ -13,7 +13,7 @@ interface ExpRow { id: number; key: string; name: string; target_path: string | 
 
 // GET — experiments + live results (from hero_events).
 export async function GET() {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('brand.hero', 'read')
   if ('error' in auth) return auth.error
   try {
     const rows = await pgQuery<ExpRow>(`SELECT id, key, name, target_path, status, variants, winner FROM hero_experiments ORDER BY updated_at DESC`)
@@ -42,7 +42,7 @@ const opSchema = z.object({ action: z.enum(['start', 'stop', 'promote', 'delete'
 const body = z.discriminatedUnion('action', [createSchema, opSchema])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('brand.hero', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

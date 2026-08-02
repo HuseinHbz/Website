@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { ENTITY_TYPES, ENTITY_SPECS, templateCsv, type EntityType } from '@/lib/import/engine'
@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 
 // GET — Import Center views: ?view=jobs|job&id=|templates|mappings|analytics|specs
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.import-center', 'read')
   if ('error' in auth) return auth.error
   const sp = req.nextUrl.searchParams
   try {
@@ -51,7 +51,7 @@ const actionSchema = z.object({
 
 // POST — multipart/form-data = upload (job.create); JSON = pipeline actions.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.import-center', 'write', 'edit')
   if ('error' in auth) return auth.error
   const ip = clientIp(req)
   try {

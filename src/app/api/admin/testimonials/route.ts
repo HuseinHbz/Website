@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { testimonials } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -9,6 +9,7 @@ import { logAction } from '@/lib/admin/audit'
 export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  { const deny = await checkTreePermission(user, 'brand.testimonials', 'read'); if (deny) return deny }
   const db = getDb()
   return NextResponse.json(await db.select().from(testimonials).orderBy(testimonials.sortOrder))
 }
@@ -16,6 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'brand.testimonials', 'write'); if (deny) return deny }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await guardJson(req)
   const db = getDb()
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
+  { const deny = await checkTreePermission(user, 'brand.testimonials', 'write'); if (deny) return deny }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id, ...data } = await guardJson(req)
   const db = getDb()

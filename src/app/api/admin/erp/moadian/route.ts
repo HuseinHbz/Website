@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, requireAdmin, readJson, badRequest } from '@/lib/api/respond'
+import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import { clientIp } from '@/lib/api/clientIp'
 import { enqueueInvoice, submitQueued, moadianQueue, moadianStats, loadMoadianConfig, isMoadianLive } from '@/lib/erp/moadian/moadianData'
@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 // GET — مودیان queue + stats + live/sandbox mode.
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requirePermission('erp.moadian', 'read')
   if ('error' in auth) return auth.error
   try {
     const status = req.nextUrl.searchParams.get('status') ?? undefined
@@ -27,7 +27,7 @@ const schema = z.discriminatedUnion('action', [
 
 // POST — enqueue a sales invoice, submit a queued item, or retry all failed.
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin('edit')
+  const auth = await requirePermission('erp.moadian', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, schema)
   if ('error' in parsed) return parsed.error
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(res)
     }
     if (d.action === 'submit') {
+      { const deny = await requireOp(auth.user, 'erp.moadian:submit', 'edit'); if (deny) return deny }
       if (!['administrator', 'super_admin'].includes(auth.user.role)) return badRequest('Only administrators can submit to مودیان')
       const res = await submitQueued(d.queueId)
       await logAction(auth.user, 'moadian.submit', 'moadian_queue', d.queueId, null, res, clientIp(req))
