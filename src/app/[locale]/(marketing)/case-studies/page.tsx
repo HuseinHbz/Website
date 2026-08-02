@@ -33,7 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CaseStudiesPage({ params }: Props) {
   const { locale } = await params
-  const projects = await getPublicProjects()
+  // 26.29 BUG-114: [] (all deactivated) must render the empty state, not demo data
+  const projects = (await getPublicProjects()) ?? []
 
   return (
     <div className="pt-16">

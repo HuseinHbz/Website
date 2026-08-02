@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
@@ -50,7 +51,7 @@ export function MenuBuilder() {
       body: JSON.stringify(editing),
     })
     setSaving(false)
-    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function del(id: number) {

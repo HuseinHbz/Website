@@ -17,7 +17,7 @@ interface DbProject {
 
 interface ProjectsSectionProps {
   locale?: string
-  dbProjects?: DbProject[]
+  dbProjects?: DbProject[] | null
 }
 
 function parseJsonArray(v: string | null | undefined): string[] {
@@ -83,7 +83,8 @@ const FALLBACK_PROJECTS: DbProject[] = [
 
 export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionProps) {
   const isRTL = locale === 'fa'
-  const projects = (dbProjects && dbProjects.length > 0) ? dbProjects : FALLBACK_PROJECTS
+  // 26.29 BUG-114: null = never configured → demo; [] = all deactivated → show nothing
+  const projects = dbProjects !== null && dbProjects !== undefined ? dbProjects : FALLBACK_PROJECTS
   const featured = projects.filter(p => p.featured)
   const rest = projects.filter(p => !p.featured)
   const display = [...featured, ...rest].slice(0, 6)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -29,7 +30,7 @@ export function AcademyManager() {
     if (!editing) return; setSaving(true)
     const method = editing.id ? 'PUT' : 'POST'
     const res = await fetch('/api/admin/courses', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
-    if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
     setSaving(false)
   }
 
@@ -42,7 +43,17 @@ export function AcademyManager() {
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Badge> },
     { key: 'enrollmentsCount', labelEn: 'Enrolled', labelFa: t('enrolled'), type: 'number', numeric: true },
   ]
-  const rowActions: RowAction<Course>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: c => setEditing(c) }]
+  // 26.29 BUG-110 — the DELETE API existed but no row action ever called it.
+  async function del(c: Course) {
+    if (!confirm(t('confirmDel'))) return
+    const res = await crud.remove('/api/admin/courses', c.id)
+    if (res.ok) { toast(t('deleted'), 'success'); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
+  }
+
+  const rowActions: RowAction<Course>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: c => setEditing(c) },
+    { id: 'delete', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: del },
+  ]
 
   return (
     <div>

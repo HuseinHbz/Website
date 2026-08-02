@@ -2248,6 +2248,7 @@ const T: Record<string, { fa: string; en: string }> = {
   perm_back_to_inherit: { fa: 'بازگشت به ارث‌بری', en: 'Back to inheritance' },
   perm_sensitive_ops: { fa: 'عملیات حساس', en: 'Sensitive ops' },
   perm_row_scope: { fa: 'دامنهٔ سطر', en: 'Row scope' },
+  perm_recovery_left: { fa: 'کدهای بازیابی باقی‌مانده', en: 'Recovery codes left' },
   perm_scope_active: { fa: 'دامنه فعال است', en: 'scope active' },
   perm_search: { fa: 'جستجو در درخت دسترسی…', en: 'Search the permission tree…' },
   perm_apply_template: { fa: 'اعمال قالب نقش…', en: 'Apply role template…' },

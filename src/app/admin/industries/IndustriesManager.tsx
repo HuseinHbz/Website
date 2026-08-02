@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -46,7 +47,7 @@ export function IndustriesManager() {
       setEditing(null)
       load()
     } else {
-      toast(t('failed'), 'error')
+      toast(await crud.errorOf(res, t('failed')), 'error')
     }
     setSaving(false)
   }

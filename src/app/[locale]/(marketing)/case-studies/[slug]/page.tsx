@@ -9,7 +9,7 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  const projects = await getPublicProjects()
+  const projects = (await getPublicProjects()) ?? []
   const locales = ['en', 'fa']
   return locales.flatMap(locale => projects.map(p => ({ locale, slug: p.slug })))
 }

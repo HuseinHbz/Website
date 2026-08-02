@@ -16,8 +16,8 @@ interface AboutSectionProps {
   locale?: string
   dbAbout?: DbAbout | null
   dbTimeline?: DbTimeline[]
-  dbSkills?: DbSkill[]
-  dbCerts?: DbCert[]
+  dbSkills?: DbSkill[] | null
+  dbCerts?: DbCert[] | null
   contactInfo?: ContactInfo
   socialLinks?: SocialLinks
 }
@@ -212,11 +212,12 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
     ? dbTimeline.map(t => ({ year: t.year, titleEn: t.titleEn, titleFa: t.titleFa, descEn: t.descEn || '', descFa: t.descFa || '', color: t.color || '#6366f1' }))
     : TIMELINE
 
-  const SKILLS_DATA: SkillItem[] = (dbSkills && dbSkills.length > 0)
+  // 26.29 BUG-114: demo data ONLY when never configured (null); [] = deliberately deactivated
+  const SKILLS_DATA: SkillItem[] = dbSkills !== null && dbSkills !== undefined
     ? dbSkills.map(s => ({ nameEn: s.nameEn, nameFa: s.nameFa, categoryEn: s.categoryEn, categoryFa: s.categoryFa, level: s.level, color: s.color || '#6366f1', icon: s.icon || null }))
     : SKILLS
 
-  const CERTS_DATA: CertItem[] = (dbCerts && dbCerts.length > 0)
+  const CERTS_DATA: CertItem[] = dbCerts !== null && dbCerts !== undefined
     ? dbCerts.map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, issuer: c.issuer || '', color: c.color || '#6366f1' }))
     : CERTS
 

@@ -30,6 +30,32 @@ async function autoResyncIfNeeded() {
   } catch { /* silent */ }
 }
 
+
+/**
+ * 26.29 BUG-114 — "deactivated means deactivated".
+ *
+ * The homepage sections fell back to hardcoded demo arrays whenever the DB
+ * returned an empty list. Deactivating every client therefore made ALL the
+ * built-in demo clients appear — the operator's action produced the opposite
+ * of what they asked for.
+ *
+ * Fix: distinguish the two empty cases.
+ *   • table has NO rows at all  → `null`  = never configured, demo content is
+ *     still a reasonable first-run experience for a brochure site
+ *   • table has rows, none active → `[]`  = a deliberate choice; render the
+ *     empty state and show NOTHING
+ * Callers fall back to demo data only on `null`.
+ */
+async function activeOrNull<T>(
+  loadActive: () => Promise<T[]>,
+  countAll: () => Promise<number>,
+): Promise<T[] | null> {
+  const rows = await loadActive()
+  if (rows.length > 0) return rows
+  return (await countAll()) > 0 ? [] : null
+}
+
+
 export async function getPublicSetting(key: string): Promise<string | null> {
   try {
     const db = getDb()
@@ -55,35 +81,66 @@ export async function getPublicAbout(locale: string) {
 export async function getPublicProjects() {
   try {
     const db = getDb()
-    return await db.select().from(projects).where(eq(projects.active, true)).orderBy(asc(projects.sortOrder))
-  } catch { return [] }
+    return await activeOrNull(
+      () => db.select().from(projects).where(eq(projects.active, true)).orderBy(asc(projects.sortOrder)),
+      async () => Number((await db.select({ c: sql<number>`count(*)` }).from(projects))[0]?.c ?? 0),
+    )
+  } catch { return null }
 }
 
 export async function getPublicServices() {
   try {
     const db = getDb()
-    return await db.select().from(services).where(eq(services.active, true)).orderBy(asc(services.sortOrder))
-  } catch { return [] }
+    return await activeOrNull(
+      () => db.select().from(services).where(eq(services.active, true)).orderBy(asc(services.sortOrder)),
+      async () => Number((await db.select({ c: sql<number>`count(*)` }).from(services))[0]?.c ?? 0),
+    )
+  } catch { return null }
 }
 
 export async function getPublicSkills() {
   try {
     const db = getDb()
-    return await db.select().from(skills).where(eq(skills.active, true)).orderBy(asc(skills.sortOrder))
-  } catch { return [] }
+    return await activeOrNull(
+      () => db.select().from(skills).where(eq(skills.active, true)).orderBy(asc(skills.sortOrder)),
+      async () => Number((await db.select({ c: sql<number>`count(*)` }).from(skills))[0]?.c ?? 0),
+    )
+  } catch { return null }
 }
 
 export async function getPublicCerts() {
   try {
     const db = getDb()
-    return await db.select().from(certifications).where(eq(certifications.active, true)).orderBy(asc(certifications.sortOrder))
-  } catch { return [] }
+    return await activeOrNull(
+      () => db.select().from(certifications).where(eq(certifications.active, true)).orderBy(asc(certifications.sortOrder)),
+      async () => Number((await db.select({ c: sql<number>`count(*)` }).from(certifications))[0]?.c ?? 0),
+    )
+  } catch { return null }
 }
 
 export async function getPublicClients() {
   try {
     const db = getDb()
-    return await db.select().from(clients).where(eq(clients.active, true)).orderBy(asc(clients.sortOrder))
+    return await activeOrNull(
+      () => db.select().from(clients).where(eq(clients.active, true)).orderBy(asc(clients.sortOrder)),
+      async () => Number((await db.select({ c: sql<number>`count(*)` }).from(clients))[0]?.c ?? 0),
+    )
+  } catch { return null }
+}
+
+/**
+ * 26.29 BUG-116 — professional credentials (CCNA, LPIC, VCP …) are managed at
+ * /admin/credentials but were never surfaced anywhere on the public site.
+ * Distinct from `certifications` (organizational certificates, بند ۳).
+ * No demo fallback: an empty list simply renders nothing.
+ */
+export async function getPublicCredentials() {
+  try {
+    const { credentials } = await import('@/lib/db/schema')
+    const db = getDb()
+    return await db.select().from(credentials)
+      .where(eq(credentials.active, true))
+      .orderBy(asc(credentials.sortOrder))
   } catch { return [] }
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ensureSlug } from '@/lib/admin/slug'
 import { guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { products } from '@/lib/db/schema'
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await guardJson(req)
   const db = getDb()
-  const result = (await db.insert(products).values({ ...body, updatedBy: user.id }).returning())[0]
+  const result = (await db.insert(products).values({ ...ensureSlug(body as Record<string, unknown>, "product"), updatedBy: user.id } as never).returning())[0]
   await logAction(user, 'CREATE', 'product', String(result.id), null, result)
   return NextResponse.json(result, { status: 201 })
 }

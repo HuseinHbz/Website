@@ -23,7 +23,7 @@ export function ClientsManager() {
     setSaving(true)
     const res = await crud.save('/api/admin/clients', editing)
     setSaving(false)
-    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function del(id: number) {

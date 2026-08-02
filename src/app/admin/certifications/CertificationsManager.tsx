@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
@@ -74,7 +75,7 @@ export function CertificationsManager() {
     const res = await fetch('/api/admin/media', { method: 'POST', body: fd })
     setUploading(false)
     if (res.ok) { const d = await res.json(); set('badgeUrl', d.url); toast(t('saved')) }
-    else toast(t('failed'), 'error')
+    else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   return (

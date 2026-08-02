@@ -28,7 +28,7 @@ interface DbService {
 
 interface ServicesSectionProps {
   locale?: string
-  dbServices?: DbService[]
+  dbServices?: DbService[] | null
 }
 
 const SERVICES: ServiceData[] = [
@@ -173,7 +173,8 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
   const [activeCategory, setActiveCategory] = useState(isRTL ? 'همه' : 'All')
   const [expandedService, setExpandedService] = useState<string | null>(null)
 
-  const SERVICES_DATA: ServiceData[] = (dbServices && dbServices.length > 0)
+  // 26.29 BUG-114: null = never configured → demo; [] = all deactivated → show nothing
+  const SERVICES_DATA: ServiceData[] = dbServices !== null && dbServices !== undefined
     ? dbServices.map((s) => ({
         id: s.slug,
         icon: s.icon || '🔧',

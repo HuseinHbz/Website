@@ -29,14 +29,14 @@ export function SkillsManager() {
     setSaving(true)
     const res = await crud.save('/api/admin/skills', editS)
     setSaving(false)
-    if (res.ok) { toast(t('saved')); setModal(false); loadSkills() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); setModal(false); loadSkills() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function saveCert() {
     setSaving(true)
     const res = await crud.save('/api/admin/certifications', editC)
     setSaving(false)
-    if (res.ok) { toast(t('saved')); setModal(false); loadCerts() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); setModal(false); loadCerts() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function delSkill(id: number) {

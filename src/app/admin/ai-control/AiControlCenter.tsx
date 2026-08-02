@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, SectionDivider, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT } from '@/lib/admin/locale'
 
@@ -107,7 +108,7 @@ export function AiControlCenter() {
       setModules(prev => prev.map(m => m.id === editingModule.id ? editingModule : m))
       toast(t('saved'))
       setModuleModal(false)
-    } else toast(t('failed'), 'error')
+    } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function saveKb() {
@@ -122,7 +123,7 @@ export function AiControlCenter() {
       toast(t('saved'))
       setKbModal(false)
       fetch('/api/admin/ai-kb').then(r => r.json()).then(d => setKbItems(Array.isArray(d) ? d : []))
-    } else toast(t('failed'), 'error')
+    } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function deleteKb(id: number) {

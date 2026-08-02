@@ -53,6 +53,17 @@ export const crud = {
   remove(path: string, id: number | string): Promise<Response> {
     return send(path, 'DELETE', { id })
   },
+  /**
+   * 26.29 — extract the server's error message from a failed Response so the
+   * toast can show WHY ("Required field missing: slug") instead of a generic
+   * "Failed" that makes the whole module look broken (BUG-101..109 class).
+   */
+  async errorOf(r: Response, fallback = 'Failed'): Promise<string> {
+    try {
+      const d = await r.clone().json() as { error?: string }
+      return d?.error || fallback
+    } catch { return fallback }
+  },
 }
 
 /** Load a list resource with loading state and a stable `reload`. */

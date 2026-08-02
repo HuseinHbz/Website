@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -121,7 +122,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
     { key: 'role', labelEn: 'Role', labelFa: 'نقش', type: 'enum', options: ['super_admin', 'administrator', 'editor', 'auditor', 'viewer'].map(r => ({ value: r, labelEn: r, labelFa: r })), render: u => <Badge color={ROLE_COLOR[u.role] || 'slate'}>{u.role.replace('_', ' ')}</Badge> },
     { key: 'totpEnabled', labelEn: '2FA', labelFa: '2FA', type: 'boolean', value: u => !!u.totpEnabled, render: u => <button onClick={() => open2FA(u)} className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${u.totpEnabled ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-surface-2/50 text-text-tertiary hover:bg-surface-2'}`}>{u.totpEnabled ? '🔐 On' : '○ Off'}</button> },
     { key: 'active', labelEn: 'Status', labelFa: 'وضعیت', type: 'boolean', value: u => u.active, render: u => <Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Active' : 'Inactive'}</Badge> },
-    { key: 'lastLogin', labelEn: 'Last Login', labelFa: 'آخرین ورود', type: 'date', render: u => <span className="text-xs text-text-tertiary">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</span> },
+    { key: 'lastLogin', labelEn: 'Last Login', labelFa: 'آخرین ورود', type: 'date', render: u => <span className="text-xs text-text-tertiary tabular-nums">{formatDateTime(u.lastLogin, locale)}</span> },
   ]
   const userActions: RowAction<User>[] = [
     { id: 'edit', labelEn: 'Edit', labelFa: 'ویرایش', icon: '✎', onClick: u => { setEditing({ ...u, password: '', department: u.department ?? '' }); setModal(true) } },

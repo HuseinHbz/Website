@@ -7,7 +7,7 @@ interface DbClient { nameEn: string; nameFa: string; typeEn: string | null; type
 
 interface CompanyPortfolioProps {
   locale?: string
-  dbClients?: DbClient[]
+  dbClients?: DbClient[] | null
 }
 
 const CLIENTS = [
@@ -58,18 +58,25 @@ function MarqueeRow({ items, reverse = false, speed = 30, isRTL = false }: {
   speed?: number
   isRTL?: boolean
 }) {
-  const doubled = [...items, ...items]
+  // 26.29 BUG-115 — the marquee duplicates the list to make the loop seamless.
+  // With only a handful of partners that duplicate is plainly visible (Senso,
+  // Popcorn, Kenzo twice in a row). Below the threshold, render a centered
+  // static row instead: no duplication, no animation, nothing to notice.
+  const MIN_FOR_MARQUEE = 8
+  const isMarquee = items.length >= MIN_FOR_MARQUEE
+  const rendered = isMarquee ? [...items, ...items] : items
+  if (items.length === 0) return null   // BUG-114: deactivated → show nothing
 
   return (
-    <div className="flex overflow-hidden relative">
+    <div className={`flex relative ${isMarquee ? 'overflow-hidden' : 'justify-center flex-wrap'}`}>
       <div
-        className="flex gap-4 items-center"
-        style={{
+        className={`flex gap-4 items-center ${isMarquee ? '' : 'flex-wrap justify-center'}`}
+        style={isMarquee ? {
           animation: `${reverse ? 'marqueeReverse' : 'marquee'} ${speed}s linear infinite`,
           willChange: 'transform',
-        }}
+        } : undefined}
       >
-        {doubled.map((item, i) => (
+        {rendered.map((item, i) => (
           <div
             key={i}
             className="flex items-center gap-3 px-5 py-3 rounded-xl flex-shrink-0 hover:border-accent/40 transition-colors duration-200 cursor-default"
@@ -99,11 +106,12 @@ export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioP
   const isRTL = locale === 'fa'
   const STATS = isRTL ? STATS_FA : STATS_EN
 
-  const regularClients = (dbClients && dbClients.length > 0)
+  // 26.29 BUG-114: null = never configured → demo logos; [] = all deactivated → empty
+  const regularClients = dbClients !== null && dbClients !== undefined
     ? dbClients.filter(c => !c.isTechPartner).map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, icon: '🏢', typeEn: c.typeEn || '', typeFa: c.typeFa || '', logoUrl: c.logoUrl }))
     : CLIENTS
 
-  const techPartners = (dbClients && dbClients.length > 0)
+  const techPartners = dbClients !== null && dbClients !== undefined
     ? dbClients.filter(c => c.isTechPartner).map(c => ({ name: c.nameEn, icon: '🔧', color: '#6366f1', logoUrl: c.logoUrl }))
     : TECH_PARTNERS
 

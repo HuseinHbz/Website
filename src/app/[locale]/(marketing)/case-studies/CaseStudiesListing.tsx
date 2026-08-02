@@ -164,15 +164,22 @@ export function CaseStudiesListing({ locale, projects }: Props) {
         if (!haystack.includes(q)) return false
       }
 
+      // 26.29 BUG-113 — "no filter" must be recognised in BOTH languages. The
+      // state starts at the English 'All' while `allLabel` is 'همه' in Persian,
+      // so the industry check below used to compare every project's industry to
+      // the literal string 'All' → nothing matched → an empty page until the
+      // visitor clicked the «همه» tab. `isAll` makes the two checks symmetric.
+      const isAll = (v: string) => v === 'All' || v === allLabel
+
       // technology filter
-      if (activeFilter !== allLabel && activeFilter !== 'All') {
+      if (!isAll(activeFilter)) {
         const techHaystack = [...tags, ...technologyFilters,
           isRTL ? p.industryFa as string : p.industryEn as string].join(' ').toLowerCase()
         if (!techHaystack.toLowerCase().includes(activeFilter.toLowerCase())) return false
       }
 
       // industry filter
-      if (activeIndustry !== allLabel) {
+      if (!isAll(activeIndustry)) {
         if (industry !== activeIndustry) return false
       }
 

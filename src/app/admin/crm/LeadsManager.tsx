@@ -6,8 +6,9 @@ import { Card, Btn, Input, Select, PageHeader, Modal, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { usePointerDnd } from '@/lib/admin/pointerDnd'
 
-type Status = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
+type Status ='new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 type Source = 'website' | 'referral' | 'consultation' | 'contact_form' | 'event' | 'social' | 'email' | 'other'
 interface Lead {
   id?: number; name: string; email: string | null; phone: string | null; company: string | null
@@ -47,7 +48,6 @@ export function LeadsManager() {
   const [detail, setDetail] = useState<Lead | null>(null)
   const [activities, setActivities] = useState<Activity[]>([])
   const [newAct, setNewAct] = useState({ kind: 'note', body: '' })
-  const [dragId, setDragId] = useState<number | null>(null)
 
   // بند ۵.۴: view mode persisted per user in the existing table_prefs store.
   useEffect(() => {
@@ -119,6 +119,13 @@ export function LeadsManager() {
   }
   function set<K extends keyof Lead>(k: K, v: Lead[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
+  // 26.29 BUG-112 — pointer-based kanban drag (works on mouse AND touch; the old
+  // HTML5 handler never started a drag because dataTransfer was never set).
+  const { dragId, overZone, dragHandlers, zoneProps } = usePointerDnd<number>((id, stage) => {
+    const l = leads.find(x => x.id === id)
+    if (l && l.status !== stage) void move(l, stage as Status)
+  })
+
   const columns: Column<Lead>[] = [
     { key: 'name', labelEn: 'Lead', labelFa: t('lead_colLead'), render: l => <div><div className="font-medium text-text-primary">{l.name}</div><div className="text-xs text-text-tertiary">{l.email || l.phone || '—'}</div></div> },
     { key: 'company', labelEn: 'Company', labelFa: t('lead_colCompany'), render: l => <span className="text-text-secondary text-xs">{l.company || '—'}</span> },
@@ -170,17 +177,16 @@ export function LeadsManager() {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
           {KANBAN_STAGES.map(stage => (
             <div key={stage}
-              onDragOver={e => e.preventDefault()}
-              onDrop={() => { const l = leads.find(x => x.id === dragId); if (l && l.status !== stage) move(l, stage); setDragId(null) }}
-              className="rounded-xl bg-surface-2 border border-subtle p-2 min-h-[220px]">
+              {...zoneProps(stage)}
+              className={`rounded-xl border p-2 min-h-[220px] transition-colors ${overZone === stage && dragId !== null ? 'bg-brand/10 border-brand' : 'bg-surface-2 border-subtle'}`}>
               <div className="flex items-center justify-between px-1 mb-2">
                 <p className="text-xs font-semibold text-text-secondary">{stLabel(stage)}</p>
                 <span className="text-2xs text-text-tertiary tabular-nums">{leads.filter(l => l.status === stage).length}</span>
               </div>
               <div className="space-y-2">
                 {leads.filter(l => l.status === stage).map(l => (
-                  <div key={l.id} draggable onDragStart={() => setDragId(l.id!)} onClick={() => openDetail(l)}
-                    className="rounded-lg bg-surface border border-border p-2.5 cursor-grab active:cursor-grabbing hover:border-brand/50 transition-colors">
+                  <div key={l.id} {...dragHandlers(l.id!, stage)} onClick={() => { if (dragId === null) openDetail(l) }}
+                    className="rounded-lg bg-surface border border-border p-2.5 hover:border-brand/50 transition-colors">
                     <p className="text-xs font-semibold text-text-primary truncate">{l.name}</p>
                     {l.company && <p className="text-2xs text-text-tertiary truncate">{l.company}</p>}
                     <div className="flex items-center justify-between mt-1.5">

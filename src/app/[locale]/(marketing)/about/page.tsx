@@ -4,7 +4,8 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import { personSchema } from '@/lib/schema'
 import { SITE } from '@/lib/site'
 import type { Metadata } from 'next'
-import { getPublicAbout, getPublicTimeline, getPublicSkills, getPublicCerts, getPublicSetting } from '@/lib/publicData'
+import { getPublicAbout, getPublicTimeline, getPublicSkills, getPublicCerts, getPublicCredentials, getPublicSetting } from '@/lib/publicData'
+import { ProfessionalCredentials } from '@/components/sections/ProfessionalCredentials'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
@@ -28,7 +29,7 @@ interface Props {
 
 export default async function AboutPage({ params }: Props) {
   const { locale } = await params
-  const [dbAbout, dbTimeline, dbSkills, dbCerts,
+  const [dbAbout, dbTimeline, dbSkills, dbCerts, dbCredentials,
     contactEmail, contactPhone, contactLocationEn, contactLocationFa,
     socialLinkedin, socialGithub, socialTwitter, socialInstagram, socialTelegram, socialWhatsapp,
   ] = await Promise.all([
@@ -36,6 +37,7 @@ export default async function AboutPage({ params }: Props) {
     getPublicTimeline(),
     getPublicSkills(),
     getPublicCerts(),
+    getPublicCredentials(),
     getPublicSetting('contact_email'),
     getPublicSetting('contact_phone'),
     getPublicSetting('contact_location_en'),
@@ -79,6 +81,8 @@ export default async function AboutPage({ params }: Props) {
           contactInfo={contactInfo}
           socialLinks={socialLinks}
         />
+        {/* 26.29 BUG-116 — professional credentials, right after the expertise areas */}
+        <ProfessionalCredentials locale={locale} items={dbCredentials} />
         <ClosingCta locale={locale} />
       </div>
     </>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ensureSlug } from '@/lib/admin/slug'
 import { apiError, guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { services } from '@/lib/db/schema'
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     const body = await guardJson(req)
     const { id: _id, updatedAt: _u, ...data } = body
     const db = getDb()
-    const result = await db.insert(services).values({ ...data, updatedBy: user?.id }).returning()
+    const result = await db.insert(services).values({ ...ensureSlug(data as Record<string, unknown>, "service"), updatedBy: user?.id } as never).returning()
     await logAction(user, 'CREATE', 'services', result[0]?.id, null, data)
     return NextResponse.json(result[0])
   } catch (e: unknown) {

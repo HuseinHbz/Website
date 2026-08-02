@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -45,7 +46,7 @@ export function CredentialsManager() {
     setSaving(true)
     const method = editing.id ? 'PUT' : 'POST'
     const res = await fetch('/api/admin/credentials', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
-    if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved'), 'success'); setEditing(null); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
     setSaving(false)
   }
 

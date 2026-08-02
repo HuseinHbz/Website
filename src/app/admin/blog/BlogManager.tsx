@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
@@ -99,7 +100,7 @@ export function BlogManager() {
     const method = editCat.id ? 'PUT' : 'POST'
     const res = await fetch('/api/admin/blog/categories', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCat) })
     setSaving(false)
-    if (res.ok) { toast(t('saved')); setCatModal(false); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); setCatModal(false); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function delCat(id: number) {
@@ -129,7 +130,7 @@ export function BlogManager() {
       set('coverImage', data.url)
       toast(t('saved'))
     } else {
-      toast(t('failed'), 'error')
+      toast(await crud.errorOf(res, t('failed')), 'error')
     }
   }
 

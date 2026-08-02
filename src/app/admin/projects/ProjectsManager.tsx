@@ -105,18 +105,18 @@ export function ProjectsManager() {
     setSaving(true)
     const res = await crud.save('/api/admin/projects', editing)
     setSaving(false)
-    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); setModal(false); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function del(id: number) {
     if (!confirm(t('confirmDel'))) return
     const res = await crud.remove('/api/admin/projects', id)
-    if (res.ok) { toast(t('deleted')); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('deleted')); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function toggle(p: Project) {
     const res = await crud.patch('/api/admin/projects', { id: p.id, active: !p.active })
-    if (res.ok) { toast(t('saved')); load() } else toast(t('failed'), 'error')
+    if (res.ok) { toast(t('saved')); load() } else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   function set<K extends keyof Project>(k: K, v: Project[K]) { setEditing((e) => ({ ...e, [k]: v })) }

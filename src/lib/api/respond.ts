@@ -5,8 +5,29 @@ import { getAdminUser, canDo, type AdminUser } from '@/lib/admin/auth'
 
 // Generic 500 — never leak internal error messages to the client. The real
 // error is logged server-side (visible in /admin/logs-monitoring).
+/** Human field name from a snake_case column ("name_en" → "name en"). */
+function fieldName(col: string): string { return col.replace(/_/g, ' ') }
+
+/**
+ * 26.29 BUG-101..109 common root: legacy CMS routes pass the body straight to
+ * Drizzle, so a missing required column (slug, name_en, …) or a duplicate
+ * unique value surfaced as a generic 500 — the UI showed "Failed" and the whole
+ * module looked broken. A constraint violation caused by user input is a CLIENT
+ * error: map PG 23502 (not-null) and 23505 (unique) to a 400 naming the field.
+ */
 export function apiError(e: unknown, message = 'Internal server error', status = 500) {
   if (e instanceof BodyError) return NextResponse.json({ error: e.message }, { status: 400 })
+  const cause = (e as { cause?: unknown })?.cause ?? e
+  const pg = cause as { code?: string; column?: string; detail?: string; constraint?: string }
+  if (pg?.code === '23502') {
+    const col = pg.column ? fieldName(pg.column) : 'a required field'
+    return NextResponse.json({ error: `Required field missing: ${col}` }, { status: 400 })
+  }
+  if (pg?.code === '23505') {
+    const m = /Key \(([^)]+)\)/.exec(pg.detail ?? '')
+    const col = m ? fieldName(m[1]) : 'value'
+    return NextResponse.json({ error: `Duplicate ${col} — it must be unique` }, { status: 400 })
+  }
   logger.error(message, { error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined })
   return NextResponse.json({ error: message }, { status })
 }

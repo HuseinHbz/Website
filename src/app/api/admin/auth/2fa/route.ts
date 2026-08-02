@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
     const otpauth = generateTotpURI(user.email, 'HBZ Admin', plain)
     const qrDataUrl = await QRCode.toDataURL(otpauth)
     const recoveryLeft = await remainingRecoveryCodes(targetId)
-    return NextResponse.json({ secret: plain, qrCode: qrDataUrl, enabled: user.totpEnabled, email: user.email, recoveryLeft })
+    // 26.29 بند ۶ — Security Center shows the last successful login (date + time)
+    return NextResponse.json({ secret: plain, qrCode: qrDataUrl, enabled: user.totpEnabled, email: user.email, recoveryLeft, lastLogin: user.lastLogin ?? null })
   } catch (e) { return apiError(e) }
 }
 

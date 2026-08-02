@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, PageHeader, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 
 type TwoFAState = {
   enabled: boolean
   secret: string
   qrCode: string
+  recoveryLeft?: number
+  lastLogin?: string | null
 }
 
 export function SecurityManager() {
   const t = useT()
+  const locale = useAdminLocale()
   const [state, setState] = useState<TwoFAState | null>(null)
   const [loading, setLoading] = useState(true)
   const [code, setCode] = useState('')
@@ -101,6 +105,19 @@ export function SecurityManager() {
                 {state?.enabled ? `● ${t('twoFaEnabled')}` : `○ ${t('twoFaDisabled')}`}
               </span>
             </div>
+
+            {/* 26.29 بند ۶ — last successful login with DATE **and** TIME
+                (Jalali + Persian digits in fa; identical to the Users column). */}
+            <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-xs">
+              <span className="text-text-tertiary">{t('lastLogin')}</span>
+              <span className="text-text-secondary tabular-nums">{formatDateTime(state?.lastLogin, locale)}</span>
+            </div>
+            {state?.enabled && (
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-text-tertiary">{t('perm_recovery_left')}</span>
+                <span className="text-text-secondary tabular-nums">{state.recoveryLeft ?? 0}</span>
+              </div>
+            )}
 
             <div className="mt-4 flex gap-2">
               {!state?.enabled ? (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, SectionDivider, useToast, Badge, Modal } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
@@ -58,7 +59,7 @@ export function SeoManager() {
     const res = await fetch('/api/admin/redirects', { method: editingRedirect.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editingRedirect) })
     setSavingRedirect(false)
     if (res.ok) { toast(t('saved')); setRedirectModal(false); fetch('/api/admin/redirects').then(r => r.json()).then(d => setRedirects(Array.isArray(d) ? d : [])) }
-    else toast(t('failed'), 'error')
+    else toast(await crud.errorOf(res, t('failed')), 'error')
   }
 
   async function deleteRedirect(id: number) {
