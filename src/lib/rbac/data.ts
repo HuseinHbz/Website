@@ -137,6 +137,19 @@ export async function rowInScope(userId: string, key: string, ownerId: string | 
 }
 
 /**
+ * 26.28 بند ۳.۱ — shared field-stripping helper: REMOVES the keys from the
+ * payload (not undefined, not null — the key is absent), so DevTools shows
+ * nothing. CSS hiding is forbidden for sensitive fields.
+ */
+export function stripFields<T extends Record<string, unknown>>(rows: T[], fields: string[]): Record<string, unknown>[] {
+  return rows.map(r => {
+    const out = { ...r } as Record<string, unknown>
+    for (const f of fields) delete out[f]
+    return out
+  })
+}
+
+/**
  * بند ۶.۲ sensitive-field visibility. A user with NO rbac rows at all sees the
  * field (legacy behaviour, R5). An rbac-managed user (any grant/op row) must be
  * explicitly granted the field's op — default-deny; explicit false always hides.

@@ -61,6 +61,19 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
 }
 
 /**
+ * 26.28 بند ۳ — sensitive fields covered by a field-grant op. The listed keys
+ * are REMOVED from the API payload (stripFields) for rbac-managed users without
+ * the op — never hidden with CSS. Secrets in settings/integrations are already
+ * write-only + masked at the source (26.26b BUG-015), so they need no op here.
+ */
+export const SENSITIVE_FIELDS: Record<string, { routes: string[]; fields: string[] }> = {
+  'erp.inventory:cost_view': {
+    routes: ['erp/inventory/products', 'erp/inventory/overview'],
+    fields: ['value', 'avgCost', 'unitCost', 'kpis.totalValue', 'topValue'],
+  },
+}
+
+/**
  * 26.28 بند ۲.۳ — modules with a REAL row-scope implementation (server-side WHERE).
  * The permission-tree UI shows the scope selector ONLY for these keys, and only
  * offers the scopes each one actually enforces — no empty promises.
