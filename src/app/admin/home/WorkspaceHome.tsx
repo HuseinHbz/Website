@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useAdminLocale } from '@/lib/admin/locale'
-import { WORKSPACES, workspaceHome, visibleWorkspaces } from '@/lib/admin/workspaces'
+import { WORKSPACES, workspaceHome, visibleWorkspaces, type GrantMap } from '@/lib/admin/workspaces'
 import type { AdminUser } from '@/lib/admin/auth'
 
 export function WorkspaceHome({ role }: { role: AdminUser['role'] }) {
@@ -13,7 +14,16 @@ export function WorkspaceHome({ role }: { role: AdminUser['role'] }) {
   // switcher BOTH read visibleWorkspaces(role); the grid no longer shows every
   // workspace regardless of RBAC (which both leaked unauthorized entries AND made
   // the grid count differ from the role-filtered dropdown).
-  const workspaces = visibleWorkspaces(role)
+  // 26.27: tree grants — a none workspace never renders here either.
+  const [grants, setGrants] = useState<GrantMap | undefined>(undefined)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/admin/auth/me').then(r => r.ok ? r.json() : null).then(j => {
+      if (alive && j?.grants && Object.keys(j.grants).length > 0) setGrants(j.grants)
+    }).catch(() => null)
+    return () => { alive = false }
+  }, [])
+  const workspaces = visibleWorkspaces(role, grants)
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>

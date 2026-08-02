@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
   try {
     const rate = await rialRateFor(d.currency)
     if (rate == null) return badRequest(`No exchange rate configured for ${d.currency} — set one in Finance → Currency`)
+    // 26.27: create-and-post is the same sensitive op as posting — same gate
+    if (d.post) { const deny = await requireOp(auth.user, 'erp.finance:post', 'edit'); if (deny) return deny }
     if (d.post) { const gate = await assertPostable(d.date); if (!gate.ok) return badRequest(gate.error!) }
     const entryNo = await nextNumber('journal', { legacyPrefix: 'JE', userId: auth.user.id })
     const entry = (await pgQuery(
