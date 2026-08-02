@@ -302,8 +302,13 @@ sudo bash deploy/uninstall.sh          # با تأیید تعاملی + بکاپ
 
 | Branch | توضیح |
 |--------|-------|
-| `hbz` | **production** — monolith (Next.js + SQLite) |
-| `feature/v2-enterprise-upgrade` | توسعه — Enterprise Architecture |
+| `feature/v2-enterprise-upgrade` | **شاخهٔ تولید** — سرور از همین شاخه آپدیت می‌شود (`deploy/branch.env` → `PROD_BRANCH`) |
+| `hbz` | آرشیو نسخهٔ قدیمی monolith (Next.js + SQLite) |
+| `claude/*` | شاخه‌های کاری موقت — **هرگز روی تولید دیپلوی نمی‌شوند** (گارد در `deploy/update.sh`) |
+
+> شاخهٔ تولید عمداً از «default branch» گیت‌هاب خوانده **نمی‌شود**: default ممکن است
+> موقتاً روی یک شاخهٔ کاری تنظیم شده باشد و سرور کد نیمه‌کاره بگیرد. تنها منبع حقیقت
+> `deploy/branch.env` است؛ برای تغییر شاخهٔ تولید فقط همان یک مقدار را عوض کنید.
 
 ---
 

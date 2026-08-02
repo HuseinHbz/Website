@@ -1531,6 +1531,13 @@ start the app, `wait-on /api/health`, then run.
 - The build artifact upload uses `include-hidden-files: true` (`.next` is a dotfile).
 
 ## Deploy
+- **Production branch = `feature/v2-enterprise-upgrade`, declared once in
+  `deploy/branch.env` (`PROD_BRANCH`).** `install.sh`/`update.sh` source that file
+  instead of hardcoding a branch or following GitHub's default branch (the default
+  can be pointed at a temporary agent branch, which would deploy half-finished code).
+  `update.sh` refuses any `claude/*`, `codex/*`, `tmp/*`, `wip/*` branch unless
+  `--allow-agent-branch` is passed. Override for a test only: `HBZ_BRANCH=… sudo -E
+  bash deploy/update.sh`.
 - App runs under **PM2** as user **`hbz`** on port **3000**, behind **nginx**.
 - Installed at `/var/www/habibazar`; scripts run from `/var/www/Website/deploy`.
 - **PM2 logs live in `/home/hbz/logs`** (the `hbz` user cannot write to `/var/log`).

@@ -3,16 +3,25 @@
 # HBZ Website — آپدیت به آخرین نسخه (zero-downtime)
 # =============================================================================
 # استفاده:
-#   sudo bash deploy/update.sh                               # branch پیش‌فرض
+#   sudo bash deploy/update.sh                               # شاخهٔ تولید (deploy/branch.env)
 #   sudo bash deploy/update.sh --branch feature/my-branch   # branch خاص
 #   sudo bash deploy/update.sh --skip-build                 # فقط pull + restart
+#
+# شاخهٔ تولید در deploy/branch.env تعریف شده (PROD_BRANCH) — نه از default branch
+# گیت‌هاب خوانده می‌شود، چون آن ممکن است موقتاً روی یک شاخهٔ کاری باشد.
 # =============================================================================
 set -euo pipefail
 
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
-BRANCH="feature/v2-enterprise-upgrade"
 SKIP_BUILD=false
+
+# شاخهٔ تولید از تنها منبع حقیقت (deploy/branch.env) خوانده می‌شود.
+# ترتیب اولویت: آرگومان --branch > متغیر HBZ_BRANCH > PROD_BRANCH فایل.
+BRANCH_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/branch.env"
+# shellcheck source=/dev/null
+[[ -f "$BRANCH_ENV" ]] && source "$BRANCH_ENV"
+BRANCH="${HBZ_BRANCH:-${PROD_BRANCH:-feature/v2-enterprise-upgrade}}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[✔]${NC} $*"; }
@@ -23,13 +32,23 @@ error() { echo -e "${RED}[✘]${NC} $*"; exit 1; }
 [[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/update.sh"
 [[ ! -d "$APP_DIR/.git" ]] && error "مخزن یافت نشد: $APP_DIR — ابتدا install.sh اجرا کنید"
 
+ALLOW_AGENT_BRANCH=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --branch)     BRANCH="$2"; shift 2 ;;
     --skip-build) SKIP_BUILD=true; shift ;;
+    --allow-agent-branch) ALLOW_AGENT_BRANCH=true; shift ;;
     *) error "آرگومان ناشناخته: $1" ;;
   esac
 done
+
+# گارد: شاخه‌های موقتِ کاری (claude/*, wip/* …) هرگز روی تولید دیپلوی نشوند —
+# حتی اگر default branch مخزن موقتاً روی یکی از آن‌ها تنظیم شده باشد.
+if [[ "$ALLOW_AGENT_BRANCH" == "false" && "$BRANCH" =~ ${PROD_BRANCH_FORBIDDEN:-^(claude/|codex/|tmp/|wip/)} ]]; then
+  error "شاخهٔ «$BRANCH» یک شاخهٔ کاری موقت است و برای تولید مجاز نیست.
+        شاخهٔ تولید: ${PROD_BRANCH:-feature/v2-enterprise-upgrade} (deploy/branch.env)
+        اگر واقعاً می‌خواهید: sudo bash deploy/update.sh --branch $BRANCH --allow-agent-branch"
+fi
 
 # git safe.directory برای جلوگیری از خطای dubious ownership
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true

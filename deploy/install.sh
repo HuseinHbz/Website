@@ -3,7 +3,7 @@
 # HBZ Website — نصب اولیه روی سرور تازه (Ubuntu 22.04)
 # =============================================================================
 # استفاده:
-#   sudo bash deploy/install.sh                  # branch پیش‌فرض
+#   sudo bash deploy/install.sh                  # شاخهٔ تولید (deploy/branch.env)
 #   sudo bash deploy/install.sh main             # branch خاص
 # =============================================================================
 set -euo pipefail
@@ -12,7 +12,11 @@ set -euo pipefail
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-BRANCH="${1:-feature/v2-enterprise-upgrade}"
+# شاخهٔ تولید از deploy/branch.env (تنها منبع حقیقت) — آرگومان اول override می‌کند.
+BRANCH_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/branch.env"
+# shellcheck source=/dev/null
+[[ -f "$BRANCH_ENV" ]] && source "$BRANCH_ENV"
+BRANCH="${1:-${HBZ_BRANCH:-${PROD_BRANCH:-feature/v2-enterprise-upgrade}}}"
 APP_PORT="3000"
 NODE_VERSION="20"
 
