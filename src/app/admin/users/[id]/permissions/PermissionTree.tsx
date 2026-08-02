@@ -21,6 +21,7 @@ interface Payload {
   ops: Record<string, boolean>
   opKeys: string[]
   scopes: Record<string, string>
+  scopedModules?: Record<string, string[]>
   templates: Array<{ id: number; name: string; name_fa: string }>
   audit: Array<{ actor_id: string; permission_key: string; old_value: string | null; new_value: string | null; created_at: string }>
 }
@@ -121,6 +122,24 @@ export function PermissionTree({ userId }: { userId: string }) {
             )}
           </span>
         </div>
+        {isOpen && (data.scopedModules?.[n.key]?.length ?? 0) > 0 && (
+          <div className="flex items-center gap-2 py-1.5 bg-surface-2/40" style={{ paddingInlineStart: (depth + 1) * 20 }}>
+            <span className="text-3xs text-muted">{t('perm_row_scope')}:</span>
+            <select
+              disabled={busy || denied}
+              className="text-2xs rounded border border-border bg-surface px-2 py-1"
+              value={data.scopes[n.key] ?? 'all'}
+              onChange={e => void act({ action: 'scope', key: n.key, scope: e.target.value === 'all' ? null : e.target.value })}
+            >
+              {(data.scopedModules?.[n.key] ?? []).map(s => (
+                <option key={s} value={s}>
+                  {fa ? ({ all: 'همه', own: 'فقط خودم', department: 'واحد من' } as Record<string, string>)[s] : s}
+                </option>
+              ))}
+            </select>
+            {(data.scopes[n.key] ?? 'all') !== 'all' && <span className="text-3xs text-brand">{t('perm_scope_active')}</span>}
+          </div>
+        )}
         {isOpen && n.ops.length > 0 && (
           <div className="flex flex-wrap gap-3 py-1.5 bg-surface-2/40" style={{ paddingInlineStart: (depth + 1) * 20 }}>
             <span className="text-3xs text-muted">{t('perm_sensitive_ops')}:</span>

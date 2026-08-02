@@ -61,6 +61,19 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
 }
 
 /**
+ * 26.28 بند ۲.۳ — modules with a REAL row-scope implementation (server-side WHERE).
+ * The permission-tree UI shows the scope selector ONLY for these keys, and only
+ * offers the scopes each one actually enforces — no empty promises.
+ */
+export const SCOPED_MODULES: Record<string, Array<'all' | 'own' | 'department'>> = {
+  'crm.crm': ['all', 'own', 'department'],            // leads + activities (owner_id / assigned_to)
+  'crm.crm.customers': ['all', 'own', 'department'],  // Customer 360 (sales_customers.owner_id)
+  'crm.crm.tickets': ['all', 'own', 'department'],    // tickets (owner_id)
+  'erp.sales': ['all', 'own', 'department'],          // documents (customer owner / created_by)
+  'erp.project-management': ['all', 'own', 'department'], // pm_projects (created_by)
+}
+
+/**
  * API-only modules with no dedicated nav page (served inside another page's UI)
  * — added to the tree explicitly so their routes are still node-governed.
  */

@@ -100,6 +100,43 @@ export async function setRowScope(actorId: string, userId: string, key: string, 
 }
 
 /**
+ * 26.28 بند ۲.۱ — shared row-scope SQL helper. Builds the WHERE fragment once so
+ * routes never re-implement scope logic. `ownerExpr` is the SQL expression that
+ * yields the owning user id for a row (e.g. `l.owner_id`, `t.owner_id`,
+ * `COALESCE(c.owner_id, d.created_by)`).
+ *  - all (default, R5): empty clause — today's behaviour
+ *  - own: ownerExpr = <userId>
+ *  - department: ownerExpr belongs to a user in the caller's department
+ *  - company: NOT implemented for these tables (users carry no company_id) —
+ *    the registry only advertises scopes that really work (no empty promises).
+ */
+export async function rowScopeSql(
+  userId: string, key: string, ownerExpr: string, nextParam: number,
+): Promise<{ scope: 'all' | 'own' | 'department' | 'company'; clause: string; params: unknown[] }> {
+  const scope = await rowScopeFor(userId, key)
+  if (scope === 'own') return { scope, clause: ` AND ${ownerExpr} = $${nextParam}`, params: [userId] }
+  if (scope === 'department') return {
+    scope,
+    clause: ` AND ${ownerExpr} IN (SELECT id FROM users WHERE department IS NOT DISTINCT FROM (SELECT department FROM users WHERE id = $${nextParam}))`,
+    params: [userId],
+  }
+  return { scope, clause: '', params: [] }
+}
+
+/** Direct-record guard for scoped routes: true = caller may touch this row. */
+export async function rowInScope(userId: string, key: string, ownerId: string | null): Promise<boolean> {
+  const scope = await rowScopeFor(userId, key)
+  if (scope === 'all' || scope === 'company') return true
+  if (!ownerId) return false
+  if (scope === 'own') return ownerId === userId
+  // department
+  const r = (await pgQuery<{ same: boolean }>(
+    `SELECT (SELECT department FROM users WHERE id=$1) IS NOT DISTINCT FROM (SELECT department FROM users WHERE id=$2) AS same`,
+    [userId, ownerId]))[0]
+  return !!r?.same
+}
+
+/**
  * بند ۶.۲ sensitive-field visibility. A user with NO rbac rows at all sees the
  * field (legacy behaviour, R5). An rbac-managed user (any grant/op row) must be
  * explicitly granted the field's op — default-deny; explicit false always hides.

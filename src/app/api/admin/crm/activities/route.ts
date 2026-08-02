@@ -16,6 +16,15 @@ export async function GET(req: NextRequest) {
   try {
     const leadId = Number(req.nextUrl.searchParams.get('leadId'))
     if (!leadId) return badRequest('leadId required')
+    // 26.28 بند ۲ — activities inherit the parent lead's row scope: an
+    // out-of-scope lead's timeline answers 404 (existence not leaked).
+    {
+      const { rowInScope } = await import('@/lib/rbac/data')
+      const lead = (await pgQuery<{ owner_id: string | null }>(`SELECT owner_id FROM crm_leads WHERE id=$1`, [leadId]))[0]
+      if (!lead || !(await rowInScope(auth.user.id, 'crm.crm', lead.owner_id))) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      }
+    }
     const activities = await pgQuery(
       `SELECT a.id, a.kind, a.body, a.due_at AS "dueAt", a.done, a.assigned_to AS "assignedTo",
               ua.name AS "assignedName", uc.name AS "createdByName", a.created_at AS "createdAt"
@@ -41,8 +50,14 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {
-    const lead = (await pgQuery(`SELECT id FROM crm_leads WHERE id=$1`, [d.leadId]))[0]
+    const lead = (await pgQuery<{ id: number; owner_id: string | null }>(`SELECT id, owner_id FROM crm_leads WHERE id=$1`, [d.leadId]))[0]
     if (!lead) return badRequest('Lead not found')
+    {
+      const { rowInScope } = await import('@/lib/rbac/data')
+      if (!(await rowInScope(auth.user.id, 'crm.crm', lead.owner_id))) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      }
+    }
     const row = (await pgQuery<{ id: number }>(
       `INSERT INTO crm_activities (lead_id, kind, body, due_at, assigned_to, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
       [d.leadId, d.kind, d.body, d.dueAt ?? null, d.assignedTo ?? null, auth.user.id]))[0]

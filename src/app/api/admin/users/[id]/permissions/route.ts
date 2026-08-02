@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
-import { permissionTree, allOpKeys } from '@/lib/rbac/registry'
+import { permissionTree, allOpKeys, SCOPED_MODULES } from '@/lib/rbac/registry'
 import { resolveTree } from '@/lib/rbac/engine'
 import { loadUserRbac, setGrant, setOp, setRowScope, copyRbac } from '@/lib/rbac/data'
 import { pgQuery } from '@/lib/db'
@@ -46,6 +46,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       tree, grants: rbac.grants, ops: rbac.ops,
       opKeys: allOpKeys(),
       scopes: Object.fromEntries(scopes.map(s => [s.permission_key, s.scope])),
+      scopedModules: SCOPED_MODULES,   // 26.28 بند ۲.۳ — only modules with a real server-side scope
       templates, audit,
     })
   } catch (e) { return apiError(e) }

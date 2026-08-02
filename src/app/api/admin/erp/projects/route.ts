@@ -17,13 +17,29 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   try {
     if (req.nextUrl.searchParams.get('overview')) return NextResponse.json(await projectOverview())
+    // 26.28 بند ۲ — project row scope on pm_projects.created_by
+    const { rowScopeFor, rowInScope } = await import('@/lib/rbac/data')
+    const scope = await rowScopeFor(auth.user.id, 'erp.project-management')
     const id = Number(req.nextUrl.searchParams.get('id'))
     if (id) {
+      if (scope !== 'all') {
+        const own = (await pgQuery<{ created_by: string | null }>(`SELECT created_by FROM pm_projects WHERE id=$1`, [id]))[0]
+        if (!own || !(await rowInScope(auth.user.id, 'erp.project-management', own.created_by))) {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 })   // بند ۲.۲
+        }
+      }
       const detail = await loadProjectDetail(id)
       if (!detail) return badRequest('Not found')
       return NextResponse.json(detail)
     }
-    return NextResponse.json({ projects: await loadProjects() })
+    let projects = await loadProjects()
+    if (scope !== 'all') {
+      const owners = await pgQuery<{ id: number; created_by: string | null }>(`SELECT id, created_by FROM pm_projects`, [])
+      const byId = new Map(owners.map(o => [o.id, o.created_by]))
+      const checks = await Promise.all(projects.map(p => rowInScope(auth.user.id, 'erp.project-management', byId.get(p.id) ?? null)))
+      projects = projects.filter((_, i) => checks[i])
+    }
+    return NextResponse.json({ projects })
   } catch (e) { return apiError(e, 'Failed to load projects') }
 }
 

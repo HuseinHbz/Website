@@ -20,17 +20,27 @@ export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams
     const id = Number(sp.get('id'))
+    // 26.28 بند ۲ — ticket row scope (owner_id): own/department enforced server-side
+    const { rowScopeFor, rowInScope } = await import('@/lib/rbac/data')
+    const scope = await rowScopeFor(auth.user.id, 'crm.crm.tickets')
     if (id) {
       const t = await getTicket(id, { includeInternal: true })   // admin sees internal notes
       if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      if (scope !== 'all' && !(await rowInScope(auth.user.id, 'crm.crm.tickets', t.ownerId ?? null))) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })   // بند ۲.۲: existence not leaked
+      }
       return NextResponse.json(t)
     }
-    return NextResponse.json({
-      tickets: await listTickets({
-        status: sp.get('status') || undefined, priority: sp.get('priority') || undefined,
-        ownerId: sp.get('owner') || undefined, customerId: Number(sp.get('customer')) || undefined,
-      }),
+    let tickets = await listTickets({
+      status: sp.get('status') || undefined, priority: sp.get('priority') || undefined,
+      ownerId: scope === 'own' ? auth.user.id : (sp.get('owner') || undefined),
+      customerId: Number(sp.get('customer')) || undefined,
     })
+    if (scope === 'department') {
+      const checks = await Promise.all(tickets.map(t => rowInScope(auth.user.id, 'crm.crm.tickets', (t as { ownerId?: string | null }).ownerId ?? null)))
+      tickets = tickets.filter((_, i) => checks[i])
+    }
+    return NextResponse.json({ tickets })
   } catch (e) { return apiError(e, 'Failed to load tickets') }
 }
 

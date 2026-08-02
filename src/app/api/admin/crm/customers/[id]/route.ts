@@ -12,13 +12,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if ('error' in auth) return auth.error
   try {
     const { id } = await params
-    // بند ۶.۱ ABAC — scope=own: only customers the user owns; others 404 (existence not leaked)
+    // بند ۲.۲ ABAC — out-of-scope customer answers 404 (existence not leaked)
     {
-      const { rowScopeFor } = await import('@/lib/rbac/data')
-      if ((await rowScopeFor(auth.user.id, 'crm.crm.customers')) === 'own') {
+      const { rowScopeFor, rowInScope } = await import('@/lib/rbac/data')
+      if ((await rowScopeFor(auth.user.id, 'crm.crm.customers')) !== 'all') {
         const { pgQuery } = await import('@/lib/db')
         const own = (await pgQuery<{ owner_id: string | null }>(`SELECT owner_id FROM sales_customers WHERE id=$1`, [Number(id)]))[0]
-        if (!own || own.owner_id !== auth.user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+        if (!own || !(await rowInScope(auth.user.id, 'crm.crm.customers', own.owner_id))) {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 })
+        }
       }
     }
     const data = await customer360(Number(id))

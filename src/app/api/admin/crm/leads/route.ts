@@ -27,18 +27,21 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requirePermission('crm.crm', 'read')
     if ('error' in auth) return auth.error
-    // بند ۶.۱ ABAC — scope=own restricts the list server-side (not a UI filter)
-    const { rowScopeFor } = await import('@/lib/rbac/data')
-    const scope = await rowScopeFor(auth.user.id, 'crm.crm')
-    const mine = scope === 'own' || req.nextUrl.searchParams.get('mine') === '1'
+    // 26.28 بند ۲.۱ — row scope enforced in the WHERE via the shared helper
+    // (own/department server-side, never a UI filter); `mine` stays a UI toggle.
+    const { rowScopeSql } = await import('@/lib/rbac/data')
+    const mine = req.nextUrl.searchParams.get('mine') === '1'
+    const base = mine ? ' AND l.owner_id=$1' : ''
+    const baseParams: unknown[] = mine ? [auth.user.id] : []
+    const sc = await rowScopeSql(auth.user.id, 'crm.crm', 'l.owner_id', baseParams.length + 1)
     const rows = await pgQuery(
       `SELECT l.id, l.name, l.email, l.phone, l.company, l.source, l.status, l.score, l.value, l.notes,
               l.owner_id AS "ownerId", u.name AS "ownerName", l.converted_customer_id AS "convertedCustomerId",
               l.created_at AS "createdAt", l.updated_at AS "updatedAt",
               (SELECT MAX(a.created_at) FROM crm_activities a WHERE a.lead_id=l.id) AS "lastActivityAt"
        FROM crm_leads l LEFT JOIN users u ON u.id=l.owner_id
-       ${mine ? 'WHERE l.owner_id=$1' : ''}
-       ORDER BY l.updated_at DESC`, mine ? [auth.user.id] : []
+       WHERE 1=1${base}${sc.clause}
+       ORDER BY l.updated_at DESC`, [...baseParams, ...sc.params]
     ) as { status: LeadStatus; value: number; score: number; lastActivityAt: string | null; createdAt: string }[]
     const stats = pipelineStats(rows.map((r) => ({ status: r.status, value: r.value, score: r.score })))
     // بند ۵.۵ — SLA: open leads with no activity for N days (configurable) →
@@ -94,10 +97,10 @@ export async function PUT(req: NextRequest) {
     if (!d.id) return badRequest('id required')
     const existing = (await pgQuery(`SELECT * FROM crm_leads WHERE id=$1`, [d.id]))[0] as Record<string, unknown> | undefined
     if (!existing) return badRequest('lead not found')
-    // بند ۶.۱ — scope=own: another user's record answers 404 (existence not leaked, 26.25a pattern)
+    // بند ۲.۲ — out-of-scope record answers 404 (existence not leaked, 26.25a pattern)
     {
-      const { rowScopeFor } = await import('@/lib/rbac/data')
-      if ((await rowScopeFor(auth.user.id, 'crm.crm')) === 'own' && existing.owner_id !== auth.user.id) {
+      const { rowInScope } = await import('@/lib/rbac/data')
+      if (!(await rowInScope(auth.user.id, 'crm.crm', (existing.owner_id as string | null) ?? null))) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 })
       }
     }
@@ -124,10 +127,10 @@ export async function DELETE(req: NextRequest) {
     const { id } = await guardJson(req).catch(() => ({}))
     if (!id || typeof id !== 'number') return badRequest('id required')
     {
-      const { rowScopeFor } = await import('@/lib/rbac/data')
-      if ((await rowScopeFor(auth.user.id, 'crm.crm')) === 'own') {
-        const own = (await pgQuery<{ owner_id: string | null }>(`SELECT owner_id FROM crm_leads WHERE id=$1`, [id]))[0]
-        if (!own || own.owner_id !== auth.user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      const { rowInScope } = await import('@/lib/rbac/data')
+      const own = (await pgQuery<{ owner_id: string | null }>(`SELECT owner_id FROM crm_leads WHERE id=$1`, [id]))[0]
+      if (!own || !(await rowInScope(auth.user.id, 'crm.crm', own.owner_id))) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
       }
     }
     await pgQuery(`DELETE FROM crm_leads WHERE id=$1`, [id])

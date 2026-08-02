@@ -33,14 +33,22 @@ export async function GET(req: NextRequest) {
   const auth = await requirePermission('erp.sales', 'read')
   if ('error' in auth) return auth.error
   try {
+    // 26.28 بند ۲ — sales row scope: a document is "owned" by its customer's
+    // owner, falling back to the creator (a sales rep sees their own customers).
+    const { rowScopeSql, rowInScope } = await import('@/lib/rbac/data')
+    const OWNER = 'COALESCE(c.owner_id, d.created_by)'
     const id = Number(req.nextUrl.searchParams.get('id'))
     if (id) {
       const doc = (await pgQuery(
         `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.customer_id AS "customerId", d.date, d.due_date AS "dueDate",
                 d.status, d.subtotal::float AS subtotal, d.discount_total::float AS "discountTotal", d.tax_total::float AS "taxTotal",
-                d.total::float AS total, d.notes, d.currency, d.exchange_rate::float AS "exchangeRate", d.base_total::float AS "baseTotal", c.name AS "customerName"
-         FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.id=$1 AND d.deleted_at IS NULL`, [id]))[0]
+                d.total::float AS total, d.notes, d.currency, d.exchange_rate::float AS "exchangeRate", d.base_total::float AS "baseTotal", c.name AS "customerName",
+                ${OWNER} AS "ownerId"
+         FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id WHERE d.id=$1 AND d.deleted_at IS NULL`, [id]))[0] as (Record<string, unknown> & { ownerId: string | null }) | undefined
       if (!doc) return badRequest('Not found')
+      if (!(await rowInScope(auth.user.id, 'erp.sales', doc.ownerId))) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })   // بند ۲.۲
+      }
       const lines = await pgQuery(
         `SELECT id, description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct", line_total::float AS "lineTotal"
          FROM sales_document_lines WHERE document_id=$1 ORDER BY line_no, id`, [id])
@@ -48,13 +56,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ doc, lines, paid: paid.paid })
     }
     const type = req.nextUrl.searchParams.get('type')
+    const baseParams: unknown[] = type ? [type] : []
+    const sc = await rowScopeSql(auth.user.id, 'erp.sales', OWNER, baseParams.length + 1)
     const rows = await pgQuery(
       `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.date, d.due_date AS "dueDate", d.status,
               d.total::float AS total, d.currency, d.gl_entry_id AS "glEntryId", c.name AS "customerName",
               COALESCE((SELECT SUM(amount) FROM sales_payments p WHERE p.document_id=d.id),0)::float AS paid
        FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id
-       WHERE d.deleted_at IS NULL ${type ? 'AND d.doc_type=$1' : ''}
-       ORDER BY d.date DESC, d.id DESC LIMIT 300`, type ? [type] : [])
+       WHERE d.deleted_at IS NULL ${type ? 'AND d.doc_type=$1' : ''}${sc.clause}
+       ORDER BY d.date DESC, d.id DESC LIMIT 300`, [...baseParams, ...sc.params])
     return NextResponse.json({ documents: rows })
   } catch (e) { return apiError(e, 'Failed to load documents') }
 }
