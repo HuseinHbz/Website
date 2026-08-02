@@ -1531,13 +1531,19 @@ start the app, `wait-on /api/health`, then run.
 - The build artifact upload uses `include-hidden-files: true` (`.next` is a dotfile).
 
 ## Deploy
-- **Production branch = `feature/v2-enterprise-upgrade`, declared once in
-  `deploy/branch.env` (`PROD_BRANCH`).** `install.sh`/`update.sh` source that file
-  instead of hardcoding a branch or following GitHub's default branch (the default
-  can be pointed at a temporary agent branch, which would deploy half-finished code).
-  `update.sh` refuses any `claude/*`, `codex/*`, `tmp/*`, `wip/*` branch unless
-  `--allow-agent-branch` is passed. Override for a test only: `HBZ_BRANCH=… sudo -E
-  bash deploy/update.sh`.
+- **Deploys follow the repo's DEFAULT branch**, resolved at run time by
+  `resolve_default_branch()` in `deploy/branch.env` (`git ls-remote --symref origin
+  HEAD`) — change the default on GitHub and the server follows it, no script edit.
+  Precedence: `--branch`/`$1` › `HBZ_BRANCH` › repo default › `PROD_BRANCH`
+  (fallback, currently `feature/v2-enterprise-upgrade`). **Guard:** if the resolved
+  default matches `claude/*`, `codex/*`, `tmp/*`, `wip/*` (a temporary agent branch),
+  the scripts fall back to `PROD_BRANCH` with a loud warning instead of deploying
+  half-finished code; `--allow-agent-branch` overrides deliberately.
+- **The production clone is not an editing workspace.** `install.sh`/`update.sh`
+  force-checkout over local edits to tracked files (backing the diff up to
+  `/root/habibazar-local-changes-*.patch` first) and set `core.fileMode false`, so a
+  stray `chmod +x` or hand-edit can never abort a deploy. Untracked runtime files
+  (`.env.local`, `public/uploads/`, `data/`) are never touched.
 - App runs under **PM2** as user **`hbz`** on port **3000**, behind **nginx**.
 - Installed at `/var/www/habibazar`; scripts run from `/var/www/Website/deploy`.
 - **PM2 logs live in `/home/hbz/logs`** (the `hbz` user cannot write to `/var/log`).

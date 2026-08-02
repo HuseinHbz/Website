@@ -302,13 +302,15 @@ sudo bash deploy/uninstall.sh          # با تأیید تعاملی + بکاپ
 
 | Branch | توضیح |
 |--------|-------|
-| `feature/v2-enterprise-upgrade` | **شاخهٔ تولید** — سرور از همین شاخه آپدیت می‌شود (`deploy/branch.env` → `PROD_BRANCH`) |
+| **default branch مخزن** | سرور از همین شاخه آپدیت می‌گیرد — خودکار کشف می‌شود |
+| `feature/v2-enterprise-upgrade` | شاخهٔ فعلی توسعه/تولید و fallback (`deploy/branch.env` → `PROD_BRANCH`) |
 | `hbz` | آرشیو نسخهٔ قدیمی monolith (Next.js + SQLite) |
-| `claude/*` | شاخه‌های کاری موقت — **هرگز روی تولید دیپلوی نمی‌شوند** (گارد در `deploy/update.sh`) |
+| `claude/*` | شاخه‌های کاری موقت — **هرگز روی تولید دیپلوی نمی‌شوند** (گارد در deploy) |
 
-> شاخهٔ تولید عمداً از «default branch» گیت‌هاب خوانده **نمی‌شود**: default ممکن است
-> موقتاً روی یک شاخهٔ کاری تنظیم شده باشد و سرور کد نیمه‌کاره بگیرد. تنها منبع حقیقت
-> `deploy/branch.env` است؛ برای تغییر شاخهٔ تولید فقط همان یک مقدار را عوض کنید.
+> `install.sh`/`update.sh` شاخهٔ default مخزن را با `git ls-remote --symref origin HEAD`
+> می‌خوانند؛ پس با عوض‌کردن default در GitHub، سرور هم خودکار همان را دنبال می‌کند.
+> استثنا: اگر default روی یک شاخهٔ کاری موقت (`claude/*` …) باشد، با هشدار صریح به
+> `PROD_BRANCH` برمی‌گردد تا تولید کد نیمه‌کاره نگیرد.
 
 ---
 

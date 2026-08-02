@@ -12,11 +12,12 @@ set -euo pipefail
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-# شاخهٔ تولید از deploy/branch.env (تنها منبع حقیقت) — آرگومان اول override می‌کند.
+# شاخه از deploy/branch.env تعیین می‌شود (پیش‌فرض: default مخزن).
+# آرگومان اول > HBZ_BRANCH > default مخزن > PROD_BRANCH.
 BRANCH_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/branch.env"
 # shellcheck source=/dev/null
 [[ -f "$BRANCH_ENV" ]] && source "$BRANCH_ENV"
-BRANCH="${1:-${HBZ_BRANCH:-${PROD_BRANCH:-feature/v2-enterprise-upgrade}}}"
+BRANCH="${1:-${HBZ_BRANCH:-}}"   # خالی = از default مخزن کشف می‌شود (بعد از تعریف توابع)
 APP_PORT="3000"
 NODE_VERSION="20"
 
@@ -27,6 +28,21 @@ warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
 error() { echo -e "${RED}[✘]${NC} $*"; exit 1; }
 
 [[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/install.sh"
+
+# ─── تعیین شاخه: default مخزن (مگر صریحاً override شده باشد) ────────────────
+if [[ -z "$BRANCH" ]]; then
+  DETECTED="$(resolve_default_branch "$APP_DIR" 2>/dev/null || true)"
+  if [[ -z "$DETECTED" ]]; then
+    BRANCH="${PROD_BRANCH:-feature/v2-enterprise-upgrade}"
+    warn "کشف شاخهٔ default ممکن نشد — استفاده از PROD_BRANCH: $BRANCH"
+  elif [[ "$DETECTED" =~ ${PROD_BRANCH_FORBIDDEN:-^(claude/|codex/|tmp/|wip/)} ]]; then
+    BRANCH="${PROD_BRANCH:-feature/v2-enterprise-upgrade}"
+    warn "⚠ شاخهٔ default مخزن «$DETECTED» یک شاخهٔ کاری موقت است — برای تولید استفاده نمی‌شود."
+    warn "  از «$BRANCH» نصب می‌شود. default را در GitHub → Settings → Default branch اصلاح کنید."
+  else
+    BRANCH="$DETECTED"
+  fi
+fi
 
 echo ""
 echo "═══════════════════════════════════════════════════"
