@@ -99,6 +99,19 @@ export async function setRowScope(actorId: string, userId: string, key: string, 
                  VALUES ($1,$2,$3,$4,$5,$6)`, [actorId, userId, `${key}#scope`, null, scope, companyId ?? null])
 }
 
+/**
+ * بند ۶.۲ sensitive-field visibility. A user with NO rbac rows at all sees the
+ * field (legacy behaviour, R5). An rbac-managed user (any grant/op row) must be
+ * explicitly granted the field's op — default-deny; explicit false always hides.
+ */
+export async function sensitiveFieldVisible(userId: string, opKey: string): Promise<boolean> {
+  const { isOpAllowed } = await import('./engine')
+  const rbac = await loadUserRbac(userId)
+  const allowed = isOpAllowed(rbac.ops, rbac.grants, opKey)
+  if (allowed !== null) return allowed
+  return Object.keys(rbac.grants).length === 0 && Object.keys(rbac.ops).length === 0
+}
+
 /** Copy all grants/ops/scopes from one user to another (بند ۴ helper). Audited per row. */
 export async function copyRbac(actorId: string, fromUserId: string, toUserId: string): Promise<number> {
   const src = await loadUserRbac(fromUserId)

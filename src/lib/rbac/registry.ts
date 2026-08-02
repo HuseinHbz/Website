@@ -52,6 +52,7 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   'erp.sales': ['confirm', 'void', 'return', 'post', 'payment_create', 'refund'],
   'erp.purchasing': ['confirm', 'void', 'post'],
   'erp.treasury': ['reconcile', 'cheque_state'],
+  'erp.inventory': ['cost_view'],   // بند ۶.۲ — sensitive-field grant (unit cost / valuation)
   'erp.approvals': ['approve', 'reject', 'delegate'],
   'erp.moadian': ['submit'],
   'security.users': ['create', 'role_change', 'reset_2fa', 'grant_edit'],

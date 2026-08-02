@@ -2662,6 +2662,12 @@ export async function runMigrations() {
     INSERT INTO erp_settings (key, value) VALUES ('2fa_required_sensitive','0')
     ON CONFLICT (key) DO NOTHING;
 
+    -- ── Phase 26.27 بند ۶ ABAC: customer ownership for row scope (scope=own) ──
+    ALTER TABLE sales_customers ADD COLUMN IF NOT EXISTS owner_id TEXT REFERENCES users(id);
+    UPDATE sales_customers c SET owner_id = l.owner_id
+      FROM crm_leads l
+      WHERE c.owner_id IS NULL AND l.converted_customer_id = c.id AND l.owner_id IS NOT NULL;
+
     -- بند ۰.۱: role_assignments was a dormant Phase-7 skeleton (role-per-scope
     -- model, zero call sites). Its shape does not fit node-level tree grants —
     -- dropped so one model remains (decision (ب), recorded in the phase report).

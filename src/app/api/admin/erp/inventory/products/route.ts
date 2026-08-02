@@ -30,6 +30,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ products: rows, picker: true })
     }
     const products = await loadProductLevels()
+    // بند ۶.۲ ABAC — sensitive fields (unit cost / valuation) are REMOVED from
+    // the API response for rbac-managed users without erp.inventory:cost_view.
+    const { sensitiveFieldVisible } = await import('@/lib/rbac/data')
+    if (!(await sensitiveFieldVisible(auth.user.id, 'erp.inventory:cost_view'))) {
+      const masked = products.map(p => {
+        const rest = { ...(p as unknown as Record<string, unknown>) }
+        delete rest.value; delete rest.avgCost
+        return rest
+      })
+      return NextResponse.json({ products: masked, kpis: inventoryKpis(products), costMasked: true })
+    }
     return NextResponse.json({ products, kpis: inventoryKpis(products) })
   } catch (e) { return apiError(e, 'Failed to load products') }
 }
