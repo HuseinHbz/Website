@@ -1531,14 +1531,14 @@ start the app, `wait-on /api/health`, then run.
 - The build artifact upload uses `include-hidden-files: true` (`.next` is a dotfile).
 
 ## Deploy
-- **Deploys follow the repo's DEFAULT branch**, resolved at run time by
-  `resolve_default_branch()` in `deploy/branch.env` (`git ls-remote --symref origin
-  HEAD`) — change the default on GitHub and the server follows it, no script edit.
-  Precedence: `--branch`/`$1` › `HBZ_BRANCH` › repo default › `PROD_BRANCH`
-  (fallback, currently `feature/v2-enterprise-upgrade`). **Guard:** if the resolved
-  default matches `claude/*`, `codex/*`, `tmp/*`, `wip/*` (a temporary agent branch),
-  the scripts fall back to `PROD_BRANCH` with a loud warning instead of deploying
-  half-finished code; `--allow-agent-branch` overrides deliberately.
+- **Deploys read ONLY the repo's DEFAULT branch — no branch is hardcoded anywhere.**
+  `resolve_default_branch()` in `deploy/branch.env` queries it live
+  (`git ls-remote --symref origin HEAD`), so with any number of branches the server
+  always takes whichever one is default on GitHub; change the default there and the
+  server follows on the next run. Precedence: `--branch`/`$1` › `HBZ_BRANCH` › repo
+  default. If detection fails the scripts **stop with a clear error** rather than
+  guessing a branch. A default matching `claude/*`/`codex/*`/`tmp/*`/`wip/*` only
+  triggers a warning — it is still deployed (the maintainer's explicit decision).
 - **No silent aborts in deploy scripts.** `install.sh`/`update.sh` run under
   `set -Eeuo pipefail` with an `ERR` trap that prints the failing step, line number,
   command and exit code (a bare `set -e` exit shows nothing — that is what made the

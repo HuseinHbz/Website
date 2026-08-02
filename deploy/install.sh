@@ -3,8 +3,8 @@
 # HBZ Website — نصب اولیه روی سرور تازه (Ubuntu 22.04)
 # =============================================================================
 # استفاده:
-#   sudo bash deploy/install.sh                  # شاخهٔ تولید (deploy/branch.env)
-#   sudo bash deploy/install.sh main             # branch خاص
+#   sudo bash deploy/install.sh                  # شاخهٔ default مخزن (خودکار)
+#   sudo bash deploy/install.sh main             # branch خاص (override)
 # =============================================================================
 # -E : تلهٔ ERR در توابع/subshellها هم اجرا شود (بدون آن، خطاها خاموش می‌مانند)
 set -Eeuo pipefail
@@ -13,8 +13,8 @@ set -Eeuo pipefail
 APP_USER="hbz"
 APP_DIR="/var/www/habibazar"
 REPO_URL="https://github.com/HuseinHbz/Website.git"
-# شاخه از deploy/branch.env تعیین می‌شود (پیش‌فرض: default مخزن).
-# آرگومان اول > HBZ_BRANCH > default مخزن > PROD_BRANCH.
+# شاخه: همیشه **default branch مخزن** (زنده از remote). هیچ شاخه‌ای ثابت نیست.
+# اولویت: آرگومان اول > HBZ_BRANCH > default مخزن.
 BRANCH_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/branch.env"
 # shellcheck source=/dev/null
 [[ -f "$BRANCH_ENV" ]] && source "$BRANCH_ENV"
@@ -59,19 +59,19 @@ if [[ -z "${HBZ_INSTALL_LOGGING:-}" ]]; then
   [[ -n "$LOG_FILE" ]] && echo "[i] لاگ کامل نصب: $LOG_FILE"
 fi
 
-# ─── تعیین شاخه: default مخزن (مگر صریحاً override شده باشد) ────────────────
+# ─── تعیین شاخه: فقط default مخزن (مگر صریحاً override شده باشد) ────────────
 if [[ -z "$BRANCH" ]]; then
-  DETECTED="$(resolve_default_branch "$APP_DIR" 2>/dev/null || true)"
-  if [[ -z "$DETECTED" ]]; then
-    BRANCH="${PROD_BRANCH:-feature/v2-enterprise-upgrade}"
-    warn "کشف شاخهٔ default ممکن نشد — استفاده از PROD_BRANCH: $BRANCH"
-  elif [[ "$DETECTED" =~ ${PROD_BRANCH_FORBIDDEN:-^(claude/|codex/|tmp/|wip/)} ]]; then
-    BRANCH="${PROD_BRANCH:-feature/v2-enterprise-upgrade}"
-    warn "⚠ شاخهٔ default مخزن «$DETECTED» یک شاخهٔ کاری موقت است — برای تولید استفاده نمی‌شود."
-    warn "  از «$BRANCH» نصب می‌شود. default را در GitHub → Settings → Default branch اصلاح کنید."
-  else
-    BRANCH="$DETECTED"
+  step "کشف شاخهٔ default مخزن..."
+  BRANCH="$(resolve_default_branch "$APP_DIR" 2>/dev/null || true)"
+  [[ -z "$BRANCH" ]] && error "شاخهٔ default مخزن کشف نشد (دسترسی به remote؟).
+        اتصال شبکه را بررسی کنید یا شاخه را صریح بدهید: sudo bash deploy/install.sh <branch>"
+  info "شاخهٔ default مخزن: $BRANCH"
+  if [[ "$BRANCH" =~ ${AGENT_BRANCH_PATTERN:-^(claude/|codex/|tmp/|wip/)} ]]; then
+    warn "⚠ توجه: «$BRANCH» شبیه یک شاخهٔ کاری موقت است. طبق تنظیم شما از همان"
+    warn "  default نصب می‌شود؛ اگر درست نیست، default را در GitHub عوض کنید."
   fi
+else
+  info "شاخهٔ دستی (override): $BRANCH"
 fi
 
 echo ""

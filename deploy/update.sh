@@ -7,9 +7,9 @@
 #   sudo bash deploy/update.sh --branch feature/my-branch   # branch خاص
 #   sudo bash deploy/update.sh --skip-build                 # فقط pull + restart
 #
-# شاخه از deploy/branch.env تعیین می‌شود: پیش‌فرض = default branch مخزن (خودکار
-# کشف می‌شود). اگر default موقتاً روی شاخهٔ کاری (claude/* …) باشد، با هشدار به
-# PROD_BRANCH برمی‌گردد تا تولید کد نیمه‌کاره نگیرد.
+# شاخه: همیشه **default branch مخزن** (زنده از remote خوانده می‌شود). هیچ شاخه‌ای
+# در اسکریپت ثابت نیست؛ با عوض‌کردن default در GitHub، سرور خودکار دنبال می‌کند.
+# فقط برای موارد خاص: --branch <x> یا HBZ_BRANCH=<x>.
 # =============================================================================
 # -E : تلهٔ ERR در توابع/subshellها هم اجرا شود (جلوگیری از خروج خاموش)
 set -Eeuo pipefail
@@ -59,36 +59,30 @@ if [[ -z "${HBZ_UPDATE_LOGGING:-}" ]]; then
 fi
 [[ ! -d "$APP_DIR/.git" ]] && error "مخزن یافت نشد: $APP_DIR — ابتدا install.sh اجرا کنید"
 
-ALLOW_AGENT_BRANCH=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --branch)     BRANCH="$2"; shift 2 ;;
     --skip-build) SKIP_BUILD=true; shift ;;
-    --allow-agent-branch) ALLOW_AGENT_BRANCH=true; shift ;;
+    --allow-agent-branch) shift ;;   # منسوخ: دیگر لازم نیست (default همیشه دنبال می‌شود)
     *) error "آرگومان ناشناخته: $1" ;;
   esac
 done
 
-# ─── تعیین شاخه: default مخزن (مگر صریحاً override شده باشد) ────────────────
+# ─── تعیین شاخه: فقط default مخزن (مگر صریحاً override شده باشد) ────────────
 if [[ -z "$BRANCH" ]]; then
   step "کشف شاخهٔ default مخزن..."
-  DETECTED="$(resolve_default_branch "$APP_DIR" 2>/dev/null || true)"
-  if [[ -z "$DETECTED" ]]; then
-    BRANCH="${PROD_BRANCH:-feature/v2-enterprise-upgrade}"
-    warn "کشف default ممکن نشد — استفاده از PROD_BRANCH: $BRANCH"
-  elif [[ "$ALLOW_AGENT_BRANCH" == "false" && "$DETECTED" =~ ${PROD_BRANCH_FORBIDDEN:-^(claude/|codex/|tmp/|wip/)} ]]; then
-    BRANCH="${PROD_BRANCH:-feature/v2-enterprise-upgrade}"
-    warn "⚠ شاخهٔ default مخزن «$DETECTED» یک شاخهٔ کاری موقت است و برای تولید امن نیست."
-    warn "  فعلاً از «$BRANCH» دیپلوی می‌شود. برای رفع دائمی، default مخزن را در"
-    warn "  GitHub → Settings → General → Default branch به «$BRANCH» تغییر دهید."
-  else
-    BRANCH="$DETECTED"
-    info "شاخهٔ default مخزن: $BRANCH"
+  BRANCH="$(resolve_default_branch "$APP_DIR" 2>/dev/null || true)"
+  [[ -z "$BRANCH" ]] && error "شاخهٔ default مخزن کشف نشد (دسترسی به remote؟).
+        اتصال شبکه را بررسی کنید یا شاخه را صریح بدهید: sudo bash deploy/update.sh --branch <branch>"
+  info "شاخهٔ default مخزن: $BRANCH"
+  if [[ "$BRANCH" =~ ${AGENT_BRANCH_PATTERN:-^(claude/|codex/|tmp/|wip/)} ]]; then
+    warn "⚠ توجه: «$BRANCH» شبیه یک شاخهٔ کاری موقت است — طبق تنظیم شما از همان دیپلوی می‌شود."
   fi
-elif [[ "$ALLOW_AGENT_BRANCH" == "false" && "$BRANCH" =~ ${PROD_BRANCH_FORBIDDEN:-^(claude/|codex/|tmp/|wip/)} ]]; then
-  error "شاخهٔ «$BRANCH» یک شاخهٔ کاری موقت است و برای تولید مجاز نیست.
-        اگر واقعاً می‌خواهید: sudo bash deploy/update.sh --branch $BRANCH --allow-agent-branch"
+else
+  info "شاخهٔ دستی (override): $BRANCH"
 fi
+# origin/HEAD محلی هم با remote هم‌گام شود تا ابزارهای دیگر گیج نشوند
+sudo -u "$APP_USER" git -C "$APP_DIR" remote set-head origin -a &>/dev/null || true
 
 # git safe.directory برای جلوگیری از خطای dubious ownership
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
