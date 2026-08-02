@@ -120,6 +120,7 @@ export function AdminShell({ user, title, children }: Props) {
         <main id="admin-main" className="flex-1 overflow-auto p-4 lg:p-6">
           <AdminLocaleProvider locale={locale}>
             <CurrencyDisplayProvider userId={user.id}>
+              <TwoFaGate locale={locale} />
               <Breadcrumb locale={locale} />
               {children}
             </CurrencyDisplayProvider>
@@ -130,5 +131,39 @@ export function AdminShell({ user, title, children }: Props) {
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} locale={locale} role={user.role} />
     </div>
     </NavPrefsProvider>
+  )
+}
+
+/**
+ * 26.28 بند ۱.۵ — mandatory-2FA gateway. When the policy is on and the signed-in
+ * user holds a financial-sensitive op without TOTP enabled, a blocking banner
+ * pushes them to Security to enable it (their sensitive ops already 403).
+ */
+function TwoFaGate({ locale }: { locale: 'fa' | 'en' }) {
+  const [needed, setNeeded] = useState(false)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/admin/auth/me').then(r => r.ok ? r.json() : null)
+      .then(j => { if (alive && j?.needs2fa) setNeeded(true) })
+      .catch(() => null)
+    return () => { alive = false }
+  }, [])
+  if (!needed) return null
+  return (
+    <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 flex items-center justify-between gap-4" role="alert">
+      <div>
+        <p className="text-sm font-bold text-red-400">
+          {locale === 'fa' ? 'فعال‌سازی ورود دومرحله‌ای الزامی است' : 'Two-factor authentication is required'}
+        </p>
+        <p className="text-xs text-text-secondary mt-1">
+          {locale === 'fa'
+            ? 'حساب شما عملیات مالی حساس دارد؛ تا فعال‌سازی 2FA این عملیات مسدود (۴۰۳) هستند.'
+            : 'Your account holds sensitive financial operations; they stay blocked (403) until you enable 2FA.'}
+        </p>
+      </div>
+      <a href="/admin/security" className="shrink-0 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-colors">
+        {locale === 'fa' ? 'فعال‌سازی 2FA ←' : 'Enable 2FA →'}
+      </a>
+    </div>
   )
 }

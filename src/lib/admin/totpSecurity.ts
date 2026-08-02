@@ -67,6 +67,18 @@ export async function verifyTotpGuarded(userId: string, storedSecret: string, co
     const lock = fails >= MAX_FAILS ? new Date(now + LOCK_MINUTES * 60_000).toISOString() : null
     await pgQuery(`UPDATE users SET totp_fail_count=$2, totp_locked_until=$3 WHERE id=$1`,
       [userId, fails >= MAX_FAILS ? 0 : fails, lock])
+    if (lock) {
+      // 1.3 — the lock is a security signal, never silent: SOC log + email to the account
+      try {
+        const { logger } = await import('@/lib/logger')
+        logger.security('TOTP lock: too many failed 2FA attempts', { source: 'auth', userId, lockedUntil: lock })
+        const u = (await pgQuery<{ email: string }>(`SELECT email FROM users WHERE id=$1`, [userId]))[0]
+        if (u?.email) {
+          const { sendMail } = await import('@/lib/notifications')
+          await sendMail({ to: u.email, subject: 'HBZ Admin — 2FA temporarily locked', html: `<p>Your account had ${MAX_FAILS} failed two-factor attempts and is locked for ${LOCK_MINUTES} minutes (until ${lock}). If this was not you, contact your administrator.</p>` })
+        }
+      } catch { /* alerting is best-effort */ }
+    }
     return lock ? 'locked' : 'invalid'
   }
   const lastStep = row?.totp_last_step != null ? Number(row.totp_last_step) : null

@@ -90,7 +90,7 @@ export async function requireOp(
   // a financial-sensitive op requires the actor to have TOTP enabled (403 until then).
   // Default '0' → exact legacy behaviour (R5).
   try {
-    if (/^(erp\.(finance|sales|purchasing|treasury|approvals|moadian))|^system\.settings\.integrations/.test(opKey)) {
+    if (/^(erp\.(finance|sales|purchasing|treasury|approvals|moadian))|^system\.settings\.integrations|^backup\.backup/.test(opKey)) {
       const { pgQuery } = await import('@/lib/db')
       const flag = (await pgQuery<{ value: string }>(`SELECT value FROM erp_settings WHERE key='2fa_required_sensitive'`))[0]?.value
       if (flag === '1') {
