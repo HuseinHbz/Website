@@ -86,6 +86,19 @@ export async function requireOp(
   opKey: string,
   legacyAction?: Action,
 ): Promise<NextResponse | null> {
+  // 26.27 بند ۵.۵ — mandatory-2FA policy: when erp_settings.2fa_required_sensitive='1',
+  // a financial-sensitive op requires the actor to have TOTP enabled (403 until then).
+  // Default '0' → exact legacy behaviour (R5).
+  try {
+    if (/^(erp\.(finance|sales|purchasing|treasury|approvals|moadian))|^system\.settings\.integrations/.test(opKey)) {
+      const { pgQuery } = await import('@/lib/db')
+      const flag = (await pgQuery<{ value: string }>(`SELECT value FROM erp_settings WHERE key='2fa_required_sensitive'`))[0]?.value
+      if (flag === '1') {
+        const u = (await pgQuery<{ totp_enabled: boolean }>(`SELECT totp_enabled FROM users WHERE id=$1`, [user.id]))[0]
+        if (!u?.totp_enabled) return forbidden('Two-factor authentication is required for this operation — enable 2FA first')
+      }
+    }
+  } catch { /* policy check is best-effort pre-migration */ }
   try {
     const { loadUserRbac } = await import('@/lib/rbac/data')
     const { isOpAllowed } = await import('@/lib/rbac/engine')

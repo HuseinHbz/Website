@@ -2646,6 +2646,22 @@ export async function runMigrations() {
       ('Employee', 'کارمند', '{"executive":"read","crm.crm.tickets":"write","erp":"none","system":"none","security":"none","backup":"none"}', '{}', '{"crm.crm.tickets":"own"}', true)
     ON CONFLICT (name) DO NOTHING;
 
+    -- ── Phase 26.27 بند ۵: 2FA hardening ────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_recovery_codes_user ON admin_recovery_codes(user_id);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step BIGINT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_fail_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_locked_until TEXT;
+    -- بند ۵.۵ policy switch (OFF by default → R5 backward compat + E2E unchanged)
+    INSERT INTO erp_settings (key, value) VALUES ('2fa_required_sensitive','0')
+    ON CONFLICT (key) DO NOTHING;
+
     -- بند ۰.۱: role_assignments was a dormant Phase-7 skeleton (role-per-scope
     -- model, zero call sites). Its shape does not fit node-level tree grants —
     -- dropped so one model remains (decision (ب), recorded in the phase report).

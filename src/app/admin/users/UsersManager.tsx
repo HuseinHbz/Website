@@ -10,7 +10,7 @@ type User = { id: string; name: string; email: string; role: string; employeeCod
 const EMPTY = { name: '', email: '', password: '', role: 'editor', department: '' }
 const ROLE_COLOR: Record<string, string> = { super_admin: 'yellow', administrator: 'blue', editor: 'green', auditor: 'purple', viewer: 'slate' }
 
-type TwoFAPanel = { userId: string; email: string; secret: string; qrCode: string; enabled: boolean; phase: 'view' | 'setup' | 'confirm' }
+type TwoFAPanel = { userId: string; email: string; secret: string; qrCode: string; enabled: boolean; phase: 'view' | 'setup' | 'confirm' | 'codes'; recoveryLeft?: number; codes?: string[] }
 
 export function UsersManager({ currentUserId }: { currentUserId: string }) {
   const locale = useAdminLocale()
@@ -56,7 +56,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
     const d = await r.json()
     if (!r.ok) { toast(d.error || 'Failed', 'error'); return }
     setTotpCode('')
-    setTwoFA({ userId: user.id, email: d.email, secret: d.secret, qrCode: d.qrCode, enabled: d.enabled, phase: 'view' })
+    setTwoFA({ userId: user.id, email: d.email, secret: d.secret, qrCode: d.qrCode, enabled: d.enabled, phase: 'view', recoveryLeft: d.recoveryLeft })
   }
 
   async function startSetup() {
@@ -79,7 +79,8 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
     setTotpSaving(false)
     if (r.ok) {
       toast('2FA enabled', 'success')
-      setTwoFA(null)
+      // 26.27 بند ۵.۱ — recovery codes are shown exactly once
+      setTwoFA({ ...twoFA, enabled: true, phase: 'codes', codes: d.recoveryCodes, recoveryLeft: (d.recoveryCodes || []).length })
       load()
     } else {
       toast(d.error || 'Invalid code', 'error')
@@ -98,6 +99,20 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
     setTotpSaving(false)
     if (r.ok) { toast('2FA disabled', 'success'); setTwoFA(null); load() }
     else toast('Failed', 'error')
+  }
+
+  async function regenRecovery() {
+    if (!twoFA) return
+    setTotpSaving(true)
+    const r = await fetch('/api/admin/auth/2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'recovery', userId: twoFA.userId }),
+    })
+    const d = await r.json()
+    setTotpSaving(false)
+    if (r.ok) setTwoFA({ ...twoFA, phase: 'codes', codes: d.recoveryCodes, recoveryLeft: (d.recoveryCodes || []).length })
+    else toast(d.error || 'Failed', 'error')
   }
 
   const userColumns: Column<User>[] = [
@@ -184,6 +199,15 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                     {twoFA.enabled ? '● Enabled' : '○ Disabled'}
                   </span>
                 </div>
+                {twoFA.enabled && (
+                  <div className="flex items-center justify-between p-3 bg-background rounded-xl border border-border">
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">Recovery codes</p>
+                      <p className="text-xs text-text-tertiary mt-0.5">{twoFA.recoveryLeft ?? 0} unused single-use codes remaining</p>
+                    </div>
+                    <Btn variant="secondary" onClick={regenRecovery} disabled={totpSaving}>Regenerate</Btn>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   {!twoFA.enabled
                     ? <Btn onClick={startSetup}>Setup 2FA for this user</Btn>
@@ -223,6 +247,20 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                     {totpSaving ? 'Verifying...' : 'Activate 2FA'}
                   </Btn>
                   <Btn variant="secondary" onClick={() => setTwoFA({ ...twoFA, phase: 'view' })}>Cancel</Btn>
+                </div>
+              </>
+            )}
+
+            {twoFA.phase === 'codes' && (
+              <>
+                <p className="text-sm font-medium text-text-primary">Recovery codes — shown only once</p>
+                <p className="text-xs text-text-secondary">Save these single-use codes somewhere safe. Each can be used once instead of an authenticator code if the device is lost.</p>
+                <div className="grid grid-cols-2 gap-2 p-3 bg-background border border-border rounded-xl">
+                  {(twoFA.codes || []).map(c => <code key={c} className="text-xs font-mono text-brand tracking-wider select-all">{c}</code>)}
+                </div>
+                <div className="flex gap-2">
+                  <Btn variant="secondary" onClick={() => { navigator.clipboard?.writeText((twoFA.codes || []).join('\n')); toast('Copied') }}>Copy all</Btn>
+                  <Btn onClick={() => setTwoFA(null)}>Done</Btn>
                 </div>
               </>
             )}
