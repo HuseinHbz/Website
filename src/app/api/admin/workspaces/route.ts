@@ -1,48 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized } from '@/lib/api/respond'
+import { guardJson, apiError, requirePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { workspaces } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { randomUUID } from 'crypto'
 
+// 26.28 بند ۰.۲ — POST/PUT previously only checked "is logged in", so ANY admin
+// role (even read-only auditor/viewer) could create or edit workspace rows.
+// Key: system.workspaces (the Workspaces module in the System workspace).
+// Note: this is the `workspaces` DB table, NOT the WORKSPACES registry constant
+// the RBAC tree is generated from — separate things.
+
 export async function GET() {
-  const user = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const db = getDb()
-  return NextResponse.json(await db.select().from(workspaces).orderBy(workspaces.sortOrder))
+  const auth = await requirePermission('system.workspaces', 'read')
+  if ('error' in auth) return auth.error
+  try {
+    const db = getDb()
+    return NextResponse.json(await db.select().from(workspaces).orderBy(workspaces.sortOrder))
+  } catch (e: unknown) { return apiError(e) }
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser()
-  if (!user) return unauthorized()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const body = await guardJson(req)
-  const db = getDb()
-  const result = (await db.insert(workspaces).values({ ...body, id: body.id || randomUUID(), createdBy: user.id }).returning())[0]
-  await logAction(user, 'CREATE', 'workspace', result.id, null, result)
-  return NextResponse.json(result, { status: 201 })
+  const auth = await requirePermission('system.workspaces', 'write', 'manage_settings')
+  if ('error' in auth) return auth.error
+  try {
+    const body = await guardJson(req)
+    const db = getDb()
+    const result = (await db.insert(workspaces).values({ ...body, id: body.id || randomUUID(), createdBy: auth.user.id }).returning())[0]
+    await logAction(auth.user, 'CREATE', 'workspace', result.id, null, result)
+    return NextResponse.json(result, { status: 201 })
+  } catch (e: unknown) { return apiError(e) }
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await getAdminUser()
-  if (!user) return unauthorized()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id, ...data } = await guardJson(req)
-  const db = getDb()
-  const result = (await db.update(workspaces).set({ ...data, updatedAt: new Date().toISOString() }).where(eq(workspaces.id, id)).returning())[0]
-  await logAction(user, 'UPDATE', 'workspace', id, null, result)
-  return NextResponse.json(result)
+  const auth = await requirePermission('system.workspaces', 'write', 'manage_settings')
+  if ('error' in auth) return auth.error
+  try {
+    const { id, ...data } = await guardJson(req)
+    const db = getDb()
+    const result = (await db.update(workspaces).set({ ...data, updatedAt: new Date().toISOString() }).where(eq(workspaces.id, id)).returning())[0]
+    await logAction(auth.user, 'UPDATE', 'workspace', id, null, result)
+    return NextResponse.json(result)
+  } catch (e: unknown) { return apiError(e) }
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = await getAdminUser()
-  if (!user || !canDo(user.role, 'delete')) return forbidden('Delete requires an administrator role')
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { id } = await guardJson(req)
-  const db = getDb()
-  await db.delete(workspaces).where(eq(workspaces.id, id))
-  await logAction(user, 'DELETE', 'workspace', id, null, null)
-  return NextResponse.json({ ok: true })
+  const auth = await requirePermission('system.workspaces', 'write', 'delete')
+  if ('error' in auth) return auth.error
+  try {
+    const { id } = await guardJson(req)
+    const db = getDb()
+    await db.delete(workspaces).where(eq(workspaces.id, id))
+    await logAction(auth.user, 'DELETE', 'workspace', id, null, null)
+    return NextResponse.json({ ok: true })
+  } catch (e: unknown) { return apiError(e) }
 }

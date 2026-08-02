@@ -72,12 +72,25 @@ export const OVERRIDES: Record<string, string> = {
   'page-templates': 'brand.templates',
 }
 
-/** routes that are auth/self-service utilities — explicitly exempt (audit:rbac list) */
+/**
+ * Routes explicitly exempt from requirePermission (audit:rbac list).
+ * 26.28 بند ۰.۳ RULE: adding to this list requires a WRITTEN one-line reason —
+ * "it was easier" is not one. navigation + workspaces were REMOVED here after
+ * gaining real guards (بند ۰.۱/۰.۲).
+ */
 export const EXCEPTIONS = new Set([
-  'auth/login', 'auth/logout', 'auth/me', 'auth/2fa',
-  'nav-prefs', 'nav-badges', 'navigation', 'table-prefs', 'table-views',
-  'dashboards', 'dashboards/data', 'dashboards/shares', 'dashboards/templates',
-  'workspaces',
+  'auth/login',    // pre-auth by definition — no user exists yet to authorize
+  'auth/logout',   // ends the session; only destroys the caller's own cookie
+  'auth/me',       // returns the caller's OWN identity + grants; no foreign data
+  'auth/2fa',      // self-service 2FA; managing ANOTHER user is op-gated in-route (security.users:reset_2fa)
+  'nav-prefs',     // per-user favorites/recents — reads/writes only the caller's own row
+  'nav-badges',    // per-user pending counters derived from the caller's visible modules
+  'table-prefs',   // per-user table column layout — own row only
+  'table-views',   // saved views; sharing visibility is enforced inside tableViews.ts
+  'dashboards',           // per-user layout row; role/dept scopes need manage_users in-route
+  'dashboards/data',      // widget payloads are RBAC-filtered per widget (tree engine, بند ۰.۴)
+  'dashboards/shares',    // share targets validated in-route; snapshot is the sharer's own layout
+  'dashboards/templates', // template apply/save is per-user; delete is role-gated in-route
 ])
 
 function routeDirs(dir: string, base = ''): string[] {
