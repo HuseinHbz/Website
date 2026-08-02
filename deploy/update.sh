@@ -50,6 +50,18 @@ trap 'echo -e "\n${YELLOW}[!] با Ctrl+C لغو شد (مرحله: ${CURRENT_STE
 
 [[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/update.sh"
 
+# ─── محافظت از خودِ اسکریپت (مثل install.sh): اجرا از کپی خارج از کلون ──────
+# reset --hard فایل‌های کلون را عوض می‌کند؛ اگر اسکریپت از داخل همان پوشه اجرا
+# شده باشد، bash وسط اجرا فایل تغییر‌یافته را می‌خواند.
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+if [[ -z "${HBZ_SELF_COPY:-}" && "$SELF" == "$APP_DIR"/* ]]; then
+  SAFE_DIR="$(mktemp -d /tmp/hbz-deploy-XXXXXX)"
+  cp -r "$(dirname "$SELF")/." "$SAFE_DIR/"
+  export HBZ_SELF_COPY=1
+  echo "[i] اجرا از کپی امن: $SAFE_DIR/$(basename "$SELF")"
+  exec bash "$SAFE_DIR/$(basename "$SELF")" "$@"
+fi
+
 # لاگ کامل روی دیسک
 if [[ -z "${HBZ_UPDATE_LOGGING:-}" ]]; then
   export HBZ_UPDATE_LOGGING=1

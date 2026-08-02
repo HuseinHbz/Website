@@ -51,6 +51,20 @@ trap 'echo -e "\n${YELLOW}[!] با Ctrl+C لغو شد (مرحله: ${CURRENT_STE
 
 [[ $EUID -ne 0 ]] && error "با sudo اجرا کنید: sudo bash deploy/install.sh"
 
+# ─── محافظت از خودِ اسکریپت: اجرا از یک کپی خارج از کلون ────────────────────
+# مرحلهٔ همگام‌سازی مخزن، فایل‌های داخل $APP_DIR را با نسخهٔ شاخهٔ مقصد جایگزین
+# می‌کند — و اگر همین اسکریپت از داخل همان پوشه اجرا شده باشد، bash وسط کار
+# فایلِ در حال خواندن را عوض‌شده می‌بیند و رفتار غیرقابل‌پیش‌بینی می‌شود.
+# پس اول خودمان را به /tmp کپی می‌کنیم و از آنجا ادامه می‌دهیم.
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+if [[ -z "${HBZ_SELF_COPY:-}" && "$SELF" == "$APP_DIR"/* ]]; then
+  SAFE_DIR="$(mktemp -d /tmp/hbz-deploy-XXXXXX)"
+  cp -r "$(dirname "$SELF")/." "$SAFE_DIR/"
+  export HBZ_SELF_COPY=1
+  echo "[i] اجرا از کپی امن: $SAFE_DIR/$(basename "$SELF")"
+  exec bash "$SAFE_DIR/$(basename "$SELF")" "$@"
+fi
+
 # ─── لاگ کامل روی دیسک (برای وقتی خروجی ترمینال بسته/کوتاه شد) ──────────────
 if [[ -z "${HBZ_INSTALL_LOGGING:-}" ]]; then
   export HBZ_INSTALL_LOGGING=1
@@ -323,7 +337,9 @@ sudo -u "$APP_USER" pm2 save
 # pm2 startup — استخراج دقیق دستور sudo و اجرا
 # ⛔ pm2 startup ممکن است غیرصفر برگردد؛ نباید کل نصب را بکشد (set -e)
 STARTUP_OUT=$(pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" 2>&1 || true)
-STARTUP_CMD=$(echo "$STARTUP_OUT" | grep "^sudo " | head -1)
+# ⛔ grep وقتی چیزی پیدا نکند کد ۱ برمی‌گرداند → با set -e کل نصب را می‌کشت.
+# (PM2 نسخهٔ جدید وقتی unit از قبل نصب است، خط "sudo …" چاپ نمی‌کند.)
+STARTUP_CMD=$(echo "$STARTUP_OUT" | grep "^sudo " | head -1 || true)
 if [[ -n "$STARTUP_CMD" ]]; then
   bash -c "$STARTUP_CMD" || warn "pm2 startup اجرا نشد — بعداً دستی: pm2 startup systemd -u $APP_USER --hp /home/$APP_USER"
 else
