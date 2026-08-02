@@ -146,6 +146,31 @@
    subtree (deny dominates), the most specific explicit level wins, and a user with
    ZERO rbac rows behaves EXACTLY like the legacy role (R5). Regression:
    `scripts/verify-2627-rbac.ts` (suite 12 in `npm run regressions`).
+20. **Each module gets exactly ONE menu item (26.29 بند ۲.۵).** `WORKSPACES` is the
+   nav source of truth AND the RBAC key source, so a second entry for the same page
+   means a second permission key. A duplicate needs a WRITTEN reason and must be a
+   specific **tab** of a module (`?tab=`/`?view=`), never a second link to the whole
+   module. Two modules must never share a Persian label (both invariants are unit
+   tested in `workspaces.test.ts`).
+21. **Changing the menu registry REQUIRES an RBAC key migration (26.29 بند ۰).**
+   Moving a module between workspaces changes its key (`content.content` →
+   `brand.content`), which silently orphans every stored grant — the user just loses
+   access with no error. Add the old→new pair to the `$rbac2629$` block in
+   `migrate.ts` (idempotent, NULL-safe, dedupes collisions), migrate the key inside
+   the route code too (`audit:rbac` fails otherwise), and prove it numerically
+   (`scripts/verify-2629-navkeys.ts`, regression suite 14).
+22. **A public query ALWAYS applies its `active`/`published` filter; an empty result
+   is an Empty State, never "show everything" (26.29 BUG-114).** The old
+   `(db && db.length > 0) ? db : DEMO_DATA` idiom made deactivating every record
+   show all the hardcoded demo records — the opposite of what the operator asked
+   for. Use `activeOrNull` (`publicData.ts`): table empty → `null` (never
+   configured, demo content is fine); rows exist but none active → `[]` (a
+   deliberate choice — render nothing). Components fall back ONLY on `null`.
+23. **A user-input constraint violation is a 400 with the field name, not a 500
+   (26.29).** `apiError` maps PG 23502/23505 to `Required field missing: <field>` /
+   `Duplicate <field>`; admin managers surface it via `crud.errorOf` instead of a
+   bare "Failed". A required `slug` the form doesn't collect is auto-derived by
+   `ensureSlug` — that one missing column made nine modules look broken.
 10. **A financial return/void must never leave a balance silently negative (26.26
    BUG-013).** A return on a PAID invoice needs a second leg — a refund (negative
    `sales_payment 'refund'` + Dr AR/Cr Bank → AR back to 0) or an explicit
@@ -990,6 +1015,26 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   optional `2fa_required_sensitive` policy (default OFF). Proof:
   `verify-2627-rbac.ts` 41/41 (regression suite #12) + 4-user Playwright E2E; all
   11 prior regressions green unchanged (R5). 787 unit tests · 12 audits 0.
+- **Phase 26.29 — User-reported defects + menu consolidation** (report:
+  `docs/governance/phase26.29-ux-fixes-report.md`). Eleven "doesn't work" modules had
+  ONE root cause, found by probing every route on live PG: legacy CMS routes passed
+  the body straight to Drizzle with **no try/catch**, so a NOT NULL column the form
+  never collects (usually `slug`) surfaced as a generic 500, and 21 managers swallowed
+  it as "Failed". Fixed in three layers — `apiError` maps PG 23502/23505 to a 400
+  naming the field, pure `ensureSlug` (FA/EN) auto-derives slugs on 9 create routes,
+  `crud.errorOf` surfaces the real message in 22 managers. Also: academy delete row
+  action (the API existed, the button didn't); **pointer-based kanban DnD**
+  (`lib/admin/pointerDnd.ts` — the old handler never called `dataTransfer.setData`
+  so the browser never started a drag; pointer events also close the 26.25b touch
+  debt); case-studies bilingual filter (fa state `'All'` vs label «همه» filtered
+  EVERYTHING out on first load); **BUG-114** deactivated-means-deactivated
+  (`activeOrNull` + 5 sections); partner marquee no longer duplicates a short list;
+  professional `credentials` surfaced on `/about` (they were never public anywhere);
+  shared `formatDateTime` (Jalali + time) for Last Login. **Menu: 12 → 9 workspaces,
+  110 → 95 items, 15 → 0 duplicates, 0 modules deleted** — with a full RBAC key
+  migration (21 pairs) proven by `verify-2629-navkeys.ts` **36/36** (regression suite
+  14): grant count intact, zero orphan keys, decisions identical, idempotent. 833
+  unit tests · 12 audits 0 · regressions 14/14 · CC-005 logged.
 - **Phase 26.28 — Access-system closure: ABAC + 2FA completion** (report:
   `docs/governance/phase26.28-abac-2fa-report.md`). Closed the two real server
   holes (navigation GET had no in-route auth → `brand.menus`; workspaces POST/PUT
