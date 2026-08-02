@@ -8,7 +8,7 @@ import { getAdminUser } from '@/lib/admin/auth'
 export async function GET() {
   const user = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  { const deny = await checkTreePermission(user, 'analytics.ai-analytics', 'read'); if (deny) return deny }
+  { const deny = await checkTreePermission(user, 'ai.ai-analytics', 'read'); if (deny) return deny }
 
   const db = getDb()
   const convs = await db.select().from(aiConversations).orderBy(desc(aiConversations.createdAt)).limit(500)

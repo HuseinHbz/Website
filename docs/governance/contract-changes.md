@@ -86,3 +86,29 @@ guaranteed, what the new one guarantees, why, and who approved it.
 - **Reason:** 26.25b's production hard-gate made the 26.25 storm design
   unsatisfiable on `next start` (always production). CI was red on this since.
 - **Approver:** maintainer (via INFRA-1 "CI must be green" gate); recorded per rule 5.
+
+## CC-005 — 26.29 بند ۲: menu reorganisation changes workspace-count and key assertions
+
+- **Files:** `src/lib/admin/__tests__/workspaces.test.ts`, `src/lib/rbac/__tests__/abac.test.ts`
+- **Old assertions:**
+  - `expect(WORKSPACES).toHaveLength(12)`
+  - `viewer sees only executive/analytics/documentation` → `['analytics','documentation','executive']`
+  - context-aware test asserted `/admin/dashboard` resolves to `analytics` when the
+    user is "in" Analytics, and `/admin/reports` likewise (both were CROSS-LISTED).
+  - `SCOPED_MODULES` contains `crm.crm.tickets`
+- **New assertions:**
+  - `expect(WORKSPACES).toHaveLength(9)` (content + documentation merged into brand,
+    analytics merged into executive — no module deleted, only re-homed)
+  - `viewer sees only the executive + brand workspaces` → `['brand','executive']`
+  - context-aware test now asserts the same guarantee on paths that still have a
+    single owner: context never moves a user out of a workspace that owns the path.
+  - `SCOPED_MODULES` contains `operations.crm.tickets`
+- **What is no longer guaranteed:** nothing about cross-listed pages — because after
+  بند ۲.۵ there are no cross-listed pages left (0 duplicate hrefs, enforced by a NEW
+  test: "every menu item is unique"). The BUG-010/BUG-011 guarantees themselves are
+  unchanged and still asserted (`workspaceForPath` membership + the strong
+  per-item resolution test), plus a new "no duplicate Persian label" test (بند ۳).
+- **Reason:** the maintainer asked for the duplicated menu entries to be merged
+  ("هیچ چیزی حذف نشود فقط ادغام"). Stored RBAC grants were migrated to the new keys
+  and proven intact by `scripts/verify-2629-navkeys.ts` (36/36, regression suite 14).
+- **Approver:** maintainer (phase 26.29 spec, بند ۲); recorded per rule 5.

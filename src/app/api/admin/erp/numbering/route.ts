@@ -12,7 +12,7 @@ const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 
 // GET — ?view=dashboard | formats | counters | audit
 export async function GET(req: NextRequest) {
-  const auth = await requirePermission('erp.numbering', 'read')
+  const auth = await requirePermission('system.numbering', 'read')
   if ('error' in auth) return auth.error
   const p = req.nextUrl.searchParams
   const view = p.get('view') ?? 'formats'
@@ -47,7 +47,7 @@ const formatSchema = z.object({
 
 // POST — create a numbering format.
 export async function POST(req: NextRequest) {
-  const auth = await requirePermission('erp.numbering', 'write', 'edit')
+  const auth = await requirePermission('system.numbering', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, formatSchema)
   if ('error' in parsed) return parsed.error
@@ -72,7 +72,7 @@ const updateSchema = formatSchema.partial().extend({ id: z.number().int().positi
 
 // PUT — update a format (docType immutable).
 export async function PUT(req: NextRequest) {
-  const auth = await requirePermission('erp.numbering', 'write', 'edit')
+  const auth = await requirePermission('system.numbering', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, updateSchema)
   if ('error' in parsed) return parsed.error
@@ -101,7 +101,7 @@ export async function PUT(req: NextRequest) {
 
 // DELETE — remove a format (and its counters via cascade). ?id=
 export async function DELETE(req: NextRequest) {
-  const auth = await requirePermission('erp.numbering', 'write', 'delete')
+  const auth = await requirePermission('system.numbering', 'write', 'delete')
   if ('error' in auth) return auth.error
   const id = Number(req.nextUrl.searchParams.get('id'))
   if (!id) return badRequest('id required')

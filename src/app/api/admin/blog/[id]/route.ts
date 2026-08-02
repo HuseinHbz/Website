@@ -5,7 +5,7 @@ import { blogPosts } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requirePermission('content.blog', 'read')
+  const auth = await requirePermission('brand.blog', 'read')
   if ('error' in auth) return auth.error
   const { id } = await params
   const db = getDb()

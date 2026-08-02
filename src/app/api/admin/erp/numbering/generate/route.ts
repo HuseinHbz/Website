@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const required = d.action === 'reset'
     ? 'manage_settings' as const
     : (d.action === 'generate' || d.action === 'reserve' || d.action === 'release') ? 'edit' as const : undefined
-  const auth = await requirePermission('erp.numbering', 'write', required)
+  const auth = await requirePermission('system.numbering', 'write', required)
   if ('error' in auth) return auth.error
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
   try {

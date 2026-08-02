@@ -15,18 +15,18 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const auth = await requirePermission('crm.crm.tickets', 'read')
+  const auth = await requirePermission('operations.crm.tickets', 'read')
   if ('error' in auth) return auth.error
   try {
     const sp = req.nextUrl.searchParams
     const id = Number(sp.get('id'))
     // 26.28 بند ۲ — ticket row scope (owner_id): own/department enforced server-side
     const { rowScopeFor, rowInScope } = await import('@/lib/rbac/data')
-    const scope = await rowScopeFor(auth.user.id, 'crm.crm.tickets')
+    const scope = await rowScopeFor(auth.user.id, 'operations.crm.tickets')
     if (id) {
       const t = await getTicket(id, { includeInternal: true })   // admin sees internal notes
       if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-      if (scope !== 'all' && !(await rowInScope(auth.user.id, 'crm.crm.tickets', t.ownerId ?? null))) {
+      if (scope !== 'all' && !(await rowInScope(auth.user.id, 'operations.crm.tickets', t.ownerId ?? null))) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 })   // بند ۲.۲: existence not leaked
       }
       return NextResponse.json(t)
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       customerId: Number(sp.get('customer')) || undefined,
     })
     if (scope === 'department') {
-      const checks = await Promise.all(tickets.map(t => rowInScope(auth.user.id, 'crm.crm.tickets', (t as { ownerId?: string | null }).ownerId ?? null)))
+      const checks = await Promise.all(tickets.map(t => rowInScope(auth.user.id, 'operations.crm.tickets', (t as { ownerId?: string | null }).ownerId ?? null)))
       tickets = tickets.filter((_, i) => checks[i])
     }
     return NextResponse.json({ tickets })
@@ -52,7 +52,7 @@ const scan = z.object({ action: z.literal('scan') })
 const body = z.discriminatedUnion('action', [reply, status, assign, priority, scan])
 
 export async function POST(req: NextRequest) {
-  const auth = await requirePermission('crm.crm.tickets', 'write', 'edit')
+  const auth = await requirePermission('operations.crm.tickets', 'write', 'edit')
   if ('error' in auth) return auth.error
   const parsed = await readJson(req, body)
   if ('error' in parsed) return parsed.error

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAdminUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    { const deny = await checkTreePermission(user, 'content.content', 'read'); if (deny) return deny }
+    { const deny = await checkTreePermission(user, 'brand.content', 'read'); if (deny) return deny }
     const db = getDb()
     const type = req.nextUrl.searchParams.get('type')
     const rows = type
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAdminUser()
     if (!user) return unauthorized()
-    { const deny = await checkTreePermission(user, 'content.content', 'write'); if (deny) return deny }
+    { const deny = await checkTreePermission(user, 'brand.content', 'write'); if (deny) return deny }
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await guardJson(req)
     const db = getDb()
@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await getAdminUser()
     if (!user) return unauthorized()
-    { const deny = await checkTreePermission(user, 'content.content', 'write'); if (deny) return deny }
+    { const deny = await checkTreePermission(user, 'brand.content', 'write'); if (deny) return deny }
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await guardJson(req)
     const db = getDb()

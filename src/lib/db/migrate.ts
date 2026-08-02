@@ -2662,6 +2662,63 @@ export async function runMigrations() {
     CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_ops_nullsafe ON rbac_user_ops(user_id, op_key, COALESCE(company_id,-1));
     CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_scope_nullsafe ON rbac_row_scope(user_id, permission_key, COALESCE(company_id,-1));
 
+    -- ── Phase 26.29 بند ۰: RBAC key migration after the menu reorganisation ──
+    -- The permission tree is GENERATED from WORKSPACES, so moving a module to a
+    -- different workspace changes its key and would silently orphan every stored
+    -- grant (the user would just lose access, with no error anywhere). This
+    -- remaps them. Idempotent: the old keys no longer exist after the first run,
+    -- and each statement is a no-op when there is nothing to move. The
+    -- ON CONFLICT-free form is required because company_id may be NULL (26.28).
+    DO $rbac2629$
+    DECLARE
+      m RECORD;
+    BEGIN
+      FOR m IN SELECT * FROM (VALUES
+        ('analytics.ai-analytics','ai.ai-analytics'),
+        ('analytics.dashboard','executive.dashboard'),
+        ('analytics.reports','erp.reports'),
+        ('analytics.seo','brand.seo'),
+        ('content.ai-kb','ai.ai-kb'),
+        ('content.ai-prompts','ai.ai-prompts'),
+        ('content.blog','brand.blog'),
+        ('content.content','brand.content'),
+        ('content.docs','brand.docs'),
+        ('content.media','brand.media'),
+        ('documentation.docs','brand.docs'),
+        ('crm.crm.tickets','operations.crm.tickets'),
+        ('erp.numbering','system.numbering'),
+        ('security.flags','system.flags'),
+        ('system.company','erp.company'),
+        ('system.logs-monitoring','operations.logs-monitoring'),
+        ('system.security','security.security'),
+        ('system.seo','brand.seo'),
+        -- workspace-level grants of the three merged workspaces
+        ('analytics','executive'),
+        ('content','brand'),
+        ('documentation','brand')
+      ) AS t(old_key, new_key) LOOP
+        -- drop a row that would collide with an existing grant on the new key
+        DELETE FROM rbac_user_grants g USING rbac_user_grants k
+          WHERE g.permission_key = m.old_key AND k.permission_key = m.new_key
+            AND g.user_id = k.user_id AND g.company_id IS NOT DISTINCT FROM k.company_id;
+        UPDATE rbac_user_grants SET permission_key = m.new_key WHERE permission_key = m.old_key;
+
+        DELETE FROM rbac_row_scope g USING rbac_row_scope k
+          WHERE g.permission_key = m.old_key AND k.permission_key = m.new_key
+            AND g.user_id = k.user_id AND g.company_id IS NOT DISTINCT FROM k.company_id;
+        UPDATE rbac_row_scope SET permission_key = m.new_key WHERE permission_key = m.old_key;
+
+        -- sensitive ops carry the module key as a prefix ("<module>:<op>")
+        DELETE FROM rbac_user_ops g USING rbac_user_ops k
+          WHERE g.op_key LIKE m.old_key || ':%'
+            AND k.op_key = m.new_key || split_part(g.op_key, ':', 2)
+            AND g.user_id = k.user_id AND g.company_id IS NOT DISTINCT FROM k.company_id;
+        UPDATE rbac_user_ops SET op_key = m.new_key || ':' || split_part(op_key, ':', 2)
+          WHERE op_key LIKE m.old_key || ':%';
+      END LOOP;
+    END
+    $rbac2629$;
+
     -- ── Phase 26.27 بند ۵: 2FA hardening ────────────────────────────────────
     CREATE TABLE IF NOT EXISTS admin_recovery_codes (
       id SERIAL PRIMARY KEY,

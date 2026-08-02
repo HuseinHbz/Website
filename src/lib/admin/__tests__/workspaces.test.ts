@@ -2,9 +2,22 @@ import { describe, it, expect } from 'vitest'
 import { WORKSPACES, workspaceForPath, workspaceById, workspaceHome, allNavItems, roleCan, visibleWorkspaces, visibleGroups, quickActionsFor, breadcrumbFor, findItem, roleDefaultFavorites, hrefPath } from '../workspaces'
 
 describe('workspace registry', () => {
-  it('has 12 workspaces with unique ids', () => {
-    expect(WORKSPACES).toHaveLength(12)
-    expect(new Set(WORKSPACES.map(w => w.id)).size).toBe(12)
+  // 26.29 بند ۲: content + documentation merged into brand, analytics into
+  // executive → 12 workspaces became 9 (CC-005 in contract-changes.md).
+  it('has 9 workspaces with unique ids', () => {
+    expect(WORKSPACES).toHaveLength(9)
+    expect(new Set(WORKSPACES.map(w => w.id)).size).toBe(9)
+  })
+
+  // 26.29 بند ۲.۵ — the invariant that replaces cross-listing: one module, one item.
+  it('every menu item is unique (zero duplicates across the whole registry)', () => {
+    const hrefs = WORKSPACES.flatMap(w => w.groups.flatMap(g => g.items.map(i => i.href)))
+    expect(new Set(hrefs).size).toBe(hrefs.length)
+  })
+
+  it('no two modules share a Persian label (بند ۳ — no confusing twins)', () => {
+    const labels = WORKSPACES.flatMap(w => w.groups.flatMap(g => g.items.map(i => i.labelFa)))
+    expect(new Set(labels).size).toBe(labels.length)
   })
 
   it('resolves the active workspace by longest-matching href', () => {
@@ -71,19 +84,20 @@ describe('workspace registry', () => {
   // BUG-010 second root (26.26b بند ۲.۱): context-aware resolution keeps a user in
   // their current workspace for a CROSS-LISTED page, instead of jumping to the
   // first-listed owner (the reported Treasury/BI/dashboard jump).
-  it('context-aware: a cross-listed page keeps the user in their current workspace (بند ۲.۱)', () => {
-    // /admin/dashboard is listed in BOTH executive and analytics.
-    expect(workspaceForPath('/admin/dashboard').id).toBe('executive')            // context-free → first owner
-    expect(workspaceForPath('/admin/dashboard', 'analytics').id).toBe('analytics') // in Analytics → stay
+  // 26.29: after the dedupe there are no cross-listed pages left, so the
+  // context-aware branch can only be exercised on a tab-scoped module. The
+  // guarantee under test is unchanged: context never moves you out of a
+  // workspace that legitimately owns the path (CC-005).
+  it('context-aware resolution keeps a user in a workspace that owns the path (بند ۲.۱)', () => {
+    expect(workspaceForPath('/admin/dashboard').id).toBe('executive')
     expect(workspaceForPath('/admin/dashboard', 'executive').id).toBe('executive')
-    // /admin/reports is in analytics + erp.
-    expect(workspaceForPath('/admin/reports', 'analytics').id).toBe('analytics')
     expect(workspaceForPath('/admin/reports', 'erp').id).toBe('erp')
+    expect(workspaceForPath('/admin/treasury', 'erp').id).toBe('erp')
   })
 
   it('context does NOT override when the current workspace does not own the path', () => {
-    // Treasury is only in erp; being "in" analytics must not keep you there.
-    expect(workspaceForPath('/admin/treasury', 'analytics').id).toBe('erp')
+    // Treasury is only in erp; being "in" another workspace must not keep you there.
+    expect(workspaceForPath('/admin/treasury', 'crm').id).toBe('erp')
     // an unknown current id is ignored
     expect(workspaceForPath('/admin/treasury', 'nonsense').id).toBe('erp')
   })
@@ -190,9 +204,11 @@ describe('read-only roles (26.22)', () => {
       expect(roleCan(role, 'manage_users')).toBe(false)
     }
   })
-  it('viewer sees only executive/analytics/documentation workspaces', () => {
+  // 26.29: analytics/documentation were merged away; the shareholder view is
+  // now executive + brand (dashboards and public content). CC-005.
+  it('viewer sees only the executive + brand workspaces', () => {
     const ids = visibleWorkspaces('viewer').map(w => w.id).sort()
-    expect(ids).toEqual(['analytics', 'documentation', 'executive'])
+    expect(ids).toEqual(['brand', 'executive'])
   })
   it('auditor sees the security workspace (audit trail) but never ERP editing', () => {
     const ids = visibleWorkspaces('auditor').map(w => w.id)

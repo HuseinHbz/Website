@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
-  { const deny = await checkTreePermission(user, 'content.blog', 'write'); if (deny) return deny }
+  { const deny = await checkTreePermission(user, 'brand.blog', 'write'); if (deny) return deny }
   const body = await guardJson(req)
   const db = getDb()
   const result = await db.insert(blogCategories).values(body).returning()
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
-  { const deny = await checkTreePermission(user, 'content.blog', 'write'); if (deny) return deny }
+  { const deny = await checkTreePermission(user, 'brand.blog', 'write'); if (deny) return deny }
   const { id, ...data } = await guardJson(req)
   const db = getDb()
   await db.update(blogCategories).set(data).where(eq(blogCategories.id, id))

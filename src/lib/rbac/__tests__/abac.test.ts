@@ -44,7 +44,8 @@ describe('26.28 بند ۲.۳ — SCOPED_MODULES registry honesty', () => {
 
   it('covers the priority modules of the spec (CRM / sales / projects)', () => {
     expect(Object.keys(SCOPED_MODULES)).toEqual(expect.arrayContaining([
-      'crm.crm', 'crm.crm.tickets', 'crm.crm.customers', 'erp.sales', 'erp.project-management',
+      // 26.29: tickets moved to the Operations workspace → key changed (CC-005)
+      'crm.crm', 'operations.crm.tickets', 'crm.crm.customers', 'erp.sales', 'erp.project-management',
     ]))
   })
 })

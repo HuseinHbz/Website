@@ -81,7 +81,7 @@ export const SENSITIVE_FIELDS: Record<string, { routes: string[]; fields: string
 export const SCOPED_MODULES: Record<string, Array<'all' | 'own' | 'department'>> = {
   'crm.crm': ['all', 'own', 'department'],            // leads + activities (owner_id / assigned_to)
   'crm.crm.customers': ['all', 'own', 'department'],  // Customer 360 (sales_customers.owner_id)
-  'crm.crm.tickets': ['all', 'own', 'department'],    // tickets (owner_id)
+  'operations.crm.tickets': ['all', 'own', 'department'],  // tickets (owner_id) — moved workspace in 26.29
   'erp.sales': ['all', 'own', 'department'],          // documents (customer owner / created_by)
   'erp.project-management': ['all', 'own', 'department'], // pm_projects (created_by)
 }

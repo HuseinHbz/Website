@@ -14,7 +14,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const user = await getAdminUser()
   if (!user) return unauthorized()
-  { const deny = await checkTreePermission(user, 'system.seo', 'write'); if (deny) return deny }
+  { const deny = await checkTreePermission(user, 'brand.seo', 'write'); if (deny) return deny }
   const body = await guardJson(req)
   const { pageKey, locale, ...data } = body
   if (!pageKey || !locale) return NextResponse.json({ error: 'pageKey and locale required' }, { status: 400 })

@@ -48,12 +48,16 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Executive Profile', labelFa: 'پروفایل اجرایی', href: '/admin/about', icon: '◍' },
         { labelEn: 'Leadership Journey', labelFa: 'مسیر رهبری', href: '/admin/timeline', icon: '◎' },
         { labelEn: 'Core Expertise', labelFa: 'تخصص‌های اصلی', href: '/admin/skills', icon: '◈' },
-        { labelEn: 'Credentials', labelFa: 'گواهینامه‌ها', href: '/admin/credentials', icon: '🏅' },
+        { labelEn: 'Professional Credentials', labelFa: 'مدارک تخصصی', href: '/admin/credentials', icon: '🏅' },
       ] },
+      // 26.29 بند ۲.۱ — the standalone «مرکز محتوا» and «مستندات» workspaces were
+      // merged in here: their items duplicated these ones one-for-one.
       { en: 'Content Hub', fa: 'مرکز محتوا', items: [
         { labelEn: 'All Content', labelFa: 'همه محتوا', href: '/admin/content', icon: '📝' },
         { labelEn: 'Blog', labelFa: 'بلاگ', href: '/admin/blog', icon: '✍️' },
         { labelEn: 'Hero & Landing', labelFa: 'هیرو و صفحه اصلی', href: '/admin/hero', icon: '⬡' },
+        { labelEn: 'Documentation', labelFa: 'مستندات', href: '/admin/docs', icon: '📖' },
+        { labelEn: 'SEO Control Center', labelFa: 'مرکز کنترل سئو', href: '/admin/seo', icon: '🔎' },
       ] },
       { en: 'Technology', fa: 'فناوری', items: [
         { labelEn: 'Technology Catalog', labelFa: 'کاتالوگ فناوری', href: '/admin/technologies', icon: '⚙️' },
@@ -62,9 +66,9 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Industries', labelFa: 'صنایع', href: '/admin/industries', icon: '🏭' },
       ] },
       { en: 'Portfolio', fa: 'پورتفولیو', items: [
-        { labelEn: 'Case Studies', labelFa: 'مطالعات موردی', href: '/admin/projects', icon: '◆' },
+        { labelEn: 'Case Studies (Portfolio)', labelFa: 'مطالعات موردی (پورتفولیو)', href: '/admin/projects', icon: '◆' },
         { labelEn: 'Testimonials', labelFa: 'نظرات مشتریان', href: '/admin/testimonials', icon: '⭐' },
-        { labelEn: 'Certifications', labelFa: 'گواهینامه‌ها', href: '/admin/certifications', icon: '📜' },
+        { labelEn: 'Organizational Certifications', labelFa: 'گواهینامه‌های سازمانی', href: '/admin/certifications', icon: '📜' },
         { labelEn: 'Products & Platform', labelFa: 'محصولات و پلتفرم', href: '/admin/products', icon: '📦' },
         { labelEn: 'Academy', labelFa: 'آکادمی', href: '/admin/academy', icon: '🎓' },
         { labelEn: 'Events & Webinars', labelFa: 'رویدادها', href: '/admin/events-mgr', icon: '🗓️' },
@@ -80,18 +84,6 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    id: 'content', nameEn: 'Content Center', nameFa: 'مرکز محتوا', icon: '📚',
-    descEn: 'Knowledge, articles, documentation and media', descFa: 'دانش، مقالات، مستندات و رسانه',
-    groups: [{ en: 'Knowledge & Docs', fa: 'دانش و مستندات', items: [
-      { labelEn: 'All Content', labelFa: 'همه محتوا', href: '/admin/content', icon: '📝' },
-      { labelEn: 'Blog', labelFa: 'بلاگ', href: '/admin/blog', icon: '✍️' },
-      { labelEn: 'Documentation', labelFa: 'مستندات', href: '/admin/docs', icon: '📄' },
-      { labelEn: 'AI Knowledge Base', labelFa: 'پایگاه دانش هوش مصنوعی', href: '/admin/ai-kb', icon: '📚' },
-      { labelEn: 'Prompt Library', labelFa: 'کتابخانه پرامپت', href: '/admin/ai-prompts', icon: '📝' },
-      { labelEn: 'Media Center', labelFa: 'مرکز رسانه', href: '/admin/media', icon: '▤' },
-    ] }],
-  },
-  {
     id: 'crm', nameEn: 'CRM Platform', nameFa: 'پلتفرم CRM', icon: '📇',
     descEn: 'Leads, clients, contacts and consultations', descFa: 'سرنخ‌ها، مشتریان، تماس‌ها و مشاوره‌ها',
     groups: [{ en: 'Customers', fa: 'مشتریان', items: [
@@ -101,7 +93,8 @@ export const WORKSPACES: Workspace[] = [
       { labelEn: 'Organizations', labelFa: 'سازمان‌ها', href: '/admin/organizations', icon: '🏢' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
       { labelEn: 'Consultations', labelFa: 'مشاوره‌ها', href: '/admin/consultations', icon: '◎' },
-      { labelEn: 'Support Tickets', labelFa: 'تیکت‌های پشتیبانی', href: '/admin/crm/tickets', icon: '🎫' },
+      // 26.29 بند ۲.۴ — «تیکت‌های پشتیبانی» moved to the Operations workspace at
+      // the maintainer's explicit request (one menu item, one home).
     ] }],
   },
   {
@@ -115,7 +108,7 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Purchasing Center', labelFa: 'مرکز خرید', href: '/admin/purchasing', icon: '🧾' },
         { labelEn: 'Inventory Center', labelFa: 'مرکز انبار', href: '/admin/inventory', icon: '📦' },
         { labelEn: 'Asset Center', labelFa: 'مرکز دارایی‌ها', href: '/admin/assets', icon: '🖧' },
-        { labelEn: 'Project Center', labelFa: 'مرکز پروژه', href: '/admin/project-management', icon: '📋' },
+        { labelEn: 'Project Center (ERP)', labelFa: 'مرکز پروژه (ERP)', href: '/admin/project-management', icon: '📋' },
       ] },
       { en: 'Treasury', fa: 'خزانه‌داری', items: [
         { labelEn: 'Treasury Overview', labelFa: 'نمای خزانه', href: '/admin/treasury?tab=overview', icon: '🏦' },
@@ -144,7 +137,6 @@ export const WORKSPACES: Workspace[] = [
         { labelEn: 'Reporting Center', labelFa: 'مرکز گزارش‌ها', href: '/admin/reports', icon: '📈' },
         { labelEn: 'Master Data Governance', labelFa: 'حاکمیت داده پایه', href: '/admin/master-data', icon: '🗂' },
         { labelEn: 'Import & Migration', labelFa: 'ورود و مهاجرت داده', href: '/admin/import-center', icon: '📥' },
-        { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
       ] },
       { en: 'Automation', fa: 'اتوماسیون', items: [
         { labelEn: 'Approval Center', labelFa: 'مرکز تأیید', href: '/admin/approvals', icon: '✅' },
@@ -173,7 +165,6 @@ export const WORKSPACES: Workspace[] = [
       { labelEn: 'Security & 2FA', labelFa: 'امنیت و ۲FA', href: '/admin/security', icon: '🔐' },
       { labelEn: 'Security Operations (SOC)', labelFa: 'مرکز عملیات امنیت', href: '/admin/soc', icon: '🛡️' },
       { labelEn: 'Audit Center', labelFa: 'مرکز حسابرسی', href: '/admin/audit', icon: '▦' },
-      { labelEn: 'Feature Flags', labelFa: 'پرچم‌های ویژگی', href: '/admin/flags', icon: '🚩' },
     ] }],
   },
   {
@@ -184,6 +175,8 @@ export const WORKSPACES: Workspace[] = [
       { labelEn: 'Operational Health', labelFa: 'سلامت عملیاتی', href: '/admin/health', icon: '🩺' },
       { labelEn: 'Logs & Monitoring', labelFa: 'لاگ‌ها و پایش', href: '/admin/logs-monitoring', icon: '📡' },
       { labelEn: 'Database Center', labelFa: 'مرکز دیتابیس', href: '/admin/database', icon: '🗄️' },
+      // 26.29 بند ۲.۴ — moved here from CRM (maintainer's explicit request)
+      { labelEn: 'Support Tickets', labelFa: 'تیکت‌های پشتیبانی', href: '/admin/crm/tickets', icon: '🎫' },
     ] }],
   },
   {
@@ -194,46 +187,32 @@ export const WORKSPACES: Workspace[] = [
     ] }],
   },
   {
-    id: 'analytics', nameEn: 'Analytics Center', nameFa: 'مرکز تحلیل', icon: '📊',
-    descEn: 'Business, AI, reporting and SEO analytics', descFa: 'تحلیل کسب‌وکار، هوش مصنوعی، گزارش و سئو',
-    groups: [{ en: 'Analytics', fa: 'تحلیل', items: [
-      { labelEn: 'Website Analytics', labelFa: 'آنالیتیکس سایت', href: '/admin/dashboard', icon: '◉' },
-      { labelEn: 'AI Analytics', labelFa: 'تحلیل هوش مصنوعی', href: '/admin/ai-analytics', icon: '📊' },
-      { labelEn: 'Reporting Center', labelFa: 'مرکز گزارش‌ها', href: '/admin/reports', icon: '📈' },
-      { labelEn: 'SEO Control Center', labelFa: 'مرکز کنترل سئو', href: '/admin/seo', icon: '🔎' },
-    ] }],
-  },
-  {
-    id: 'documentation', nameEn: 'Documentation', nameFa: 'مستندات', icon: '📖',
-    descEn: 'Product, API and developer documentation', descFa: 'مستندات محصول، API و توسعه‌دهنده',
-    groups: [{ en: 'Docs', fa: 'مستندات', items: [
-      { labelEn: 'Documentation Center', labelFa: 'مرکز مستندات', href: '/admin/docs', icon: '📖' },
-    ] }],
-  },
-  {
     id: 'system', nameEn: 'System Administration', nameFa: 'مدیریت سیستم', icon: '⚙️', requires: 'manage_settings',
     descEn: 'Settings, organization, integrations and platform config', descFa: 'تنظیمات، سازمان، یکپارچه‌سازی و پیکربندی پلتفرم',
     groups: [
       { en: 'Platform', fa: 'پلتفرم', items: [
         { labelEn: 'Go-Live Checklist', labelFa: 'چک‌لیست راه‌اندازی', href: '/admin/settings/onboarding', icon: '🚀' },
         { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
-        { labelEn: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', href: '/admin/settings/integrations', icon: '🔌' },
-        { labelEn: 'Company Profile', labelFa: 'پروفایل شرکت (اسناد)', href: '/admin/company', icon: '🏢' },
+        { labelEn: 'Integration Credentials', labelFa: 'کلیدهای اتصال', href: '/admin/settings/integrations', icon: '🔌' },
+        // 26.29 بند ۲.۵ — one module, one menu item. Removed from here because
+        // another workspace is the module's real home:
+        //   company → ERP (printed on every generated document)
+        //   security → Security Center · logs-monitoring → Operations Center
+        //   seo → Brand (content marketing)
+        // Kept: the two ?tab=/?view= entries below are a SPECIFIC TAB of a bigger
+        // module, not a second link to the whole module (the written exception).
         { labelEn: 'Currency Settings', labelFa: 'تنظیمات ارز', href: '/admin/finance?tab=currency', icon: '💱' },
         { labelEn: 'Document Settings', labelFa: 'تنظیمات اسناد', href: '/admin/documents?view=designer', icon: '📑' },
-        { labelEn: 'Security Settings', labelFa: 'تنظیمات امنیت', href: '/admin/security', icon: '🔐' },
-        { labelEn: 'Audit & Logs', labelFa: 'ممیزی و لاگ‌ها', href: '/admin/logs-monitoring', icon: '📋' },
         { labelEn: 'Feature Flags', labelFa: 'پرچم‌های ویژگی', href: '/admin/flags', icon: '🚩' },
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
         { labelEn: 'Design System', labelFa: 'سیستم طراحی', href: '/admin/design-system', icon: '🎨' },
-        { labelEn: 'SEO Control Center', labelFa: 'مرکز کنترل سئو', href: '/admin/seo', icon: '🔎' },
       ] },
       { en: 'Organization', fa: 'سازمان', items: [
-        { labelEn: 'HBZ Organization', labelFa: 'پروفایل شرکت', href: '/admin/organization', icon: '🏛️' },
+        { labelEn: 'HBZ Organization', labelFa: 'پروفایل سازمان', href: '/admin/organization', icon: '🏛️' },
         { labelEn: 'Sites', labelFa: 'سایت‌ها', href: '/admin/sites', icon: '🌐' },
         { labelEn: 'Workspaces', labelFa: 'فضاهای کاری', href: '/admin/workspaces', icon: '🗃️' },
         { labelEn: 'Partners', labelFa: 'شرکا', href: '/admin/partners', icon: '🤝' },
-        { labelEn: 'Integrations', labelFa: 'یکپارچه‌سازی‌ها', href: '/admin/integrations', icon: '🔌' },
+        { labelEn: 'Integrations Catalog', labelFa: 'کاتالوگ یکپارچه‌سازی', href: '/admin/integrations', icon: '🔌' },
       ] },
     ],
   },
@@ -342,9 +321,11 @@ const ROLE_PERMS: Record<AdminRole, WorkspaceRequire[]> = {
 // Read-only roles see a curated workspace subset (26.22). The whitelist also
 // grants the auditor the Security workspace (audit trail) despite its
 // manage_users gate — the server still blocks every write for these roles.
+// 26.29 بند ۲ — the analytics + documentation workspaces were merged away, so a
+// whitelist naming them would have silently left `viewer` with ONE workspace.
 const ROLE_WORKSPACE_WHITELIST: Record<string, string[]> = {
-  viewer: ['executive', 'analytics', 'documentation'],
-  auditor: ['executive', 'analytics', 'operations', 'security', 'documentation'],
+  viewer: ['executive', 'brand'],
+  auditor: ['executive', 'brand', 'operations', 'security'],
 }
 /** Pure permission check usable on the client (server routes still enforce RBAC). */
 export function roleCan(role: string, action: WorkspaceRequire): boolean {

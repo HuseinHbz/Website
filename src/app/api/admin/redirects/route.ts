@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAdminUser()
     if (!user) return unauthorized()
-    { const deny = await checkTreePermission(user, 'system.seo', 'write'); if (deny) return deny }
+    { const deny = await checkTreePermission(user, 'brand.seo', 'write'); if (deny) return deny }
     const body = await guardJson(req)
     const db = getDb()
     const result = await db.insert(redirects).values(body).returning()
@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await getAdminUser()
     if (!user) return unauthorized()
-    { const deny = await checkTreePermission(user, 'system.seo', 'write'); if (deny) return deny }
+    { const deny = await checkTreePermission(user, 'brand.seo', 'write'); if (deny) return deny }
     const { id, ...data } = await guardJson(req)
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const db = getDb()
