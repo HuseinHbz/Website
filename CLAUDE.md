@@ -128,6 +128,17 @@
    `scripts/rbac-route-map.ts`. New modules/tabs in `workspaces.ts` get tree nodes
    automatically; new sensitive ops must be registered in `SENSITIVE_OPS`
    (`src/lib/rbac/registry.ts`).
+18. **Adding a route to the rbac EXCEPTIONS list requires a WRITTEN one-line reason
+   (26.28 بند ۰.۳).** The list lives in `scripts/rbac-route-map.ts`; every entry must
+   say WHY it is exempt (self-service, pre-auth, own-row-only). A route that touches
+   shared/admin data is never an exception — it gets `requirePermission` with a
+   registry key (navigation and workspaces were removed from the list this way).
+19. **A sensitive field is REMOVED from the API payload, never hidden with CSS
+   (26.28 بند ۳).** Use `stripFields`/`sensitiveFieldVisible` (`src/lib/rbac/data.ts`)
+   with an op key declared in `SENSITIVE_FIELDS` (`rbac/registry.ts`) — the key must
+   be ABSENT from the raw response. Row scope (`rowScopeSql`/`rowInScope`) is applied
+   in the query WHERE, and an out-of-scope record answers **404, not 403** (26.25a
+   pattern). Only modules listed in `SCOPED_MODULES` advertise a scope selector.
 17. **A sensitive op is NEVER implied by `write` (26.27).** Operations like
    `:post`/`:void`/`:confirm`/`:close_period` require an explicit `requireOp(user,
    '<module>:<op>', legacyAction)` inside that op's branch — including create-and-post
@@ -979,6 +990,24 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   optional `2fa_required_sensitive` policy (default OFF). Proof:
   `verify-2627-rbac.ts` 41/41 (regression suite #12) + 4-user Playwright E2E; all
   11 prior regressions green unchanged (R5). 787 unit tests · 12 audits 0.
+- **Phase 26.28 — Access-system closure: ABAC + 2FA completion** (report:
+  `docs/governance/phase26.28-abac-2fa-report.md`). Closed the two real server
+  holes (navigation GET had no in-route auth → `brand.menus`; workspaces POST/PUT
+  only checked login → `system.workspaces`); EXCEPTIONS trimmed 14→12, every entry
+  with a written reason; dashboard widgets decide tree-first (`effectiveLevel` on
+  the widget's workspace, canDo only as R5 fallback). **ABAC live**: shared
+  `rowScopeSql`/`rowInScope` (own + department; company honestly not offered) now
+  called by leads/activities/tickets/customer360/sales-documents/projects — lists
+  filtered in the WHERE, out-of-scope record → 404; `SCOPED_MODULES` drives the
+  scope selector in the permission tree. **Field cover**: `stripFields` +
+  `SENSITIVE_FIELDS`; inventory cost/valuation removed from products AND overview
+  payloads without `erp.inventory:cost_view`. **2FA completion**: backup ops under
+  the mandatory policy, TOTP-lock alert (SOC log + email), `needs2fa` gateway
+  banner in AdminShell. **Real bug fixed**: rbac upserts with NULL company_id never
+  hit ON CONFLICT (SQL NULLs are distinct) → NULL-safe DELETE+INSERT + dedupe +
+  COALESCE unique indexes. Proof: `verify-2628-abac.ts` 21/21 (regression suite
+  #13) · E2E 6/6 · regressions 13/13 (11 legacy unchanged, R5) · 809 unit tests ·
+  12 audits 0 (audit:rbac 159/12/0) · build clean.
 - **Phase 26.25b — R2 Final** (تکمیل نهایی R2; report:
   `docs/governance/phase26.25b-r2-final-report.md`). Closes Release 2. **بند ۰
   inherited-debt (10/10)**: **password → async `crypto.scrypt`** (`lib/admin/
