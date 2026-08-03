@@ -23,7 +23,13 @@ export default async function IndustriesPage({ params }: Props) {
   const { locale } = await params
   const fa = locale === 'fa'
   const db = getDb()
+  // 26.30 بند۱ — the post-deploy health check caught this: with the database
+  // briefly unreachable, every other public page degraded to its empty state
+  // while this one threw and returned 500 for the whole route. A public page
+  // must not take itself down because one query failed — render empty, log the
+  // cause. (Same guard the events/docs/products pages already had.)
   const allIndustries = await db.select().from(industries).where(eq(industries.active, true)).orderBy(industries.sortOrder)
+    .catch((e: unknown) => { console.error('[industries] query failed — rendering empty state', e); return [] as (typeof industries.$inferSelect)[] })
 
   return (
     <div className="min-h-screen bg-background" dir={fa ? 'rtl' : 'ltr'}>

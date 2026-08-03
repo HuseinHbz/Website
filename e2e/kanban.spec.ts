@@ -1,14 +1,15 @@
 /**
  * 26.33 BUG-206 — the CRM kanban drag, tested for real.
  *
- * This defect has now come back twice. 26.29 replaced HTML5 drag with pointer
- * events and proved the PURE helpers with unit tests — but a unit test cannot
- * see that the browser fires a `click` after `pointerup`, which is what actually
- * broke it: the drop succeeded, then the card's onClick opened the lead drawer
- * over the board, so the move looked like it had failed.
+ * This defect came back twice because both previous diagnoses stopped one layer
+ * short. 26.29 fixed the drag mechanics; 26.33 fixed the click that fired after
+ * `pointerup` and opened the drawer over the board. Both were real, neither was
+ * the root: the PUT itself was answering 400 "name: Required" (the update reused
+ * the CREATE schema), and `move()` swallowed the failure — so the row never
+ * moved on any device, by drag or by the stage selector.
  *
- * Only a real drag in a real browser, followed by checking what the SERVER
- * stored, closes that gap. That is what this does.
+ * That is why this test asserts against the SERVER and not the DOM. Watching the
+ * request go out is not evidence; only the stored row is.
  */
 import { test, expect } from '@playwright/test'
 
@@ -59,7 +60,10 @@ async function dragCard(page: import('@playwright/test').Page, cardText: string,
 }
 
 async function openKanban(page: import('@playwright/test').Page) {
-  await page.goto('/admin/crm')
+  // 'networkidle' matters here: the board is client-rendered from a fetch, and
+  // the drag closure captures the lead list from the render that was current
+  // when the press began. Starting a drag mid-load captures an empty list.
+  await page.goto('/admin/crm', { waitUntil: 'networkidle' })
   // The view toggle is label-based and the admin UI is bilingual, so match on
   // either language and then wait for the BOARD itself rather than a timeout —
   // the zones only exist in kanban view, so their presence is the real signal.
@@ -93,16 +97,21 @@ test.describe('CRM kanban drag & drop', () => {
   // fixme rather than deleted (it is a genuine coverage gap, not a non-issue)
   // and rather than left red (a permanently failing test trains people to
   // ignore CI). The two tests below DO run and cover the actual 26.33 defect.
-  test.fixme('dragging a card to another column moves it on the SERVER', async ({ page, request }) => {
+  test('dragging a card to another column moves it on the SERVER', async ({ page, request }) => {
     await openKanban(page)
     await dragCard(page, LEAD.name, 'qualified')
 
     // The assertion that matters: the move was PERSISTED, not just repainted.
+    // Read through the page's own session with a cache-buster — a plain GET on
+    // the shared request context can be served from cache and report the value
+    // from before the drag.
     await expect.poll(async () => {
-      const res = await request.get('/api/admin/crm/leads')
+      const res = await page.request.get(`/api/admin/crm/leads?_=${Date.now()}`, {
+        headers: { 'cache-control': 'no-cache' },
+      })
       const { leads } = await res.json()
       return leads.find((l: { id: number }) => l.id === leadId)?.status
-    }, { timeout: 10_000 }).toBe('qualified')
+    }, { timeout: 15_000 }).toBe('qualified')
   })
 
   test('the drop does not also open the lead drawer (the 26.33 regression)', async ({ page }) => {

@@ -24,6 +24,21 @@ const upsertSchema = z.object({
   ownerId: z.string().max(64).optional().nullable(),
 })
 
+/**
+ * 26.30 BUG-206 (real root) — an UPDATE must not demand fields it is not
+ * changing. The kanban moves a lead by sending `{id, status}`; the create
+ * schema requires `name`, so every stage move answered 400 "name: Required"
+ * and the row never moved. Both the drag AND the touch stage-selector call the
+ * same `move()`, which is why the board looked broken on every device.
+ *
+ * The handler already merges the body over the existing row and re-scores, so
+ * a partial update is exactly what it was written for — the schema was simply
+ * the create contract reused for update.
+ */
+const updateSchema = upsertSchema.partial().extend({
+  id: z.number().int().positive(),
+})
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requirePermission('crm.crm', 'read')
@@ -94,7 +109,7 @@ export async function PUT(req: NextRequest) {
   try {
     const auth = await requirePermission('crm.crm', 'write', 'edit')
     if ('error' in auth) return auth.error
-    const parsed = await readJson(req, upsertSchema)
+    const parsed = await readJson(req, updateSchema)
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     if (!d.id) return badRequest('id required')

@@ -7,6 +7,7 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 import { usePointerDnd } from '@/lib/admin/pointerDnd'
+import { crud } from '@/lib/admin/crud'
 
 type Status ='new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 type Source = 'website' | 'referral' | 'consultation' | 'contact_form' | 'event' | 'social' | 'email' | 'other'
@@ -112,10 +113,20 @@ export function LeadsManager() {
     } catch { toast(t('lead_delFail'), 'error') }
   }
   async function move(lead: Lead, status: Status) {
+    // 26.30 BUG-206 — this used to swallow the failure entirely: the PUT was
+    // answering 400 "name: Required" and `if (r.ok)` simply did nothing, so the
+    // board silently refused to move for two phases while looking like a
+    // front-end drag bug. A refusal must say why (26.29 contract).
     try {
-      const r = await fetch('/api/admin/crm/leads', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: lead.id, status }) })
-      if (r.ok) load()
-    } catch { /* ignore */ }
+      const r = await fetch('/api/admin/crm/leads', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: lead.id, status }),
+      })
+      if (r.ok) { load(); return }
+      toast(await crud.errorOf(r, L(fa, 'Could not move the lead', 'انتقال سرنخ انجام نشد')), 'error')
+    } catch {
+      toast(L(fa, 'Network error while moving the lead', 'خطای شبکه هنگام انتقال سرنخ'), 'error')
+    }
   }
   function set<K extends keyof Lead>(k: K, v: Lead[K]) { setEditing((e) => ({ ...e, [k]: v })) }
 
