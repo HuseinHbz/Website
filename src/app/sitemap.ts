@@ -34,6 +34,12 @@ const staticRoutes: Array<{ path: string; changeFrequency: Frequency; priority: 
   { path: '/consultation',        changeFrequency: 'monthly', priority: 0.8 },
   { path: '/consultation/intro-call', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/search',              changeFrequency: 'weekly',  priority: 0.5 },
+  // 26.31 بند ۴ — pages that had a route and content but were in neither the
+  // menu nor the sitemap: invisible to visitors AND to crawlers.
+  { path: '/docs',                changeFrequency: 'weekly',  priority: 0.7 },
+  { path: '/academy',             changeFrequency: 'weekly',  priority: 0.7 },
+  { path: '/events',              changeFrequency: 'weekly',  priority: 0.6 },
+  { path: '/ai',                  changeFrequency: 'monthly', priority: 0.6 },
 ]
 
 async function getDynamicSlugs(): Promise<string[]> {

@@ -7,6 +7,7 @@ import {
   type Column, type Row, type SortSpec, type ColumnFilter, type TableView,
 } from '@/lib/admin/dataTable'
 import { toCsv, toJson, toExcelXml, exportColumns } from '@/lib/admin/dataTableExport'
+import { usePointerDnd } from '@/lib/admin/pointerDnd'
 
 // ── Public action contracts ─────────────────────────────────────────────────
 export interface RowAction<T extends object> {
@@ -184,9 +185,10 @@ export function DataTable<T extends object>({
   }, [isRTL, persist])
 
   // ── Column reorder (drag header) ──
+  const colDrag = usePointerDnd<string>((srcKey, targetKey) => onDropCol(targetKey, srcKey))
   const dragCol = useRef<string | null>(null)
-  const onDropCol = (targetKey: string) => {
-    const src = dragCol.current; dragCol.current = null
+  const onDropCol = (targetKey: string, srcKey?: string) => {
+    const src = srcKey ?? dragCol.current; dragCol.current = null
     if (!src || src === targetKey) return
     const order = viewedCols.map(c => c.key)
     const from = order.indexOf(src), to = order.indexOf(targetKey)
@@ -399,9 +401,15 @@ export function DataTable<T extends object>({
                 {viewedCols.map(c => {
                   const sortable = c.sortable !== false && c.key !== '__actions'
                   const si = sortInfo(c.key)
+                  // 26.31 بند ۶ — inherited debt from 26.29: HTML5 column drag
+                  // never started (no dataTransfer.setData) and does not exist on
+                  // touch. Reuses the SAME pointer helper as the CRM kanban.
+                  const drag = c.key !== '__actions' ? colDrag.dragHandlers(c.key, c.key) : null
                   return (
-                    <th key={c.key} scope="col" draggable={c.key !== '__actions'} style={colStyle(c)}
-                      onDragStart={() => { dragCol.current = c.key }} onDragOver={e => e.preventDefault()} onDrop={() => onDropCol(c.key)}
+                    <th key={c.key} scope="col"
+                      {...(c.key !== '__actions' ? colDrag.zoneProps(c.key) : {})}
+                      {...(drag ? { onPointerDown: drag.onPointerDown } : {})}
+                      style={{ ...colStyle(c), ...(drag ? drag.style : {}) }}
                       aria-sort={si ? (si.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className={`relative ${pad} text-overline text-text-tertiary font-semibold text-${align(c)} ${c.pinned ? 'sticky bg-surface z-[5]' : ''}`}>
                       {sortable ? (

@@ -171,6 +171,16 @@
    `Duplicate <field>`; admin managers surface it via `crud.errorOf` instead of a
    bare "Failed". A required `slug` the form doesn't collect is auto-derived by
    `ensureSlug` — that one missing column made nine modules look broken.
+24. **Every public page must be reachable from the menu or the footer — an orphan
+   page is not allowed (26.31).** The site menu is READ FROM THE DATABASE
+   (`navigation_items` → `loadPublicNav`, server-side in the marketing layout), so
+   what the operator builds at `/admin/menus` is what visitors see; an empty/failed
+   table falls back to `DEFAULT_HEADER`/`DEFAULT_FOOTER` in `@/lib/navigation` so the
+   site never renders without navigation. Adding a public route means adding it to
+   the default structure AND `sitemap.ts`; `e2e/navigation.spec.ts` fails when a
+   page is linked from nowhere. Keep the DB-touching loader (`publicNav.ts`) out of
+   client components — importing it into one pulls the `pg` driver into the browser
+   bundle and breaks the build.
 10. **A financial return/void must never leave a balance silently negative (26.26
    BUG-013).** A return on a PAID invoice needs a second leg — a refund (negative
    `sales_payment 'refund'` + Dr AR/Cr Bank → AR back to 0) or an explicit
@@ -1015,6 +1025,21 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   optional `2fa_required_sensitive` policy (default OFF). Proof:
   `verify-2627-rbac.ts` 41/41 (regression suite #12) + 4-user Playwright E2E; all
   11 prior regressions green unchanged (R5). 787 unit tests · 12 audits 0.
+- **Phase 26.31 — Public navigation** (report:
+  `docs/governance/phase26.31-public-navigation-report.md`). Nine public pages had
+  content but no link anywhere — and `navigation_items` already held 6 seeded rows
+  that nothing read (the Menu Builder edited an orphan table, its rows even
+  disagreeing with the hardcoded `NAV_ITEMS`). The site menu now loads from the DB
+  in the marketing layout (`loadPublicNav`, `active`-filtered, empty → built-in
+  fallback), with 3 dropdowns (desktop, keyboard + Escape + ARIA) and a mobile
+  accordion, a 4-column footer that links **every** page (the crawlable path), a
+  header search entry, 4 missing `sitemap.ts` routes, and testimonials lifted out of
+  their double-hidden `/solutions/[slug]` home onto the homepage. Inherited 26.29
+  debt closed: DataTable column drag reuses the kanban's `usePointerDnd`. Proof:
+  adding a menu item via the admin API appears on the site immediately (0 → 1),
+  deactivating it removes it (→ 0), deleting every row keeps the site healthy;
+  E2E `navigation.spec.ts` 6/6 + accessibility 20/20; 842 unit tests · 12 audits 0 ·
+  regressions 14/14.
 - **Phase 26.29 — User-reported defects + menu consolidation** (report:
   `docs/governance/phase26.29-ux-fixes-report.md`). Eleven "doesn't work" modules had
   ONE root cause, found by probing every route on live PG: legacy CMS routes passed

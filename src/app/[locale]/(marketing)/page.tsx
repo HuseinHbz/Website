@@ -11,6 +11,7 @@ import { ServicesSection } from '@/components/sections/ServicesSection'
 import { ProjectsSection } from '@/components/sections/ProjectsSection'
 import { AboutSection } from '@/components/sections/AboutSection'
 import { CompanyPortfolio } from '@/components/sections/CompanyPortfolio'
+import { TestimonialsSection } from '@/components/sections/TestimonialsSection'
 import { AiTeaser } from '@/components/sections/AiTeaser'
 import { ClosingCta } from '@/components/sections/ClosingCta'
 import { JsonLd } from '@/components/seo/JsonLd'
@@ -22,6 +23,7 @@ import {
   getPublicSkills,
   getPublicCerts,
   getPublicClients,
+  getPublicTestimonials,
   getPublicTimeline,
   getPublicAbout,
   getPublicSetting,
@@ -59,7 +61,7 @@ async function resolvePhase23Hero(locale: string) {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
 
-  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero, heroVariant] = await Promise.all([
+  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero, heroVariant, dbTestimonials] = await Promise.all([
     getPublicProjects(),
     getPublicServices(),
     getPublicSkills(),
@@ -69,6 +71,7 @@ export default async function HomePage({ params }: Props) {
     getPublicAbout(locale),
     getPublicHero(locale),
     getPublicSetting('hero_variant'),
+    getPublicTestimonials(),
   ])
 
   const active = await resolvePhase23Hero(locale)
@@ -85,6 +88,8 @@ export default async function HomePage({ params }: Props) {
       <ProjectsSection locale={locale} dbProjects={dbProjects} />
       <AboutSection locale={locale} dbAbout={dbAbout} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
       <CompanyPortfolio locale={locale} dbClients={dbClients} />
+      {/* 26.31 بند ۵ — testimonials out of their double-hidden solutions page */}
+      <TestimonialsSection locale={locale} items={dbTestimonials} />
       <AiTeaser locale={locale} />
       <ClosingCta locale={locale} />
     </>

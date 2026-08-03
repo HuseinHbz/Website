@@ -187,21 +187,56 @@ export async function seedDatabase() {
     }
   }
 
-  // Navigation
-  if (await count(s.navigationItems) === 0) {
-    const navItems: [string, string, string, 'header' | 'footer', number][] = [
-      ['Home', 'خانه', '/', 'header', 1],
-      ['About', 'درباره', '/about', 'header', 2],
-      ['Services', 'خدمات', '/services', 'header', 3],
-      ['Projects', 'پروژه‌ها', '/projects', 'header', 4],
-      ['Blog', 'وبلاگ', '/blog', 'header', 5],
-      ['Consultation', 'مشاوره', '/consultation', 'header', 6],
-    ]
-    await db.insert(s.navigationItems).values(navItems.map(([labelEn, labelFa, href, location, sortOrder]) => ({ labelEn, labelFa, href, location, sortOrder })))
-  }
+  // Navigation — 26.31: the site menu is now READ from this table (publicNav.ts),
+  // so the seed must describe the real structure, including the dropdown parents
+  // and the footer columns that make every public page reachable (بند ۲/۳).
+  // Idempotent by (href, location, parent): re-running never duplicates, and an
+  // operator's own edits are never overwritten — only missing rows are added.
+  await seedNavigation()
 
   // AI knowledge base default
   if (await count(s.aiKnowledgeBase) === 0) {
     await db.insert(s.aiKnowledgeBase).values({ title: 'HBZ Professional Profile', type: 'snippet', content: 'Husein Habibazar (HBZ) is an Infrastructure Architect and Network Security Consultant with 10+ years of experience. Specializes in MikroTik, Cisco, Fortigate, VMware, Proxmox, Zabbix, Ansible, and Linux administration. Serves enterprise clients in hospitality, corporate, and industrial sectors.', tags: 'profile,about,background', locale: 'both' })
+  }
+}
+
+/**
+ * 26.31 — seed the public menu structure (header dropdowns + footer columns).
+ * Adds only what is missing, matched by href+location+parent label, so a menu
+ * the operator has customised in /admin/menus is left alone.
+ */
+async function seedNavigation() {
+  const s = schema
+  const { DEFAULT_HEADER, DEFAULT_FOOTER } = await import('@/lib/publicNav')
+  type NavRow = typeof s.navigationItems.$inferSelect
+  const existing: NavRow[] = await db.select().from(s.navigationItems)
+  const has = (href: string, location: string, parentId: number | null) =>
+    existing.some((r: NavRow) => r.href === href && r.location === location && (r.parentId ?? null) === parentId)
+
+  let order = 0
+  for (const [location, tree] of [['header', DEFAULT_HEADER], ['footer', DEFAULT_FOOTER]] as const) {
+    for (const root of tree) {
+      order++
+      // a root with children is a dropdown parent; its own href is the landing page
+      let parentId: number | null = existing.find((r: NavRow) => r.href === root.href && r.location === location && r.parentId == null)?.id ?? null
+      if (parentId == null) {
+        const inserted = await db.insert(s.navigationItems).values({
+          labelEn: root.labelEn, labelFa: root.labelFa, href: root.href,
+          location, sortOrder: order, parentId: null,
+        }).returning()
+        parentId = inserted[0].id
+        existing.push(inserted[0])
+      }
+      let childOrder = 0
+      for (const child of root.children) {
+        childOrder++
+        if (has(child.href, location, parentId)) continue
+        const inserted = await db.insert(s.navigationItems).values({
+          labelEn: child.labelEn, labelFa: child.labelFa, href: child.href,
+          location, sortOrder: childOrder, parentId,
+        }).returning()
+        existing.push(inserted[0])
+      }
+    }
   }
 }

@@ -2,13 +2,17 @@
 
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { DEFAULT_FOOTER, type NavNode } from '@/lib/navigation'
 import { SITE } from '@/lib/site'
 
 interface FooterProps {
   locale?: string
+  /** 26.31 بند ۳ — footer columns from the DB menu (location='footer').
+   *  Undefined → the built-in columns, so the footer is never empty (R4). */
+  nav?: NavNode[]
 }
 
-export function Footer({ locale = 'en' }: FooterProps) {
+export function Footer({ locale = 'en', nav }: FooterProps) {
   const t = useTranslations('footer')
   const isRTL = locale === 'fa'
   const currentYear = new Date().getFullYear()
@@ -53,7 +57,22 @@ export function Footer({ locale = 'en' }: FooterProps) {
     ],
   }
 
-  const LINKS = isRTL ? LINKS_FA : LINKS_EN
+  // 26.31 بند ۳ — a complete footer is how the orphan pages become crawlable:
+  // every public page is linked from here. Columns come from the DB when the
+  // operator has built them, otherwise from the built-in structure.
+  const source: NavNode[] = nav && nav.length > 0 ? nav : DEFAULT_FOOTER
+  const DB_LINKS: Record<string, { label: string; href: string }[]> = {}
+  for (const col of source) {
+    const title = isRTL ? col.labelFa : col.labelEn
+    DB_LINKS[title] = col.children.map(c => ({ label: isRTL ? c.labelFa : c.labelEn, href: c.href }))
+  }
+  // the hand-written service anchors stay as an extra column (deep links into
+  // /services that no DB row describes)
+  const ANCHORS = isRTL ? LINKS_FA['خدمات'] : LINKS_EN.Services
+  const LINKS: Record<string, { label: string; href: string }[]> = {
+    ...DB_LINKS,
+    [isRTL ? 'تخصص‌ها' : 'Expertise']: ANCHORS,
+  }
 
   function buildLocalizedPath(path: string) {
     return `/${locale}${path === '/' ? '' : path}`
@@ -65,7 +84,7 @@ export function Footer({ locale = 'en' }: FooterProps) {
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
 
       <div className="container-site relative z-10">
-        <div className="py-16 grid md:grid-cols-4 gap-10">
+        <div className="py-16 grid md:grid-cols-3 lg:grid-cols-6 gap-10">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href={buildLocalizedPath('/')} className="flex items-center gap-3 mb-4 group">

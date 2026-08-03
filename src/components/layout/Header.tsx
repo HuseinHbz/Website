@@ -6,15 +6,21 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { focusRing } from '@/lib/a11y'
-import { NAV_ITEMS } from '@/lib/navigation'
+import { DEFAULT_HEADER, type NavNode } from '@/lib/navigation'
 import { SITE } from '@/lib/site'
 
 interface HeaderProps {
   locale: string
+  /** 26.31 بند ۱ — the menu now comes from the DB (server layout passes it in).
+   *  Undefined only in old call sites/tests → the built-in structure (R4). */
+  nav?: NavNode[]
 }
 
-export function Header({ locale }: HeaderProps) {
+export function Header({ locale, nav }: HeaderProps) {
+  const items: NavNode[] = nav && nav.length > 0 ? nav : DEFAULT_HEADER
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [openDrop, setOpenDrop] = useState<string | null>(null)
+  const [openAccordion, setOpenAccordion] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
   const isRTL = locale === 'fa'
@@ -25,7 +31,7 @@ export function Header({ locale }: HeaderProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  useEffect(() => { setIsMenuOpen(false) }, [pathname])
+  useEffect(() => { setIsMenuOpen(false); setOpenDrop(null); setOpenAccordion(null) }, [pathname])
 
   function buildLocalizedPath(path: string) {
     return `/${locale}${path === '/' ? '' : path}`
@@ -43,7 +49,12 @@ export function Header({ locale }: HeaderProps) {
   function isActive(href: string) {
     const localizedHref = buildLocalizedPath(href)
     if (href === '/') return pathname === localizedHref
-    return pathname.startsWith(localizedHref)
+    return pathname === localizedHref || pathname.startsWith(localizedHref + '/')
+  }
+
+  /** A dropdown parent is highlighted when the visitor is on any of its children. */
+  function isBranchActive(item: NavNode) {
+    return isActive(item.href) || item.children.some(c => isActive(c.href))
   }
 
   return (
@@ -86,26 +97,86 @@ export function Header({ locale }: HeaderProps) {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-0.5" aria-label="Main navigation">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.key}
-                href={buildLocalizedPath(item.href)}
-                className={cn(
-                  'px-3.5 py-2 text-sm rounded-lg transition-all duration-150',
-                  focusRing,
-                  isActive(item.href)
-                    ? 'text-accent bg-accent/10 font-medium'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
-                )}
-              >
-                {isRTL ? item.labelFa : item.labelEn}
-              </Link>
-            ))}
+          <nav className="hidden lg:flex items-center gap-0.5" aria-label="Main navigation"
+            onKeyDown={e => { if (e.key === 'Escape') setOpenDrop(null) }}>
+            {items.map((item) => {
+              const label = isRTL ? item.labelFa : item.labelEn
+              const cls = cn(
+                'px-3.5 py-2 text-sm rounded-lg transition-all duration-150',
+                focusRing,
+                isBranchActive(item)
+                  ? 'text-accent bg-accent/10 font-medium'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-white/5',
+              )
+              if (item.children.length === 0) {
+                return <Link key={item.key} href={buildLocalizedPath(item.href)} className={cls}>{label}</Link>
+              }
+              const open = openDrop === item.key
+              return (
+                <div
+                  key={item.key}
+                  className="relative"
+                  onMouseEnter={() => setOpenDrop(item.key)}
+                  onMouseLeave={() => setOpenDrop(null)}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-haspopup="true"
+                    className={cn(cls, 'inline-flex items-center gap-1')}
+                    onClick={() => setOpenDrop(open ? null : item.key)}
+                  >
+                    {label}
+                    <span aria-hidden className={cn('text-3xs transition-transform', open && 'rotate-180')}>▾</span>
+                  </button>
+                  {open && (
+                    <div
+                      className={cn(
+                        'absolute top-full mt-1 min-w-[13rem] rounded-xl border border-border bg-background/98 backdrop-blur-xl p-1.5 shadow-xl z-50',
+                        isRTL ? 'right-0' : 'left-0',
+                      )}
+                      role="menu"
+                    >
+                      {item.children.map(child => (
+                        <Link
+                          key={child.key}
+                          role="menuitem"
+                          href={buildLocalizedPath(child.href)}
+                          onClick={() => setOpenDrop(null)}
+                          className={cn(
+                            'block px-3 py-2 text-sm rounded-lg transition-colors',
+                            focusRing,
+                            isActive(child.href)
+                              ? 'text-accent bg-accent/10 font-medium'
+                              : 'text-text-secondary hover:text-text-primary hover:bg-white/5',
+                          )}
+                        >
+                          {isRTL ? child.labelFa : child.labelEn}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </nav>
 
           {/* Desktop right */}
           <div className="hidden md:flex items-center gap-2">
+            {/* 26.31 بند ۴ — search entry point in the header (the /search page
+                existed but nothing linked to it) */}
+            <Link
+              href={buildLocalizedPath('/search')}
+              aria-label={isRTL ? 'جستجو' : 'Search'}
+              title={isRTL ? 'جستجو' : 'Search'}
+              className={cn(
+                'px-2.5 py-1.5 rounded-lg text-text-muted hover:text-text-primary',
+                'border border-border hover:border-accent/40 transition-all duration-150',
+                focusRing,
+              )}
+            >
+              <span aria-hidden>⌕</span>
+            </Link>
             {/* Lang */}
             <Link
               href={getAltLocalePath()}
@@ -184,21 +255,54 @@ export function Header({ locale }: HeaderProps) {
             className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl overflow-hidden"
           >
             <nav className="container-site py-4 flex flex-col gap-1">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.key}
-                  href={buildLocalizedPath(item.href)}
-                  className={cn(
-                    'px-4 py-3 text-sm rounded-xl transition-colors duration-150',
-                    focusRing,
-                    isActive(item.href)
-                      ? 'text-accent bg-accent/10 font-medium'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
-                  )}
-                >
-                  {isRTL ? item.labelFa : item.labelEn}
-                </Link>
-              ))}
+              {items.map((item) => {
+                const label = isRTL ? item.labelFa : item.labelEn
+                const cls = cn(
+                  'px-4 py-3 text-sm rounded-xl transition-colors duration-150',
+                  focusRing,
+                  isBranchActive(item)
+                    ? 'text-accent bg-accent/10 font-medium'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5',
+                )
+                if (item.children.length === 0) {
+                  return <Link key={item.key} href={buildLocalizedPath(item.href)} className={cls}>{label}</Link>
+                }
+                // 26.31 بند ۲ — accordion on mobile: hover/HTML5 tricks do not
+                // exist on touch, so the parent is a real tap target.
+                const open = openAccordion === item.key
+                return (
+                  <div key={item.key}>
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      className={cn(cls, 'w-full flex items-center justify-between')}
+                      onClick={() => setOpenAccordion(open ? null : item.key)}
+                    >
+                      {label}
+                      <span aria-hidden className={cn('text-3xs transition-transform', open && 'rotate-180')}>▾</span>
+                    </button>
+                    {open && (
+                      <div className="ps-4 flex flex-col gap-0.5 pb-1">
+                        {item.children.map(child => (
+                          <Link
+                            key={child.key}
+                            href={buildLocalizedPath(child.href)}
+                            className={cn(
+                              'px-4 py-2.5 text-sm rounded-lg transition-colors',
+                              focusRing,
+                              isActive(child.href)
+                                ? 'text-accent bg-accent/10 font-medium'
+                                : 'text-text-tertiary hover:text-text-primary hover:bg-white/5',
+                            )}
+                          >
+                            {isRTL ? child.labelFa : child.labelEn}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
               <div className="pt-3 mt-2 border-t border-border">
                 <Link
                   href={buildLocalizedPath('/consultation')}

@@ -144,6 +144,23 @@ export async function getPublicCredentials() {
   } catch { return [] }
 }
 
+/**
+ * 26.31 بند ۵ — testimonials were rendered ONLY inside /solutions/[slug], i.e.
+ * hidden behind a page that was itself missing from the menu (double-hidden).
+ * This exposes the featured/active ones for the homepage trust section.
+ * Empty result → the section renders nothing (26.29 rule 22); no demo fallback.
+ */
+export async function getPublicTestimonials(limit = 6) {
+  try {
+    const { testimonials } = await import('@/lib/db/schema')
+    const db = getDb()
+    return await db.select().from(testimonials)
+      .where(eq(testimonials.active, true))
+      .orderBy(asc(testimonials.sortOrder))
+      .limit(limit)
+  } catch { return [] }
+}
+
 export async function getPublicTimeline() {
   try {
     const db = getDb()
