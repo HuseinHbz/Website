@@ -101,6 +101,46 @@ for (const f of files) {
   }
 }
 
+// ── 26.33 بند ۱.۲: the SAME detector, in the other direction ────────────────
+// The 26.25b detector only looked for bare Persian. That is half the rule: the
+// contract is "no English inside the Persian UI AND no Persian inside the
+// English UI", so a bare English JSX literal with no Persian counterpart is the
+// identical defect mirrored — and it was invisible to the gate. Measured here
+// with the same structure and its own locked baseline.
+//
+// Brand names and untranslatable acronyms are legitimately Latin in both
+// languages, so they are listed explicitly rather than silently tolerated.
+const ALLOWED_LATIN = new Set([
+  'HBZ', 'VMware', 'Cisco', 'Microsoft', 'Linux', 'Windows', 'Zabbix', 'Grafana',
+  'Kubernetes', 'Docker', 'PostgreSQL', 'Redis', 'Nginx', 'AWS', 'Azure', 'GCP',
+  'API', 'SQL', 'CSV', 'JSON', 'XML', 'PDF', 'URL', 'HTTP', 'HTTPS', 'SSL', 'TLS',
+  'CPU', 'RAM', 'SSD', 'DNS', 'VPN', 'LAN', 'WAN', 'IP', 'ID', 'UI', 'AI', 'ERP',
+  'CRM', 'GL', 'AR', 'AP', 'VAT', 'KPI', 'OKR', 'SLA', 'SOC', 'RBAC', 'ABAC',
+  '2FA', 'TOTP', 'OTP', 'DR', 'HA', 'EOQ', 'FIFO', 'LIFO', 'IRR', 'IRT', 'USD',
+  'EUR', 'AED', 'SMS', 'SMTP', 'QR', 'CEO', 'CFO', 'COO', 'IT', 'OK',
+])
+const LATIN_WORD = /\b[A-Za-z][A-Za-z'’-]{2,}\b/g
+const bareEnglish = []
+for (const f of files) {
+  if (f === LOCALE) continue
+  const text = readFileSync(f, 'utf8')
+  if (!ADMIN_LOCALE_IMPORT.test(text)) continue
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (PERSIAN.test(line)) continue                          // has a Persian pair → fine
+    if (/\bt\(\s*['"]/.test(line)) continue                    // t('key')
+    if (/lc\(\s*fa\b|\bL\(\s*(fa|rtl)\b|\btr\(\s*fa\b/.test(line)) continue
+    if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue            // comment
+    if (/^\s*(import|export type|interface|type )/.test(line)) continue
+    const m = line.match(/>([^<>{}]{3,})</) ||
+      line.match(/(?:title|label|placeholder|aria-label|labelEn)=\{?['"]([^'"]{3,})['"]/)
+    if (!m) continue
+    const words = (m[1].match(LATIN_WORD) || []).filter(w => !ALLOWED_LATIN.has(w) && !ALLOWED_LATIN.has(w.toUpperCase()))
+    if (words.length > 0) bareEnglish.push({ file: f.slice(SRC.length - 3), line: i + 1, text: m[1].trim().slice(0, 60) })
+  }
+}
+
 // 26.26b بند ۱.۳: locked baseline. The hardcoded-Persian count may only go DOWN.
 // An INCREASE is now a hard failure (no more silent unbounded debt). Lower the
 // number in scripts/i18n-baseline.json whenever you remove hardcoded strings.
@@ -110,6 +150,12 @@ try {
 } catch { /* no baseline file → treat as unlocked (should not happen in CI) */ }
 const hardcodedRegressed = hardcoded.length > HARDCODED_BASELINE
 
+let ENGLISH_BASELINE = Infinity
+try {
+  ENGLISH_BASELINE = JSON.parse(readFileSync(join(ROOT, 'scripts', 'i18n-baseline.json'), 'utf8')).bareEnglishBaseline ?? Infinity
+} catch { /* no baseline → unlocked */ }
+const englishRegressed = bareEnglish.length > ENGLISH_BASELINE
+
 const report = {
   definedKeys: defined.size,
   referencedStaticKeys: used.size,
@@ -118,7 +164,11 @@ const report = {
   orphanCount: orphan.length,
   hardcodedCount: hardcoded.length,
   hardcodedBaseline: HARDCODED_BASELINE,
+  bareEnglishCount: bareEnglish.length,
+  bareEnglishBaseline: ENGLISH_BASELINE,
+  bareEnglish,
   hardcodedRegressed,
+  englishRegressed,
 }
 
 if (process.argv.includes('--json')) {
@@ -134,8 +184,10 @@ if (process.argv.includes('--json')) {
   console.log(`  ${hardcodedRegressed ? '✗' : '•'} Hardcoded Persian JSX ...... ${report.hardcodedCount}  (baseline ${HARDCODED_BASELINE}${hardcodedRegressed ? ' — REGRESSED, over baseline' : ', locked'})`)
   for (const x of missing) console.log(`   - MISSING  t('${x.key}')  (${x.file})`)
   for (const x of emptyTranslation) console.log(`   - EMPTY    '${x.key}'  (${x.file})`)
-  if (hardcodedRegressed) for (const x of hardcoded.slice(0, 30)) console.log(`   · HARDCODED ${x.file}:${x.line}`)
+  console.log(`  ${englishRegressed ? '✗' : '•'} Bare English JSX ........... ${report.bareEnglishCount}  (baseline ${ENGLISH_BASELINE}${englishRegressed ? ' — REGRESSED, over baseline' : ', locked'})`)
+  if (hardcodedRegressed) for (const x of hardcoded.slice(0, 30)) console.log(`   · HARDCODED-FA ${x.file}:${x.line}`)
+  if (englishRegressed) for (const x of bareEnglish.slice(0, 30)) console.log(`   · BARE-EN ${x.file}:${x.line}  "${x.text}"`)
   console.log('')
 }
 
-process.exit(missing.length + emptyTranslation.length > 0 || hardcodedRegressed ? 1 : 0)
+process.exit(missing.length + emptyTranslation.length > 0 || hardcodedRegressed || englishRegressed ? 1 : 0)

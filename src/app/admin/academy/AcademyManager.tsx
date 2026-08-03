@@ -6,6 +6,7 @@ import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { UntranslatedBadge } from '@/components/admin/UntranslatedBadge'
 
 type Course = { id: number; slug: string; titleEn: string; level: string; type: string; durationHours: number | null; lessonsCount: number; enrollmentsCount: number; status: string; featured: boolean; isFree: boolean; price: number; rating: number }
 
@@ -37,7 +38,7 @@ export function AcademyManager() {
   const stats = { total: courses.length, published: courses.filter(c => c.status === 'published').length, enrolled: courses.reduce((s, c) => s + c.enrollmentsCount, 0) }
 
   const columns: Column<Course>[] = [
-    { key: 'titleEn', labelEn: 'Course', labelFa: t('course'), render: c => <div><div className="font-medium text-text-primary">{c.titleEn}</div><div className="text-xs text-text-tertiary">{c.durationHours}h · {c.lessonsCount} lessons</div></div> },
+    { key: 'titleEn', labelEn: 'Course', labelFa: t('course'), render: c => <div><div className="font-medium text-text-primary">{c.titleEn}<UntranslatedBadge row={c} fields={['title','description']} /></div><div className="text-xs text-text-tertiary">{c.durationHours}h · {c.lessonsCount} lessons</div></div> },
     { key: 'level', labelEn: 'Level', labelFa: t('level'), type: 'enum', options: LEVELS.map(l => ({ value: l, labelEn: l, labelFa: l })), render: c => <Badge color={LEVEL_COLORS[c.level] || 'slate'}>{c.level}</Badge> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: c => <span className="text-text-secondary">{c.type}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Badge> },
@@ -75,11 +76,11 @@ export function AcademyManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editCourse') : t('newCourse')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('titleEn')} value={editing.titleEn || ''} onChange={v => setEditing(e => ({ ...e, titleEn: v }))} /></div>
               <Select label={t('level')} value={editing.level || 'intermediate'} onChange={v => setEditing(e => ({ ...e, level: v }))} options={LEVELS.map(l => ({ value: l, label: l }))} />
               <Select label={t('type')} value={editing.type || 'course'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: tp }))} />
-              <Select label="Status" value={editing.status || 'draft'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(s => ({ value: s, label: s }))} />
+              <Select label={t('status')} value={editing.status || 'draft'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(s => ({ value: s, label: s }))} />
               <Input label={t('durationHours')} type="number" value={String(editing.durationHours || 0)} onChange={v => setEditing(e => ({ ...e, durationHours: parseInt(v) || 0 }))} />
               <div className="col-span-2">
                 <label className="text-xs text-text-secondary mb-1 block">{t('description')}</label>

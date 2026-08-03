@@ -6,6 +6,8 @@ import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
+import { UntranslatedBadge } from '@/components/admin/UntranslatedBadge'
 
 type Doc = { id: number; slug: string; titleEn: string; type: string; version: string | null; status: string; featured: boolean; views: number; helpful: number; sortOrder: number }
 
@@ -35,13 +37,18 @@ export function DocsManager() {
   const TYPE_ICONS: Record<string, string> = { docs: '📄', api: '⚡', runbook: '📋', tutorial: '📖', guide: '🏛️', release: '📦' }
 
   const columns: Column<Doc>[] = [
-    { key: 'titleEn', labelEn: 'Document', labelFa: t('document'), render: d => <div><div className="font-medium text-text-primary">{d.titleEn}</div><div className="text-xs text-text-tertiary">{d.slug}</div></div> },
+    { key: 'titleEn', labelEn: 'Document', labelFa: t('document'), render: d => <div><div className="font-medium text-text-primary">{d.titleEn}<UntranslatedBadge row={d} fields={['title']} /></div><div className="text-xs text-text-tertiary">{d.slug}</div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: d => <span className="text-text-secondary">{TYPE_ICONS[d.type]} {d.type}</span> },
     { key: 'version', labelEn: 'Version', labelFa: t('version'), render: d => <span className="text-text-secondary font-mono text-xs">{d.version || '—'}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(s => ({ value: s, labelEn: s, labelFa: s })), render: d => <Badge color={d.status === 'published' ? 'green' : d.status === 'draft' ? 'yellow' : 'slate'}>{d.status}</Badge> },
     { key: 'views', labelEn: 'Views', labelFa: t('views'), type: 'number', numeric: true },
   ]
-  const rowActions: RowAction<Doc>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: d => setEditing(d) }]
+  const rowActions: RowAction<Doc>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: d => setEditing(d) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Doc>({ path: '/api/admin/docs', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.titleEn ?? '') }),
+  ]
 
   return (
     <div>
@@ -54,10 +61,10 @@ export function DocsManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editDoc') : t('newDoc')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('titleEn')} value={editing.titleEn || ''} onChange={v => setEditing(e => ({ ...e, titleEn: v }))} /></div>
               <Select label={t('type')} value={editing.type || 'docs'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: tp }))} />
-              <Select label="Status" value={editing.status || 'draft'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(s => ({ value: s, label: s }))} />
+              <Select label={t('status')} value={editing.status || 'draft'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(s => ({ value: s, label: s }))} />
               <Input label={t('version')} value={editing.version || ''} onChange={v => setEditing(e => ({ ...e, version: v }))} />
               <Input label={t('sortOrder')} type="number" value={String(editing.sortOrder || 0)} onChange={v => setEditing(e => ({ ...e, sortOrder: parseInt(v) || 0 }))} />
               <div className="col-span-2">

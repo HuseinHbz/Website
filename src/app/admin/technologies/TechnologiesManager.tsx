@@ -5,6 +5,7 @@ import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
 
 type Technology = {
   id: number
@@ -71,7 +72,12 @@ export function TechnologiesManager() {
     { key: 'tier', labelEn: 'Tier', labelFa: t('tier'), type: 'enum', options: TIERS.map(tr => ({ value: tr, labelEn: tr, labelFa: tr })), render: tech => <Badge color={tech.tier === 'core' ? 'green' : tech.tier === 'advanced' ? 'blue' : 'yellow'}>{tech.tier}</Badge> },
     { key: 'vendor', labelEn: 'Vendor', labelFa: t('vendor'), render: tech => <span className="text-text-secondary">{tech.vendor}</span> },
   ]
-  const rowActions: RowAction<Technology>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: tech => setEditing(tech) }]
+  const rowActions: RowAction<Technology>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: tech => setEditing(tech) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Technology>({ path: '/api/admin/technologies', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.nameEn ?? '') }),
+  ]
 
   return (
     <div>
@@ -87,15 +93,15 @@ export function TechnologiesManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editTech') : t('newTech')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />
               <Input label={t('nameFa')} value={editing.nameFa || ''} onChange={v => setEditing(e => ({ ...e, nameFa: v }))} />
               <Select label={t('category')} value={editing.category || 'networking'} onChange={v => setEditing(e => ({ ...e, category: v }))} options={CATEGORIES.map(cat => ({ value: cat, label: cat }))} />
               <Select label={t('tier')} value={editing.tier || 'core'} onChange={v => setEditing(e => ({ ...e, tier: v as Technology['tier'] }))} options={TIERS.map(tr => ({ value: tr, label: tr }))} />
-              <Input label="Icon" value={editing.icon || ''} onChange={v => setEditing(e => ({ ...e, icon: v }))} />
+              <Input label={t('icon')} value={editing.icon || ''} onChange={v => setEditing(e => ({ ...e, icon: v }))} />
               <Input label={t('colorHex')} value={editing.color || ''} onChange={v => setEditing(e => ({ ...e, color: v }))} />
               <div className="col-span-2"><Input label={t('vendor')} value={editing.vendor || ''} onChange={v => setEditing(e => ({ ...e, vendor: v }))} /></div>
-              <Input label="Sort Order" type="number" value={String(editing.sortOrder || 0)} onChange={v => setEditing(e => ({ ...e, sortOrder: parseInt(v) || 0 }))} />
+              <Input label={t('sortOrder')} type="number" value={String(editing.sortOrder || 0)} onChange={v => setEditing(e => ({ ...e, sortOrder: parseInt(v) || 0 }))} />
               <div className="flex items-center gap-3 pt-5">
                 <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
                   <input type="checkbox" checked={!!editing.active} onChange={e2 => setEditing(e => ({ ...e, active: e2.target.checked }))} />

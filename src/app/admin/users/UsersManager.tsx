@@ -180,7 +180,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
           <Input label="Department / Team" value={editing.department ?? ''} onChange={(v) => setEditing({ ...editing, department: v })} />
           <div className="flex gap-3">
             <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : editing.id ? 'Update User' : 'Create User'}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('cancel')}</Btn>
           </div>
         </div>
       </Modal>
@@ -247,7 +247,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                   <Btn onClick={confirmEnable} disabled={totpSaving || totpCode.length < 6}>
                     {totpSaving ? 'Verifying...' : 'Activate 2FA'}
                   </Btn>
-                  <Btn variant="secondary" onClick={() => setTwoFA({ ...twoFA, phase: 'view' })}>Cancel</Btn>
+                  <Btn variant="secondary" onClick={() => setTwoFA({ ...twoFA, phase: 'view' })}>{t('cancel')}</Btn>
                 </div>
               </>
             )}

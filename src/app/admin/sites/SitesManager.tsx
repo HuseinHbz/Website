@@ -91,10 +91,10 @@ export function SitesManager() {
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editSite') : t('newSite')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label={t('name')} value={editing.name || ''} onChange={v => setEditing(e => ({ ...e, name: v }))} /></div>
-              <Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} />
+              <Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} />
               <Input label={t('domain')} value={editing.domain || ''} onChange={v => setEditing(e => ({ ...e, domain: v }))} />
               <Select label={t('type')} value={editing.type || 'corporate'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={SITE_TYPES.map(st => ({ value: st, label: st }))} />
-              <Select label="Status" value={editing.status || 'staging'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(ss => ({ value: ss, label: ss }))} />
+              <Select label={t('status')} value={editing.status || 'staging'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(ss => ({ value: ss, label: ss }))} />
               <Select label={t('defaultLocale')} value={editing.defaultLocale || 'en'} onChange={v => setEditing(e => ({ ...e, defaultLocale: v }))} options={[{ value: 'en', label: 'English' }, { value: 'fa', label: 'فارسی' }]} />
               <Input label={t('workspaceId')} value={editing.workspaceId || ''} onChange={v => setEditing(e => ({ ...e, workspaceId: v }))} />
               <div className="col-span-2">

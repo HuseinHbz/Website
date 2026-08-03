@@ -43,6 +43,7 @@ export function MediaManager() {
   const [uploading, setUploading] = useState(false)
   const [selected, setSelected] = useState<MediaFile | null>(null)
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
+  const t = useT()
   const { toast, ToastContainer } = useToast()
 
   async function load() {
@@ -200,7 +201,7 @@ export function MediaManager() {
                 </div>
               )}
               <div className="space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-text-tertiary">Type</span><Badge>{selected.mimeType.split('/')[1]}</Badge></div>
+                <div className="flex justify-between"><span className="text-text-tertiary">{t('type')}</span><Badge>{selected.mimeType.split('/')[1]}</Badge></div>
                 <div className="flex justify-between"><span className="text-text-tertiary">Size</span><span className="text-text-primary">{formatBytes(selected.size)}</span></div>
                 <div className="flex justify-between"><span className="text-text-tertiary">Folder</span><span className="text-text-primary">{selected.folder}</span></div>
                 <div className="flex justify-between"><span className="text-text-tertiary">Date</span><span className="text-text-primary">{new Date(selected.uploadedAt).toLocaleDateString()}</span></div>

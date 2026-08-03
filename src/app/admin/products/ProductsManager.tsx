@@ -6,6 +6,8 @@ import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
+import { UntranslatedBadge } from '@/components/admin/UntranslatedBadge'
 
 type Product = { id: number; slug: string; nameEn: string; nameFa: string; type: string; icon: string; color: string; currentVersion: string | null; status: string; featured: boolean; active: boolean; sortOrder: number; taglineEn: string | null }
 
@@ -34,12 +36,17 @@ export function ProductsManager() {
   }
 
   const columns: Column<Product>[] = [
-    { key: 'nameEn', labelEn: 'Product', labelFa: t('product'), render: p => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${p.color}20`, border: `1px solid ${p.color}30` }}>{p.icon}</div><div><div className="font-medium text-text-primary">{p.nameEn}</div><div className="text-xs text-text-tertiary">{p.taglineEn}</div></div></div> },
+    { key: 'nameEn', labelEn: 'Product', labelFa: t('product'), render: p => <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${p.color}20`, border: `1px solid ${p.color}30` }}>{p.icon}</div><div><div className="font-medium text-text-primary">{p.nameEn}<UntranslatedBadge row={p} fields={['name','tagline']} /></div><div className="text-xs text-text-tertiary">{p.taglineEn}</div></div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: p => <span className="text-text-secondary">{p.type}</span> },
     { key: 'currentVersion', labelEn: 'Version', labelFa: t('version'), render: p => <span className="text-text-secondary font-mono text-xs">{p.currentVersion || '—'}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: p => <Badge color={STATUS_COLORS[p.status] || 'slate'}>{p.status}</Badge> },
   ]
-  const rowActions: RowAction<Product>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => setEditing(p) }]
+  const rowActions: RowAction<Product>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => setEditing(p) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Product>({ path: '/api/admin/products', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.nameEn ?? '') }),
+  ]
 
   return (
     <div>
@@ -52,16 +59,16 @@ export function ProductsManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editProduct') : t('newProduct')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />
               <Input label={t('nameFa')} value={editing.nameFa || ''} onChange={v => setEditing(e => ({ ...e, nameFa: v }))} />
               <div className="col-span-2"><Input label={t('taglineEn')} value={editing.taglineEn || ''} onChange={v => setEditing(e => ({ ...e, taglineEn: v }))} /></div>
               <Select label={t('type')} value={editing.type || 'service'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: tp }))} />
               <Select label={t('status')} value={editing.status || 'active'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(st => ({ value: st, label: st }))} />
-              <Input label="Icon" value={editing.icon || ''} onChange={v => setEditing(e => ({ ...e, icon: v }))} />
+              <Input label={t('icon')} value={editing.icon || ''} onChange={v => setEditing(e => ({ ...e, icon: v }))} />
               <Input label={t('color')} value={editing.color || ''} onChange={v => setEditing(e => ({ ...e, color: v }))} />
               <Input label={t('currentVersion')} value={editing.currentVersion || ''} onChange={v => setEditing(e => ({ ...e, currentVersion: v }))} />
-              <Input label="Sort Order" type="number" value={String(editing.sortOrder || 0)} onChange={v => setEditing(e => ({ ...e, sortOrder: parseInt(v) || 0 }))} />
+              <Input label={t('sortOrder')} type="number" value={String(editing.sortOrder || 0)} onChange={v => setEditing(e => ({ ...e, sortOrder: parseInt(v) || 0 }))} />
               <div className="flex items-center gap-4 col-span-2 pt-1">
                 <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer"><input type="checkbox" checked={!!editing.active} onChange={e2 => setEditing(e => ({ ...e, active: e2.target.checked }))} /> {t('activeLabel')}</label>
                 <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer"><input type="checkbox" checked={!!editing.featured} onChange={e2 => setEditing(e => ({ ...e, featured: e2.target.checked }))} /> {t('featuredLabel')}</label>

@@ -10,5 +10,7 @@
     "src/app/admin/dashboard/AnalyticsPanel.tsx",
     "src/app/admin/import-center/ImportCenter.tsx",
     "src/app/admin/operations/OperationsCenter.tsx"
-  ]
+  ],
+  "bareEnglishBaseline": 216,
+  "bareEnglishNote": "26.33 بند۱.۲ — the detector is now BIDIRECTIONAL. This counts bare English JSX in admin components that have a Persian mode (the mirror of hardcodedBaseline). Locked: may only go DOWN."
 }

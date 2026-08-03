@@ -193,7 +193,7 @@ export function FormBuilder() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <Input label={t('formNameStar')} value={editing.name} onChange={v => set('name', v)} placeholder="Contact Form" />
-              <Input label="Slug *" value={editing.slug} onChange={v => set('slug', v)} placeholder="contact-form" />
+              <Input label={t('slug') + ' *'} value={editing.slug} onChange={v => set('slug', v)} placeholder="contact-form" />
               <Select label={t('formType')} value={editing.type} onChange={v => set('type', v as FormEntry['type'])} options={[
                 { value: 'contact', label: 'Contact' },
                 { value: 'consultation', label: 'Consultation' },
@@ -248,7 +248,7 @@ export function FormBuilder() {
               <Input label={t('successMsgEn')} value={editing.successMessageEn} onChange={v => set('successMessageEn', v)} multiline rows={3} />
               <Input label={t('successMsgFa')} value={editing.successMessageFa} onChange={v => set('successMessageFa', v)} multiline rows={3} />
             </div>
-            <Select label="Status" value={editing.active ? 'true' : 'false'} onChange={v => set('active', v === 'true')} options={[
+            <Select label={t('status')} value={editing.active ? 'true' : 'false'} onChange={v => set('active', v === 'true')} options={[
               { value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' },
             ]} />
           </div>

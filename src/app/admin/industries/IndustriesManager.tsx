@@ -6,6 +6,7 @@ import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admi
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
 
 type Industry = {
   id: number
@@ -65,7 +66,12 @@ export function IndustriesManager() {
     { key: 'taglineEn', labelEn: 'Tagline', labelFa: t('colTagline'), render: ind => <span className="text-text-secondary">{ind.taglineEn}</span> },
     { key: 'active', labelEn: 'Status', labelFa: t('status'), type: 'boolean', value: ind => ind.active, render: ind => <Badge color={ind.active ? 'green' : 'slate'}>{ind.active ? t('active') : t('inactive')}</Badge> },
   ]
-  const rowActions: RowAction<Industry>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: ind => setEditing(ind) }]
+  const rowActions: RowAction<Industry>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: ind => setEditing(ind) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Industry>({ path: '/api/admin/industries', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.nameEn ?? '') }),
+  ]
 
   return (
     <div>

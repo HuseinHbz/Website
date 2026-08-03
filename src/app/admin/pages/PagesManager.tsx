@@ -65,6 +65,11 @@ export function PagesManager() {
   const [builderPage, setBuilderPage] = useState<PageDetail | null>(null)
   const [availableSections, setAvailableSections] = useState<AvailableSection[]>([])
   const [saving, setSaving] = useState(false)
+  // 26.33 BUG-201: `page_templates` had full CRUD in the Templates module and
+  // NOTHING consumed it — the operator built a template that could never be
+  // applied (the 26.31 orphan-table class). This is the consumer.
+  const [templates, setTemplates] = useState<{ id: number; slug: string; nameEn: string; nameFa: string; sectionsJson: string }[]>([])
+  const [templateId, setTemplateId] = useState('')
   const { toast, ToastContainer } = useToast()
 
   const load = useCallback(async () => {
@@ -75,6 +80,11 @@ export function PagesManager() {
 
   useEffect(() => { load() }, [load])
 
+  async function loadTemplates() {
+    const r = await fetch('/api/admin/page-templates')
+    if (r.ok) { const d = await r.json(); setTemplates(Array.isArray(d) ? d.filter((x: { active?: boolean }) => x.active !== false) : []) }
+  }
+
   async function loadSections() {
     const r = await fetch('/api/admin/sections')
     const d = await r.json()
@@ -84,14 +94,31 @@ export function PagesManager() {
   async function save() {
     setSaving(true)
     const method = editing.id ? 'PUT' : 'POST'
+    // A template contributes the section layout the operator designed; the page
+    // fields they just typed always win over the template's defaults.
+    const chosen = !editing.id && templateId ? templates.find(t2 => String(t2.id) === templateId) : undefined
+    let templateSections: { sectionId: string; active: boolean }[] = []
+    if (chosen) {
+      try {
+        const parsed = JSON.parse(chosen.sectionsJson || '[]')
+        if (Array.isArray(parsed)) {
+          templateSections = parsed.map((sec: unknown) =>
+            typeof sec === 'string'
+              ? { sectionId: sec, active: true }
+              : { sectionId: String((sec as { sectionId?: string }).sectionId ?? ''), active: (sec as { active?: boolean }).active !== false })
+            .filter(sec => sec.sectionId)
+        }
+      } catch { templateSections = [] }
+    }
     const res = await fetch('/api/admin/pages', {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editing),
+      body: JSON.stringify(templateSections.length ? { ...editing, sections: templateSections } : editing),
     })
     setSaving(false)
     if (res.ok) {
       toast(editing.id ? t('updated') : t('created'), 'success')
+      setTemplateId('')
       setModal(false)
       load()
     } else {
@@ -213,11 +240,25 @@ export function PagesManager() {
       {/* Page create/edit modal */}
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('editPage') : t('createPage')} size="md">
         <div className="space-y-4">
+          {/* 26.33 BUG-201 — templates were buildable but not usable. On a NEW
+              page the operator can now start from one; editing an existing page
+              hides it, because re-applying a layout would discard their work. */}
+          {!editing.id && templates.length > 0 && (
+            <Select
+              label={locale === 'fa' ? 'شروع از قالب (اختیاری)' : 'Start from a template (optional)'}
+              value={templateId}
+              onChange={setTemplateId}
+              options={[
+                { value: '', label: locale === 'fa' ? 'بدون قالب — صفحهٔ خالی' : 'No template — blank page' },
+                ...templates.map(tp => ({ value: String(tp.id), label: locale === 'fa' ? tp.nameFa : tp.nameEn })),
+              ]}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Input label={t('titleEn')} value={editing.titleEn || ''} onChange={(v) => setEditing({ ...editing, titleEn: v })} />
             <Input label={t('titleFa')} value={editing.titleFa || ''} onChange={(v) => setEditing({ ...editing, titleFa: v })} />
           </div>
-          <Input label="Slug *" value={editing.slug || ''} onChange={(v) => setEditing({ ...editing, slug: v.toLowerCase().replace(/\s+/g, '-') })} placeholder="about-us" />
+          <Input label={t('slug') + ' *'} value={editing.slug || ''} onChange={(v) => setEditing({ ...editing, slug: v.toLowerCase().replace(/\s+/g, '-') })} placeholder="about-us" />
           <div className="grid grid-cols-2 gap-3">
             <Select
               label="Layout"
@@ -231,7 +272,7 @@ export function PagesManager() {
               ]}
             />
             <Select
-              label="Status"
+              label={t('status')}
               value={editing.status || 'draft'}
               onChange={(v) => setEditing({ ...editing, status: v as 'draft' | 'published' | 'archived' })}
               options={[
@@ -244,9 +285,9 @@ export function PagesManager() {
           <Input label="Description (EN)" value={editing.descriptionEn || ''} onChange={(v) => setEditing({ ...editing, descriptionEn: v })} />
           <div className="border-t border-border pt-4">
             <p className="text-xs text-text-tertiary mb-3 uppercase tracking-wider font-medium">SEO</p>
-            <Input label="SEO Title" value={editing.seoTitle || ''} onChange={(v) => setEditing({ ...editing, seoTitle: v })} />
+            <Input label={t('seoTitle')} value={editing.seoTitle || ''} onChange={(v) => setEditing({ ...editing, seoTitle: v })} />
             <div className="mt-3">
-              <Input label="SEO Description" value={editing.seoDescription || ''} onChange={(v) => setEditing({ ...editing, seoDescription: v })} />
+              <Input label={t('seoDescription')} value={editing.seoDescription || ''} onChange={(v) => setEditing({ ...editing, seoDescription: v })} />
             </div>
             <div className="mt-3">
               <Input label="OG Image URL" value={editing.ogImage || ''} onChange={(v) => setEditing({ ...editing, ogImage: v })} />

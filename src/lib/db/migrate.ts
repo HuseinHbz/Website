@@ -2746,6 +2746,39 @@ export async function runMigrations() {
     END
     $rbac2629$;
 
+    -- ── Phase 26.33 BUG-204: Currency/Document settings had a SECOND menu entry
+    -- under the System workspace, which (per the 26.29 key rule) meant a second
+    -- permission key. Removing the duplicate menu items would silently orphan
+    -- every grant stored against those keys, so they migrate to the ERP owners.
+    -- Same idempotent, NULL-safe, collision-deduping form as $rbac2629$.
+    DO $rbac2633$
+    DECLARE
+      m RECORD;
+    BEGIN
+      FOR m IN SELECT * FROM (VALUES
+        ('system.finance','erp.finance'),
+        ('system.documents','erp.documents')
+      ) AS t(old_key, new_key) LOOP
+        DELETE FROM rbac_user_grants g USING rbac_user_grants k
+          WHERE g.permission_key = m.old_key AND k.permission_key = m.new_key
+            AND g.user_id = k.user_id AND g.company_id IS NOT DISTINCT FROM k.company_id;
+        UPDATE rbac_user_grants SET permission_key = m.new_key WHERE permission_key = m.old_key;
+
+        DELETE FROM rbac_row_scope g USING rbac_row_scope k
+          WHERE g.permission_key = m.old_key AND k.permission_key = m.new_key
+            AND g.user_id = k.user_id AND g.company_id IS NOT DISTINCT FROM k.company_id;
+        UPDATE rbac_row_scope SET permission_key = m.new_key WHERE permission_key = m.old_key;
+
+        DELETE FROM rbac_user_ops g USING rbac_user_ops k
+          WHERE g.op_key LIKE m.old_key || ':%'
+            AND k.op_key = m.new_key || split_part(g.op_key, ':', 2)
+            AND g.user_id = k.user_id AND g.company_id IS NOT DISTINCT FROM k.company_id;
+        UPDATE rbac_user_ops SET op_key = m.new_key || ':' || split_part(op_key, ':', 2)
+          WHERE op_key LIKE m.old_key || ':%';
+      END LOOP;
+    END
+    $rbac2633$;
+
     -- ── Phase 26.27 بند ۵: 2FA hardening ────────────────────────────────────
     CREATE TABLE IF NOT EXISTS admin_recovery_codes (
       id SERIAL PRIMARY KEY,

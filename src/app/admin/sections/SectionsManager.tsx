@@ -303,7 +303,7 @@ export function SectionsManager() {
               options={animOptions}
             />
             <Select
-              label="Status"
+              label={t('status')}
               value={editing.status || 'draft'}
               onChange={(v) => setEditing({ ...editing, status: v as 'draft' | 'published' | 'archived' })}
               options={[

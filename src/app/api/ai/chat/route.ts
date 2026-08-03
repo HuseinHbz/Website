@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { limiters } from '@/lib/rateLimit'
 import { guardMessages, sanitize, REFUSAL, MAX_MESSAGE_LEN, MAX_MESSAGES } from '@/lib/ai/guard'
 import { runCompletion, AiConfigError } from '@/lib/ai/engine'
+import { buildSystemPrompt } from '@/lib/ai/language'
 
 // Public, untrusted input — validate + cap. The client may only send
 // user/assistant turns; a client-supplied `system` role is rejected so it cannot
@@ -72,7 +73,10 @@ export async function POST(req: NextRequest) {
       ? 'شما HBZ AI Platform هستید — پلتفرم هوش مصنوعی سازمانی HBZ Technology. متخصص در زیرساخت IT، شبکه، امنیت، ابر، و مشاوره فناوری. پاسخ‌ها را حرفه‌ای، ساختارمند، و مفید نگه دارید.'
       : 'You are HBZ AI Platform — the enterprise AI advisor of HBZ Technology. You are an expert in IT infrastructure, networking, cybersecurity, cloud, virtualization, and technology consulting. Provide professional, structured, and actionable responses.'
     const basePrompt = modulePrompt || customSystemPrompt || defaultSystemPrompt
-    const systemPrompt = basePrompt + (userContext ? `\nUser context: ${userContext}` : '')
+    // 26.33 بند ۱.۳ — the language rule is APPENDED, never a branch of the
+    // prompt choice: a module prompt or a custom admin prompt used to replace
+    // the only place the locale was mentioned, so the reply came back English.
+    const systemPrompt = buildSystemPrompt(basePrompt, locale, userContext)
 
     try {
       const { reply, sources, provider } = await runCompletion({ messages, systemPrompt, useRag: true, source: 'chat' })

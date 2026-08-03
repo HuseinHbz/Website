@@ -36,6 +36,22 @@ export function zoneIdFrom(el: Element | null): string | null {
   return null
 }
 
+/**
+ * 26.33 BUG-206 — after a successful drop the browser still delivers a `click`
+ * to the element the press started on. The kanban card's onClick opened the
+ * lead drawer, so every drop instantly covered the board and the move looked
+ * like it had not happened. `finish()` clears the drag state synchronously, so
+ * by the time the click arrives there is nothing left to test against — the
+ * consumer cannot defend itself, which is why the guard belongs in the hook.
+ *
+ * Pure so the window is testable without timers.
+ */
+export const CLICK_SUPPRESS_MS = 300
+
+export function shouldSuppressClick(draggedAt: number | null, now: number, windowMs = CLICK_SUPPRESS_MS): boolean {
+  return draggedAt !== null && now - draggedAt < windowMs
+}
+
 /** Should the drop fire? Only for a real zone that differs from the origin. */
 export function shouldDrop(fromZone: string | null, toZone: string | null): boolean {
   return !!toZone && toZone !== fromZone
@@ -49,6 +65,7 @@ export interface PointerDndResult<Id extends string | number> {
   /** Spread onto a draggable item. `zone` is the item's current zone. */
   dragHandlers: (id: Id, zone: string) => {
     onPointerDown: (e: React.PointerEvent) => void
+    onClickCapture: (e: React.MouseEvent) => void
     style: React.CSSProperties
   }
   /** Spread onto a drop zone container. */
@@ -67,6 +84,7 @@ export function usePointerDnd<Id extends string | number>(
   const [dragId, setDragId] = useState<Id | null>(null)
   const [overZone, setOverZone] = useState<string | null>(null)
   const state = useRef<{ id: Id; from: string; x: number; y: number; active: boolean } | null>(null)
+  const draggedAt = useRef<number | null>(null)
 
   const finish = useCallback((clientX: number, clientY: number) => {
     const s = state.current
@@ -74,6 +92,7 @@ export function usePointerDnd<Id extends string | number>(
     setDragId(null)
     setOverZone(null)
     if (!s?.active) return
+    draggedAt.current = Date.now()
     const target = document.elementFromPoint(clientX, clientY)
     const to = zoneIdFrom(target)
     if (shouldDrop(s.from, to)) onDrop(s.id, to!)
@@ -116,6 +135,15 @@ export function usePointerDnd<Id extends string | number>(
       window.addEventListener('pointermove', onMove, { passive: false })
       window.addEventListener('pointerup', onUp)
       window.addEventListener('pointercancel', onCancel)
+    },
+    onClickCapture: (e: React.MouseEvent) => {
+      // swallow the click the browser fires after a drag, before it reaches the
+      // card's own onClick (which would open a drawer over the board)
+      if (shouldSuppressClick(draggedAt.current, Date.now())) {
+        e.preventDefault()
+        e.stopPropagation()
+        draggedAt.current = null
+      }
     },
     style: {
       touchAction: 'none' as const,

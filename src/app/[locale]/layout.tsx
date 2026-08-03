@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
-import { Inter, JetBrains_Mono, Vazirmatn } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
+import { persianFontVars } from '@/lib/fonts'
 import { cn } from '@/lib/utils'
 import { SITE } from '@/lib/site'
 import { AnalyticsTracker } from '@/components/AnalyticsTracker'
@@ -19,12 +20,6 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
-  display: 'swap',
-})
-
-const vazirmatn = Vazirmatn({
-  subsets: ['arabic', 'latin'],
-  variable: '--font-persian',
   display: 'swap',
 })
 
@@ -125,7 +120,7 @@ export default async function RootLayout({ children, params }: Props) {
       className={cn(
         inter.variable,
         jetbrainsMono.variable,
-        vazirmatn.variable,
+        persianFontVars,
         isRTL ? 'font-persian' : 'font-sans',
         'scroll-smooth'
       )}

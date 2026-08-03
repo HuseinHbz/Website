@@ -71,7 +71,8 @@ const CREATE: Record<string, { route: string; body: Record<string, unknown> }> =
   'brand.sections': { route: 'sections', body: { sectionType: 'hero', page: 'home', titleEn: 'A32', titleFa: 'آ۳۲' } },
   'brand.pages': { route: 'pages', body: { titleEn: 'A32 Page', titleFa: 'آ۳۲', slug: 'a32-page' } },
   'brand.forms': { route: 'forms', body: { name: 'A32 Form', type: 'contact' } },
-  'brand.menus': { route: 'navigation', body: { labelEn: 'A32', labelFa: 'آ۳۲', href: '/a32', location: 'header', sortOrder: 90, active: true } },
+  // 26.33 BUG-203: the href must now be a REAL page — a fake path is a 400 by design.
+  'brand.menus': { route: 'navigation', body: { labelEn: 'A32', labelFa: 'آ۳۲', href: '/docs', location: 'header', sortOrder: 90, active: true } },
   'brand.templates': { route: 'page-templates', body: { nameEn: 'A32 Tpl', nameFa: 'آ۳۲' } },
   'crm.crm': { route: 'crm/leads', body: { name: 'A32 Lead' } },
   'crm.clients': { route: 'clients', body: { nameEn: 'A32 Client', nameFa: 'آ۳۲' } },

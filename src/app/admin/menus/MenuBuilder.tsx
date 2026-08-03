@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { PUBLIC_ROUTES, isKnownRoute, unknownRouteMessage } from '@/lib/publicRoutes'
 
 interface MenuItem {
   id: number
@@ -21,18 +22,19 @@ const EMPTY: Omit<MenuItem, 'id'> = {
   labelEn: '', labelFa: '', href: '', icon: '', location: 'header', parentId: null, sortOrder: 0, active: true,
 }
 
-const COMMON_LINKS = [
-  { label: 'Home', href: '/' }, { label: 'Case Studies', href: '/case-studies' },
-  { label: 'Knowledge Center', href: '/blog' }, { label: 'Consultation', href: '/consultation' },
-  { label: 'About', href: '/about' },
-]
+// 26.33 BUG-203 — this was a hardcoded list of five that had drifted from the
+// seventeen pages the site actually has, so the quick-add offered a fraction of
+// them and everything else had to be typed by hand (and mistyped into a 404).
+const COMMON_LINKS = PUBLIC_ROUTES.map(r => ({ label: r.labelEn, labelFa: r.labelFa, href: r.path }))
 
 export function MenuBuilder() {
   const t = useT()
+  const locale = useAdminLocale()
   const [items, setItems] = useState<MenuItem[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Omit<MenuItem, 'id'> & { id?: number }>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [custom, setCustom] = useState(false)
   const [location, setLocation] = useState<'header' | 'footer'>('header')
   const { toast, ToastContainer } = useToast()
 
@@ -192,7 +194,7 @@ export function MenuBuilder() {
             <div className="flex flex-wrap gap-2">
               {COMMON_LINKS.map(link => (
                 <button key={link.href} onClick={() => {
-                  setEditing({ ...EMPTY, labelEn: link.label, labelFa: link.label, href: link.href, location, sortOrder: filteredItems.length })
+                  setEditing({ ...EMPTY, labelEn: link.label, labelFa: link.labelFa, href: link.href, location, sortOrder: filteredItems.length })
                   setModal(true)
                 }}
                   className="text-xs px-2 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
@@ -211,7 +213,27 @@ export function MenuBuilder() {
             <Input label={t('labelEnStar')} value={editing.labelEn} onChange={v => set('labelEn', v)} placeholder="Case Studies" />
             <Input label={t('labelFaLabel')} value={editing.labelFa} onChange={v => set('labelFa', v)} placeholder="مطالعات موردی" />
           </div>
-          <Input label={t('urlPath')} value={editing.href} onChange={v => set('href', v)} placeholder="/case-studies" />
+          {/* 26.33 BUG-203: free-text href let an operator save a link to a page
+              that does not exist; it saved fine and 404'd for visitors. Pick a
+              real page, or opt into a custom/external URL deliberately. */}
+          <Select
+            label={t('urlPath')}
+            value={custom ? '__custom__' : editing.href}
+            onChange={v => { if (v === '__custom__') { setCustom(true); set('href', '') } else { setCustom(false); set('href', v) } }}
+            options={[
+              { value: '', label: locale === 'fa' ? '— انتخاب صفحه —' : '— pick a page —' },
+              ...COMMON_LINKS.map(l => ({ value: l.href, label: `${locale === 'fa' ? l.labelFa : l.label} (${l.href})` })),
+              { value: '__custom__', label: locale === 'fa' ? 'نشانی دلخواه یا لینک خارجی…' : 'Custom or external URL…' },
+            ]}
+          />
+          {custom && (
+            <div>
+              <Input label={locale === 'fa' ? 'نشانی دلخواه' : 'Custom URL'} value={editing.href} onChange={v => set('href', v)} placeholder="https://example.com" />
+              {editing.href && !isKnownRoute(editing.href) && (
+                <p className="text-xs text-warning mt-1">{unknownRouteMessage(editing.href, locale === 'fa')}</p>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Input label={t('iconEmoji')} value={editing.icon} onChange={v => set('icon', v)} placeholder="◆" />
             <Select label={t('location')} value={editing.location} onChange={v => set('location', v as 'header' | 'footer')} options={[

@@ -221,6 +221,44 @@
    so the vendor-grade trend and the reconciliation audit trail were invisible.
    Both got real read paths + UI. The rest are documented one by one in
    `docs/governance/phase26.32-module-audit-report.md` §4.
+31. **In Persian there is NO English, and in English NO Persian (26.33 بند۱).**
+   The only exceptions are brand names (HBZ, VMware, Cisco…) and acronyms with no
+   settled Persian equivalent — and they live in an EXPLICIT list in
+   `scripts/i18n-audit.mjs`, never as silent tolerance. A public page reads the
+   `*Fa` column when the locale is fa (`localized()` in `lib/localizedContent.ts`,
+   falling back only when the translation is genuinely missing) and never
+   hardcodes a locale into a link — `/en/foo` throws a Persian reader out of their
+   own locale. `audit:i18n` is now BIDIRECTIONAL with two locked baselines
+   (hardcoded-Persian and bare-English); both may only go DOWN.
+   (در فارسی هیچ انگلیسی و در انگلیسی هیچ فارسی — جز نام‌های تجاری فهرست‌شده.)
+32. **The AI language rule is APPENDED to the system prompt, never a branch of it
+   (26.33 بند۱.۳).** `modulePrompt || customPrompt || defaultPrompt` put the
+   Persian instruction inside ONE branch, so choosing an advisor or saving a
+   custom `ai_system_prompt` silently discarded the locale and the assistant
+   replied in English. Always `buildSystemPrompt(base, locale, ctx)`
+   (`lib/ai/language.ts`): persona first, then the language rule the operator
+   cannot override, then user context. Test all three prompt paths.
+   (دستور زبان به پرامپت الحاق می‌شود، جایگزین نمی‌شود.)
+33. **Persian type has two roles: heading and body (26.33 بند۲).** Use
+   `--font-persian-heading` (titles, h1–h6, card/modal titles) and
+   `--font-persian-body` (text, tables, forms, buttons) — declared in
+   `src/lib/fonts.ts`, applied in `globals.css` for BOTH the public site and the
+   admin. Target is IRANYekan (heading) + IRANSans (body); today both resolve to
+   Vazirmatn because no licensed file exists — swapping the two `next/font`
+   declarations is the whole migration. Latin text inside an RTL page keeps the
+   Latin face. **A missing font is reported, never silently substituted.**
+   (فونت: ایران‌یکان برای تیتر، ایران‌سنس برای بدنه — نبودِ فایل گزارش شود نه جایگزینی خاموش.)
+34. **A DELETE endpoint without a Delete button is a broken module (26.33
+   BUG-205).** Ten managers had a working API and no affordance, so users
+   reported "delete doesn't work" while every route answered 200. Use the shared
+   `deleteRowAction()` (`lib/admin/rowDelete.ts`) — one helper, not N copies of
+   confirm/fetch/toast/reload — and surface the server's reason on a refusal.
+35. **A menu href is validated against real routes at write time (26.33
+   BUG-203).** Free text let an operator save a link to a page that does not
+   exist; it saved fine and 404'd for visitors. `PUBLIC_ROUTES`
+   (`lib/publicRoutes.ts`) is the ONE list — `sitemap.ts` imports it too — and
+   the navigation route rejects an unknown internal path with a 400 that says
+   why. External `http(s)` links are allowed and marked.
 30. **Module health is proven against a RUNNING server, not by reading code
    (26.32 بند۰).** Three phases running, review missed what one request exposed.
    `npm run audit:modules` (every admin module: page, list, create, empty-body

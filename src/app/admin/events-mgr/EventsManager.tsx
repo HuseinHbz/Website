@@ -6,6 +6,8 @@ import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
+import { UntranslatedBadge } from '@/components/admin/UntranslatedBadge'
 
 type Event = { id: number; slug: string; titleEn: string; type: string; status: string; format: string; startDate: string; registrationsCount: number; isFree: boolean; featured: boolean }
 
@@ -35,14 +37,19 @@ export function EventsManager() {
   }
 
   const columns: Column<Event>[] = [
-    { key: 'titleEn', labelEn: 'Event', labelFa: t('colEvent'), render: e => <div><div className="font-medium text-text-primary">{e.titleEn}</div><div className="text-xs text-text-tertiary">{e.slug}</div></div> },
+    { key: 'titleEn', labelEn: 'Event', labelFa: t('colEvent'), render: e => <div><div className="font-medium text-text-primary">{e.titleEn}<UntranslatedBadge row={e} fields={['title','description']} /></div><div className="text-xs text-text-tertiary">{e.slug}</div></div> },
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', options: TYPES.map(tp => ({ value: tp, labelEn: tp, labelFa: tp })), render: e => <span className="text-text-secondary">{e.type}</span> },
     { key: 'startDate', labelEn: 'Date', labelFa: t('date'), type: 'date', render: e => <span className="text-text-secondary text-xs">{e.startDate}</span> },
     { key: 'format', labelEn: 'Format', labelFa: t('format'), type: 'enum', options: FORMATS.map(fm => ({ value: fm, labelEn: fm, labelFa: fm })), render: e => <span className="text-text-secondary">{e.format}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: STATUSES.map(st => ({ value: st, labelEn: st, labelFa: st })), render: e => <Badge color={STATUS_COLORS[e.status] || 'slate'}>{e.status}</Badge> },
     { key: 'registrationsCount', labelEn: 'Registrations', labelFa: t('colRegistrations'), type: 'number', numeric: true },
   ]
-  const rowActions: RowAction<Event>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: e => setEditing(e) }]
+  const rowActions: RowAction<Event>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: e => setEditing(e) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Event>({ path: '/api/admin/events', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.titleEn ?? '') }),
+  ]
 
   return (
     <div>
@@ -55,7 +62,7 @@ export function EventsManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editEvent') : t('addEvent')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('titleEn')} value={editing.titleEn || ''} onChange={v => setEditing(e => ({ ...e, titleEn: v }))} /></div>
               <Select label={t('type')} value={editing.type || 'webinar'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: tp }))} />
               <Select label={t('status')} value={editing.status || 'upcoming'} onChange={v => setEditing(e => ({ ...e, status: v }))} options={STATUSES.map(st => ({ value: st, label: st }))} />

@@ -96,7 +96,7 @@ export function OrganizationManager() {
         {activeTab === 'contact' && (
           <div className="grid grid-cols-2 gap-4 p-1">
             <div className="col-span-2"><Input label="Website" value={org.website || ''} onChange={v => setOrg(o => ({ ...o, website: v }))} /></div>
-            <Input label="Email" value={org.email || ''} onChange={v => setOrg(o => ({ ...o, email: v }))} />
+            <Input label={t('email')} value={org.email || ''} onChange={v => setOrg(o => ({ ...o, email: v }))} />
             <Input label="Phone" value={org.phone || ''} onChange={v => setOrg(o => ({ ...o, phone: v }))} />
           </div>
         )}

@@ -111,7 +111,12 @@ const config: Config = {
       // ── Typography ────────────────────────────────────────
       fontFamily: {
         sans:    ['var(--font-sans)',    'system-ui', 'sans-serif'],
-        persian: ['var(--font-persian)', 'Tahoma', 'Arial', 'sans-serif'],
+        // 26.33 بند۲ — two roles, not one family: headings and body are separate
+        // tokens so the licensed IRANYekan/IRANSans can be swapped in per role
+        // without touching a single call site. `persian` stays as the alias.
+        persian:         ['var(--font-persian)',         'Tahoma', 'Arial', 'sans-serif'],
+        'persian-head':  ['var(--font-persian-heading)', 'var(--font-persian)', 'Tahoma', 'Arial', 'sans-serif'],
+        'persian-body':  ['var(--font-persian-body)',    'var(--font-persian)', 'Tahoma', 'Arial', 'sans-serif'],
         mono:    ['var(--font-mono)',    'Consolas', 'monospace'],
       },
 

@@ -30,6 +30,8 @@ interface Message {
   content: string
   sources?: KbSource[]
   suggestions?: string[]
+  /** 26.33 بند۳.۴ — renders as a recoverable notice, not as model output. */
+  isError?: boolean
   timestamp: string
 }
 
@@ -54,6 +56,9 @@ interface SearchResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// 26.33 بند ۳.۱ — there was ONE English suggestion list, rendered verbatim in
+// the Persian UI, so a Persian visitor was invited to ask questions in English.
+// Per-locale sets, keyed by the same module slug.
 const SUGGESTIONS_EN: Record<string, string[]> = {
   infrastructure: ['How to design a highly available data center?', 'What storage solution for 500TB capacity?', 'Best practices for server virtualization?'],
   network: ['How to implement BGP between two sites?', 'Best VLAN design for enterprise?', 'How to configure SD-WAN failover?'],
@@ -69,6 +74,56 @@ const SUGGESTIONS_EN: Record<string, string[]> = {
   project: ['How to plan a data center migration?', 'IT project risk management framework?', 'Resource estimation for infrastructure project?'],
   solution: ['How to create a technical proposal?', 'What to include in a network BoM?', 'How to present ROI for IT investment?'],
   troubleshooting: ['Network packet loss troubleshooting steps?', 'How to diagnose slow server performance?', 'Systematic approach to firewall issues?'],
+}
+
+const SUGGESTIONS_FA: Record<string, string[]> = {
+  infrastructure: ['چگونه یک مرکز داده با دسترس‌پذیری بالا طراحی کنم؟', 'برای ۵۰۰ ترابایت چه راهکار ذخیره‌سازی مناسب است؟', 'بهترین شیوه‌های مجازی‌سازی سرور چیست؟'],
+  network: ['چگونه بین دو سایت پروتکل BGP را پیاده‌سازی کنم؟', 'طراحی مناسب شبکه‌های مجازی برای سازمان چگونه است؟', 'چگونه تغییر مسیر خودکار SD-WAN را پیکربندی کنم؟'],
+  cloud: ['برای بارهای کاری سازمانی، Azure بهتر است یا AWS؟', 'مهاجرت به رایانش ابری را چگونه برنامه‌ریزی کنم؟', 'راهکارهای بهینه‌سازی هزینهٔ ابر چیست؟'],
+  security: ['معماری اعتماد صفر را چگونه پیاده‌سازی کنم؟', 'بهترین شیوه‌های بخش‌بندی دیوارهٔ آتش چیست؟', 'چگونه یک مرکز عملیات امنیت راه‌اندازی کنم؟'],
+  virtualization: ['VMware vSAN بهتر است یا ذخیره‌ساز شبکه‌ای سنتی؟', 'چگونه سرور فیزیکی را به مجازی مهاجرت دهم؟', 'برای کانتینرها Kubernetes بهتر است یا VMware؟'],
+  microsoft: ['برای ۵۰۰۰ کاربر، Active Directory را چگونه طراحی کنم؟', 'Exchange داخلی بهتر است یا Microsoft 365؟', 'برای مدیریت دستگاه‌ها Intune بهتر است یا SCCM؟'],
+  linux: ['چگونه یک سرور لینوکس را ایمن‌سازی کنم؟', 'اسکریپت خودکار پشتیبان‌گیری چگونه نوشته می‌شود؟', 'نکات بهبود کارایی لینوکس چیست؟'],
+  monitoring: ['چگونه Zabbix را برای ۲۰۰ میزبان راه‌اندازی کنم؟', 'معماری Prometheus و Grafana چگونه است؟', 'بهترین شیوه‌های پایش با SNMP چیست؟'],
+  career: ['اول CCNP بگیرم یا گواهی‌نامهٔ Azure؟', 'چگونه از شبکه به رایانش ابری منتقل شوم؟', 'بهترین منابع مطالعهٔ CCIE کدام‌اند؟'],
+  documentation: ['چگونه دستورالعمل اجرایی شبکه بنویسم؟', 'الگوی طرح بازیابی از فاجعه چیست؟', 'بهترین قالب مستندسازی معماری کدام است؟'],
+  architecture: ['چگونه یک معماری سه‌لایه را بازبینی کنم؟', 'پرسش‌های کلیدی ارزیابی ریسک معماری چیست؟', 'برای سازمان، معماری ریزخدمات بهتر است یا یکپارچه؟'],
+  project: ['مهاجرت مرکز داده را چگونه برنامه‌ریزی کنم؟', 'چارچوب مدیریت ریسک پروژه‌های فناوری اطلاعات چیست؟', 'برآورد منابع پروژهٔ زیرساخت چگونه انجام می‌شود؟'],
+  solution: ['چگونه یک پیشنهاد فنی تهیه کنم؟', 'فهرست تجهیزات شبکه باید شامل چه مواردی باشد؟', 'بازگشت سرمایهٔ فناوری اطلاعات را چگونه ارائه کنم؟'],
+  troubleshooting: ['گام‌های عیب‌یابی افت بستهٔ شبکه چیست؟', 'کندی کارایی سرور را چگونه تشخیص دهم؟', 'رویکرد نظام‌مند رفع مشکلات دیوارهٔ آتش چیست؟'],
+}
+
+/**
+ * 26.33 بند ۳.۴ — the server's raw English string used to be printed straight
+ * into the chat ("⚠ AI API key not configured"), which broke the language rule
+ * AND told the reader nothing they could act on.
+ *
+ * A visitor is not the person who fixes a missing key, so they get a plain
+ * apology with a human route out. The operator-facing instruction lives in the
+ * admin banner, not in front of customers.
+ */
+export function friendlyAiError(raw: string, isRTL: boolean): string {
+  const notConfigured = /api key|not configured|AiConfigError/i.test(raw)
+  const rateLimited = /rate.?limit|429|too many/i.test(raw)
+  if (notConfigured) {
+    return isRTL
+      ? 'دستیار هوشمند در حال حاضر در دسترس نیست. تیم ما در جریان است — می‌توانید از طریق صفحهٔ مشاوره با یک متخصص انسانی در تماس باشید.'
+      : 'The assistant is unavailable right now. Our team has been notified — you can reach a human expert through the consultation page in the meantime.'
+  }
+  if (rateLimited) {
+    return isRTL
+      ? 'پرسش‌های زیادی در زمان کوتاه ارسال شده است. لطفاً چند لحظه صبر کنید و دوباره بپرسید.'
+      : 'Too many questions in a short time. Please wait a moment and ask again.'
+  }
+  return isRTL
+    ? 'پاسخ‌گویی با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
+    : 'Something went wrong while answering. Please try again.'
+}
+
+/** Suggestions for the ACTIVE locale — never the English list inside the fa UI. */
+function suggestionsFor(slug: string | undefined, isRTL: boolean): string[] {
+  if (!slug) return []
+  return (isRTL ? SUGGESTIONS_FA[slug] : SUGGESTIONS_EN[slug]) ?? []
 }
 
 const COLOR_MAP: Record<string, { bg: string; border: string; text: string; badge: string }> = {
@@ -160,6 +215,15 @@ export function AiPlatform({ locale }: Props) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  // 26.33 بند ۳.۶ — on a phone the advisor list is a drawer, not a column: it
+  // starts closed so the conversation owns the screen, and opens over the chat.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const apply = () => setSidebarOpen(!mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   const [contextOpen, setContextOpen] = useState(true)
   const [currentSources, setCurrentSources] = useState<KbSource[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -289,7 +353,7 @@ export function AiPlatform({ locale }: Props) {
       const data = await res.json() as { reply: string; sources?: KbSource[]; error?: string }
       if (!res.ok) throw new Error(data.error || 'AI error')
 
-      const suggestList = (SUGGESTIONS_EN[activeModule?.slug || ''] || []).filter(s => !messages.some(m => m.content.includes(s))).slice(0, 3)
+      const suggestList = suggestionsFor(activeModule?.slug, isRTL).filter(s => !messages.some(m => m.content.includes(s))).slice(0, 3)
 
       setMessages(prev => prev.map(m => m.id === assistantId
         ? { ...m, content: data.reply, sources: data.sources || [], suggestions: suggestList }
@@ -297,12 +361,14 @@ export function AiPlatform({ locale }: Props) {
       ))
       if (data.sources?.length) setCurrentSources(data.sources)
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'AI error'
-      setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `⚠ ${errMsg}` } : m))
+      const raw = err instanceof Error ? err.message : ''
+      setMessages(prev => prev.map(m => m.id === assistantId
+        ? { ...m, content: friendlyAiError(raw, isRTL), isError: true }
+        : m))
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, messages, locale, activeModule])
+  }, [input, isLoading, messages, locale, activeModule, isRTL])
 
   function clearChat() {
     if (messages.length > 0) saveConversation()
@@ -379,7 +445,13 @@ export function AiPlatform({ locale }: Props) {
 
         {/* ── Left Sidebar ─────────────────────────────────────────── */}
         {sidebarOpen && (
-          <aside className="w-64 flex-shrink-0 flex flex-col border-r border-border overflow-hidden" style={{ background: 'rgba(10,10,20,0.8)' }}>
+          <button aria-label={t('Close advisor list', 'بستن فهرست مشاوران')} onClick={() => setSidebarOpen(false)}
+            className="md:hidden fixed inset-0 z-30 bg-black/60" />
+        )}
+        {sidebarOpen && (
+          <aside aria-label={t('AI advisors', 'مشاوران هوش مصنوعی')}
+            className="w-64 flex-shrink-0 flex flex-col border-e border-border overflow-hidden fixed inset-y-0 z-40 md:static md:z-auto"
+            style={{ background: 'rgba(10,10,20,0.95)' }}>
             {/* Modules */}
             <div className="flex-shrink-0 px-3 pt-3 pb-2">
               <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 px-1 mb-2">{t('AI Advisors', 'مشاوران هوش مصنوعی')}</p>
@@ -478,13 +550,31 @@ export function AiPlatform({ locale }: Props) {
                 <h2 className="text-xl font-bold text-white mb-2">
                   {isRTL ? activeModule.nameFa : activeModule.nameEn}
                 </h2>
-                <p className="text-sm text-slate-500 mb-8">
+                <p className="text-sm text-slate-500 mb-6 max-w-lg">
                   {isRTL ? (activeModule.descriptionFa || activeModule.descriptionEn) : activeModule.descriptionEn}
                 </p>
+                {/* 26.33 بند ۳.۳ — the page used to open on ~70% empty space with
+                    three unexplained buttons. Say what this advisor is for
+                    before asking the visitor to think of a question. */}
+                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                  {[
+                    t('Grounded in HBZ documentation', 'مبتنی بر مستندات HBZ'),
+                    t('Cites its sources', 'منابعش را ذکر می‌کند'),
+                    t('Answers in your language', 'به زبان شما پاسخ می‌دهد'),
+                  ].map(cap => (
+                    <span key={cap} className="text-2xs px-2.5 py-1 rounded-full text-slate-400"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      {cap}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-3">
+                  {t('Try asking', 'نمونه پرسش')}
+                </p>
                 <div className="grid grid-cols-1 gap-2 w-full max-w-md">
-                  {(SUGGESTIONS_EN[activeModule.slug] || []).map((s, i) => (
-                    <button key={i} onClick={() => sendMessage(s)}
-                      className="text-sm text-start px-4 py-3 rounded-xl text-slate-400 hover:text-white transition-all"
+                  {suggestionsFor(activeModule.slug, isRTL).map((s, i) => (
+                    <button key={i} onClick={() => sendMessage(s)} dir="auto"
+                      className="text-sm text-start px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:border-indigo-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all"
                       style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                       {s}
                     </button>
@@ -511,13 +601,27 @@ export function AiPlatform({ locale }: Props) {
 
                 {/* Bubble */}
                 <div className={`max-w-[78%] flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  {/* 26.33 بند ۳.۵ — `dir="auto"` makes each message follow the
+                      direction of ITS OWN text. Without it an English sentence
+                      inside the RTL container had its punctuation moved to the
+                      front ("?How to design a data center"). */}
                   {msg.role === 'user' ? (
-                    <div className="px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm text-white" style={{ background: 'rgba(99,102,241,0.35)', border: '1px solid rgba(99,102,241,0.4)' }}>
+                    <div dir="auto" className="px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm text-white text-start" style={{ background: 'rgba(99,102,241,0.35)', border: '1px solid rgba(99,102,241,0.4)' }}>
                       {msg.content}
                     </div>
                   ) : (
-                    <div className="px-4 py-3 rounded-2xl rounded-tl-sm" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div dir="auto" role={msg.isError ? 'alert' : undefined}
+                      className="px-4 py-3 rounded-2xl rounded-tl-sm text-start"
+                      style={msg.isError
+                        ? { background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }
+                        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       {msg.content === '' ? <TypingDots /> : <div className="space-y-1">{renderMarkdown(msg.content)}</div>}
+                      {msg.isError && (
+                        <Link href={`/${locale}/consultation`}
+                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-amber-300 hover:text-amber-200 underline underline-offset-2">
+                          <span>📅</span>{t('Talk to a human expert', 'گفت‌وگو با متخصص انسانی')}
+                        </Link>
+                      )}
                     </div>
                   )}
 
@@ -612,7 +716,7 @@ export function AiPlatform({ locale }: Props) {
                 <div>
                   <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Suggested Questions', 'سوالات پیشنهادی')}</p>
                   <div className="space-y-1.5">
-                    {(SUGGESTIONS_EN[activeModule.slug] || []).map((s, i) => (
+                    {suggestionsFor(activeModule.slug, isRTL).map((s, i) => (
                       <button key={i} onClick={() => sendMessage(s)}
                         className="w-full text-start text-xs px-3 py-2 rounded-lg text-slate-500 hover:text-white transition-all"
                         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -623,26 +727,11 @@ export function AiPlatform({ locale }: Props) {
                 </div>
               )}
 
-              {/* All modules quick switch */}
-              <div>
-                <p className="text-3xs font-bold uppercase tracking-widest text-slate-600 mb-2">{t('Switch Advisor', 'تغییر مشاور')}</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {modules.map(mod => {
-                    const c = getColor(mod.color)
-                    const active = activeModule?.slug === mod.slug
-                    return (
-                      <button key={mod.slug} onClick={() => switchModule(mod)}
-                        className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center"
-                        style={active ? { background: c.bg, border: `1px solid ${c.border}` } : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <span className="text-lg">{mod.icon}</span>
-                        <span className="text-4xs leading-tight" style={{ color: active ? c.text : '#64748b' }}>
-                          {isRTL ? mod.nameFa.replace('HBZ ', '').replace('مشاور ', '').replace('دستیار ', '').replace('بازبین ', '').replace('طراح ', '') : mod.nameEn.replace('HBZ ', '').split(' ')[0]}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+              {/* 26.33 بند ۳.۲ — a second copy of the advisor list used to live
+                  here ("Switch Advisor"), duplicating the sidebar above it: the
+                  same ten items twice on one screen, and the truncated labels
+                  made them read as different things. The sidebar is the single
+                  advisor selector. */}
 
               {/* Voice ready banner */}
               <div className="rounded-xl p-3" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>

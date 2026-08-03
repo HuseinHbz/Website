@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { exceedsThreshold, zoneIdFrom, shouldDrop, DRAG_THRESHOLD } from '../pointerDnd'
+import { exceedsThreshold, zoneIdFrom, shouldDrop, DRAG_THRESHOLD, shouldSuppressClick } from '../pointerDnd'
 
 /** Minimal Element stand-in: only what zoneIdFrom touches. */
 function el(zone: string | null, parent: unknown = null): unknown {
@@ -43,5 +43,25 @@ describe('26.29 BUG-112 — pointer DnD helpers', () => {
     expect(shouldDrop('new', 'new')).toBe(false)      // same column → no server call
     expect(shouldDrop('new', null)).toBe(false)       // released outside the board
     expect(shouldDrop(null, 'won')).toBe(true)
+  })
+})
+
+/**
+ * 26.33 BUG-206 — the drop worked, but the click the browser delivers after a
+ * drag reached the card's own onClick and opened the lead drawer over the
+ * board, so the move looked like it had failed.
+ */
+describe('shouldSuppressClick (26.33)', () => {
+  it('does not suppress when no drag has happened', () => {
+    expect(shouldSuppressClick(null, 1000)).toBe(false)
+  })
+  it('suppresses the click that immediately follows a drop', () => {
+    expect(shouldSuppressClick(1000, 1010, 300)).toBe(true)
+  })
+  it('stops suppressing once the window has passed — a real click still works', () => {
+    expect(shouldSuppressClick(1000, 1400, 300)).toBe(false)
+  })
+  it('treats the boundary as expired', () => {
+    expect(shouldSuppressClick(1000, 1300, 300)).toBe(false)
   })
 })

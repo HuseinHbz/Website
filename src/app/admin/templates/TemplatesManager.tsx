@@ -83,7 +83,7 @@ export function TemplatesManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editTemplate') : t('newTemplate')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />
               <Input label={t('nameFa')} value={editing.nameFa || ''} onChange={v => setEditing(e => ({ ...e, nameFa: v }))} />
               <div className="col-span-2"><Input label={t('description')} value={editing.descriptionEn || ''} onChange={v => setEditing(e => ({ ...e, descriptionEn: v }))} /></div>

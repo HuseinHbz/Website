@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { SITE } from '@/lib/site'
+import { PUBLIC_ROUTES } from '@/lib/publicRoutes'
 import { getDb } from '@/lib/db/index'
 import { solutions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -20,28 +21,10 @@ function buildUrl(path: string, locale: string) {
   return `${SITE.url}/${locale}${path === '/' ? '' : path}`
 }
 
-const staticRoutes: Array<{ path: string; changeFrequency: Frequency; priority: number }> = await [
-  { path: '/',                    changeFrequency: 'weekly',  priority: 1.0 },
-  { path: '/about',               changeFrequency: 'monthly', priority: 0.8 },
-  { path: '/solutions',           changeFrequency: 'weekly',  priority: 0.9 },
-  { path: '/technologies',        changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/industries',          changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/case-studies',        changeFrequency: 'weekly',  priority: 0.9 },
-  { path: '/blog',                changeFrequency: 'daily',   priority: 0.8 },
-  { path: '/products',            changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/services',            changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/projects',            changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/consultation',        changeFrequency: 'monthly', priority: 0.8 },
-  { path: '/consultation/intro-call', changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/search',              changeFrequency: 'weekly',  priority: 0.5 },
-  // 26.31 بند ۴ — pages that had a route and content but were in neither the
-  // menu nor the sitemap: invisible to visitors AND to crawlers.
-  { path: '/docs',                changeFrequency: 'weekly',  priority: 0.7 },
-  { path: '/academy',             changeFrequency: 'weekly',  priority: 0.7 },
-  { path: '/events',              changeFrequency: 'weekly',  priority: 0.6 },
-  { path: '/ai',                  changeFrequency: 'monthly', priority: 0.6 },
-]
-
+// 26.33 — the route list moved to `@/lib/publicRoutes` so the Menu Builder can
+// validate against the SAME list instead of a second copy that drifts (BUG-203).
+const staticRoutes: Array<{ path: string; changeFrequency: Frequency; priority: number }> =
+  PUBLIC_ROUTES.map(r => ({ path: r.path, changeFrequency: r.changeFrequency, priority: r.priority }))
 async function getDynamicSlugs(): Promise<string[]> {
   try {
     const db = getDb()

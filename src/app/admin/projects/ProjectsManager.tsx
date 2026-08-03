@@ -175,7 +175,7 @@ export function ProjectsManager() {
           {activeTab === 'basic' && (
             <>
               <div className="grid grid-cols-3 gap-4">
-                <Input label="Slug *" value={editing.slug} onChange={(v) => set('slug', v)} placeholder="enterprise-network-upgrade" />
+                <Input label={t('slug') + ' *'} value={editing.slug} onChange={(v) => set('slug', v)} placeholder="enterprise-network-upgrade" />
                 <Input label="Year" value={editing.year} onChange={(v) => set('year', v)} placeholder="2024" />
                 <Input label="Brand Color" type="color" value={editing.color} onChange={(v) => set('color', v)} />
               </div>
@@ -313,8 +313,8 @@ export function ProjectsManager() {
           {/* SEO */}
           {activeTab === 'seo' && (
             <>
-              <Input label="SEO Title" value={editing.seoTitle} onChange={(v) => set('seoTitle', v)} placeholder="Enterprise Network Upgrade Case Study | HBZ Technology" />
-              <Input label="SEO Description" value={editing.seoDescription} onChange={(v) => set('seoDescription', v)} multiline rows={3} placeholder="How HBZ Technology transformed..." />
+              <Input label={t('seoTitle')} value={editing.seoTitle} onChange={(v) => set('seoTitle', v)} placeholder="Enterprise Network Upgrade Case Study | HBZ Technology" />
+              <Input label={t('seoDescription')} value={editing.seoDescription} onChange={(v) => set('seoDescription', v)} multiline rows={3} placeholder="How HBZ Technology transformed..." />
               <Input label="SEO Keywords" value={editing.seoKeywords} onChange={(v) => set('seoKeywords', v)} placeholder="enterprise networking, cisco, vmware, case study" />
               <MediaPicker label="OG Image" value={editing.ogImage} onChange={(v) => set('ogImage', v)} folder="seo" placeholder="Select Open Graph image (1200x630)" />
             </>

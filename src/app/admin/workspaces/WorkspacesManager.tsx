@@ -42,7 +42,7 @@ export function WorkspacesManager() {
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editWorkspace') : t('newWorkspace')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><Input label={t('name')} value={editing.name || ''} onChange={v => setEditing(e => ({ ...e, name: v }))} /></div>
-              <Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} />
+              <Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} />
               <Select label={t('type')} value={editing.type || 'corporate'} onChange={v => setEditing(e => ({ ...e, type: v, icon: TYPE_ICONS[v] || '🏢' }))} options={TYPES.map(tp => ({ value: tp, label: tp }))} />
               <Input label={t('icon')} value={editing.icon || ''} onChange={v => setEditing(e => ({ ...e, icon: v }))} />
               <Input label={t('color')} value={editing.color || ''} onChange={v => setEditing(e => ({ ...e, color: v }))} />

@@ -226,11 +226,39 @@
     min-height: 100dvh;
   }
 
-  /* RTL persian font */
+  /* 26.33 بند۲ — Persian type roles.
+     Body copy, tables, forms and buttons take the BODY face; headings and the
+     things that read as headings (page titles, card titles, modal titles) take
+     the HEADING face. Applied here rather than on hundreds of components, so
+     both the public site and the admin panel inherit it, and so swapping in the
+     licensed IRANYekan/IRANSans later is a change to two CSS variables.
+     Latin text is untouched: these rules only apply inside an RTL container. */
   [dir='rtl'] body,
   [dir='rtl'] .font-persian {
-    font-family: var(--font-persian, Tahoma, Arial, sans-serif);
+    font-family: var(--font-persian-body, var(--font-persian), Tahoma, Arial, sans-serif);
     letter-spacing: 0;
+  }
+
+  [dir='rtl'] h1,
+  [dir='rtl'] h2,
+  [dir='rtl'] h3,
+  [dir='rtl'] h4,
+  [dir='rtl'] h5,
+  [dir='rtl'] h6,
+  [dir='rtl'] .font-persian-head {
+    font-family: var(--font-persian-heading, var(--font-persian), Tahoma, Arial, sans-serif);
+  }
+
+  /* An English string inside an RTL page keeps the LATIN face — a Persian font
+     rendering Latin text is exactly the mixed look بند۱ is removing. Code stays
+     monospace, which is a separate concern from language direction. */
+  [dir='rtl'] [dir='ltr'] {
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+  [dir='rtl'] code,
+  [dir='rtl'] pre,
+  [dir='rtl'] .font-mono {
+    font-family: var(--font-mono), Consolas, monospace;
   }
 
   /* Headings */

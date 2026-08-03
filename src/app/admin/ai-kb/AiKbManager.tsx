@@ -70,9 +70,9 @@ export function AiKbManager() {
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit Knowledge Item' : 'New Knowledge Item'} size="lg">
         <div className="space-y-4">
-          <Input label="Title *" value={editing.title} onChange={(v) => set('title', v)} placeholder="HBZ Professional Profile" />
+          <Input label={t('title') + ' *'} value={editing.title} onChange={(v) => set('title', v)} placeholder="HBZ Professional Profile" />
           <div className="grid grid-cols-3 gap-4">
-            <Select label="Type" value={editing.type} onChange={(v) => set('type', v as Item['type'])} options={[{ value: 'snippet', label: 'Snippet' }, { value: 'document', label: 'Document' }, { value: 'faq', label: 'FAQ' }, { value: 'url', label: 'URL' }]} />
+            <Select label={t('type')} value={editing.type} onChange={(v) => set('type', v as Item['type'])} options={[{ value: 'snippet', label: 'Snippet' }, { value: 'document', label: 'Document' }, { value: 'faq', label: 'FAQ' }, { value: 'url', label: 'URL' }]} />
             <Select label="Locale" value={editing.locale} onChange={(v) => set('locale', v)} options={[{ value: 'both', label: 'Both' }, { value: 'en', label: 'English' }, { value: 'fa', label: 'Persian' }]} />
             <Input label="Priority (higher = more important)" type="number" value={String(editing.priority)} onChange={(v) => set('priority', Number(v))} />
           </div>
@@ -86,10 +86,10 @@ export function AiKbManager() {
             <Input label="File URL (if uploaded)" value={editing.fileUrl} onChange={(v) => set('fileUrl', v)} placeholder="/uploads/knowledge/doc.pdf" />
           )}
           <Input label="Tags (comma-separated)" value={editing.tags} onChange={(v) => set('tags', v)} placeholder="profile, services, about" />
-          <Select label="Status" value={editing.active ? 'true' : 'false'} onChange={(v) => set('active', v === 'true')} options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Disabled' }]} />
+          <Select label={t('status')} value={editing.active ? 'true' : 'false'} onChange={(v) => set('active', v === 'true')} options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Disabled' }]} />
           <div className="flex gap-3">
             <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Item'}</Btn>
-            <Btn variant="secondary" onClick={() => setModal(false)}>Cancel</Btn>
+            <Btn variant="secondary" onClick={() => setModal(false)}>{t('cancel')}</Btn>
           </div>
         </div>
       </Modal>

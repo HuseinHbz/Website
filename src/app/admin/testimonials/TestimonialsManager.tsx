@@ -5,6 +5,7 @@ import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admi
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
 
 type Testimonial = {
   id: number
@@ -67,6 +68,9 @@ export function TestimonialsManager() {
   const rowActions: RowAction<Testimonial>[] = [
     { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: t2 => setEditing(t2) },
     { id: 'toggle', labelEn: 'Toggle', labelFa: t('disable'), icon: '⇄', onClick: t2 => toggle(t2) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Testimonial>({ path: '/api/admin/testimonials', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.clientName ?? '') }),
   ]
 
   return (

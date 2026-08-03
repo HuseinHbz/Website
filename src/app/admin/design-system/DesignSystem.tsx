@@ -57,6 +57,21 @@ export function DesignSystem() {
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <PageHeader title={L('Design System', 'سیستم طراحی')} subtitle={L('The single enterprise design language — tokens, components and the DataTable — every module follows.', 'زبان واحد طراحی سازمانی — توکن‌ها، کامپوننت‌ها و جدول داده — که همهٔ ماژول‌ها از آن پیروی می‌کنند.')} />
 
+      {/* 26.33 BUG-202 — reported as "does not work": nothing on this page
+          reacts, because every control here is a SPECIMEN of a component, not an
+          action. That is the intended design (it is a reference catalogue), but
+          an unlabelled page full of dead buttons is indistinguishable from a
+          broken one. Saying so is the fix. */}
+      <div className="mb-6 rounded-xl border border-info/40 bg-info/10 px-4 py-3">
+        <p className="text-sm font-semibold text-text-primary">
+          {L('Reference only — this page is not editable', 'فقط مرجع — این صفحه قابل ویرایش نیست')}
+        </p>
+        <p className="text-xs text-text-secondary mt-1">
+          {L('Every control below is a sample of a component, shown so you can see how it looks. The samples deliberately do nothing when clicked. To change brand colours or the logo, use Company Profile; feature toggles live in Feature Flags.',
+             'همهٔ کنترل‌های زیر نمونهٔ کامپوننت‌اند و فقط برای دیدن ظاهرشان نمایش داده می‌شوند؛ با کلیک عمداً کاری انجام نمی‌دهند. برای تغییر رنگ برند یا لوگو از «پروفایل شرکت» و برای فعال/غیرفعال‌کردن قابلیت‌ها از «پرچم‌های ویژگی» استفاده کنید.')}
+        </p>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
         <Section title={L('Color tokens', 'توکن‌های رنگ')}>
           <div className="grid grid-cols-5 gap-3">

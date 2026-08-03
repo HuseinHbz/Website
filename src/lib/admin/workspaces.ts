@@ -201,8 +201,11 @@ export const WORKSPACES: Workspace[] = [
         //   seo → Brand (content marketing)
         // Kept: the two ?tab=/?view= entries below are a SPECIFIC TAB of a bigger
         // module, not a second link to the whole module (the written exception).
-        { labelEn: 'Currency Settings', labelFa: 'تنظیمات ارز', href: '/admin/finance?tab=currency', icon: '💱' },
-        { labelEn: 'Document Settings', labelFa: 'تنظیمات اسناد', href: '/admin/documents?view=designer', icon: '📑' },
+        // 26.33 BUG-204 — these two pointed at the ERP Financial and Document
+        // Centers from the System workspace, so the same page appeared under two
+        // menus and (per the 26.29 key rule) carried a SECOND permission key.
+        // They are financial settings, so ERP owns them; the System copies are
+        // gone and their grants migrate in `$rbac2633$` (migrate.ts).
         { labelEn: 'Feature Flags', labelFa: 'پرچم‌های ویژگی', href: '/admin/flags', icon: '🚩' },
         { labelEn: 'Numbering Engine', labelFa: 'موتور شماره‌گذاری', href: '/admin/numbering', icon: '🔢' },
         { labelEn: 'Design System', labelFa: 'سیستم طراحی', href: '/admin/design-system', icon: '🎨' },

@@ -83,7 +83,7 @@ export function Customer360({ id }: { id: number }) {
         <Card className="p-4 space-y-2">
           <h3 className="text-sm font-semibold text-text-primary">{lc(fa, 'Contact', 'تماس')}</h3>
           <dl className="text-xs space-y-1 text-text-secondary">
-            {c.email && <div className="flex justify-between gap-2"><dt className="text-text-tertiary">Email</dt><dd className="font-mono">{c.email}</dd></div>}
+            {c.email && <div className="flex justify-between gap-2"><dt className="text-text-tertiary">{t('email')}</dt><dd className="font-mono">{c.email}</dd></div>}
             {c.phone && <div className="flex justify-between gap-2"><dt className="text-text-tertiary">{lc(fa, 'Phone', 'تلفن')}</dt><dd className="font-mono">{num(c.phone)}</dd></div>}
             {c.economicCode && <div className="flex justify-between gap-2"><dt className="text-text-tertiary">{lc(fa, 'Economic code', 'کد اقتصادی')}</dt><dd className="font-mono">{num(c.economicCode)}</dd></div>}
             {c.nationalId && <div className="flex justify-between gap-2"><dt className="text-text-tertiary">{lc(fa, 'National ID', 'شناسه/کد ملی')}</dt><dd className="font-mono">{num(c.nationalId)}</dd></div>}

@@ -5,6 +5,7 @@ import { PageHeader, Card, Btn, Badge, Input, useToast } from '@/components/admi
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
 
 type Solution = {
   id: number
@@ -65,6 +66,9 @@ export function SolutionsManager() {
   const rowActions: RowAction<Solution>[] = [
     { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: s => setEditing(s) },
     { id: 'toggle', labelEn: 'Toggle', labelFa: t('disable'), icon: '⇄', onClick: s => toggle(s) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Solution>({ path: '/api/admin/solutions', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.nameEn ?? '') }),
   ]
 
   return (
@@ -82,7 +86,7 @@ export function SolutionsManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editSolution') : t('newSolution')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} />
               <Input label={t('nameFa')} value={editing.nameFa || ''} onChange={v => setEditing(e => ({ ...e, nameFa: v }))} />
               <div className="col-span-2"><Input label={t('taglineEn')} value={editing.taglineEn || ''} onChange={v => setEditing(e => ({ ...e, taglineEn: v }))} /></div>

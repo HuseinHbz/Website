@@ -6,6 +6,7 @@ import { PageHeader, Card, Btn, Badge, Input, Select, useToast } from '@/compone
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { deleteRowAction } from '@/lib/admin/rowDelete'
 
 type Partner = { id: number; slug: string; nameEn: string; type: string; tier: string; website: string | null; active: boolean; featured: boolean; sortOrder: number }
 
@@ -42,6 +43,9 @@ export function PartnersManager() {
   ]
   const rowActions: RowAction<Partner>[] = [
     { id: 'edit', labelEn: 'Edit', labelFa: t('edit'), icon: '✎', onClick: p => setEditing(p) },
+    // 26.33 BUG-205: the DELETE API always worked; this manager simply
+    // never rendered a Delete affordance, so there was nothing to click.
+    deleteRowAction<Partner>({ path: '/api/admin/partners', fa: locale === 'fa', toast, reload: load, labelOf: r => String(r.nameEn ?? '') }),
   ]
 
   return (
@@ -55,7 +59,7 @@ export function PartnersManager() {
           <div className="bg-background border border-border rounded-2xl w-full max-w-xl p-6">
             <h3 className="text-lg font-bold text-text-primary mb-4">{editing.id ? t('editPartner') : t('newPartner')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Input label="Slug" value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
+              <div className="col-span-2"><Input label={t('slug')} value={editing.slug || ''} onChange={v => setEditing(e => ({ ...e, slug: v }))} /></div>
               <div className="col-span-2"><Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} /></div>
               <Select label={t('type')} value={editing.type || 'technology'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: tp }))} />
               <Select label={t('tier')} value={editing.tier || 'silver'} onChange={v => setEditing(e => ({ ...e, tier: v }))} options={TIERS.map(tr => ({ value: tr, label: tr }))} />
