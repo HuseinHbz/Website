@@ -18,7 +18,7 @@ export async function GET() {
       `SELECT i.id, i.key, i.name, i.type, i.config, i.active, i.retries,
               (SELECT COUNT(*)::int FROM integration_dispatches d WHERE d.connector_id=i.id) AS dispatches,
               (SELECT COUNT(*)::int FROM integration_dispatches d WHERE d.connector_id=i.id AND d.status='dead' AND d.resolved=0) AS dlq
-       FROM integrations i ORDER BY i.type, i.key`, [])) as {
+       FROM integration_connectors i ORDER BY i.type, i.key`, [])) as {
       id: number; key: string; name: string; type: ConnectorType; config: string; active: number; retries: number; dispatches: number; dlq: number
     }[]
     const connectors = rows.map(r => {
@@ -49,14 +49,14 @@ export async function POST(req: NextRequest) {
   if (!v.valid) return badRequest(v.error ?? 'invalid connector')
   try {
     if (!d.id) {
-      if ((await pgQuery(`SELECT id FROM integrations WHERE key=$1`, [d.key]))[0]) return badRequest('A connector with this key already exists')
+      if ((await pgQuery(`SELECT id FROM integration_connectors WHERE key=$1`, [d.key]))[0]) return badRequest('A connector with this key already exists')
       const row = (await pgQuery(
-        `INSERT INTO integrations (key, name, type, config, retries, active, owner_id, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,${NOW}) RETURNING id`,
+        `INSERT INTO integration_connectors (key, name, type, config, retries, active, owner_id, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,${NOW}) RETURNING id`,
         [d.key, d.name, d.type, JSON.stringify(d.config), d.retries, d.active ? 1 : 0, auth.user.id]))[0] as { id: number }
       await logAction(auth.user, 'integration.create', 'integration', row.id, null, { key: d.key, type: d.type })
       return NextResponse.json({ id: row.id })
     }
-    await pgQuery(`UPDATE integrations SET key=$2, name=$3, type=$4, config=$5, retries=$6, active=$7, updated_at=${NOW} WHERE id=$1`,
+    await pgQuery(`UPDATE integration_connectors SET key=$2, name=$3, type=$4, config=$5, retries=$6, active=$7, updated_at=${NOW} WHERE id=$1`,
       [d.id, d.key, d.name, d.type, JSON.stringify(d.config), d.retries, d.active ? 1 : 0])
     await logAction(auth.user, 'integration.update', 'integration', d.id)
     return NextResponse.json({ id: d.id })
@@ -70,7 +70,7 @@ export async function DELETE(req: NextRequest) {
   const parsed = await readJson(req, z.object({ id: z.number().int().positive() }))
   if ('error' in parsed) return parsed.error
   try {
-    await pgQuery(`DELETE FROM integrations WHERE id=$1`, [parsed.data.id])
+    await pgQuery(`DELETE FROM integration_connectors WHERE id=$1`, [parsed.data.id])
     await logAction(auth.user, 'integration.delete', 'integration', parsed.data.id)
     return NextResponse.json({ ok: true })
   } catch (e) { return apiError(e, 'Failed to delete connector') }

@@ -29,7 +29,9 @@
     "reset:demo": "tsx scripts/reset-demo.ts",
     "audit:nav": "tsx scripts/nav-audit.ts",
     "audit:shell": "node scripts/shell-audit.mjs",
-    "audit:rbac": "tsx scripts/rbac-audit.ts"
+    "audit:rbac": "tsx scripts/rbac-audit.ts",
+    "audit:modules": "tsx scripts/module-audit.ts",
+    "audit:modules:classes": "tsx scripts/module-audit-classes.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

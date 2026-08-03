@@ -35,6 +35,23 @@ export function apiError(e: unknown, message = 'Internal server error', status =
 export function badRequest(message = 'Bad request') {
   return NextResponse.json({ error: message }, { status: 400 })
 }
+
+export function notFound(message = 'Not found') {
+  return NextResponse.json({ error: message }, { status: 404 })
+}
+
+/**
+ * 26.32 — a Drizzle `.update(...).returning()` matches ZERO rows when the id
+ * does not exist, so `rows[0]` is `undefined` and `NextResponse.json(undefined)`
+ * throws "Value is not JSON serializable" → a generic 500 for what is plainly a
+ * client error. Fourteen admin routes shared that exact shape.
+ *
+ * Use for update/lookup results: returns the row's JSON, or a clean 404.
+ */
+export function jsonOr404<T>(row: T | undefined | null, message = 'Not found') {
+  if (row == null) return notFound(message)
+  return NextResponse.json(row)
+}
 export function unauthorized(message = 'Unauthorized') {
   return NextResponse.json({ error: message }, { status: 401 })
 }

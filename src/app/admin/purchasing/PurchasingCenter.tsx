@@ -8,6 +8,7 @@ import { useAdminLocale } from '@/lib/admin/locale'
 import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
+import { formatDateTime } from '@/lib/admin/datetime'
 import type { PurchasingChartsData } from './PurchasingCharts'
 
 // Recharts is heavy — load the chart chunk only when the Analytics tab renders.
@@ -190,6 +191,15 @@ function Vendors({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; to
 
 function EvaluateModal({ rtl, vendor, onClose, onDone, toast }: { rtl: boolean; vendor: Vendor; onClose: () => void; onDone: () => void; toast: Toast }) {
   const [s, setS] = useState({ quality: 3, delivery: 3, price: 3, service: 3, compliance: 3 })
+  // 26.32 بند۴: `vendor_evaluations` was written on every review and read by
+  // nothing — the buyer could not see whether a vendor's grade was improving.
+  const [history, setHistory] = useState<{ id: number; score: number; grade: string; evaluatorName: string | null; createdAt: string }[]>([])
+  useEffect(() => {
+    fetch(`/api/admin/erp/purchasing?evaluations=${vendor.id}`)
+      .then(r => r.ok ? r.json() : { evaluations: [] })
+      .then(d => setHistory(d.evaluations ?? []))
+      .catch(() => setHistory([]))
+  }, [vendor.id])
   async function submit() {
     const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vendor.evaluate', vendorId: vendor.id, ...s }) })
     if (r.ok) { const d = await r.json(); toast(lc(rtl, `Scored ${d.score} (${d.grade})`, `امتیاز ${d.score} (${d.grade})`), 'success'); onDone() } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
@@ -205,6 +215,20 @@ function EvaluateModal({ rtl, vendor, onClose, onDone, toast }: { rtl: boolean; 
             <span className="text-sm font-semibold w-6 text-center">{s[k]}</span>
           </div>
         ))}
+        {history.length > 0 && (
+          <div className="border-t border-border pt-3">
+            <div className="text-sm font-semibold mb-2">{lc(rtl, 'Evaluation history', 'تاریخچهٔ ارزیابی')}</div>
+            <ul className="space-y-1 max-h-40 overflow-y-auto">
+              {history.map(h => (
+                <li key={h.id} className="flex items-center justify-between text-xs text-text-secondary">
+                  <span>{formatDateTime(h.createdAt, rtl ? 'fa' : 'en')}</span>
+                  <span>{h.evaluatorName ?? '—'}</span>
+                  <span className="font-semibold text-text-primary">{h.score} ({h.grade})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>{lc(rtl, 'Cancel', 'انصراف')}</Btn><Btn onClick={submit}>{lc(rtl, 'Save evaluation', 'ثبت ارزیابی')}</Btn></div>
       </div>
     </Modal>

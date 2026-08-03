@@ -4,6 +4,7 @@ import { apiError, readJson, badRequest, guardJson, requirePermission } from '@/
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { scoreLead, pipelineStats, LEAD_SOURCES, LEAD_STATUSES, type LeadStatus } from '@/lib/crm/leads'
+import { runOnce } from '@/lib/api/idempotency'
 
 // CRM lead pipeline API. Reuses the validated subsystems: zod validation,
 // requireAdmin RBAC, and audit logging. Writes re-score the lead server-side.
@@ -73,13 +74,15 @@ export async function POST(req: NextRequest) {
     if ('error' in parsed) return parsed.error
     const d = parsed.data
     const score = scoreLead(d)
-    const result = (await pgQuery(
+    // 26.32 بند۳: a double-click on «ثبت سرنخ» created two leads (empirically
+    // proven) — a duplicate lead then double-counts the funnel and CAC.
+    const result = (await runOnce(auth.user.id, 'crm/leads', d, () => pgQuery(
       `INSERT INTO crm_leads (name, email, phone, company, source, status, score, value, notes, owner_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
       [d.name, d.email || null, d.phone || null, d.company || null,
         d.source ?? 'other', d.status ?? 'new', score, d.value ?? 0,
         d.notes || null, d.ownerId ?? auth.user.id],
-    ))[0] as { id: number }
+    )))[0] as { id: number }
     await logAction(auth.user, 'CREATE', 'crm_leads', result.id, null, { ...d, score })
     return NextResponse.json({ id: result.id, score })
   } catch (e: unknown) {

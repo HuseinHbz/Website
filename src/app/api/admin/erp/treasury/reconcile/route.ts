@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
-import { suggestMatches, confirmMatch } from '@/lib/treasury/bankOpsData'
+import { suggestMatches, confirmMatch, matchHistory } from '@/lib/treasury/bankOpsData'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -10,7 +10,11 @@ export const runtime = 'nodejs'
 export async function GET(req: NextRequest) {
   const auth = await requirePermission('erp.treasury', 'read'); if ('error' in auth) return auth.error
   const id = Number(req.nextUrl.searchParams.get('accountId')); if (!id) return NextResponse.json({ error: 'accountId required' }, { status: 400 })
-  try { return NextResponse.json(await suggestMatches(id)) } catch (e) { return apiError(e, 'Reconcile failed') }
+  try {
+    // 26.32 بند۴: the persisted match trail is now readable (it was write-only).
+    if (req.nextUrl.searchParams.get('history')) return NextResponse.json({ history: await matchHistory(id) })
+    return NextResponse.json(await suggestMatches(id))
+  } catch (e) { return apiError(e, 'Reconcile failed') }
 }
 const schema = z.object({ lineId: z.number().int().positive(), erpRef: z.string().min(1).max(60), confidence: z.number(), status: z.enum(['matched','rejected']), reasons: z.array(z.string()).max(10).optional() })
 export async function POST(req: NextRequest) {

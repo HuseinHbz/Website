@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, unauthorized, checkTreePermission } from '@/lib/api/respond'
+import { guardJson, unauthorized, checkTreePermission, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { organization } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest) {
   const existing = (await db.select().from(organization))[0]
   if (existing) {
     const result = (await db.update(organization).set({ ...body, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(organization.id, existing.id)).returning())[0]
+    if (!result) return notFound()
     await logAction(user, 'UPDATE', 'organization', String(existing.id), null, result)
     return NextResponse.json(result)
   } else {

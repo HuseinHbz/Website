@@ -54,6 +54,24 @@ export async function evaluateVendor(vendorId: number, scores: { quality: number
   return s
 }
 
+/**
+ * 26.32 بند۴ — `vendor_evaluations` was WRITE-ONLY: every 5-criteria review the
+ * buyer filled in was stored and then unreachable, so only the latest rolled-up
+ * score survived and the trend behind a vendor's grade was invisible. This is
+ * the read path that makes the history a real feature.
+ */
+export async function vendorEvaluationHistory(vendorId: number) {
+  return await pgQuery<{
+    id: number; quality: number; delivery: number; price: number; service: number
+    compliance: number; score: number; grade: string; note: string | null
+    evaluatorName: string | null; createdAt: string
+  }>(
+    `SELECT e.id, e.quality, e.delivery, e.price, e.service, e.compliance,
+            e.score, e.grade, e.note, u.name AS "evaluatorName", e.created_at AS "createdAt"
+     FROM vendor_evaluations e LEFT JOIN users u ON u.id = e.evaluator_id
+     WHERE e.vendor_id = $1 ORDER BY e.created_at DESC LIMIT 50`, [vendorId])
+}
+
 export async function vendorPosition(vendorId: number) {
   const inv = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(total*exchange_rate),0) AS t FROM purchase_documents WHERE vendor_id=$1 AND doc_type='invoice' AND status NOT IN ('void','draft')`, [vendorId]))[0]?.t)
   const paid = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(amount*exchange_rate),0) AS t FROM purchase_payments WHERE vendor_id=$1`, [vendorId]))[0]?.t)

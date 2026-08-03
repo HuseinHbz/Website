@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { usePointerDnd } from '@/lib/admin/pointerDnd'
 import dynamic from 'next/dynamic'
 import { Card, Btn, Badge, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
@@ -116,8 +117,13 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
     setLayout(l => l.map(e => e.id === id ? { ...e, config: { ...e.config, refreshInterval: secs || undefined } } : e)); setDirty(true)
   }
 
-  function onDrop(targetId: string) {
-    const from = dragId.current; dragId.current = null
+  // 26.32 — last remaining HTML5 drag in the admin: it never called
+  // dataTransfer.setData (so the browser never started a drag) and did not work
+  // on touch. Reuses the SAME pointer helper as the kanban and the DataTable.
+  const widgetDrag = usePointerDnd<string>((fromId, targetId) => onDrop(targetId, fromId))
+
+  function onDrop(targetId: string, fromId?: string) {
+    const from = fromId ?? dragId.current; dragId.current = null
     if (!from || from === targetId) return
     setLayout(l => {
       const arr = [...l]
@@ -252,11 +258,10 @@ export function DashboardEngine({ workspace }: { workspace: string }) {
             return (
               <div
                 key={entry.id}
-                draggable={edit}
-                onDragStart={() => { dragId.current = entry.id }}
-                onDragOver={e => { if (edit) e.preventDefault() }}
-                onDrop={() => onDrop(entry.id)}
-                className={`${SPAN[entry.size]} ${edit ? 'cursor-move' : ''}`}
+                {...(edit ? widgetDrag.zoneProps(entry.id) : {})}
+                {...(edit ? { onPointerDown: widgetDrag.dragHandlers(entry.id, entry.id).onPointerDown } : {})}
+                style={edit ? widgetDrag.dragHandlers(entry.id, entry.id).style : undefined}
+                className={`${SPAN[entry.size]} ${edit ? 'cursor-move' : ''} ${edit && widgetDrag.overZone === entry.id ? 'ring-2 ring-brand rounded-xl' : ''}`}
               >
                 <Card className="p-4 h-full">
                   <div className="flex items-center gap-2 mb-3">

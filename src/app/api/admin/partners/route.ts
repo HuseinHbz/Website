@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized, checkTreePermission, apiError } from '@/lib/api/respond'
+import { ensureSlug, ensureUniqueSlug } from '@/lib/admin/slug'
+import { guardJson, forbidden, unauthorized, checkTreePermission, apiError, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { partners } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET() {
   try {
@@ -24,7 +26,8 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await guardJson(req)
     const db = getDb()
-    const result = (await db.insert(partners).values(body).returning())[0]
+    // 26.32: the partner form never collects a slug — derive it (26.29 BUG-101 class)
+    const result = (await runOnce(user.id, 'partners', body, async () => db.insert(partners).values(await ensureUniqueSlug(body as Record<string, unknown>, 'partners', 'partner') as never).returning()))[0]
     await logAction(user, 'CREATE', 'partner', String(result.id), null, result)
     return NextResponse.json(result, { status: 201 })
   } catch (e: unknown) { return apiError(e) }
@@ -39,8 +42,9 @@ export async function PUT(req: NextRequest) {
     const { id, ...data } = await guardJson(req)
     const db = getDb()
     const result = (await db.update(partners).set(data).where(eq(partners.id, id)).returning())[0]
+    if (!result) return notFound()
     await logAction(user, 'UPDATE', 'partner', String(id), null, result)
-    return NextResponse.json(result)
+    return jsonOr404(result)
   } catch (e: unknown) { return apiError(e) }
 }
 

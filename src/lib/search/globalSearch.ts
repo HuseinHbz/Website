@@ -85,7 +85,7 @@ export const SOURCES: SearchSource[] = [
   {
     module: 'integrations', type: 'integration', url: () => '/admin/integration-hub',
     sql: `SELECT id, name AS title, type AS subtitle, coalesce(key,'') AS keywords
-          FROM integrations WHERE name ILIKE $1 OR key ILIKE $1 OR type ILIKE $1 LIMIT 25`,
+          FROM integration_connectors WHERE name ILIKE $1 OR key ILIKE $1 OR type ILIKE $1 LIMIT 25`,
   },
 ]
 

@@ -1,11 +1,12 @@
-import { ensureSlug } from '@/lib/admin/slug'
+import { ensureSlug, ensureUniqueSlug } from '@/lib/admin/slug'
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized, checkTreePermission, apiError } from '@/lib/api/respond'
+import { guardJson, forbidden, unauthorized, checkTreePermission, apiError, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { getDb } from '@/lib/db'
 import { content } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET(req: NextRequest) {
   try {
@@ -30,8 +31,8 @@ export async function POST(req: NextRequest) {
     const body = await guardJson(req)
     const db = getDb()
     // 26.29: the form leaves slug blank → derive it instead of a 500 (BUG-101)
-    const withSlug = ensureSlug(body as Record<string, unknown>, 'content')
-    const [row] = await db.insert(content).values({
+    const withSlug = await ensureUniqueSlug(body as Record<string, unknown>, 'content', 'content')
+    const [row] = await runOnce(user.id, 'content', body, async () => db.insert(content).values({
       slug: withSlug.slug as string, type: body.type || 'blog',
       titleEn: body.titleEn, titleFa: body.titleFa,
       excerptEn: body.excerptEn, excerptFa: body.excerptFa,
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
       sortOrder: body.sortOrder ?? 0,
       publishedAt: body.status === 'published' ? new Date().toISOString() : null,
       updatedBy: user.id,
-    }).returning()
+    }).returning())
     await logAction(user, 'create', 'content', row.id)
     return NextResponse.json(row, { status: 201 })
   } catch (e: unknown) { return apiError(e) }
@@ -75,8 +76,9 @@ export async function PUT(req: NextRequest) {
       publishedAt: body.status === 'published' && !wasPublished ? new Date().toISOString() : existing[0]?.publishedAt,
       updatedBy: user.id,
     }).where(eq(content.id, body.id)).returning()
+    if (!row) return notFound()
     await logAction(user, 'update', 'content', body.id)
-    return NextResponse.json(row)
+    return jsonOr404(row)
   } catch (e: unknown) { return apiError(e) }
 }
 

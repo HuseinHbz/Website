@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ensureSlug, ensureUniqueSlug } from '@/lib/admin/slug'
 import { apiError, guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { blogPosts, blogCategories } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET() {
   const db = await getDb()
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
     // strip id if accidentally sent
     const { id: _id, views: _v, ...data } = body
     const db = getDb()
-    const result = await db.insert(blogPosts).values({ ...data, updatedBy: user?.id }).returning()
+    const result = await runOnce(user?.id, 'blog', body, async () => db.insert(blogPosts).values({ ...await ensureUniqueSlug(data as Record<string, unknown>, 'blog_posts', 'post'), updatedBy: user?.id } as never).returning())
     await logAction(user, 'CREATE', 'blog_posts', result[0]?.id, null, data)
     return NextResponse.json(result[0])
   } catch (e: unknown) {

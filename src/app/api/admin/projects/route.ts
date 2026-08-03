@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureSlug } from '@/lib/admin/slug'
+import { ensureUniqueSlug } from '@/lib/admin/slug'
 import { apiError, guardJson, forbidden, unauthorized, checkTreePermission } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { projects } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET() {
   try {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     const body = await guardJson(req)
     const { id: _id, createdAt: _c, updatedAt: _u, ...data } = body
     const db = getDb()
-    const result = await db.insert(projects).values({ ...ensureSlug(data as Record<string, unknown>, "project"), updatedBy: user?.id } as never).returning()
+    const result = await runOnce(user?.id, 'projects', body, async () => db.insert(projects).values({ ...await ensureUniqueSlug(data as Record<string, unknown>, 'projects', 'project'), updatedBy: user?.id } as never).returning())
     await logAction(user, 'CREATE', 'projects', result[0]?.id, null, data)
     return NextResponse.json(result[0])
   } catch (e: unknown) {

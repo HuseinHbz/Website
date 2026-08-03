@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
 import {
-  listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition,
+  listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition, vendorEvaluationHistory,
   listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
   recordPayment, convertDocument, overview, postPurchaseInvoiceToGl, analytics,
   receiveDocument, compareQuotes, confirmPurchaseInvoice, voidPurchaseInvoice,
@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
     if (view === 'analytics') return NextResponse.json(await analytics())
     if (view === 'vendors') return NextResponse.json({ vendors: await listVendors() })
     if (sp.get('vendorPosition')) return NextResponse.json(await vendorPosition(Number(sp.get('vendorPosition'))))
+    // 26.32 بند۴: the evaluation history was written and never read — now readable.
+    if (sp.get('evaluations')) return NextResponse.json({ evaluations: await vendorEvaluationHistory(Number(sp.get('evaluations'))) })
     if (sp.get('compare')) return NextResponse.json({ quotes: await compareQuotes(Number(sp.get('compare'))) })
     if (sp.get('id')) {
       const doc = await getDocument(Number(sp.get('id')))

@@ -88,7 +88,7 @@ async function record(connectorId: number, r: DispatchResult, payload: unknown):
 
 /** Dispatch by connector key (used by the Workflow `integration` task handler). */
 export async function dispatchByKey(key: string, payload: unknown): Promise<DispatchResult | null> {
-  const row = (await pgQuery(`SELECT id, type, config, retries FROM integrations WHERE key=$1 AND active=1`, [key]))[0] as
+  const row = (await pgQuery(`SELECT id, type, config, retries FROM integration_connectors WHERE key=$1 AND active=1`, [key]))[0] as
     { id: number; type: ConnectorType; config: string; retries: number } | undefined
   if (!row) return null
   let config: ConnectorConfig = {}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized, checkTreePermission, apiError } from '@/lib/api/respond'
+import { guardJson, forbidden, unauthorized, checkTreePermission, apiError, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { testimonials } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -39,8 +39,9 @@ export async function PUT(req: NextRequest) {
     const { id, ...data } = await guardJson(req)
     const db = getDb()
     const result = (await db.update(testimonials).set(data).where(eq(testimonials.id, id)).returning())[0]
+    if (!result) return notFound()
     await logAction(user, 'update', 'testimonial', String(id), null, result)
-    return NextResponse.json(result)
+    return jsonOr404(result)
   } catch (e: unknown) { return apiError(e) }
 }
 

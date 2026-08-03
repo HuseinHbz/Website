@@ -8,6 +8,7 @@
  * shared AI engine. RTL/EN.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { Card, Btn, Input, Select, Badge, PageHeader, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
 import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
@@ -138,7 +139,16 @@ function Reconcile({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [accountId, setAccountId] = useState('')
   const [data, setData] = useState<{ suggestions: { lineId: number; candidateId: string; confidence: number; status: string; reasons: string[] }[]; stats: { total: number; matched: number; autoMatchRatePct: number } } | null>(null)
   useEffect(() => { fetch('/api/admin/erp/treasury/banks').then(r => r.json()).then(d => setBanks((d.banks ?? []).map((b: { id: number; name: string }) => ({ id: b.id, name: b.name })))).catch(() => {}) }, [])
-  const load = useCallback(async () => { if (!accountId) return; const r = await fetch(`/api/admin/erp/treasury/reconcile?accountId=${accountId}`); if (r.ok) setData(await r.json()) }, [accountId])
+  // 26.32 بند۴: `bank_matches` recorded every confirm/reject and was read by
+  // nothing — an auditor could not see WHY a line counts as reconciled, and a
+  // rejected suggestion looked like it had never been decided.
+  const [history, setHistory] = useState<{ id: number; lineId: number; erpRef: string; confidence: number; status: string; matchedByName: string | null; createdAt: string }[]>([])
+  const load = useCallback(async () => {
+    if (!accountId) return
+    const r = await fetch(`/api/admin/erp/treasury/reconcile?accountId=${accountId}`); if (r.ok) setData(await r.json())
+    const h = await fetch(`/api/admin/erp/treasury/reconcile?accountId=${accountId}&history=1`)
+    if (h.ok) setHistory((await h.json()).history ?? [])
+  }, [accountId])
   useEffect(() => { load() }, [load])
   async function confirm(s: { lineId: number; candidateId: string; confidence: number; reasons: string[] }, status: 'matched' | 'rejected') {
     const r = await fetch('/api/admin/erp/treasury/reconcile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lineId: s.lineId, erpRef: s.candidateId, confidence: s.confidence, status, reasons: s.reasons }) })
@@ -151,6 +161,21 @@ function Reconcile({ rtl, toast }: { rtl: boolean; toast: Toast }) {
       <Card className="p-4"><table className="w-full text-sm"><thead><tr className="text-text-tertiary text-2xs"><th className="text-start py-1">{L(rtl, 'Line', 'ردیف')}</th><th>{L(rtl, 'Candidate', 'نامزد')}</th><th className="text-end">{L(rtl, 'Confidence', 'اطمینان')}</th><th></th></tr></thead>
         <tbody>{(data?.suggestions ?? []).filter(s => s.candidateId).map(s => <tr key={s.lineId} className="border-t border-subtle"><td className="py-1.5 text-text-secondary">#{s.lineId}</td><td className="text-center text-2xs text-text-secondary">{s.candidateId}</td><td className="text-end"><Badge color={s.status === 'matched' ? 'green' : s.status === 'suggested' ? 'amber' : 'slate'}>{Math.round(s.confidence * 100)}%</Badge></td><td className="text-end whitespace-nowrap"><button onClick={() => confirm(s, 'matched')} className="text-2xs text-brand hover:underline mx-1">{L(rtl, 'Match', 'تطبیق')}</button><button onClick={() => confirm(s, 'rejected')} className="text-2xs text-danger hover:underline mx-1">{L(rtl, 'Reject', 'رد')}</button></td></tr>)}
           {!data?.suggestions.some(s => s.candidateId) && <tr><td colSpan={4} className="text-center text-text-tertiary py-6">{L(rtl, 'No suggestions', 'پیشنهادی نیست')}</td></tr>}</tbody></table></Card>
+      {history.length > 0 && (
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{L(rtl, 'Reconciliation trail', 'سابقهٔ مغایرت‌گیری')}</h3>
+          <table className="w-full text-sm"><thead><tr className="text-text-tertiary text-2xs"><th className="text-start py-1">{L(rtl, 'Line', 'ردیف')}</th><th>{L(rtl, 'ERP ref', 'مرجع')}</th><th>{L(rtl, 'Decision', 'تصمیم')}</th><th>{L(rtl, 'By', 'توسط')}</th><th className="text-end">{L(rtl, 'When', 'زمان')}</th></tr></thead>
+            <tbody>{history.map(h => (
+              <tr key={h.id} className="border-t border-subtle">
+                <td className="py-1.5 text-text-secondary">#{h.lineId}</td>
+                <td className="text-center text-2xs text-text-secondary font-mono">{h.erpRef}</td>
+                <td className="text-center"><Badge color={h.status === 'matched' ? 'green' : 'red'}>{h.status}</Badge></td>
+                <td className="text-center text-2xs text-text-secondary">{h.matchedByName ?? '—'}</td>
+                <td className="text-end text-2xs text-text-tertiary">{formatDateTime(h.createdAt, rtl ? 'fa' : 'en')}</td>
+              </tr>
+            ))}</tbody></table>
+        </Card>
+      )}
     </div>
   )
 }

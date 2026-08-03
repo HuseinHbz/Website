@@ -220,7 +220,15 @@ export async function runMigrations() {
 
     -- Enterprise Integration Hub (Phase 21.8). Connectors + a dispatch log that
     -- doubles as the dead-letter queue (status 'dead' after retries exhausted).
-    CREATE TABLE IF NOT EXISTS integrations (
+    --
+    -- 26.32 NAME COLLISION (found by audit:modules): this table used to be named
+    -- "integrations" -- the same name the Drizzle schema uses for the CMS
+    -- Integrations Catalog (slug/name_en/category). The Drizzle migrator runs
+    -- first, so CREATE TABLE IF NOT EXISTS here NEVER fired and every Hub query
+    -- hit the CMS table (column i.key does not exist) so the whole module 500'd.
+    -- Renamed to integration_connectors; the dispatch FK moves with it.
+    -- Both tables were empty, so nothing is lost.
+    CREATE TABLE IF NOT EXISTS integration_connectors (
       id SERIAL PRIMARY KEY,
       key TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
@@ -235,7 +243,7 @@ export async function runMigrations() {
 
     CREATE TABLE IF NOT EXISTS integration_dispatches (
       id SERIAL PRIMARY KEY,
-      connector_id INTEGER NOT NULL REFERENCES integrations(id) ON DELETE CASCADE,
+      connector_id INTEGER NOT NULL REFERENCES integration_connectors(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'success' CHECK(status IN ('success','failed','queued','dead')),
       request TEXT,
       response TEXT,
@@ -2661,6 +2669,25 @@ export async function runMigrations() {
     CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_grants_nullsafe ON rbac_user_grants(user_id, permission_key, COALESCE(company_id,-1));
     CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_ops_nullsafe ON rbac_user_ops(user_id, op_key, COALESCE(company_id,-1));
     CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_scope_nullsafe ON rbac_row_scope(user_id, permission_key, COALESCE(company_id,-1));
+
+    -- 26.32: repoint an existing install's dispatch FK from the colliding CMS
+    -- "integrations" table to the real connector table (idempotent, no-op when
+    -- it already points at the right place).
+    DO $fk2632$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'integration_dispatches_connector_id_fkey'
+          AND confrelid = 'integrations'::regclass
+      ) THEN
+        ALTER TABLE integration_dispatches DROP CONSTRAINT integration_dispatches_connector_id_fkey;
+        ALTER TABLE integration_dispatches
+          ADD CONSTRAINT integration_dispatches_connector_id_fkey
+          FOREIGN KEY (connector_id) REFERENCES integration_connectors(id) ON DELETE CASCADE;
+      END IF;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END
+    $fk2632$;
 
     -- ── Phase 26.29 بند ۰: RBAC key migration after the menu reorganisation ──
     -- The permission tree is GENERATED from WORKSPACES, so moving a module to a

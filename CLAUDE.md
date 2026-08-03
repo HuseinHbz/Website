@@ -189,6 +189,44 @@
    a paid invoice cannot be voided; overpayment/void-invoice payments are rejected.
    The same guards apply to the purchase side (debit note / AP). (برگشت/ابطال مالی
    نباید مانده را خاموش منفی کند.)
+25. **A create endpoint needs an IDENTITY, not an accidental unique constraint
+   (26.32 بند۳).** 26.26c closed the double-submit class by argument ("the button
+   is disabled"); 26.32 measured it — two genuinely concurrent POSTs created **two
+   rows** on `skills`, `timeline` and `crm/leads`. The endpoints that survived were
+   protected only by luck (a unique slug/code). Wrap every create in
+   `runOnce(actorId, route, body, fn)` (`src/lib/api/idempotency.ts`): the
+   concurrent twin awaits the SAME in-flight promise, so the duplicate never
+   reaches the DB — a "have I seen this?" check alone is not enough, because both
+   halves of a double-click arrive before either commits. Proof:
+   `npm run audit:modules:classes`. (ثبت تکراری با دوبار کلیک — با runOnce بسته شود.)
+26. **A DERIVED slug is disambiguated; an OPERATOR-TYPED slug collides loudly
+   (26.32 Root D).** `Duplicate slug` on a form with no slug field tells the
+   operator to fix a value they cannot see — the module reads as broken again.
+   Use `ensureUniqueSlug(body, '<table>', '<prefix>')`: a typed slug is the
+   operator's unique key and must still 400; a server-derived one becomes
+   `guide-2`, `guide-3`. (اسلاگِ مشتق‌شده یکتا شود، اسلاگِ دستی خطا بدهد.)
+27. **A missing row is a 404, never a 500 (26.32 Root A).**
+   `update(...).returning()[0]` on a bogus id is `undefined`, and
+   `NextResponse.json(undefined)` throws → 500 for a simple wrong id. Use
+   `notFound()` / `jsonOr404(row)` (`src/lib/api/respond.ts`). Every route also
+   needs `try`/`catch` → `apiError` so PG 23502/23505 map to a 400 naming the field.
+28. **A table name has exactly ONE owner (26.32 Root C).** `integrations` was
+   declared by both the Drizzle schema (CMS catalog) and raw DDL (ERP Integration
+   Hub). Drizzle migrates first, so the Hub's `CREATE TABLE IF NOT EXISTS` never
+   ran and every Hub query silently hit the wrong table. Before adding raw DDL,
+   check the name is not already in `schema.ts`. (هر نام جدول یک مالک دارد.)
+29. **A write-only table is a FINDING — connect it or record an explicit decision;
+   never drop it to make the scan clean (26.32 بند۴).** `vendor_evaluations` and
+   `bank_matches` were written on every review/reconciliation and read by nothing,
+   so the vendor-grade trend and the reconciliation audit trail were invisible.
+   Both got real read paths + UI. The rest are documented one by one in
+   `docs/governance/phase26.32-module-audit-report.md` §4.
+30. **Module health is proven against a RUNNING server, not by reading code
+   (26.32 بند۰).** Three phases running, review missed what one request exposed.
+   `npm run audit:modules` (every admin module: page, list, create, empty-body
+   400, bogus-id 404, delete) and `npm run audit:modules:classes` (double-submit +
+   contract drift) run in CI with `AUDIT_STRICT=1`. Keep them at **80/80 clean**.
+   (سلامت ماژول‌ها با تست واقعی روی سرور زنده اثبات می‌شود، نه با بازرسی کد.)
 
 ---
 

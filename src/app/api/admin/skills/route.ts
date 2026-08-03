@@ -5,6 +5,7 @@ import { skills } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET() {
   try {
@@ -23,7 +24,10 @@ export async function POST(req: NextRequest) {
     const body = await guardJson(req)
     const { id: _id, updatedAt: _u, ...data } = body
     const db = getDb()
-    const result = await db.insert(skills).values({ ...data, updatedBy: user?.id }).returning()
+    // 26.32 بند۳: `skills` has no unique key, so two concurrent POSTs both landed
+    // (empirically proven). One create per submission fingerprint.
+    const result = await runOnce(user.id, 'skills', data, () =>
+      db.insert(skills).values({ ...data, updatedBy: user?.id }).returning())
     await logAction(user, 'CREATE', 'skills', result[0]?.id, null, data)
     return NextResponse.json(result[0])
   } catch (e: unknown) {

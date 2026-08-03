@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
     if (!connectorId) return badRequest('connectorId required')
 
-    const conn = (await pgQuery(`SELECT id, type, config, retries FROM integrations WHERE id=$1 AND active=1`, [connectorId]))[0] as
+    const conn = (await pgQuery(`SELECT id, type, config, retries FROM integration_connectors WHERE id=$1 AND active=1`, [connectorId]))[0] as
       { id: number; type: ConnectorType; config: string; retries: number } | undefined
     if (!conn) return badRequest('Connector not found or inactive')
     let config: ConnectorConfig = {}; try { config = JSON.parse(conn.config) } catch { /* empty */ }

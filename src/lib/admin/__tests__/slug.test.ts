@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { slugify, slugFrom, ensureSlug } from '../slug'
+import { slugify, slugFrom, ensureSlug, nextFreeSlug, slugWasDerived } from '../slug'
 
 describe('26.29 — slug auto-fill (BUG-101..109 root cause)', () => {
   it('slugifies latin titles', () => {
@@ -43,5 +43,30 @@ describe('26.29 — slug auto-fill (BUG-101..109 root cause)', () => {
     const out = ensureSlug({ nameEn: 'A', active: true, sortOrder: 3 })
     expect(out.active).toBe(true)
     expect(out.sortOrder).toBe(3)
+  })
+})
+
+/**
+ * 26.32 — the module audit hit `Duplicate slug` on nine modules whose form has
+ * no slug field, so the operator was told to fix an invisible value. A DERIVED
+ * slug is disambiguated; an operator-typed slug still collides loudly.
+ */
+describe('nextFreeSlug / slugWasDerived (26.32)', () => {
+  it('returns the base when it is free', () => {
+    expect(nextFreeSlug('guide', [])).toBe('guide')
+  })
+  it('suffixes past a collision', () => {
+    expect(nextFreeSlug('guide', ['guide'])).toBe('guide-2')
+  })
+  it('keeps counting past a run of taken variants', () => {
+    expect(nextFreeSlug('guide', ['guide', 'guide-2', 'guide-3'])).toBe('guide-4')
+  })
+  it('is unaffected by unrelated slugs', () => {
+    expect(nextFreeSlug('guide', ['other', 'guidebook'])).toBe('guide')
+  })
+  it('knows an operator-typed slug from a derived one', () => {
+    expect(slugWasDerived({ titleEn: 'X' })).toBe(true)
+    expect(slugWasDerived({ slug: 'my-choice' })).toBe(false)
+    expect(slugWasDerived({ slug: '   ' })).toBe(true)
   })
 })

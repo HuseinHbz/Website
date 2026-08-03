@@ -5,6 +5,7 @@ import { timelineItems } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET() {
   try {
@@ -23,7 +24,9 @@ export async function POST(req: NextRequest) {
     const body = await guardJson(req)
     const { id: _id, createdAt: _c, updatedAt: _u, ...data } = body
     const db = getDb()
-    const result = await db.insert(timelineItems).values({ ...data, updatedBy: user?.id }).returning()
+    // 26.32 بند۳: no unique key → concurrent double-submit created two rows.
+    const result = await runOnce(user.id, 'timeline', data, () =>
+      db.insert(timelineItems).values({ ...data, updatedBy: user?.id }).returning())
     await logAction(user, 'CREATE', 'timeline_items', result[0]?.id, null, data)
     return NextResponse.json(result[0])
   } catch (e: unknown) {

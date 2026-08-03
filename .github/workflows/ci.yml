@@ -140,6 +140,19 @@ jobs:
             curl -sf http://127.0.0.1:3000/api/health && break
             sleep 2
           done
+      # 26.32: the module audit and the two class checks only find anything
+      # against a RUNNING server — that is the whole point of the phase. Code
+      # inspection missed these defects three phases in a row.
+      - name: Module audit (every admin module, real status codes)
+        run: npm run audit:modules
+        env:
+          AUDIT_BASE: http://127.0.0.1:3000
+          AUDIT_STRICT: '1'
+      - name: Error-class checks (double-submit + contract drift)
+        run: npm run audit:modules:classes
+        env:
+          AUDIT_BASE: http://127.0.0.1:3000
+          AUDIT_STRICT: '1'
       - name: Load test hot routes (status dist + p50/p95/p99) + 5-min RSS watch
         run: node scripts/load-test.mjs
         env:

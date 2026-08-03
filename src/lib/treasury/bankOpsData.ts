@@ -84,4 +84,27 @@ export async function confirmMatch(lineId: number, erpRef: string, confidence: n
   if (status === 'matched') await pgQuery(`UPDATE bank_statement_lines SET status='matched', matched_ref=$2 WHERE id=$1`, [lineId, erpRef])
 }
 
+/**
+ * 26.32 بند۴ — `bank_matches` was WRITE-ONLY. It is the reconciliation AUDIT
+ * TRAIL: who matched which statement line to which ERP reference, at what
+ * confidence, and which suggestions were REJECTED. Without a read path an
+ * auditor could not answer "why is this line considered reconciled?", and a
+ * rejected suggestion silently reappeared on every rescan.
+ */
+export async function matchHistory(accountId: number) {
+  return await pgQuery<{
+    id: number; lineId: number; date: string; amount: number; description: string | null
+    erpRef: string; confidence: number; status: string; reasons: string | null
+    matchedByName: string | null; createdAt: string
+  }>(
+    `SELECT m.id, m.statement_line_id AS "lineId", l.date, l.amount::float AS amount,
+            l.description, m.erp_ref AS "erpRef", m.confidence, m.status, m.reasons,
+            u.name AS "matchedByName", m.created_at AS "createdAt"
+     FROM bank_matches m
+     JOIN bank_statement_lines l ON l.id = m.statement_line_id
+     LEFT JOIN users u ON u.id = m.matched_by
+     WHERE l.account_id = $1
+     ORDER BY m.created_at DESC LIMIT 200`, [accountId])
+}
+
 export { NOW as TREASURY_NOW }

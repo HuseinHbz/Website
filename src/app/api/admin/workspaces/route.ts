@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, apiError, requirePermission } from '@/lib/api/respond'
+import { ensureSlug, ensureUniqueSlug } from '@/lib/admin/slug'
+import { guardJson, apiError, requirePermission, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { workspaces } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { logAction } from '@/lib/admin/audit'
 import { randomUUID } from 'crypto'
+import { runOnce } from '@/lib/api/idempotency'
 
 // 26.28 بند ۰.۲ — POST/PUT previously only checked "is logged in", so ANY admin
 // role (even read-only auditor/viewer) could create or edit workspace rows.
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await guardJson(req)
     const db = getDb()
-    const result = (await db.insert(workspaces).values({ ...body, id: body.id || randomUUID(), createdBy: auth.user.id }).returning())[0]
+    const result = (await runOnce(auth.user.id, 'workspaces', body, async () => db.insert(workspaces).values({ ...await ensureUniqueSlug(body as Record<string, unknown>, 'workspaces', 'workspace'), id: body.id || randomUUID(), createdBy: auth.user.id } as never).returning()))[0]
     await logAction(auth.user, 'CREATE', 'workspace', result.id, null, result)
     return NextResponse.json(result, { status: 201 })
   } catch (e: unknown) { return apiError(e) }
@@ -40,8 +42,9 @@ export async function PUT(req: NextRequest) {
     const { id, ...data } = await guardJson(req)
     const db = getDb()
     const result = (await db.update(workspaces).set({ ...data, updatedAt: new Date().toISOString() }).where(eq(workspaces.id, id)).returning())[0]
+    if (!result) return notFound()
     await logAction(auth.user, 'UPDATE', 'workspace', id, null, result)
-    return NextResponse.json(result)
+    return jsonOr404(result)
   } catch (e: unknown) { return apiError(e) }
 }
 

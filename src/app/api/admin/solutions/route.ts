@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureSlug } from '@/lib/admin/slug'
-import { guardJson, forbidden, unauthorized, checkTreePermission, apiError } from '@/lib/api/respond'
+import { ensureUniqueSlug } from '@/lib/admin/slug'
+import { guardJson, forbidden, unauthorized, checkTreePermission, apiError, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getDb } from '@/lib/db'
 import { solutions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
+import { runOnce } from '@/lib/api/idempotency'
 
 export async function GET() {
   try {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await guardJson(req)
     const db = getDb()
-    const result = (await db.insert(solutions).values({ ...ensureSlug(body as Record<string, unknown>, "solution"), updatedBy: user.id } as never).returning())[0]
+    const result = (await runOnce(user.id, 'solutions', body, async () => db.insert(solutions).values({ ...await ensureUniqueSlug(body as Record<string, unknown>, 'solutions', 'solution'), updatedBy: user.id } as never).returning()))[0]
     await logAction(user, 'create', 'solution', String(result.id), null, result)
     return NextResponse.json(result, { status: 201 })
   } catch (e: unknown) { return apiError(e) }
@@ -42,8 +43,9 @@ export async function PUT(req: NextRequest) {
     const { id, ...data } = body
     const db = getDb()
     const result = (await db.update(solutions).set({ ...data, updatedBy: user.id, updatedAt: new Date().toISOString() }).where(eq(solutions.id, id)).returning())[0]
+    if (!result) return notFound()
     await logAction(user, 'update', 'solution', String(id), null, result)
-    return NextResponse.json(result)
+    return jsonOr404(result)
   } catch (e: unknown) { return apiError(e) }
 }
 

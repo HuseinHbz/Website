@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardJson, forbidden, unauthorized, checkTreePermission, apiError } from '@/lib/api/respond'
+import { guardJson, forbidden, unauthorized, checkTreePermission, apiError, notFound, jsonOr404 } from '@/lib/api/respond'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
 import { getDb } from '@/lib/db'
@@ -63,8 +63,9 @@ export async function PUT(req: NextRequest) {
       active: body.active, featured: body.featured,
       sortOrder: body.sortOrder, updatedBy: user.id,
     }).where(eq(credentials.id, body.id)).returning()
+    if (!row) return notFound()
     await logAction(user, 'update', 'credentials', body.id)
-    return NextResponse.json(row)
+    return jsonOr404(row)
   } catch (e: unknown) { return apiError(e) }
 }
 
