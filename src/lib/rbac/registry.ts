@@ -52,6 +52,10 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   'erp.sales': ['confirm', 'void', 'return', 'post', 'payment_create', 'refund'],
   'erp.purchasing': ['confirm', 'void', 'post'],
   'erp.treasury': ['reconcile', 'cheque_state'],
+  // Phase 28 — HR. Payroll ops are separated because calculating a run,
+  // approving it and paying it must be able to sit with different people
+  // (maker/checker); `sensitive_view` gates national id and bank details.
+  'hr.employees': ['sensitive_view', 'delete'],
   'erp.inventory': ['cost_view'],   // بند ۶.۲ — sensitive-field grant (unit cost / valuation)
   'erp.approvals': ['approve', 'reject', 'delegate'],
   'erp.moadian': ['submit'],
@@ -71,6 +75,13 @@ export const SENSITIVE_FIELDS: Record<string, { routes: string[]; fields: string
     routes: ['erp/inventory/products', 'erp/inventory/overview'],
     fields: ['value', 'avgCost', 'unitCost', 'kpis.totalValue', 'topValue'],
   },
+  // Phase 28.1 R8 — HR holds the most sensitive data the organisation has.
+  // Without this grant the columns are ABSENT from the payload, not hidden by
+  // CSS: an HR coordinator can manage people without seeing bank details.
+  'hr.employees:sensitive_view': {
+    routes: ['hr/employees'],
+    fields: ['nationalId', 'iban', 'bankAccount', 'insuranceNo'],
+  },
 }
 
 /**
@@ -84,6 +95,9 @@ export const SCOPED_MODULES: Record<string, Array<'all' | 'own' | 'department'>>
   'operations.crm.tickets': ['all', 'own', 'department'],  // tickets (owner_id) — moved workspace in 26.29
   'erp.sales': ['all', 'own', 'department'],          // documents (customer owner / created_by)
   'erp.project-management': ['all', 'own', 'department'], // pm_projects (created_by)
+  // Phase 28.1 — a line manager sees their own team, an employee only
+  // themselves, HR sees everyone. Enforced in the WHERE, never as a UI filter.
+  'hr.employees': ['all', 'own', 'department'],
 }
 
 /**

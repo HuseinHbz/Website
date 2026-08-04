@@ -98,8 +98,20 @@ export const WORKSPACES: Workspace[] = [
       { labelEn: 'Organizations', labelFa: 'سازمان‌ها', href: '/admin/organizations', icon: '🏢' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },
       { labelEn: 'Consultations', labelFa: 'مشاوره‌ها', href: '/admin/consultations', icon: '◎' },
+
       // 26.29 بند ۲.۴ — «تیکت‌های پشتیبانی» moved to the Operations workspace at
       // the maintainer's explicit request (one menu item, one home).
+    ] }],
+  },
+  {
+    // Phase 28 — HR is its own platform, not a CRM annexe: it owns the most
+    // sensitive data in the system and needs its own permission keys
+    // (`hr.employees`, later `hr.leave`/`hr.attendance`/`hr.payroll`).
+    id: 'hr', nameEn: 'Human Resources', nameFa: 'منابع انسانی', icon: '👥', requires: 'edit',
+    descEn: 'Personnel files, employment history, leave and payroll',
+    descFa: 'پروندهٔ پرسنلی، سوابق استخدامی، مرخصی و حقوق و دستمزد',
+    groups: [{ en: 'People', fa: 'کارکنان', items: [
+      { labelEn: 'Employees', labelFa: 'پرسنل', href: '/admin/employees', icon: '👥' },
     ] }],
   },
   {

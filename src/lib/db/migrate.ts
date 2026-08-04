@@ -2970,6 +2970,110 @@ export async function runMigrations() {
     ) AS v(k,val)
     WHERE NOT EXISTS (SELECT 1 FROM erp_settings s WHERE s.key = v.k);
 
+    -- ══ Phase 28.1: HR — people and their employment record ═════════════════
+    -- HR data is the most sensitive the organisation holds (salary, national
+    -- id, bank account), so the sensitive columns live here but are stripped
+    -- from API responses without an explicit grant (R8 / 26.28 field scope).
+    CREATE TABLE IF NOT EXISTS hr_employees (
+      id SERIAL PRIMARY KEY,
+      employee_code TEXT NOT NULL UNIQUE,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      -- sensitive: national id, bank details
+      national_id TEXT UNIQUE,
+      iban TEXT,
+      bank_account TEXT,
+      birth_date TEXT,
+      gender TEXT CHECK(gender IN ('male','female','other')),
+      marital_status TEXT CHECK(marital_status IN ('single','married','divorced','widowed')),
+      children_count INTEGER NOT NULL DEFAULT 0,
+      insurance_no TEXT,
+      mobile TEXT,
+      email TEXT,
+      address TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','on_leave','terminated')),
+      hire_date TEXT,
+      end_date TEXT,
+      -- optional link to an admin login; an employee need not have one
+      user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      department_id INTEGER,
+      notes TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_emp_status ON hr_employees(status);
+    CREATE INDEX IF NOT EXISTS idx_hr_emp_dept ON hr_employees(department_id);
+
+    CREATE TABLE IF NOT EXISTS hr_positions (
+      id SERIAL PRIMARY KEY,
+      title_en TEXT NOT NULL,
+      title_fa TEXT NOT NULL,
+      department_id INTEGER,
+      level INTEGER NOT NULL DEFAULT 1,
+      description_en TEXT,
+      description_fa TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      company_id INTEGER
+    );
+
+    -- APPEND-ONLY employment history. A salary change or a promotion writes a
+    -- NEW row and closes the previous one; nothing is overwritten, because this
+    -- table is the basis for severance (سنوات) and payroll back-calculation.
+    -- Same discipline as the GL and the loyalty ledger.
+    CREATE TABLE IF NOT EXISTS hr_employment (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      position_id INTEGER REFERENCES hr_positions(id) ON DELETE SET NULL,
+      contract_type TEXT NOT NULL DEFAULT 'contract'
+        CHECK(contract_type IN ('permanent','fixed_term','contract','hourly','intern')),
+      start_date TEXT NOT NULL,
+      end_date TEXT,
+      base_salary NUMERIC(18,2) NOT NULL DEFAULT 0,
+      work_location TEXT,
+      manager_id INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
+      change_reason TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_employment_emp ON hr_employment(employee_id, start_date DESC);
+
+    -- Personnel documents: the FILE lives in media_files (reused); only the
+    -- metadata and the HR meaning of it live here.
+    CREATE TABLE IF NOT EXISTS hr_documents (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL DEFAULT 'other'
+        CHECK(kind IN ('id_card','birth_certificate','education','contract','military','insurance','other')),
+      title TEXT NOT NULL,
+      media_url TEXT,
+      issued_at TEXT,
+      expires_at TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_documents_emp ON hr_documents(employee_id);
+
+    -- Dependents drive tax relief and insurance entitlement, so they are a
+    -- payroll input, not an address-book nicety.
+    CREATE TABLE IF NOT EXISTS hr_dependents (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      full_name TEXT NOT NULL,
+      relation TEXT NOT NULL DEFAULT 'child'
+        CHECK(relation IN ('spouse','child','parent','other')),
+      national_id TEXT,
+      birth_date TEXT,
+      is_dependent INTEGER NOT NULL DEFAULT 1,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_dependents_emp ON hr_dependents(employee_id);
+
+
     -- Configurable loss reasons (بند۱) — a free-text reason cannot be analysed.
     CREATE TABLE IF NOT EXISTS crm_loss_reasons (
       id SERIAL PRIMARY KEY,

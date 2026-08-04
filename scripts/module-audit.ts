@@ -51,6 +51,9 @@ async function req(method: string, path: string, body?: unknown): Promise<Probe>
  */
 const CREATE: Record<string, { route: string; body: Record<string, unknown> }> = {
 
+  // Phase 28.1 — HR personnel.
+  'hr.employees': { route: 'hr/employees', body: { firstName: 'A32', lastName: 'Test' } },
+
   // Phase 27 — the new CRM modules are exercised like every other one.
   'crm.crm.opportunities': { route: 'crm/opportunities', body: { title: 'A32 Deal', amount: 1000, stage: 'identified' } },
   'crm.crm.loyalty': { route: 'crm/loyalty', body: { nameEn: 'A32 Club', nameFa: 'باشگاه آ۳۲', kind: 'points' } },

@@ -121,7 +121,11 @@ async function main() {
   // ── registry/menu invariants (بند ۲ gates) ────────────────────────────────
   const { nodes } = permissionTree()
   const wsCount = nodes.filter(x => x.kind === 'workspace').length
-  ok(wsCount === 9, `workspace count is 9 (was 12)`)
+  // 26.29 merged 12 → 9; 28.1 added Human Resources → 10 (CC-006). The number is
+  // a tripwire against workspace proliferation, not a behavioural guarantee; the
+  // invariants it protects (no duplicate hrefs, no shared Persian label, one
+  // module one item) are asserted separately below and are unchanged.
+  ok(wsCount === 10, `workspace count is 10 (12 → 9 in 26.29, +HR in 28.1)`)
   const hrefs = WORKSPACES.flatMap(w => w.groups.flatMap(g => g.items.map(i => i.href)))
   ok(new Set(hrefs).size === hrefs.length, `zero duplicate menu items (${hrefs.length} items, all unique)`)
   // every module still reachable — nothing was deleted, only moved

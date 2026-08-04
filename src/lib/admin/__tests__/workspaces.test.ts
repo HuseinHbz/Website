@@ -3,10 +3,13 @@ import { WORKSPACES, workspaceForPath, workspaceById, workspaceHome, allNavItems
 
 describe('workspace registry', () => {
   // 26.29 بند ۲: content + documentation merged into brand, analytics into
-  // executive → 12 workspaces became 9 (CC-005 in contract-changes.md).
-  it('has 9 workspaces with unique ids', () => {
-    expect(WORKSPACES).toHaveLength(9)
-    expect(new Set(WORKSPACES.map(w => w.id)).size).toBe(9)
+  // executive → 12 workspaces became 9 (CC-005).
+  // 28.1: Human Resources added as its own workspace → 10 (CC-006). HR is not a
+  // CRM annexe — it owns the most sensitive data in the system and needs its own
+  // permission keys (`hr.employees`, later `hr.leave`/`hr.payroll`).
+  it('has 10 workspaces with unique ids', () => {
+    expect(WORKSPACES).toHaveLength(10)
+    expect(new Set(WORKSPACES.map(w => w.id)).size).toBe(10)
   })
 
   // 26.29 بند ۲.۵ — the invariant that replaces cross-listing: one module, one item.

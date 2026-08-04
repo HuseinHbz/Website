@@ -221,6 +221,32 @@
    so the vendor-grade trend and the reconciliation audit trail were invisible.
    Both got real read paths + UI. The rest are documented one by one in
    `docs/governance/phase26.32-module-audit-report.md` §4.
+40. **Employment history is APPEND-ONLY; a raise never overwrites a salary
+   (28.1).** Severance (سنوات) and any backward payroll calculation read
+   `hr_employment`, so overwriting a rate silently changes what the company owes
+   for months already worked. `addEmploymentRecord` CLOSES the record in force
+   (the day before the new one starts) and OPENS a new one, both in one
+   transaction — so no date ever has two salaries in force. `employmentOn(history,
+   date)` is the only correct way to ask "what was the rate then?".
+   (سابقهٔ استخدامی فقط افزوده می‌شود؛ افزایش حقوق رکورد قبلی را بازنویسی نمی‌کند.)
+41. **HR data is the most sensitive the system holds — strip it at the DATA
+   layer, and never log salary (28.1 R8).** National id, IBAN, bank account and
+   insurance number are removed from the payload without
+   `hr.employees:sensitive_view` (`applySensitiveScope`, called inside
+   `employeeData.ts` so a new endpoint cannot leak them by forgetting a helper).
+   The UI must not render an input for a field the server will not return. Salary
+   is deliberately ABSENT from `logAction` payloads, and opening a personnel file
+   is itself audited. Row scope (`hr.employees`: all/own/department) answers 404,
+   never 403, for an out-of-scope file.
+42. **A statutory rate is NEVER hardcoded (28.3, when built).** Tax exemption,
+   the ماده ۸۵ brackets, insurance ceiling/floor and the minimum wage change
+   every year in the budget. They live in an editable `payroll_rates` table the
+   operator updates from the UI. A confirmed payroll period is LOCKED — a
+   correction is a corrective slip (a reversing document), never an edit, and
+   the person who calculates a run may not be the one who approves it.
+   🔴 A payroll figure is not accepted until an accountant has reconciled it
+   against a manual calculation — that verification is the maintainer's, not
+   Claude's. (نرخ قانونی هرگز هاردکد نمی‌شود؛ دورهٔ قفل‌شده فقط با فیش اصلاحی.)
 36. **A loyalty point is a LIABILITY recorded in a ledger, never a balance
    someone writes (27 بند۲).** Every point granted is a discount the company
    owes, so `loyalty_accounts.balance` is a CACHE recomputed from

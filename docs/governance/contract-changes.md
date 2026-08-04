@@ -112,3 +112,30 @@ guaranteed, what the new one guarantees, why, and who approved it.
   ("هیچ چیزی حذف نشود فقط ادغام"). Stored RBAC grants were migrated to the new keys
   and proven intact by `scripts/verify-2629-navkeys.ts` (36/36, regression suite 14).
 - **Approver:** maintainer (phase 26.29 spec, بند ۲); recorded per rule 5.
+
+---
+
+## CC-006 — workspace count 9 → 10 (phase 28.1)
+
+- **Tests (two places, same contract):**
+  - `src/lib/admin/__tests__/workspaces.test.ts` → "has 9 workspaces with unique ids"
+  - `scripts/verify-2629-navkeys.ts` → assertion 19, "workspace count is 9 (was 12)"
+    (regression suite 14)
+- **Old assertion:** `WORKSPACES.length === 9` / `wsCount === 9`
+- **New assertion:** `WORKSPACES.length === 10` / `wsCount === 10`
+- **What is no longer guaranteed:** the count itself is not a behavioural guarantee —
+  it is a tripwire against workspace proliferation (a module quietly acquiring a
+  second home, which CC-005 was written to stop). Raising it by exactly one, for one
+  named workspace, keeps that tripwire armed. Every invariant CC-005 actually
+  protects is untouched and still asserted: zero duplicate hrefs, no two modules
+  sharing a Persian label, and one-module-one-menu-item.
+- **Reason:** phase 28 adds Human Resources. It was first placed inside the CRM
+  workspace, which derived the permission key `crm.hr.employees` — wrong on its own
+  terms (HR is not CRM) and wrong against the phase spec, which names the keys
+  `hr.employees` / `hr.leave` / `hr.attendance` / `hr.payroll`. HR also holds the
+  most sensitive data in the system (salary, national id, bank details) and needs
+  permission keys that can be granted independently of CRM.
+  No RBAC key migration was required: the workspace and its module are new, so no
+  stored grant referenced the old key (`audit:rbac` 162 guarded · 0 failures).
+- **Approver:** maintainer (phase 28 spec, `cross_cutting.rbac` names these keys);
+  recorded per rule 5.
