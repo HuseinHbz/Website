@@ -3263,5 +3263,329 @@ export async function runMigrations() {
     FROM crm_leads l
     WHERE l.status='won' AND COALESCE(l.value,0) > 0
       AND NOT EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.lead_id = l.id);
+
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 28.3-الف — payroll core.
+    --
+    -- The whole design exists to keep statutory numbers OUT of the code. Tax
+    -- brackets, insurance rates, allowances and — crucially — which earning is
+    -- insurable or taxable are all DATA, versioned by ruleset. Next year the
+    -- operator copies a ruleset, edits the values, and payroll is correct with
+    -- no developer involved.
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    -- A ruleset is versioned WITHIN a year, not just by year: Iranian law can
+    -- change mid-year (a minimum-wage circular in Tir), and a slip must always
+    -- name the exact version it was computed with. Changing the rules never
+    -- reaches back into slips already issued.
+    CREATE TABLE IF NOT EXISTS payroll_rulesets (
+      id SERIAL PRIMARY KEY,
+      year INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      title TEXT,
+      effective_from TEXT NOT NULL,
+      effective_to TEXT,
+      source TEXT,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','approved','archived')),
+      created_by TEXT REFERENCES users(id),
+      approved_by TEXT REFERENCES users(id),
+      approved_at TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_ruleset_ver
+      ON payroll_rulesets(year, version, COALESCE(company_id, 0));
+
+    -- Brackets are ROWS, not fixed columns. A year with seven bands instead of
+    -- six is a data change, not a migration.
+    CREATE TABLE IF NOT EXISTS payroll_tax_brackets (
+      id SERIAL PRIMARY KEY,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id) ON DELETE CASCADE,
+      seq INTEGER NOT NULL DEFAULT 0,
+      from_amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      to_amount NUMERIC(18,2),
+      rate_percent NUMERIC(6,3) NOT NULL DEFAULT 0,
+      company_id INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_brackets ON payroll_tax_brackets(ruleset_id, seq);
+
+    -- Typed key/value so a NEW parameter never needs a migration.
+    CREATE TABLE IF NOT EXISTS payroll_parameters (
+      id SERIAL PRIMARY KEY,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id) ON DELETE CASCADE,
+      param_group TEXT NOT NULL CHECK(param_group IN ('tax','insurance','labor','company')),
+      key TEXT NOT NULL,
+      label_fa TEXT NOT NULL,
+      label_en TEXT NOT NULL,
+      value_type TEXT NOT NULL CHECK(value_type IN ('amount','percent','factor','boolean','integer')),
+      value NUMERIC(18,4) NOT NULL DEFAULT 0,
+      unit TEXT,
+      description TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      company_id INTEGER
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_param_key ON payroll_parameters(ruleset_id, key);
+
+    -- Append-only: who changed which parameter, when, from what to what.
+    CREATE TABLE IF NOT EXISTS payroll_policy_history (
+      id SERIAL PRIMARY KEY,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id) ON DELETE CASCADE,
+      entity TEXT NOT NULL,
+      entity_key TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      changed_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_policy_hist ON payroll_policy_history(ruleset_id, created_at);
+
+    -- 🔴 The correctness of every slip rests on THIS table. Whether the food
+    -- allowance is insurable, or how much of the housing allowance is exempt,
+    -- is regulation — it changes, so it is data the operator edits, never a
+    -- condition compiled into the engine.
+    CREATE TABLE IF NOT EXISTS payroll_earning_types (
+      id SERIAL PRIMARY KEY,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id) ON DELETE CASCADE,
+      key TEXT NOT NULL,
+      label_fa TEXT NOT NULL,
+      label_en TEXT NOT NULL,
+      earning_group TEXT NOT NULL DEFAULT 'allowance',
+      -- recurring (مستمر) vs non-recurring — decides the Eid-bonus and
+      -- severance bases, which 28.3-ب will read.
+      recurring INTEGER NOT NULL DEFAULT 1,
+      insurable TEXT NOT NULL DEFAULT 'yes' CHECK(insurable IN ('yes','no','capped')),
+      insurable_cap NUMERIC(18,2),
+      taxable TEXT NOT NULL DEFAULT 'yes' CHECK(taxable IN ('yes','no','capped')),
+      taxable_cap NUMERIC(18,2),
+      in_eid_base INTEGER NOT NULL DEFAULT 0,
+      in_severance_base INTEGER NOT NULL DEFAULT 0,
+      in_overtime_base INTEGER NOT NULL DEFAULT 0,
+      calc_method TEXT NOT NULL DEFAULT 'fixed'
+        CHECK(calc_method IN ('fixed','percent_of_base','daily_prorated','per_child','manual')),
+      calc_value NUMERIC(18,4) NOT NULL DEFAULT 0,
+      param_key TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      company_id INTEGER
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_earning_key ON payroll_earning_types(ruleset_id, key);
+
+    -- ── periods, slips, loans ───────────────────────────────────────────────
+
+    CREATE TABLE IF NOT EXISTS payroll_periods (
+      id SERIAL PRIMARY KEY,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id),
+      jalali_year INTEGER NOT NULL,
+      jalali_month INTEGER NOT NULL CHECK(jalali_month BETWEEN 1 AND 12),
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      days_in_month INTEGER NOT NULL DEFAULT 30,
+      status TEXT NOT NULL DEFAULT 'open'
+        CHECK(status IN ('open','calculated','approved','paid','locked')),
+      calculated_by TEXT REFERENCES users(id),
+      calculated_at TEXT,
+      approved_by TEXT REFERENCES users(id),
+      approved_at TEXT,
+      paid_at TEXT,
+      gl_entry_id INTEGER,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_period_month
+      ON payroll_periods(jalali_year, jalali_month, COALESCE(company_id, 0));
+
+    CREATE TABLE IF NOT EXISTS payroll_slips (
+      id SERIAL PRIMARY KEY,
+      period_id INTEGER NOT NULL REFERENCES payroll_periods(id) ON DELETE CASCADE,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id),
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id),
+      worked_days NUMERIC(6,2) NOT NULL DEFAULT 0,
+      gross NUMERIC(18,2) NOT NULL DEFAULT 0,
+      insurance_base NUMERIC(18,2) NOT NULL DEFAULT 0,
+      employee_insurance NUMERIC(18,2) NOT NULL DEFAULT 0,
+      employer_insurance NUMERIC(18,2) NOT NULL DEFAULT 0,
+      unemployment_insurance NUMERIC(18,2) NOT NULL DEFAULT 0,
+      taxable_income NUMERIC(18,2) NOT NULL DEFAULT 0,
+      tax NUMERIC(18,2) NOT NULL DEFAULT 0,
+      deductions NUMERIC(18,2) NOT NULL DEFAULT 0,
+      net NUMERIC(18,2) NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','approved','paid','reversed','correction')),
+      reversal_of INTEGER,
+      reversed_by INTEGER,
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_slips ON payroll_slips(period_id, employee_id);
+
+    CREATE TABLE IF NOT EXISTS payroll_slip_lines (
+      id SERIAL PRIMARY KEY,
+      slip_id INTEGER NOT NULL REFERENCES payroll_slips(id) ON DELETE CASCADE,
+      line_type TEXT NOT NULL CHECK(line_type IN ('earning','deduction','employer_cost')),
+      key TEXT NOT NULL,
+      label_fa TEXT NOT NULL,
+      label_en TEXT NOT NULL,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      insurable INTEGER NOT NULL DEFAULT 0,
+      taxable INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      company_id INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_slip_lines ON payroll_slip_lines(slip_id);
+
+    CREATE TABLE IF NOT EXISTS payroll_loans (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      total_amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      installments INTEGER NOT NULL DEFAULT 1,
+      monthly_amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      start_date TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','settled','cancelled')),
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_loans ON payroll_loans(employee_id, status);
+
+    -- A LEDGER, like the leave balance: the outstanding amount is the total
+    -- minus the sum of these rows, never a column somebody writes.
+    CREATE TABLE IF NOT EXISTS payroll_loan_installments (
+      id SERIAL PRIMARY KEY,
+      loan_id INTEGER NOT NULL REFERENCES payroll_loans(id) ON DELETE CASCADE,
+      slip_id INTEGER,
+      period_id INTEGER,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'payment' CHECK(kind IN ('payment','reversal','adjust')),
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_loan_inst ON payroll_loan_installments(loan_id);
+
+    -- ── GL account map + accounts (28.3-الف بند ۶) ──────────────────────────
+    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES
+      ('2300','Salaries Payable','حقوق پرداختنی','liability'),
+      ('2310','Social Insurance Payable','بیمه پرداختنی','liability'),
+      ('2320','Payroll Tax Payable','مالیات حقوق پرداختنی','liability'),
+      ('1160','Employee Loans Receivable','وام کارکنان','asset'),
+      ('6110','Employer Insurance Expense','هزینهٔ بیمهٔ سهم کارفرما','expense')
+    ON CONFLICT (code) DO NOTHING;
+
+    INSERT INTO erp_settings (key, value)
+    SELECT * FROM (VALUES
+      ('gl_map_payroll_expense','6100'),
+      ('gl_map_payroll_employer_insurance_expense','6110'),
+      ('gl_map_payroll_payable','2300'),
+      ('gl_map_payroll_insurance_payable','2310'),
+      ('gl_map_payroll_tax_payable','2320'),
+      ('gl_map_payroll_loan','1160')
+    ) AS v(k,val)
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings s WHERE s.key = v.k);
+
+    -- ── seed: ruleset 1405 v1 ───────────────────────────────────────────────
+    -- Idempotent AND non-destructive: it only ever inserts the ruleset if that
+    -- (year, version) is absent, so an operator's edits are never overwritten.
+    INSERT INTO payroll_rulesets (year, version, title, effective_from, effective_to, source, status)
+      SELECT 1405, 1, 'مجموعه‌قوانین حقوق و دستمزد ۱۴۰۵', '2026-03-21', '2027-03-20',
+             'بخشنامهٔ مزد ۱۴۰۵ — مقدار اولیه، لطفاً با بخشنامهٔ رسمی تطبیق دهید', 'draft'
+      WHERE NOT EXISTS (SELECT 1 FROM payroll_rulesets WHERE year=1405 AND version=1);
+  `)
+
+  const rs1405 = (await pgQuery<{ id: number }>(
+    `SELECT id FROM payroll_rulesets WHERE year=1405 AND version=1 LIMIT 1`))[0]?.id
+  if (rs1405) {
+    // Seeded only when the ruleset has no rows yet — re-running migrations must
+    // never revert a value the operator changed.
+    const hasParams = (await pgQuery<{ n: string }>(
+      `SELECT count(*)::text AS n FROM payroll_parameters WHERE ruleset_id=$1`, [rs1405]))[0]?.n !== '0'
+    if (!hasParams) {
+      const params: [string, string, string, string, string, number, string | null, string | null, number][] = [
+        ['tax', 'monthly_exemption', 'معافیت ماهانهٔ مالیات', 'Monthly tax exemption', 'amount', 400_000_000, 'ریال', 'درآمد تا این مبلغ در هر ماه معاف است', 1],
+        ['insurance', 'employee_rate', 'سهم بیمهٔ کارمند', 'Employee insurance rate', 'percent', 7, '٪', null, 1],
+        ['insurance', 'employer_rate', 'سهم بیمهٔ کارفرما', 'Employer insurance rate', 'percent', 20, '٪', 'هزینهٔ شرکت است، از کارمند کسر نمی‌شود', 2],
+        ['insurance', 'unemployment_rate', 'بیمهٔ بیکاری (سهم کارفرما)', 'Unemployment insurance rate', 'percent', 3, '٪', null, 3],
+        ['insurance', 'max_base_factor', 'ضریب سقف مبنای بیمه', 'Insurance ceiling factor', 'factor', 7, 'برابر حداقل مزد روزانه', 'به‌صورت ضریب نگه داشته می‌شود تا با تغییر حداقل مزد خودکار به‌روز شود', 4],
+        ['labor', 'min_wage_daily', 'حداقل مزد روزانه', 'Minimum daily wage', 'amount', 5_541_850, 'ریال', null, 1],
+        ['labor', 'min_wage_monthly_30', 'حداقل مزد ماهانه (۳۰ روز)', 'Minimum monthly wage', 'amount', 166_255_550, 'ریال', null, 2],
+        ['labor', 'housing_allowance', 'حق مسکن', 'Housing allowance', 'amount', 30_000_000, 'ریال', null, 3],
+        ['labor', 'food_allowance', 'بن کارگری', 'Food allowance', 'amount', 22_000_000, 'ریال', null, 4],
+        ['labor', 'marriage_allowance', 'حق تأهل', 'Marriage allowance', 'amount', 5_000_000, 'ریال', null, 5],
+        ['labor', 'child_allowance_each', 'حق اولاد (هر فرزند)', 'Child allowance (each)', 'amount', 16_625_560, 'ریال', null, 6],
+        ['company', 'daily_work_hours', 'ساعت کاری روزانه', 'Daily working hours', 'integer', 7.33, 'ساعت', 'مبنای تبدیل مزد روزانه به مزد ساعتی', 1],
+        ['company', 'overtime_factor', 'ضریب اضافه‌کار', 'Overtime factor', 'factor', 1.4, 'برابر', 'حداقل قانونی ۱.۴ — شرکت می‌تواند بالاتر بگذارد', 2],
+        ['company', 'holiday_overtime_factor', 'ضریب تعطیل‌کاری', 'Holiday work factor', 'factor', 1.96, 'برابر', null, 3],
+        ['company', 'friday_factor', 'ضریب جمعه‌کاری', 'Friday work factor', 'factor', 1.4, 'برابر', null, 4],
+        ['company', 'night_shift_factor', 'ضریب شب‌کاری', 'Night shift factor', 'factor', 1.75, 'برابر', null, 5],
+        ['company', 'shift_factor', 'ضریب نوبت‌کاری', 'Rotating shift factor', 'factor', 1.15, 'برابر', null, 6],
+        ['company', 'rounding', 'گرد کردن خالص پرداختی', 'Net rounding', 'amount', 1000, 'ریال', 'صفر یعنی بدون گرد کردن', 7],
+        ['company', 'absence_deduction_enabled', 'کسر غیبت', 'Deduct absence', 'boolean', 1, null, null, 8],
+        ['company', 'late_deduction_enabled', 'کسر تأخیر', 'Deduct lateness', 'boolean', 0, null, 'پیش‌فرض خاموش — سیاست شرکت است نه الزام قانونی', 9],
+      ]
+      for (const [g, k, fa, en, t, v, unit, desc, sort] of params) {
+        await pgQuery(
+          `INSERT INTO payroll_parameters (ruleset_id, param_group, key, label_fa, label_en, value_type, value, unit, description, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT DO NOTHING`,
+          [rs1405, g, k, fa, en, t, v, unit, desc, sort])
+      }
+    }
+
+    const hasBrackets = (await pgQuery<{ n: string }>(
+      `SELECT count(*)::text AS n FROM payroll_tax_brackets WHERE ruleset_id=$1`, [rs1405]))[0]?.n !== '0'
+    if (!hasBrackets) {
+      const brackets: [number, number, number | null, number][] = [
+        [0, 0, 400_000_000, 0],
+        [1, 400_000_000, 800_000_000, 10],
+        [2, 800_000_000, 1_000_000_000, 15],
+        [3, 1_000_000_000, 1_200_000_000, 20],
+        [4, 1_200_000_000, 1_400_000_000, 25],
+        [5, 1_400_000_000, null, 30],
+      ]
+      for (const [seq, from, to, rate] of brackets) {
+        await pgQuery(
+          `INSERT INTO payroll_tax_brackets (ruleset_id, seq, from_amount, to_amount, rate_percent)
+           VALUES ($1,$2,$3,$4,$5)`, [rs1405, seq, from, to, rate])
+      }
+    }
+
+    const hasEarnings = (await pgQuery<{ n: string }>(
+      `SELECT count(*)::text AS n FROM payroll_earning_types WHERE ruleset_id=$1`, [rs1405]))[0]?.n !== '0'
+    if (!hasEarnings) {
+      // key, fa, en, group, recurring, insurable, taxable, eid, severance, overtimeBase, method, paramKey, sort
+      const earnings: [string, string, string, string, number, string, string, number, number, number, string, string | null, number][] = [
+        ['base_salary', 'حقوق پایه', 'Base salary', 'salary', 1, 'yes', 'yes', 1, 1, 1, 'daily_prorated', null, 1],
+        ['seniority_base', 'پایهٔ سنوات', 'Seniority base', 'salary', 1, 'yes', 'yes', 1, 1, 1, 'manual', null, 2],
+        ['housing', 'حق مسکن', 'Housing allowance', 'allowance', 1, 'yes', 'yes', 1, 0, 0, 'daily_prorated', 'housing_allowance', 3],
+        ['food', 'بن کارگری', 'Food allowance', 'allowance', 1, 'yes', 'yes', 1, 0, 0, 'daily_prorated', 'food_allowance', 4],
+        ['marriage', 'حق تأهل', 'Marriage allowance', 'allowance', 1, 'no', 'no', 0, 0, 0, 'fixed', 'marriage_allowance', 5],
+        ['child', 'حق اولاد', 'Child allowance', 'allowance', 1, 'no', 'no', 0, 0, 0, 'per_child', 'child_allowance_each', 6],
+        ['job_allowance', 'فوق‌العادهٔ شغل', 'Job allowance', 'allowance', 1, 'yes', 'yes', 1, 0, 1, 'manual', null, 7],
+        ['expertise', 'فوق‌العادهٔ تخصص', 'Expertise allowance', 'allowance', 1, 'yes', 'yes', 1, 0, 1, 'manual', null, 8],
+        ['supervision', 'فوق‌العادهٔ سرپرستی', 'Supervision allowance', 'allowance', 1, 'yes', 'yes', 1, 0, 1, 'manual', null, 9],
+        ['overtime', 'اضافه‌کار', 'Overtime', 'variable', 0, 'yes', 'yes', 0, 0, 0, 'manual', null, 10],
+        ['holiday_work', 'تعطیل‌کاری', 'Holiday work', 'variable', 0, 'yes', 'yes', 0, 0, 0, 'manual', null, 11],
+        ['friday_work', 'جمعه‌کاری', 'Friday work', 'variable', 0, 'yes', 'yes', 0, 0, 0, 'manual', null, 12],
+        ['night_shift', 'شب‌کاری', 'Night shift', 'variable', 0, 'yes', 'yes', 0, 0, 0, 'manual', null, 13],
+        ['shift_work', 'نوبت‌کاری', 'Rotating shift', 'variable', 0, 'yes', 'yes', 0, 0, 0, 'manual', null, 14],
+        ['bonus', 'پاداش', 'Bonus', 'variable', 0, 'no', 'yes', 0, 0, 0, 'manual', null, 15],
+        ['commission', 'پورسانت', 'Commission', 'variable', 0, 'no', 'yes', 0, 0, 0, 'manual', null, 16],
+        ['mission_expense', 'هزینهٔ مأموریت', 'Mission expense', 'variable', 0, 'no', 'no', 0, 0, 0, 'manual', null, 17],
+      ]
+      for (const [k, fa, en, grp, rec, ins, tax, eid, sev, ot, method, pk, sort] of earnings) {
+        await pgQuery(
+          `INSERT INTO payroll_earning_types
+             (ruleset_id, key, label_fa, label_en, earning_group, recurring, insurable, taxable,
+              in_eid_base, in_severance_base, in_overtime_base, calc_method, param_key, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) ON CONFLICT DO NOTHING`,
+          [rs1405, k, fa, en, grp, rec, ins, tax, eid, sev, ot, method, pk, sort])
+      }
+    }
+  }
+
+  await pgQuery(`
+    SELECT 1;
   `)
 }

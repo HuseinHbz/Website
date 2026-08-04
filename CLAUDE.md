@@ -238,15 +238,39 @@
    is deliberately ABSENT from `logAction` payloads, and opening a personnel file
    is itself audited. Row scope (`hr.employees`: all/own/department) answers 404,
    never 403, for an out-of-scope file.
-42. **A statutory rate is NEVER hardcoded (28.3, when built).** Tax exemption,
-   the ماده ۸۵ brackets, insurance ceiling/floor and the minimum wage change
-   every year in the budget. They live in an editable `payroll_rates` table the
-   operator updates from the UI. A confirmed payroll period is LOCKED — a
-   correction is a corrective slip (a reversing document), never an edit, and
-   the person who calculates a run may not be the one who approves it.
+42. **A statutory rate is NEVER hardcoded (28.3-الف).** Tax exemption, the
+   brackets, insurance ceiling/floor and the minimum wage change every year in
+   the budget. `src/lib/hr/payroll.ts` contains no statutory number at all —
+   everything arrives as an argument from `payroll_parameters`,
+   `payroll_tax_brackets` and `payroll_earning_types`. Seeds are non-destructive:
+   re-running migrations must never overwrite a value the operator edited.
    🔴 A payroll figure is not accepted until an accountant has reconciled it
    against a manual calculation — that verification is the maintainer's, not
-   Claude's. (نرخ قانونی هرگز هاردکد نمی‌شود؛ دورهٔ قفل‌شده فقط با فیش اصلاحی.)
+   Claude's. (نرخ قانونی هرگز هاردکد نمی‌شود.)
+43. **A payroll ruleset is versioned WITHIN a year, and a slip names its version
+   (28.3-الف بند۱).** Law can change mid-year by circular, so `payroll_rulesets`
+   is keyed `(year, version)`; every slip stores `ruleset_id`. A ruleset that has
+   issued slips is FROZEN — editing it would silently restate figures already
+   reported to the tax authority and posted to the ledger. The answer is a new
+   version, never an edit. (نسخهٔ قوانین درون سال؛ فیش نسخه‌اش را می‌نویسد.)
+44. **A locked payroll period changes only by CORRECTIVE SLIP (28.3-الف بند۶).**
+   Never an edit, never a delete: the original stays, a reversing slip cancels
+   it, a new slip supersedes it — the BUG-020 discipline applied to payroll. The
+   person who calculates a run may not approve it (`isSeparationViolation`, now
+   covering `payroll_period`). (دورهٔ قفل‌شده فقط با فیش اصلاحی.)
+45. **Whether an earning is insurable or taxable is DATA, not a condition in
+   code (28.3-الف بند۳).** `payroll_earning_types` carries per-item flags
+   (insurable/taxable yes·no·capped + cap, recurring, Eid/severance/overtime
+   base). Regulation changes; a flag flip must be enough. A new earning type is
+   defined from the UI with no migration. The tax exemption lives in the bracket
+   table as the leading 0% band and is NEVER also subtracted separately — doing
+   both exempts it twice, silently. (مشمولیت داده است نه کد.)
+46. **A rounding policy creates a real difference that must be recorded
+   (28.3-الف).** Rounding the net makes the slip stop adding up AND unbalances
+   the journal entry by the rounded-away amount, because the gross is expensed in
+   full. The difference becomes its own visible line and stays inside what is
+   payable to the employee — it is not income to the company. Found by the live
+   suite, not by unit tests, whose tidy inputs never rounded.
 36. **A loyalty point is a LIABILITY recorded in a ledger, never a balance
    someone writes (27 بند۲).** Every point granted is a discount the company
    owes, so `loyalty_accounts.balance` is a CACHE recomputed from

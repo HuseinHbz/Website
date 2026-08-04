@@ -61,6 +61,10 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   // imply them. `adjust` in particular writes days into the ledger with no
   // request behind it and must be traceable to a person who was granted it.
   'hr.leave': ['approve', 'adjust'],
+  // Phase 28.3-الف — payroll separates four authorities on purpose: running a
+  // calculation, approving it, paying it, and editing the statutory parameters
+  // are four different people's jobs in any organisation that can be audited.
+  'hr.payroll': ['calculate', 'approve', 'pay', 'settings_write', 'amounts_view'],
   'erp.inventory': ['cost_view'],   // بند ۶.۲ — sensitive-field grant (unit cost / valuation)
   'erp.approvals': ['approve', 'reject', 'delegate'],
   'erp.moadian': ['submit'],
@@ -87,6 +91,13 @@ export const SENSITIVE_FIELDS: Record<string, { routes: string[]; fields: string
     routes: ['hr/employees'],
     fields: ['nationalId', 'iban', 'bankAccount', 'insuranceNo'],
   },
+  // 28.3-الف — a payroll coordinator may need to see WHO is on a run without
+  // seeing what anyone earns. The amounts are removed from the payload.
+  'hr.payroll:amounts_view': {
+    routes: ['hr/payroll'],
+    fields: ['gross', 'net', 'tax', 'employeeInsurance', 'employerInsurance',
+             'insuranceBase', 'taxableIncome', 'deductions'],
+  },
 }
 
 /**
@@ -103,6 +114,8 @@ export const SCOPED_MODULES: Record<string, Array<'all' | 'own' | 'department'>>
   // Phase 28.1 — a line manager sees their own team, an employee only
   // themselves, HR sees everyone. Enforced in the WHERE, never as a UI filter.
   'hr.employees': ['all', 'own', 'department'],
+  // 28.3-الف — an employee sees their own payslip, a manager their team's.
+  'hr.payroll': ['all', 'own', 'department'],
 }
 
 /**

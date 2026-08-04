@@ -73,6 +73,7 @@ export function Btn({
 // ── Input ─────────────────────────────────────────────────────────────────────
 export function Input({
   label, value, onChange, placeholder, type = 'text', required, className = '', multiline, rows = 4,
+  disabled,
 }: {
   label?: string
   value: string
@@ -83,6 +84,8 @@ export function Input({
   className?: string
   multiline?: boolean
   rows?: number
+  /** Read-only state — e.g. a frozen payroll ruleset that already issued slips. */
+  disabled?: boolean
 }) {
   return (
     <div className={className}>
@@ -98,7 +101,8 @@ export function Input({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="form-input py-2.5 resize-none"
+          disabled={disabled}
+          className="form-input py-2.5 resize-none disabled:opacity-60"
         />
       ) : (
         <input
@@ -107,7 +111,8 @@ export function Input({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
-          className="form-input h-9"
+          disabled={disabled}
+          className="form-input h-9 disabled:opacity-60"
         />
       )}
     </div>

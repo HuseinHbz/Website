@@ -83,8 +83,15 @@ export function effectiveApprovers(principal: string, delegations: Delegation[],
  * delegate acts on the creator's behalf (the effective decision owner is the
  * creator either way). `onBehalfOf` is the principal a delegate is representing.
  */
+/**
+ * Document types under maker/checker. 28.3-الف adds payroll: the person who
+ * calculates a run must not be the one who approves it. The list is additive —
+ * `journal_entry` behaves exactly as before (R5).
+ */
+const SEPARATION_DOC_TYPES = new Set(['journal_entry', 'payroll_period'])
+
 export function isSeparationViolation(docType: string, createdBy: string, actorId: string, onBehalfOf?: string | null): boolean {
-  if (docType !== 'journal_entry') return false
+  if (!SEPARATION_DOC_TYPES.has(docType)) return false
   return createdBy === actorId || createdBy === onBehalfOf
 }
 

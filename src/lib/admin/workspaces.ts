@@ -113,6 +113,7 @@ export const WORKSPACES: Workspace[] = [
     groups: [{ en: 'People', fa: 'کارکنان', items: [
       { labelEn: 'Employees', labelFa: 'پرسنل', href: '/admin/employees', icon: '👥' },
       { labelEn: 'Leave & Attendance', labelFa: 'مرخصی و حضور و غیاب', href: '/admin/leave', icon: '🗓️' },
+      { labelEn: 'Payroll', labelFa: 'حقوق و دستمزد', href: '/admin/payroll', icon: '💵' },
     ] }],
   },
   {
