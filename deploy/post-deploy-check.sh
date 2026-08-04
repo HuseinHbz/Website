@@ -158,13 +158,38 @@ for w in /api/webhooks/telegram /api/webhooks/whatsapp /api/pay/callback; do
 done
 
 # ── ۸) بکاپ ──────────────────────────────────────────────────────────────────
+# این بررسی اول مسیر را HARDCODE می‌کرد و برای همین روی سرور واقعی «پیدا نشد»
+# می‌داد در حالی که ممکن بود بکاپ سالم جای دیگری باشد. مسیرها را از همان‌جایی
+# می‌خوانیم که خود سیستم می‌خواند: BACKUP_ROOT در env، وگرنه دو پیش‌فرض واقعی
+# (موتور داخلی: <app>/data/backups-engine · اسکریپت شل: /var/backups/habibazar).
 sect "بکاپ"
-if [[ -f /home/hbz/backups/last-status.json ]] || [[ -d /home/hbz/backups ]]; then
-  LAST="$(find /home/hbz/backups -name '*.enc' -mtime -2 2>/dev/null | wc -l)"
-  [[ "$LAST" -gt 0 ]] && ok "بکاپ اخیر" "$LAST فایل در ۴۸ ساعت گذشته" \
-                      || bad "بکاپ اخیر" "هیچ بکاپی در ۴۸ ساعت گذشته نیست"
+BACKUP_ROOT_ENV=""
+[[ -f "$ENV_FILE" ]] && BACKUP_ROOT_ENV="$(grep -E '^BACKUP_ROOT=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)"
+FOUND_DIR=""
+FRESH=0
+for d in "$BACKUP_ROOT_ENV" "$APP_DIR/data/backups-engine" /var/backups/habibazar /home/hbz/backups; do
+  [[ -n "$d" && -d "$d" ]] || continue
+  FOUND_DIR="$d"
+  N="$(find "$d" -type f \( -name '*.enc' -o -name '*.tar.gz' -o -name '*.dump' -o -name '*.sql' \) -mtime -2 2>/dev/null | wc -l | tr -d ' \n')"
+  if [[ "${N:-0}" -gt 0 ]]; then FRESH="$N"; break; fi
+done
+
+if [[ -z "$FOUND_DIR" ]]; then
+  bad "بکاپ" "هیچ مسیر بکاپی وجود ندارد (BACKUP_ROOT هم در env نیست) — قبل از ورود دادهٔ واقعی فعال شود"
+elif [[ "$FRESH" -gt 0 ]]; then
+  ok "بکاپ اخیر" "$FRESH فایل در ۴۸ ساعت گذشته ($FOUND_DIR)"
 else
-  bad "پوشهٔ بکاپ" "پیدا نشد — قبل از ورود دادهٔ واقعی حتماً فعال شود"
+  bad "بکاپ اخیر" "پوشه هست ($FOUND_DIR) ولی در ۴۸ ساعت گذشته بکاپی ساخته نشده"
+fi
+
+# وضعیت موتور داخلی بکاپ (رویدادمحور، بدون cron) — اگر خاموش باشد باید بدانید.
+if [[ -n "$DSN" ]] && [[ "$(q 'SELECT 1')" == "1" ]]; then
+  LASTB="$(q "SELECT COALESCE(to_char(max(created_at::timestamp),'YYYY-MM-DD HH24:MI'),'—') FROM backups WHERE status='success'")"
+  if [[ "$LASTB" == "—" || "$LASTB" == "ERR" ]]; then
+    bad "موتور بکاپ داخلی" "هیچ بکاپ موفقی در کاتالوگ نیست — POST /api/admin/backup/run را یک‌بار بزنید"
+  else
+    ok "موتور بکاپ داخلی" "آخرین بکاپ موفق: $LASTB"
+  fi
 fi
 
 # ── جمع‌بندی ─────────────────────────────────────────────────────────────────
