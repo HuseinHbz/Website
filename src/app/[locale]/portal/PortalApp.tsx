@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { faDigits } from '@/lib/admin/chartRtl'
 import { fmtMoney } from '@/lib/format'
 
-type View = 'dashboard' | 'invoices' | 'payments' | 'tickets' | 'help' | 'profile'
+type View = 'dashboard' | 'invoices' | 'payments' | 'loyalty' | 'tickets' | 'help' | 'profile'
 interface Dash { customer: { name: string; code: string }; balance: number; aging: { current: number; d31_60: number; d61_90: number; d90plus: number; total: number }; creditLimit: number; paymentTerms: number; openCount: number; channels: { id: number; channel: string; address: string; optIn: number }[] }
 interface Inv { id: number; docNo: string; date: string; dueDate: string | null; status: string; total: number; paid: number; currency: string }
 interface Pay { id: number; date: string; amount: number; method: string; reference: string | null; invoiceNo: string | null }
@@ -30,9 +30,9 @@ export function PortalApp({ locale }: { locale: 'fa' | 'en' }) {
   return (
     <Shell fa={fa}>
       <nav className="flex flex-wrap gap-1 mb-5 border-b border-border pb-3">
-        {(['dashboard', 'invoices', 'payments', 'tickets', 'help', 'profile'] as const).map(v => (
+        {(['dashboard', 'invoices', 'payments', 'loyalty', 'tickets', 'help', 'profile'] as const).map(v => (
           <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${view === v ? 'bg-brand text-white' : 'text-text-secondary hover:bg-surface-2'}`}>
-            {v === 'dashboard' ? t('Dashboard', 'داشبورد') : v === 'invoices' ? t('My invoices', 'فاکتورهای من') : v === 'payments' ? t('My payments', 'پرداخت‌های من') : v === 'tickets' ? t('Support', 'پشتیبانی') : v === 'help' ? t('Help', 'راهنما') : t('Profile', 'پروفایل')}
+            {v === 'dashboard' ? t('Dashboard', 'داشبورد') : v === 'invoices' ? t('My invoices', 'فاکتورهای من') : v === 'payments' ? t('My payments', 'پرداخت‌های من') : v === 'loyalty' ? t('My points', 'امتیازهای من') : v === 'tickets' ? t('Support', 'پشتیبانی') : v === 'help' ? t('Help', 'راهنما') : t('Profile', 'پروفایل')}
           </button>
         ))}
         <button onClick={async () => { await fetch('/api/portal/auth/logout', { method: 'POST' }); setAuthed(false) }} className="ms-auto px-3 py-1.5 rounded-lg text-sm text-danger-text hover:bg-danger/5">{t('Log out', 'خروج')}</button>
@@ -40,6 +40,7 @@ export function PortalApp({ locale }: { locale: 'fa' | 'en' }) {
       {view === 'dashboard' && <Dashboard fa={fa} money={money} num={num} t={t} />}
       {view === 'invoices' && <Invoices fa={fa} money={money} num={num} t={t} />}
       {view === 'payments' && <Payments fa={fa} money={money} num={num} t={t} />}
+      {view === 'loyalty' && <Loyalty fa={fa} money={money} num={num} t={t} />}
       {view === 'tickets' && <Tickets fa={fa} num={num} t={t} />}
       {view === 'help' && <Help t={t} />}
       {view === 'profile' && <Profile fa={fa} t={t} />}
@@ -326,6 +327,97 @@ function Help({ t }: { t: (en: string, f: string) => string }) {
       {items.map(a => (
         <Card key={a.id} className="cursor-pointer hover:border-brand/40"><button onClick={() => openArt(a.id)} className="text-start w-full"><div className="text-sm font-medium">{a.title}</div><div className="text-xs text-text-tertiary mt-0.5 line-clamp-2">{a.excerpt}</div></button></Card>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Phase 27 بند۲ — the member's own points.
+ *
+ * Shows the LEDGER, not just a balance: a number a customer cannot trace is a
+ * number they will not trust, and the first support ticket is always "why do I
+ * have this many points?".
+ */
+function Loyalty({ fa, money, num, t }: { fa: boolean; money: (v: number) => string; num: (v: unknown) => string; t: (en: string, f: string) => string }) {
+  const [d, setD] = useState<{
+    program: { nameEn: string; nameFa: string } | null
+    balance: number; value: number; totalEarned: number; totalSpent: number
+    tier: { nameEn: string; nameFa: string; discountPct: number } | null
+    tiers: { id: number; nameEn: string; nameFa: string; threshold: number; discountPct: number }[]
+    ledger: { id: number; kind: string; points: number; note: string | null; createdAt: string }[]
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/portal/loyalty').then(r => r.ok ? r.json() : null)
+      .then(setD).catch(() => setD(null)).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <p className="text-sm text-text-tertiary py-10 text-center">{t('Loading…', 'در حال بارگذاری…')}</p>
+  if (!d?.program) {
+    return <p className="text-sm text-text-tertiary py-10 text-center">{t('No loyalty programme is running yet.', 'هنوز برنامهٔ وفاداری فعالی وجود ندارد.')}</p>
+  }
+
+  const KIND: Record<string, { en: string; fa: string }> = {
+    earn: { en: 'Earned', fa: 'کسب' },
+    redeem: { en: 'Redeemed', fa: 'مصرف' },
+    expire: { en: 'Expired', fa: 'انقضا' },
+    adjust: { en: 'Adjustment', fa: 'اصلاح' },
+    reversal: { en: 'Reversed', fa: 'برگشت' },
+  }
+  const nextTier = d.tiers.filter(x => x.threshold > d.balance).sort((a, b) => a.threshold - b.threshold)[0]
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-text-tertiary mb-1">{t('My points', 'امتیاز من')}</p>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">{num(d.balance)}</p>
+        </div>
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-text-tertiary mb-1">{t('Worth', 'ارزش')}</p>
+          <p className="text-2xl font-bold text-text-primary">{money(d.value)}</p>
+        </div>
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-text-tertiary mb-1">{t('My tier', 'سطح من')}</p>
+          <p className="text-2xl font-bold text-text-primary">{d.tier ? (fa ? d.tier.nameFa : d.tier.nameEn) : '—'}</p>
+          {d.tier && d.tier.discountPct > 0 && (
+            <p className="text-2xs text-text-tertiary mt-1">{t(`${d.tier.discountPct}% discount`, `${num(d.tier.discountPct)}٪ تخفیف`)}</p>
+          )}
+        </div>
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-text-tertiary mb-1">{t('Total earned', 'مجموع کسب‌شده')}</p>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">{num(d.totalEarned)}</p>
+        </div>
+      </div>
+
+      {nextTier && (
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-sm text-text-secondary">
+            {t(`${nextTier.threshold - d.balance} more points to reach ${nextTier.nameEn}`,
+               `${num(nextTier.threshold - d.balance)} امتیاز تا رسیدن به سطح ${nextTier.nameFa}`)}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border overflow-hidden">
+        <p className="px-4 py-3 text-sm font-semibold text-text-primary border-b border-border">{t('Point history', 'تاریخچهٔ امتیاز')}</p>
+        {d.ledger.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-text-tertiary text-center">{t('No movements yet.', 'هنوز تراکنشی ثبت نشده است.')}</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {d.ledger.map(l => (
+              <li key={l.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <span className="text-text-secondary">{fa ? (KIND[l.kind]?.fa ?? l.kind) : (KIND[l.kind]?.en ?? l.kind)}</span>
+                <span className="text-2xs text-text-tertiary">{String(l.createdAt).slice(0, 10)}</span>
+                <span className={`tabular-nums font-semibold ${l.points >= 0 ? 'text-success-text' : 'text-danger-text'}`}>
+                  {l.points >= 0 ? '+' : '−'}{num(Math.abs(l.points))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }

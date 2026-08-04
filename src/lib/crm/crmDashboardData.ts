@@ -7,6 +7,8 @@ import { pgQuery } from '@/lib/db'
 import { pipelineStats, type LeadStatus } from './leads'
 import { agingBuckets, type OpenInvoiceFact } from './aging'
 import { momChange, monthBounds, type MoM } from './dashboard'
+import { overview as opportunityOverview } from './opportunityData'
+import { loyaltyOverview } from './loyaltyData'
 
 const num = (v: unknown) => Number(v ?? 0)
 
@@ -19,6 +21,10 @@ export interface CrmDashboard {
   arBalance: number
   channels: { channel: string; sent: number; delivered: number; leads: number; won: number; spend: number }[]
   mom: { newLeads: MoM; wonValue: MoM; newTickets: MoM; newCustomers: MoM }
+  // Phase 27 بند۴ — the deal pipeline and the club, beside the lead funnel.
+  pipeline: Awaited<ReturnType<typeof opportunityOverview>>['summary'] | null
+  losses: Awaited<ReturnType<typeof opportunityOverview>>['losses']
+  loyalty: Awaited<ReturnType<typeof loyaltyOverview>> | null
 }
 
 export async function crmDashboard(slaDaysNoActivity = 7): Promise<CrmDashboard> {
@@ -78,5 +84,16 @@ export async function crmDashboard(slaDaysNoActivity = 7): Promise<CrmDashboard>
     await count(`SELECT COUNT(*)::int AS c FROM sales_customers WHERE created_at>=$1 AND created_at<$2`, b.curStart, '9999'),
     await count(`SELECT COUNT(*)::int AS c FROM sales_customers WHERE created_at>=$1 AND created_at<$2`, b.prevStart, b.prevEnd))
 
-  return { funnel, noActivityLeads: noActivity, openTickets, breachedTickets, aging, arBalance, channels, mom: { newLeads, wonValue, newTickets, newCustomers } }
+  // Phase 27 بند۴ — reuse each module's own aggregation rather than
+  // recomputing it here; a second implementation is a second thing to drift.
+  const opps = await opportunityOverview().catch(() => null)
+  const club = await loyaltyOverview().catch(() => null)
+
+  return {
+    funnel, noActivityLeads: noActivity, openTickets, breachedTickets, aging, arBalance, channels,
+    mom: { newLeads, wonValue, newTickets, newCustomers },
+    pipeline: opps?.summary ?? null,
+    losses: opps?.losses ?? [],
+    loyalty: club,
+  }
 }

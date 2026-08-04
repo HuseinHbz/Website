@@ -221,6 +221,39 @@
    so the vendor-grade trend and the reconciliation audit trail were invisible.
    Both got real read paths + UI. The rest are documented one by one in
    `docs/governance/phase26.32-module-audit-report.md` §4.
+36. **A loyalty point is a LIABILITY recorded in a ledger, never a balance
+   someone writes (27 بند۲).** Every point granted is a discount the company
+   owes, so `loyalty_accounts.balance` is a CACHE recomputed from
+   `loyalty_transactions` — all movement goes through `postTransaction`
+   (`lib/crm/loyaltyData.ts`). Only a CONFIRMED invoice earns (a draft would
+   create a liability for a sale that may not happen), earning is idempotent per
+   invoice, and returning that invoice appends a `reversal` while the original
+   `earn` row STAYS — the 26.26b BUG-020 principle. A balance that goes negative
+   after a reversal is SHOWN, not floored at zero: it is a real debt the operator
+   must decide about. Coupon limits are counted from the database on every call,
+   never trusted from the client. Cashback GL posting is off by default
+   (`loyalty_gl_enabled`) until an accountant picks the accounts.
+   (امتیاز بدهی است و در دفتر ثبت می‌شود، نه موجودی که مستقیم نوشته شود.)
+37. **A derived intelligence feature without enough data is DEFERRED with the
+   numbers, never built (27 بند۳).** A churn score over five test customers is
+   not a prediction, it is a number a manager will trust — and an ungrounded
+   number is worse than a missing feature, because its absence is visible and
+   its wrongness is not. `scripts/crm-data-gate.ts` states the thresholds
+   (≥20 active customers · ≥3 months history · ≥50 transactions); if it fails,
+   the phase report carries the real counts and the feature waits.
+   (خروجی هوشمند بدون دادهٔ کافی، با عدد صریح deferred می‌شود نه ساخته.)
+38. **A deal is not a lead (27 بند۱).** One customer commonly works several
+   opportunities at once, which the value-on-the-lead model could not express.
+   The figure that matters is the WEIGHTED pipeline (`amount × probability`) —
+   the raw sum always flatters a forecast. A loss must carry a reason from the
+   configurable list, or the loss analysis has nothing to aggregate. Converting a
+   won deal produces a DRAFT sales document: conversion is a hand-off to Sales,
+   not an accounting event, so there stays exactly one path into the ledger.
+39. **The admin header resolves its title from the nav registry, not the page's
+   English prop (27).** Every `page.tsx` passes an English `title` to
+   `AdminShell`, which used to render untranslated on every screen in the Persian
+   UI. `AdminHeader` now reads `labelFa`/`labelEn` from `findItem(pathname)` and
+   falls back to the prop only for pages outside the registry.
 31. **In Persian there is NO English, and in English NO Persian (26.33 بند۱).**
    The only exceptions are brand names (HBZ, VMware, Cisco…) and acronyms with no
    settled Persian equivalent — and they live in an EXPLICIT list in

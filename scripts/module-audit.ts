@@ -51,6 +51,10 @@ async function req(method: string, path: string, body?: unknown): Promise<Probe>
  */
 const CREATE: Record<string, { route: string; body: Record<string, unknown> }> = {
 
+  // Phase 27 — the new CRM modules are exercised like every other one.
+  'crm.crm.opportunities': { route: 'crm/opportunities', body: { title: 'A32 Deal', amount: 1000, stage: 'identified' } },
+  'crm.crm.loyalty': { route: 'crm/loyalty', body: { nameEn: 'A32 Club', nameFa: 'باشگاه آ۳۲', kind: 'points' } },
+
   'brand.timeline': { route: 'timeline', body: { year: '2026', titleEn: 'A32', titleFa: 'آ۳۲' } },
   'brand.skills': { route: 'skills', body: { nameEn: 'A32', nameFa: 'آ۳۲', categoryEn: 'net', categoryFa: 'شبکه', level: 80 } },
   'brand.credentials': { route: 'credentials', body: { type: 'certification', nameEn: 'A32 Cred' } },

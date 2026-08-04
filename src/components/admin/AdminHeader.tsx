@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import type { AdminUser } from '@/lib/admin/auth'
 import { ThemeToggle } from '@/components/ds/ThemeProvider'
+import { findItem } from '@/lib/admin/workspaces'
 
 interface Notification {
   id: string
@@ -40,11 +41,18 @@ interface Props {
 }
 
 export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, onMobileOpen }: Props) {
+  // 26.33 rule (no English inside the Persian UI): every page passes an English
+  // `title`, which then sat untranslated in the header on every screen. The nav
+  // registry already carries a Persian label for each module, so resolve it from
+  // the path and fall back to the prop only for pages outside the registry.
+  const pathname = usePathname()
+  const navItem = findItem(pathname ?? '')?.item
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const isRTL = locale === 'fa'
+  const pageTitle = navItem ? (isRTL ? navItem.labelFa : navItem.labelEn) : title
 
   const unread = notifications.filter(n => !n.read).length
 
@@ -79,7 +87,7 @@ export function AdminHeader({ user, title, locale, onToggleLocale, onOpenCmd, on
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <h1 className="text-base font-semibold text-text-primary truncate">{title}</h1>
+        <h1 className="text-base font-semibold text-text-primary truncate">{pageTitle}</h1>
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">

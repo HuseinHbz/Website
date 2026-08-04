@@ -15,6 +15,10 @@ interface Data {
   arBalance: number
   channels: { channel: string; sent: number; delivered: number; leads: number; won: number; spend: number }[]
   mom: { newLeads: MoM; wonValue: MoM; newTickets: MoM; newCustomers: MoM }
+  // Phase 27 بند۴
+  pipeline: { openCount: number; openValue: number; weightedValue: number; wonValue: number; winRatePct: number } | null
+  losses: { reason: string; count: number; value: number }[]
+  loyalty: { members: number; pointsOutstanding: number; liabilityValue: number; couponRedemptions: number; couponDiscount: number } | null
 }
 
 const STAGES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']
@@ -110,6 +114,48 @@ export function CrmDashboard() {
           </div>
         )}
       </Card>
+
+      {/* Phase 27 بند۴ — the DEAL pipeline (weighted), beside the lead funnel.
+          The raw open value always flatters a forecast; the weighted figure is
+          the one a sales manager can commit to. */}
+      {d.pipeline && (
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{L(fa, 'Opportunity pipeline', 'خط لولهٔ فرصت‌ها')}</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Open deals', 'فرصت باز')}</div><div className="text-xl font-bold">{num(d.pipeline.openCount)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Pipeline value', 'ارزش خط لوله')}</div><div className="text-xl font-bold">{fmtMoney(d.pipeline.openValue)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Weighted value', 'ارزش وزنی')}</div><div className="text-xl font-bold text-brand">{fmtMoney(d.pipeline.weightedValue)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Won', 'برد')}</div><div className="text-xl font-bold text-success">{fmtMoney(d.pipeline.wonValue)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Win rate', 'نرخ برد')}</div><div className="text-xl font-bold">{num(d.pipeline.winRatePct)}٪</div></div>
+          </div>
+          {d.losses.length > 0 && (
+            <div className="mt-4">
+              <p className="text-2xs font-bold uppercase tracking-widest text-text-tertiary mb-2">{L(fa, 'Why we lose', 'چرا می‌بازیم')}</p>
+              <div className="flex flex-wrap gap-2">
+                {d.losses.slice(0, 6).map(l => (
+                  <span key={l.reason} className="inline-flex items-center gap-2 rounded-lg border border-subtle px-3 py-1.5 text-xs">
+                    <span className="text-text-secondary">{l.reason}</span>
+                    <span className="text-text-primary font-semibold tabular-nums">{num(l.count)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Loyalty: the headline is the LIABILITY, because points are money owed. */}
+      {d.loyalty && d.loyalty.members > 0 && (
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">{L(fa, 'Loyalty club', 'باشگاه مشتریان')}</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Members', 'اعضا')}</div><div className="text-xl font-bold">{num(d.loyalty.members)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Points outstanding', 'امتیاز در گردش')}</div><div className="text-xl font-bold">{num(d.loyalty.pointsOutstanding)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Open liability', 'بدهی باز')}</div><div className="text-xl font-bold text-warning">{fmtMoney(d.loyalty.liabilityValue)}</div></div>
+            <div className="rounded-lg bg-surface-2 p-3"><div className="text-2xs text-text-tertiary">{L(fa, 'Coupon discount', 'تخفیف کوپن')}</div><div className="text-xl font-bold">{fmtMoney(d.loyalty.couponDiscount)}</div></div>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

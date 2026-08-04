@@ -89,6 +89,11 @@ export const WORKSPACES: Workspace[] = [
     groups: [{ en: 'Customers', fa: 'مشتریان', items: [
       { labelEn: 'CRM Dashboard', labelFa: 'داشبورد CRM', href: '/admin/crm/dashboard', icon: '📊' },
       { labelEn: 'CRM — Leads', labelFa: 'مدیریت سرنخ‌ها', href: '/admin/crm', icon: '📇' },
+      // Phase 27 بند۱ — a deal is not a lead: one account can work several
+      // opportunities at once, which the lead model could not express.
+      { labelEn: 'Opportunities', labelFa: 'فرصت‌های فروش', href: '/admin/crm/opportunities', icon: '🎯' },
+      // Phase 27 بند۲ — loyalty programme, tiers, points ledger and coupons.
+      { labelEn: 'Loyalty Club', labelFa: 'باشگاه مشتریان', href: '/admin/crm/loyalty', icon: '🏅' },
       { labelEn: 'Clients', labelFa: 'مشتریان', href: '/admin/clients', icon: '🧑‍💼' },
       { labelEn: 'Organizations', labelFa: 'سازمان‌ها', href: '/admin/organizations', icon: '🏢' },
       { labelEn: 'Contact Requests', labelFa: 'درخواست‌های تماس', href: '/admin/contacts', icon: '✉' },

@@ -8,6 +8,8 @@
  */
 import { pgQuery } from '@/lib/db'
 import { agingBuckets, creditDecision, type CreditGuardMode, type OpenInvoiceFact } from './aging'
+import { customerOpportunities } from './opportunityData'
+import { customerLoyalty } from './loyaltyData'
 
 const num = (v: unknown) => Number(v ?? 0)
 
@@ -87,10 +89,18 @@ export async function customer360(customerId: number, asOf = new Date().toISOStr
 
   const purchaseTotal = Math.round(orders.filter((o: Record<string, unknown>) => o.docType === 'invoice' && o.status !== 'void').reduce((s: number, o: Record<string, unknown>) => s + num(o.total), 0) * 100) / 100
 
+  // Phase 27 — a 360 view that omits the open deals and the loyalty balance is
+  // not 360. Both are guarded so one missing table never blanks the whole page.
+  const opportunities = await customerOpportunities(customerId).catch(() => null)
+  const loyalty = await customerLoyalty(customerId).catch(() => null)
+
   return {
     customer, balance, aging,
     creditLimit: num(customer.creditLimit), paymentTerms: num(customer.paymentTerms),
     purchaseTotal, openInvoices: open,
     orders, payments, gatewayTx, activities, tickets, sourceLead, contactReqs, consultReqs, channels, timeline,
+    opportunities: opportunities?.opportunities ?? [],
+    opportunitySummary: opportunities?.summary ?? null,
+    loyalty,
   }
 }

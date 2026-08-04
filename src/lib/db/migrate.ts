@@ -62,6 +62,12 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_crm_activities_lead ON crm_activities(lead_id);
     ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS converted_customer_id INTEGER;
 
+
+
+
+
+
+
     CREATE TABLE IF NOT EXISTS feature_flags (
       id SERIAL PRIMARY KEY,
       key TEXT NOT NULL UNIQUE,
@@ -2812,5 +2818,185 @@ export async function runMigrations() {
       FROM gl_accounts g
       WHERE a.parent_id IS NULL AND length(a.code) > 1 AND length(g.code) = 1
         AND g.code = left(a.code, 1);
+    -- ── Phase 27 بند۱: Opportunity as a first-class entity ──────────────────
+    -- Deal value used to live on the lead itself, which cannot express what a
+    -- real customer looks like: one account with SEVERAL open deals at once (a
+    -- network project AND a support contract). A lead is a person/company you
+    -- are qualifying; an opportunity is a deal you are working.
+    CREATE TABLE IF NOT EXISTS crm_opportunities (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER REFERENCES sales_customers(id) ON DELETE SET NULL,
+      lead_id INTEGER REFERENCES crm_leads(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'IRR',
+      probability INTEGER NOT NULL DEFAULT 10 CHECK(probability BETWEEN 0 AND 100),
+      stage TEXT NOT NULL DEFAULT 'identified'
+        CHECK(stage IN ('identified','qualified','proposal','negotiation','won','lost')),
+      expected_close_date TEXT,
+      owner_id TEXT REFERENCES users(id),
+      -- why it was won or lost: the input the loss analysis in بند۴ reads
+      outcome_reason TEXT,
+      -- two-way link to the sales document a won opportunity became
+      sales_document_id INTEGER,
+      notes TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_opp_customer ON crm_opportunities(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_crm_opp_stage ON crm_opportunities(stage);
+    CREATE INDEX IF NOT EXISTS idx_crm_opp_owner ON crm_opportunities(owner_id);
+
+    -- Optional proposed lines, so a won opportunity converts straight into a
+    -- quotation/invoice instead of being re-typed.
+    CREATE TABLE IF NOT EXISTS crm_opportunity_items (
+      id SERIAL PRIMARY KEY,
+      opportunity_id INTEGER NOT NULL REFERENCES crm_opportunities(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      qty NUMERIC(18,3) NOT NULL DEFAULT 1,
+      unit_price NUMERIC(18,2) NOT NULL DEFAULT 0,
+      discount_pct NUMERIC(6,2) NOT NULL DEFAULT 0,
+      tax_pct NUMERIC(6,2) NOT NULL DEFAULT 0,
+      product_id INTEGER,
+      line_no INTEGER NOT NULL DEFAULT 0,
+      company_id INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_opp_items ON crm_opportunity_items(opportunity_id);
+
+    -- ── Phase 27 بند۲: loyalty club ─────────────────────────────────────────
+    -- Points are a LIABILITY, not decoration: every point earned is a discount
+    -- the company owes. So the balance is never written directly — it is the
+    -- sum of an append-only ledger, exactly like the GL. That is what makes a
+    -- reversal possible when the originating invoice is returned.
+    CREATE TABLE IF NOT EXISTS loyalty_programs (
+      id SERIAL PRIMARY KEY,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'points' CHECK(kind IN ('points','tier','hybrid')),
+      -- points earned per 1 unit of invoice value
+      earn_rate NUMERIC(12,6) NOT NULL DEFAULT 0.001,
+      -- currency value of one point when redeemed
+      redeem_rate NUMERIC(12,6) NOT NULL DEFAULT 1,
+      points_expire_days INTEGER,
+      active INTEGER NOT NULL DEFAULT 1,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS loyalty_tiers (
+      id SERIAL PRIMARY KEY,
+      program_id INTEGER NOT NULL REFERENCES loyalty_programs(id) ON DELETE CASCADE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      threshold NUMERIC(18,2) NOT NULL DEFAULT 0,
+      discount_pct NUMERIC(6,2) NOT NULL DEFAULT 0,
+      benefits_en TEXT,
+      benefits_fa TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_loyalty_tiers_program ON loyalty_tiers(program_id);
+
+    CREATE TABLE IF NOT EXISTS loyalty_accounts (
+      id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES sales_customers(id) ON DELETE CASCADE,
+      program_id INTEGER NOT NULL REFERENCES loyalty_programs(id) ON DELETE CASCADE,
+      -- a CACHE of the ledger, refreshed from it; never the source of truth
+      balance NUMERIC(18,2) NOT NULL DEFAULT 0,
+      total_earned NUMERIC(18,2) NOT NULL DEFAULT 0,
+      total_spent NUMERIC(18,2) NOT NULL DEFAULT 0,
+      tier_id INTEGER REFERENCES loyalty_tiers(id) ON DELETE SET NULL,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW}),
+      UNIQUE(customer_id, program_id)
+    );
+
+    -- The ledger. The points column is signed: earn positive, redeem/expire/
+    -- reversal negative. ref_type/ref_id tie every movement to its source
+    -- document, which is what makes "why do I have these points?" answerable.
+    CREATE TABLE IF NOT EXISTS loyalty_transactions (
+      id SERIAL PRIMARY KEY,
+      account_id INTEGER NOT NULL REFERENCES loyalty_accounts(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK(kind IN ('earn','redeem','expire','adjust','reversal')),
+      points NUMERIC(18,2) NOT NULL,
+      ref_type TEXT,
+      ref_id INTEGER,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_loyalty_tx_account ON loyalty_transactions(account_id);
+    CREATE INDEX IF NOT EXISTS idx_loyalty_tx_ref ON loyalty_transactions(ref_type, ref_id);
+
+    CREATE TABLE IF NOT EXISTS coupons (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      kind TEXT NOT NULL DEFAULT 'percent' CHECK(kind IN ('percent','amount')),
+      value NUMERIC(18,2) NOT NULL DEFAULT 0,
+      min_order_total NUMERIC(18,2) NOT NULL DEFAULT 0,
+      max_redemptions INTEGER,
+      max_per_customer INTEGER NOT NULL DEFAULT 1,
+      valid_from TEXT,
+      valid_until TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS coupon_redemptions (
+      id SERIAL PRIMARY KEY,
+      coupon_id INTEGER NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+      customer_id INTEGER REFERENCES sales_customers(id) ON DELETE SET NULL,
+      sales_document_id INTEGER,
+      discount_amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_coupon_redemptions ON coupon_redemptions(coupon_id, customer_id);
+
+    -- Cashback has a real accounting effect, so the GL mapping is configurable
+    -- and DEFAULTS TO OFF until an accountant decides which accounts to use.
+    INSERT INTO erp_settings (key, value)
+    SELECT * FROM (VALUES
+      ('loyalty_gl_enabled','0'),
+      ('loyalty_gl_expense','6900'),
+      ('loyalty_gl_liability','2900')
+    ) AS v(k,val)
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings s WHERE s.key = v.k);
+
+    -- Configurable loss reasons (بند۱) — a free-text reason cannot be analysed.
+    CREATE TABLE IF NOT EXISTS crm_loss_reasons (
+      id SERIAL PRIMARY KEY,
+      label_en TEXT NOT NULL,
+      label_fa TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    INSERT INTO crm_loss_reasons (label_en, label_fa, sort_order)
+    SELECT * FROM (VALUES
+      ('Price too high','قیمت بالا',1),
+      ('Lost to competitor','انتخاب رقیب',2),
+      ('No budget','نبود بودجه',3),
+      ('Timing / postponed','زمان‌بندی نامناسب',4),
+      ('No decision','بدون تصمیم',5),
+      ('Requirements not met','عدم تطابق با نیاز',6)
+    ) AS v(a,b,c)
+    WHERE NOT EXISTS (SELECT 1 FROM crm_loss_reasons);
+
+    -- One-time, idempotent: a WON lead that carried a value was, in the old
+    -- model, the only place that deal existed. Give it an opportunity so the
+    -- pipeline history is not lost. Open leads are deliberately untouched —
+    -- they are still leads, not yet deals.
+    INSERT INTO crm_opportunities (customer_id, lead_id, title, amount, probability, stage, owner_id, created_at)
+    SELECT l.converted_customer_id, l.id, l.name, l.value, 100, 'won', l.owner_id, l.created_at
+    FROM crm_leads l
+    WHERE l.status='won' AND COALESCE(l.value,0) > 0
+      AND NOT EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.lead_id = l.id);
   `)
 }

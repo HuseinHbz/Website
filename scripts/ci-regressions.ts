@@ -22,6 +22,7 @@ const SUITES = [
   { name: '26.27 RBAC/ABAC/2FA security matrix', script: 'verify-2627-rbac.ts', db: 'rg_2627' },
   { name: '26.28 ABAC row/field scope + 2FA policy', script: 'verify-2628-abac.ts', db: 'rg_2628' },
   { name: '26.29 nav reorg + RBAC key migration', script: 'verify-2629-navkeys.ts', db: 'rg_2629' },
+  { name: '27 CRM completion (opportunities + loyalty)', script: 'verify-27-crm.ts', db: 'rg_27' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'
