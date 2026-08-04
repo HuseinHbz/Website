@@ -56,6 +56,11 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   // approving it and paying it must be able to sit with different people
   // (maker/checker); `sensitive_view` gates national id and bank details.
   'hr.employees': ['sensitive_view', 'delete'],
+  // Phase 28.2 — deciding on someone's leave and correcting a balance by hand
+  // are different authorities from recording attendance, so `write` does not
+  // imply them. `adjust` in particular writes days into the ledger with no
+  // request behind it and must be traceable to a person who was granted it.
+  'hr.leave': ['approve', 'adjust'],
   'erp.inventory': ['cost_view'],   // بند ۶.۲ — sensitive-field grant (unit cost / valuation)
   'erp.approvals': ['approve', 'reject', 'delegate'],
   'erp.moadian': ['submit'],

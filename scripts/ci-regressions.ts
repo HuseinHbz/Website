@@ -24,6 +24,7 @@ const SUITES = [
   { name: '26.29 nav reorg + RBAC key migration', script: 'verify-2629-navkeys.ts', db: 'rg_2629' },
   { name: '27 CRM completion (opportunities + loyalty)', script: 'verify-27-crm.ts', db: 'rg_27' },
   { name: '28.1 HR personnel + employment history', script: 'verify-28-hr.ts', db: 'rg_28' },
+  { name: '28.2 HR leave ledger + attendance', script: 'verify-28-2-leave.ts', db: 'rg_282' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

@@ -3073,6 +3073,167 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_hr_dependents_emp ON hr_dependents(employee_id);
 
+    -- ══ Phase 28.2: leave, attendance, missions ═════════════════════════════
+    -- Iranian public holidays MOVE every year, so they are data the operator
+    -- maintains — never a hardcoded list that silently rots.
+    CREATE TABLE IF NOT EXISTS hr_holidays (
+      id SERIAL PRIMARY KEY,
+      date TEXT NOT NULL,
+      title_fa TEXT NOT NULL,
+      title_en TEXT,
+      kind TEXT NOT NULL DEFAULT 'public' CHECK(kind IN ('public','religious','company')),
+      company_id INTEGER,
+      UNIQUE(date, company_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_holidays_date ON hr_holidays(date);
+
+    -- The organisation's working week. In Iran Friday is the weekly rest day
+    -- and Thursday is commonly a half or non-working day — so it is settings,
+    -- not an assumption baked into a function.
+    CREATE TABLE IF NOT EXISTS hr_work_calendar (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL DEFAULT 'default',
+      -- 0=Saturday … 6=Friday (Iranian week order)
+      working_days TEXT NOT NULL DEFAULT '0,1,2,3,4',
+      daily_hours NUMERIC(5,2) NOT NULL DEFAULT 8,
+      company_id INTEGER,
+      active INTEGER NOT NULL DEFAULT 1
+    );
+    INSERT INTO hr_work_calendar (name, working_days, daily_hours)
+    SELECT 'default', '0,1,2,3,4', 8
+    WHERE NOT EXISTS (SELECT 1 FROM hr_work_calendar);
+
+    CREATE TABLE IF NOT EXISTS hr_leave_types (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      name_en TEXT NOT NULL,
+      name_fa TEXT NOT NULL,
+      paid INTEGER NOT NULL DEFAULT 1,
+      -- days accrued per month; the labour-law default is 2.5 but it is
+      -- configurable because contracts differ
+      accrual_per_month NUMERIC(6,2) NOT NULL DEFAULT 0,
+      max_days_per_year NUMERIC(6,2),
+      requires_document INTEGER NOT NULL DEFAULT 0,
+      deducts_balance INTEGER NOT NULL DEFAULT 1,
+      active INTEGER NOT NULL DEFAULT 1,
+      company_id INTEGER
+    );
+    INSERT INTO hr_leave_types (code, name_en, name_fa, paid, accrual_per_month, requires_document, deducts_balance)
+    SELECT * FROM (VALUES
+      ('annual','Annual leave','مرخصی استحقاقی',1,2.5,0,1),
+      ('sick','Sick leave','مرخصی استعلاجی',1,0,1,0),
+      ('unpaid','Unpaid leave','مرخصی بدون حقوق',0,0,0,0),
+      ('maternity','Maternity leave','مرخصی زایمان',1,0,1,0),
+      ('marriage','Marriage leave','مرخصی ازدواج',1,0,1,0),
+      ('bereavement','Bereavement leave','مرخصی فوت بستگان',1,0,0,0)
+    ) AS v(a,b,c,d,e,f,g)
+    WHERE NOT EXISTS (SELECT 1 FROM hr_leave_types);
+
+    -- LEDGER, not a balance column (the 27 lesson): every accrual, use,
+    -- carry-over, payout and reversal is a signed row, so a cancelled leave can
+    -- be given back and the balance always explains itself.
+    CREATE TABLE IF NOT EXISTS hr_leave_transactions (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      leave_type_id INTEGER NOT NULL REFERENCES hr_leave_types(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK(kind IN ('accrual','use','carry_over','payout','adjust','reversal')),
+      days NUMERIC(8,2) NOT NULL,
+      ref_type TEXT,
+      ref_id INTEGER,
+      period TEXT,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_leave_tx ON hr_leave_transactions(employee_id, leave_type_id);
+    CREATE INDEX IF NOT EXISTS idx_hr_leave_tx_ref ON hr_leave_transactions(ref_type, ref_id);
+
+    CREATE TABLE IF NOT EXISTS hr_leave_requests (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      leave_type_id INTEGER NOT NULL REFERENCES hr_leave_types(id),
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      days NUMERIC(8,2) NOT NULL DEFAULT 0,
+      half_day INTEGER NOT NULL DEFAULT 0,
+      reason TEXT,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','pending','approved','rejected','cancelled')),
+      approval_request_id INTEGER,
+      decided_by TEXT REFERENCES users(id),
+      decided_at TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_leave_req ON hr_leave_requests(employee_id, status);
+
+    CREATE TABLE IF NOT EXISTS hr_attendance (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      check_in TEXT,
+      check_out TEXT,
+      source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('manual','device','self')),
+      late_minutes INTEGER NOT NULL DEFAULT 0,
+      early_leave_minutes INTEGER NOT NULL DEFAULT 0,
+      worked_minutes INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      UNIQUE(employee_id, date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_attendance ON hr_attendance(employee_id, date);
+
+    -- Overtime is a direct payroll input, so its KIND matters: the statutory
+    -- multiplier differs for ordinary, holiday and night work.
+    CREATE TABLE IF NOT EXISTS hr_overtime (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      hours NUMERIC(6,2) NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'normal' CHECK(kind IN ('normal','holiday','night')),
+      approved INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_overtime ON hr_overtime(employee_id, date);
+
+    CREATE TABLE IF NOT EXISTS hr_missions (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      destination TEXT NOT NULL,
+      purpose TEXT,
+      estimated_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+      actual_cost NUMERIC(18,2),
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','pending','approved','rejected','completed')),
+      petty_cash_entry_id INTEGER,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_missions ON hr_missions(employee_id, status);
+
+    -- 28.2: a default approval rule for leave.
+    --
+    -- The approval engine auto-approves a document type it has NO rule for.
+    -- That default is wrong for absence: leave must default to "needs a
+    -- decision", not to "granted", or a request is approved the moment it is
+    -- typed and no manager ever sees it. The rule is editable in the Approval
+    -- Center like any other.
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, levels, priority, active)
+      SELECT 'leave_request', 'Leave approval', 'تأیید مرخصی', 0,
+             '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
+      WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='leave_request');
+
+
 
     -- Configurable loss reasons (بند۱) — a free-text reason cannot be analysed.
     CREATE TABLE IF NOT EXISTS crm_loss_reasons (

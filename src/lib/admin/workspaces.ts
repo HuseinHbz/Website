@@ -112,6 +112,7 @@ export const WORKSPACES: Workspace[] = [
     descFa: 'پروندهٔ پرسنلی، سوابق استخدامی، مرخصی و حقوق و دستمزد',
     groups: [{ en: 'People', fa: 'کارکنان', items: [
       { labelEn: 'Employees', labelFa: 'پرسنل', href: '/admin/employees', icon: '👥' },
+      { labelEn: 'Leave & Attendance', labelFa: 'مرخصی و حضور و غیاب', href: '/admin/leave', icon: '🗓️' },
     ] }],
   },
   {

@@ -1,9 +1,9 @@
 # Phase 28 — HRM platform
 
 > **Scope reality, stated up front.** The phase brief calls this five sub-phases
-> and says each closes independently with its own gate. **28.1 is complete and
-> verified. 28.2–28.5 are not started.** This report covers 28.1 only; nothing
-> below is claimed for the rest.
+> and says each closes independently with its own gate. **28.1 and 28.2 are
+> complete and verified. 28.3–28.5 are not started.** Nothing below is claimed
+> for the rest.
 
 ---
 
@@ -12,7 +12,7 @@
 | Sub-phase | Status | Evidence |
 |---|---|---|
 | **28.1** پرسنل و پروندهٔ کارکنان | ✅ **بسته شد** | live-PG **27/27** · 30 unit tests · module audit **81/81** · browser fa/en × light/dark |
-| **28.2** مرخصی، حضور و غیاب | ⏳ شروع نشده | — |
+| **28.2** مرخصی، حضور و غیاب | ✅ **بسته شد** | live-PG **43/43** · 40 unit tests · 12 audits 0 · regressions 17/17 |
 | **28.3** حقوق و دستمزد ایران | ⏳ شروع نشده | 🔴 نیازمند تأیید حسابدار — §5 |
 | **28.4** پورتال کارمند | ⏳ شروع نشده | — |
 | **28.5** استخدام، آموزش، ارزیابی | ⏳ شروع نشده | — |
@@ -135,3 +135,89 @@ Habibazar`، `Ctrl`)
 `scripts/ci-regressions.ts` · `scripts/module-audit.ts` ·
 `src/lib/admin/__tests__/workspaces.test.ts` + `scripts/verify-2629-navkeys.ts` (CC-006) ·
 `docs/governance/contract-changes.md`
+
+
+---
+
+## 8. Attestation — 28.2
+
+| بند | وضعیت | شاهد |
+|---|---|---|
+| جداول (۸ جدول) | ✅ | migration روی دیتابیس خالی تمیز اجرا شد |
+| `company_id` روی همه | ✅ | `audit:tenancy` **0** |
+| 🔴 تعطیلات رسمی قابل ویرایش | ✅ | live: افزودن تعطیلی، روز کاری بازه را **۵ → ۴** کرد |
+| مرخصی استحقاقی ۲.۵ روز/ماه، قابل تنظیم | ✅ | `accrual_per_month` در `hr_leave_types` |
+| اتصال به `approval_matrix` موجود | ✅ | `leave_request` از قبل یکی از docType‌های موتور ۲۶.۱۲ بود |
+| 🔴 ابطال مرخصی → تراکنش معکوس | ✅ | ۵ ادعای live-PG — §9 |
+| تعلق ماهانه idempotent | ✅ | live: اجرای دوم همان ماه، `employees: 0` و مانده بدون تغییر |
+| محاسبهٔ روز سمت سرور | ✅ | live: `days: 4` برای بازهٔ ۵روزهٔ حاوی تعطیلی |
+| رد کردن به‌جای کوتاه‌کردن | ✅ | live: `insufficient_balance` با گزارش روزِ خواسته‌شده (۲۱۷) |
+| `requirePermission` + op جداگانه | ✅ | `audit:rbac` **163 guarded · 0 failures**؛ `hr.leave:approve` و `:adjust` |
+| `runOnce` روی create | ✅ | درخواست، اضافه‌کار، مأموریت، تعطیلی |
+| AdminShell + دوزبانه + تقویم شمسی | ✅ | `audit:shell` 0 · `audit:i18n` 0 · `toJalaliStr` |
+| اضافه‌کار با ضریب قانونی | ✅ | ۱.۴ برابر — قانون کار مادهٔ ۵۹، به‌عنوان ثابت نام‌دار |
+
+---
+
+## 9. 🔴 چرا مانده یک دفتر است
+
+اگر مانده یک ستون بود، ابطال یک مرخصیِ تأییدشده آن ستون را زیاد می‌کرد و هیچ
+ردی نمی‌ماند — دقیقاً همان اشتباهی که در ۲۶.۲۶b (BUG-020) روی سند حسابداری
+گرفته شد و در ۲۷ روی دفتر امتیاز تکرار نشد.
+
+پس ابطال، سطر استفادهٔ اصلی را **نگه می‌دارد** و یک سطر برگشت می‌نویسد. اثبات
+زنده:
+
+```
+✅ 🔴 the balance is back to what it was before the leave — 18.5 → 22.5
+✅ 🔴 the ORIGINAL use row survives — history is not rewritten — 1 use rows
+✅ 🔴 a compensating reversal row was posted — 1 rows, 4 days
+✅ the two rows net to zero — exactly like a reversing GL entry — -4 + 4
+✅ 🔴 cancelling twice does NOT credit the days twice (idempotent) — 22.5 → 22.5
+```
+
+---
+
+## 10. باگی که خودِ سوئیت پیدا کرد
+
+دو ادعا در اجرای اول شکست خورد، و علتش یک نقص واقعی بود نه ایراد تست:
+
+**موتور تأیید، هر نوع سندی را که برایش قاعده‌ای تعریف نشده باشد به‌صورت خودکار
+تأیید می‌کند.** برای مرخصی این پیش‌فرض غلط است — درخواست همان لحظه که تایپ
+می‌شد تأیید می‌شد و هیچ مدیری آن را نمی‌دید. غیبت باید پیش‌فرضش «نیازمند
+تصمیم» باشد، نه «داده‌شده».
+
+اصلاح: یک قاعدهٔ پیش‌فرض `leave_request` در `migrate.ts` seed شد (idempotent،
+مثل قاعدهٔ `journal_entry` در ۲۶.۲۳) و مثل هر قاعدهٔ دیگری در Approval Center
+قابل ویرایش است. بعد از آن، ادعای «درخواستِ در انتظار، روزها را قفل نمی‌کند»
+مسیر واقعی را آزمود و ۴۳/۴۳ سبز شد.
+
+اگر سوئیت فقط کد را می‌خواند، این را نمی‌دید.
+
+---
+
+## 11. Gates — 28.2
+
+TypeScript **0** · ESLint **0** · unit tests **1005** (بود ۹۶۵ → +۴۰) ·
+governance audits **12/12 صفر** · build clean · regression suites **17/17**
+(سوئیت ۲۸.۲ ثبت شد) · live-PG **43/43**
+
+**مرز صادقانه:** ماژول مرخصی در `scripts/module-audit.ts` ورودی `CREATE`
+ندارد، چون ساختِ درخواست به کارمند و نوع مرخصیِ موجود نیاز دارد و یک payload
+ثابت نمی‌تواند آن را بسازد؛ صفحه و لیستش خودکار probe می‌شوند و نوشتنش با
+سوئیت اختصاصی ۴۳ ادعایی پوشش داده شده است.
+
+---
+
+## 12. Changelog — 28.2
+
+**New**
+`src/lib/hr/leave.ts` (+40 tests) · `src/lib/hr/leaveData.ts` ·
+`src/app/api/admin/hr/leave/route.ts` · `src/app/admin/leave/*` ·
+`scripts/verify-28-2-leave.ts` (۴۳ ادعا)
+
+**Changed**
+`src/lib/db/migrate.ts` (۸ جدول ۲۸.۲ + قاعدهٔ تأیید پیش‌فرض مرخصی) ·
+`src/lib/admin/workspaces.ts` (آیتم «مرخصی و حضور و غیاب») ·
+`src/lib/rbac/registry.ts` (`hr.leave:approve` + `:adjust`) ·
+`scripts/ci-regressions.ts` · `docs/HRM_GUIDE_FA.md`
