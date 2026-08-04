@@ -3489,6 +3489,148 @@ export async function runMigrations() {
     -- ── seed: ruleset 1405 v1 ───────────────────────────────────────────────
     -- Idempotent AND non-destructive: it only ever inserts the ruleset if that
     -- (year, version) is absent, so an operator's edits are never overwritten.
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 28.3-ب — annual entitlements and final settlement.
+    --
+    -- 🔴 The distinction the whole sub-phase turns on: "پایهٔ سنوات" (a monthly
+    -- recurring allowance added to pay, already handled in 28.3-الف as an
+    -- earning type) and "سنوات پایان خدمت" (one month's pay per year of
+    -- service, paid when someone leaves) are TWO DIFFERENT THINGS. Conflating
+    -- them is the one error here that stays invisible for years and only
+    -- surfaces at the final settlement, when it is expensive and disputed.
+    -- These tables are only about the SECOND one.
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    CREATE TABLE IF NOT EXISTS payroll_eid_calculations (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id),
+      jalali_year INTEGER NOT NULL,
+      service_days INTEGER NOT NULL DEFAULT 0,
+      days_in_year INTEGER NOT NULL DEFAULT 365,
+      monthly_base NUMERIC(18,2) NOT NULL DEFAULT 0,
+      gross NUMERIC(18,2) NOT NULL DEFAULT 0,
+      floor_applied NUMERIC(18,2),
+      ceiling_applied NUMERIC(18,2),
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      tax NUMERIC(18,2) NOT NULL DEFAULT 0,
+      net NUMERIC(18,2) NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','approved','paid','reversed','correction')),
+      gl_entry_id INTEGER,
+      reversal_of INTEGER,
+      reversed_by INTEGER,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_eid ON payroll_eid_calculations(employee_id, jalali_year);
+
+    CREATE TABLE IF NOT EXISTS payroll_severance_calculations (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      ruleset_id INTEGER NOT NULL REFERENCES payroll_rulesets(id),
+      from_date TEXT NOT NULL,
+      to_date TEXT NOT NULL,
+      service_days INTEGER NOT NULL DEFAULT 0,
+      daily_base NUMERIC(18,2) NOT NULL DEFAULT 0,
+      base_policy TEXT NOT NULL DEFAULT 'last',
+      days_per_year NUMERIC(8,2) NOT NULL DEFAULT 30,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      accrued_before NUMERIC(18,2) NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','approved','paid','reversed','correction')),
+      gl_entry_id INTEGER,
+      reversal_of INTEGER,
+      reversed_by INTEGER,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_severance ON payroll_severance_calculations(employee_id);
+
+    -- Monthly severance provision. OFF by default: recognising the liability as
+    -- it accrues is the accounting-correct treatment, but whether to do it is a
+    -- company policy an accountant must decide, so the system does not assume.
+    CREATE TABLE IF NOT EXISTS payroll_severance_accruals (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      period_id INTEGER REFERENCES payroll_periods(id) ON DELETE CASCADE,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'accrual' CHECK(kind IN ('accrual','settlement','reversal')),
+      gl_entry_id INTEGER,
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_sev_accrual ON payroll_severance_accruals(employee_id, period_id);
+
+    CREATE TABLE IF NOT EXISTS payroll_settlements (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      end_date TEXT NOT NULL,
+      reason TEXT,
+      last_slip_id INTEGER,
+      severance_id INTEGER,
+      eid_id INTEGER,
+      final_pay NUMERIC(18,2) NOT NULL DEFAULT 0,
+      severance NUMERIC(18,2) NOT NULL DEFAULT 0,
+      eid NUMERIC(18,2) NOT NULL DEFAULT 0,
+      leave_encashment NUMERIC(18,2) NOT NULL DEFAULT 0,
+      leave_days NUMERIC(8,2) NOT NULL DEFAULT 0,
+      loan_outstanding NUMERIC(18,2) NOT NULL DEFAULT 0,
+      other_deductions NUMERIC(18,2) NOT NULL DEFAULT 0,
+      total NUMERIC(18,2) NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','approved','paid','reversed')),
+      gl_entry_id INTEGER,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      approved_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_settlements ON payroll_settlements(employee_id);
+
+    -- Configurable legal-export layouts. The exact column order of the social
+    -- security (DSK) and tax files can change; a layout that lives in the
+    -- database can be corrected without a release.
+    CREATE TABLE IF NOT EXISTS payroll_export_layouts (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL,
+      title_fa TEXT NOT NULL,
+      title_en TEXT NOT NULL,
+      kind TEXT NOT NULL CHECK(kind IN ('insurance','tax','summary')),
+      delimiter TEXT NOT NULL DEFAULT ',',
+      include_header INTEGER NOT NULL DEFAULT 1,
+      encoding TEXT NOT NULL DEFAULT 'utf-8',
+      columns TEXT NOT NULL,
+      verified INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_export_key
+      ON payroll_export_layouts(key, COALESCE(company_id, 0));
+
+    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES
+      ('2330','Eid Bonus Payable','عیدی پرداختنی','liability'),
+      ('2340','Severance Provision','ذخیرهٔ سنوات','liability'),
+      ('6120','Eid Bonus Expense','هزینهٔ عیدی','expense'),
+      ('6130','Severance Expense','هزینهٔ سنوات','expense')
+    ON CONFLICT (code) DO NOTHING;
+
+    INSERT INTO erp_settings (key, value)
+    SELECT * FROM (VALUES
+      ('gl_map_payroll_eid_expense','6120'),
+      ('gl_map_payroll_eid_payable','2330'),
+      ('gl_map_payroll_severance_expense','6130'),
+      ('gl_map_payroll_severance_payable','2340')
+    ) AS v(k,val)
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings s WHERE s.key = v.k);
+
     INSERT INTO payroll_rulesets (year, version, title, effective_from, effective_to, source, status)
       SELECT 1405, 1, 'مجموعه‌قوانین حقوق و دستمزد ۱۴۰۵', '2026-03-21', '2027-03-20',
              'بخشنامهٔ مزد ۱۴۰۵ — مقدار اولیه، لطفاً با بخشنامهٔ رسمی تطبیق دهید', 'draft'
@@ -3524,6 +3666,16 @@ export async function runMigrations() {
         ['company', 'rounding', 'گرد کردن خالص پرداختی', 'Net rounding', 'amount', 1000, 'ریال', 'صفر یعنی بدون گرد کردن', 7],
         ['company', 'absence_deduction_enabled', 'کسر غیبت', 'Deduct absence', 'boolean', 1, null, null, 8],
         ['company', 'late_deduction_enabled', 'کسر تأخیر', 'Deduct lateness', 'boolean', 0, null, 'پیش‌فرض خاموش — سیاست شرکت است نه الزام قانونی', 9],
+        // ── 28.3-ب: annual entitlements. Statutory shape, editable values.
+        ['labor', 'eid_days', 'روزهای مبنای عیدی', 'Eid bonus days', 'integer', 60, 'روز', 'عیدی معادل چند روز آخرین مزد', 10],
+        ['labor', 'eid_min_days_of_min_wage', 'حداقل عیدی (روزِ حداقل مزد)', 'Eid floor in minimum-wage days', 'integer', 60, 'روز', null, 11],
+        ['labor', 'eid_max_days_of_min_wage', 'حداکثر عیدی (روزِ حداقل مزد)', 'Eid ceiling in minimum-wage days', 'integer', 90, 'روز', null, 12],
+        ['tax', 'eid_tax_exempt_amount', 'معافیت مالیاتی عیدی', 'Eid tax exemption', 'amount', 0, 'ریال', 'صفر یعنی عیدی کاملاً مشمول است — طبق بخشنامهٔ سال تنظیم شود', 2],
+        ['labor', 'severance_days_per_year', 'روزهای سنوات به ازای هر سال', 'Severance days per year of service', 'integer', 30, 'روز', 'یک ماه مزد به ازای هر سال — حداقل قانونی', 13],
+        ['company', 'severance_base_policy', 'مبنای سنوات', 'Severance base policy', 'integer', 0, null, 'صفر = آخرین مزد · یک = میانگین سه ماه آخر', 10],
+        ['company', 'severance_accrual_enabled', 'ذخیرهٔ ماهانهٔ سنوات', 'Monthly severance provision', 'boolean', 0, null, '🔴 پیش‌فرض خاموش — شناسایی ماهانهٔ بدهی سنوات را با حسابدار خود تصمیم بگیرید', 11],
+        ['company', 'leave_encashment_enabled', 'بازخرید مرخصی استفاده‌نشده', 'Encash unused leave', 'boolean', 1, null, null, 12],
+        ['company', 'leave_encashment_max_days', 'سقف روز قابل بازخرید', 'Maximum encashable leave days', 'integer', 9, 'روز', 'صفر یعنی بدون سقف', 13],
       ]
       for (const [g, k, fa, en, t, v, unit, desc, sort] of params) {
         await pgQuery(
@@ -3582,6 +3734,66 @@ export async function runMigrations() {
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) ON CONFLICT DO NOTHING`,
           [rs1405, k, fa, en, grp, rec, ins, tax, eid, sev, ot, method, pk, sort])
       }
+    }
+  }
+
+  // 28.3-ب: export layouts. These are STARTING POINTS whose column order has
+  // NOT been verified against a real submission file — `verified` stays 0 until
+  // the operator confirms it against the portal, and the UI says so.
+  const hasLayouts = (await pgQuery<{ n: string }>(
+    `SELECT count(*)::text AS n FROM payroll_export_layouts`))[0]?.n !== '0'
+  if (!hasLayouts) {
+    const layouts: [string, string, string, string, string][] = [
+      ['dsk_insurance', 'لیست بیمه (تأمین اجتماعی)', 'Social security list (DSK)', 'insurance',
+        JSON.stringify([
+          { key: 'row', labelFa: 'ردیف' },
+          { key: 'insuranceNo', labelFa: 'شمارهٔ بیمه' },
+          { key: 'nationalId', labelFa: 'کد ملی' },
+          { key: 'firstName', labelFa: 'نام' },
+          { key: 'lastName', labelFa: 'نام خانوادگی' },
+          { key: 'fatherName', labelFa: 'نام پدر' },
+          { key: 'birthDate', labelFa: 'تاریخ تولد' },
+          { key: 'hireDate', labelFa: 'تاریخ شروع' },
+          { key: 'workedDays', labelFa: 'روزهای کارکرد' },
+          { key: 'insuranceBase', labelFa: 'مبنای بیمه' },
+          { key: 'employeeInsurance', labelFa: 'سهم بیمه‌شده' },
+          { key: 'employerInsurance', labelFa: 'سهم کارفرما' },
+          { key: 'unemploymentInsurance', labelFa: 'بیمهٔ بیکاری' },
+        ])],
+      ['tax_payroll', 'لیست مالیات حقوق', 'Payroll tax list', 'tax',
+        JSON.stringify([
+          { key: 'row', labelFa: 'ردیف' },
+          { key: 'nationalId', labelFa: 'کد ملی' },
+          { key: 'firstName', labelFa: 'نام' },
+          { key: 'lastName', labelFa: 'نام خانوادگی' },
+          { key: 'employeeCode', labelFa: 'کد پرسنلی' },
+          { key: 'gross', labelFa: 'جمع ناخالص' },
+          { key: 'exemptTotal', labelFa: 'معافیت‌ها' },
+          { key: 'taxableIncome', labelFa: 'درآمد مشمول' },
+          { key: 'tax', labelFa: 'مالیات' },
+          { key: 'net', labelFa: 'خالص پرداختی' },
+        ])],
+      ['period_summary', 'خلاصهٔ دوره برای حسابداری', 'Period summary for accounting', 'summary',
+        JSON.stringify([
+          { key: 'employeeCode', labelFa: 'کد پرسنلی' },
+          { key: 'fullName', labelFa: 'نام و نام خانوادگی' },
+          { key: 'workedDays', labelFa: 'روز کارکرد' },
+          { key: 'gross', labelFa: 'جمع مزایا' },
+          { key: 'insuranceBase', labelFa: 'مبنای بیمه' },
+          { key: 'employeeInsurance', labelFa: 'بیمهٔ کارمند' },
+          { key: 'employerInsurance', labelFa: 'بیمهٔ کارفرما' },
+          { key: 'tax', labelFa: 'مالیات' },
+          { key: 'deductions', labelFa: 'کسورات' },
+          { key: 'net', labelFa: 'خالص' },
+        ])],
+    ]
+    for (const [key, fa, en, kind, columns] of layouts) {
+      await pgQuery(
+        `INSERT INTO payroll_export_layouts (key, title_fa, title_en, kind, columns, verified, note)
+         VALUES ($1,$2,$3,$4,$5,0,$6) ON CONFLICT DO NOTHING`,
+        [key, fa, en, kind, columns,
+          kind === 'summary' ? null
+            : 'ساختار ستون‌ها با فایل واقعی سامانه تطبیق داده نشده است — پیش از ارسال، ترتیب ستون‌ها را بررسی و تأیید کنید'])
     }
   }
 

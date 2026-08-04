@@ -265,6 +265,31 @@
    defined from the UI with no migration. The tax exemption lives in the bracket
    table as the leading 0% band and is NEVER also subtracted separately — doing
    both exempts it twice, silently. (مشمولیت داده است نه کد.)
+47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
+   بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
+   28.3-الف); the second is a termination benefit — one month's pay per year of
+   service, paid on exit. They share a Persian word and nothing else. Conflating
+   them is the one error in payroll that stays invisible for YEARS: the monthly
+   figure looks right and nobody checks the termination figure until someone
+   actually leaves. The separation is enforced by the type signature —
+   `calculateSeverance` takes a DAILY base and a service span, so a monthly
+   allowance cannot be passed to it by accident. Service days come from the
+   28.1 append-only history, and a partial year is pro-rated continuously, never
+   rounded down to whole years (rounding down underpays every leaver who did not
+   depart on their anniversary).
+48. **A severance provision already accrued is RELEASED at settlement, never
+   re-expensed (28.3-ب).** Monthly accrual recognises the liability as it
+   builds; charging the full amount again at termination doubles the expense.
+   The provision is off by default because whether to accrue is an accounting
+   policy the operator decides with their accountant, not an assumption the
+   system makes.
+49. **An export layout whose real format is unverified says so IN THE PRODUCT
+   (28.3-ب بند۴).** The DSK and payroll-tax column orders were never checked
+   against a real submission, so `payroll_export_layouts.verified` defaults to
+   0, the UI shows the warning, and the download carries
+   `X-Layout-Verified: 0`. The column order is DATA, so a wrong one is fixed
+   without a release. Guessing a statutory file format is forbidden — mark it
+   `blocked-external` and let the operator confirm it.
 46. **A rounding policy creates a real difference that must be recorded
    (28.3-الف).** Rounding the net makes the slip stop adding up AND unbalances
    the journal entry by the rounded-away amount, because the gross is expensed in

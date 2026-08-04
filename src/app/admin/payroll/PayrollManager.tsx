@@ -55,17 +55,47 @@ interface Slip {
 }
 interface TaxRow { seq: number; from: number; to: number | null; ratePercent: number; amountInBracket: number; tax: number }
 
-type Tab = 'periods' | 'slips' | 'rulesets' | 'tax' | 'insurance' | 'earnings' | 'loans'
+type Tab = 'periods' | 'slips' | 'eid' | 'severance' | 'settlements' | 'exports'
+  | 'rulesets' | 'tax' | 'insurance' | 'earnings' | 'loans'
 
 const TABS: { id: Tab; en: string; fa: string }[] = [
   { id: 'periods', en: 'Payroll runs', fa: 'دوره‌های حقوق' },
   { id: 'slips', en: 'Payslips', fa: 'فیش‌ها' },
+  { id: 'eid', en: 'Eid bonus', fa: 'عیدی' },
+  { id: 'severance', en: 'Severance', fa: 'سنوات پایان خدمت' },
+  { id: 'settlements', en: 'Final settlement', fa: 'تسویه‌حساب' },
+  { id: 'exports', en: 'Legal exports', fa: 'خروجی‌های قانونی' },
   { id: 'rulesets', en: 'Rule versions', fa: 'نسخه‌های قوانین' },
   { id: 'tax', en: 'Tax brackets', fa: 'پلکان مالیاتی' },
   { id: 'insurance', en: 'Rates & allowances', fa: 'نرخ‌ها و مزایا' },
   { id: 'earnings', en: 'Earning types', fa: 'اقلام حقوقی' },
   { id: 'loans', en: 'Loans', fa: 'وام‌ها' },
 ]
+
+interface EidRow {
+  id: number; employeeId: number; employeeName: string; employeeCode: string
+  jalaliYear: number; serviceDays: number; monthlyBase?: number
+  amount?: number; tax?: number; net?: number; status: string; glEntryId: number | null
+}
+interface SeveranceRow {
+  id: number; employeeId: number; employeeName: string; employeeCode: string
+  fromDate: string; toDate: string; serviceDays: number; dailyBase?: number
+  basePolicy: string; amount?: number; accruedBefore?: number
+  status: string; glEntryId: number | null
+}
+interface SettlementRow {
+  id: number; employeeId: number; employeeName: string; employeeCode: string
+  endDate: string; reason: string | null
+  finalPay?: number; severance?: number; eid?: number; leaveEncashment?: number
+  leaveDays: number; loanOutstanding?: number; total?: number
+  status: string; glEntryId: number | null
+}
+interface ExportLayout {
+  id: number; key: string; titleFa: string; titleEn: string; kind: string
+  delimiter: string; includeHeader: boolean
+  columns: { key: string; labelFa: string }[]
+  verified: boolean; note: string | null
+}
 
 const GROUP_LABELS: Record<string, { en: string; fa: string }> = {
   tax: { en: 'Tax', fa: 'مالیات' },
@@ -117,6 +147,19 @@ export function PayrollManager() {
   const [slips, setSlips] = useState<Slip[]>([])
   const [loans, setLoans] = useState<{ id: number; employeeName: string; totalAmount: number; monthlyAmount: number; paid: number; outstanding: number; status: string }[]>([])
 
+  const [eidRows, setEidRows] = useState<EidRow[]>([])
+  const [sevRows, setSevRows] = useState<SeveranceRow[]>([])
+  const [settlements, setSettlements] = useState<SettlementRow[]>([])
+  const [layouts, setLayouts] = useState<ExportLayout[]>([])
+  const [annual, setAnnual] = useState<{ eidCount: number; eidTotal: number; severanceCount: number; severanceTotal: number; severanceProvision: number; settlements: number } | null>(null)
+  const [eidYear, setEidYear] = useState('1405')
+  const [sevForm, setSevForm] = useState({ employeeId: '', endDate: '' })
+  const [setForm, setSetForm] = useState({ employeeId: '', endDate: '', reason: '', otherDeductions: '' })
+  const [sevModal, setSevModal] = useState(false)
+  const [setModal, setSetModal] = useState(false)
+  const [exportPeriod, setExportPeriod] = useState('')
+  const [employees, setEmployees] = useState<{ id: number; fullName: string }[]>([])
+
   const [previewIncome, setPreviewIncome] = useState('1000000000')
   const [preview, setPreview] = useState<TaxRow[] | null>(null)
 
@@ -143,6 +186,8 @@ export function PayrollManager() {
       setCanSeeAmounts(!!d.canSeeAmounts)
       if (!selRuleset && d.rulesets?.length) setSelRuleset(d.rulesets[0].id)
     }
+    const e = await fetch('/api/admin/hr/employees')
+    if (e.ok) setEmployees(((await e.json()).employees ?? []) as { id: number; fullName: string }[])
     setLoading(false)
   }, [selRuleset])
   useEffect(() => { load() }, [load])
@@ -169,6 +214,30 @@ export function PayrollManager() {
     if (r.ok) setLoans((await r.json()).loans ?? [])
   }, [])
   useEffect(() => { if (tab === 'loans') loadLoans() }, [tab, loadLoans])
+
+  const loadEid = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=eid')
+    if (r.ok) { const d = await r.json(); setEidRows(d.eid ?? []); setAnnual(d.overview ?? null) }
+  }, [])
+  const loadSeverance = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=severance')
+    if (r.ok) { const d = await r.json(); setSevRows(d.severance ?? []); setAnnual(d.overview ?? null) }
+  }, [])
+  const loadSettlements = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=settlements')
+    if (r.ok) setSettlements((await r.json()).settlements ?? [])
+  }, [])
+  const loadLayouts = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=exportLayouts')
+    if (r.ok) setLayouts((await r.json()).layouts ?? [])
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'eid') loadEid()
+    if (tab === 'severance') loadSeverance()
+    if (tab === 'settlements') loadSettlements()
+    if (tab === 'exports') loadLayouts()
+  }, [tab, loadEid, loadSeverance, loadSettlements, loadLayouts])
 
   async function post(body: Record<string, unknown>, okEn: string, okFa: string, after?: () => void) {
     const res = await fetch('/api/admin/hr/payroll', {
@@ -441,6 +510,205 @@ export function PayrollManager() {
         </div>
       )}
 
+
+      {tab === 'eid' && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-sm text-text-secondary mb-3">
+              {L(fa,
+                'The bonus is a number of days of the employee’s own recurring pay, pro-rated by service inside the year, then held between a floor and a ceiling expressed in days of the MINIMUM wage. That last part surprises people: the cap is not a multiple of their own salary, so most mid-to-high earners receive exactly the ceiling.',
+                'عیدی چند روز از مزایای مستمر خودِ کارمند است، به نسبت روزهای خدمت در همان سال، و بعد بین یک کف و یک سقف که هر دو بر حسب روزِ حداقل مزد تعریف شده‌اند محدود می‌شود. همین بند آخر معمولاً غافلگیرکننده است: سقف مضربی از حقوق خودِ فرد نیست، پس بیشتر حقوق‌های متوسط به بالا دقیقاً همان سقف را می‌گیرند.')}
+            </p>
+            <div className="flex gap-2 items-end">
+              <div className="w-40">
+                <Input label={L(fa, 'Jalali year', 'سال شمسی')} type="number" value={eidYear}
+                  onChange={setEidYear} placeholder="1405" />
+              </div>
+              <Btn onClick={() => post({ action: 'eid.calculate', jalaliYear: Number(eidYear) },
+                'Eid bonus calculated', 'عیدی محاسبه شد', loadEid)}>
+                {L(fa, 'Calculate for the year', 'محاسبه برای سال')}</Btn>
+            </div>
+          </Card>
+
+          {annual && (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {kpi(L(fa, 'Calculations', 'تعداد محاسبه'), num(annual.eidCount))}
+              {kpi(L(fa, 'Total Eid bonus', 'جمع عیدی'), canSeeAmounts ? money(annual.eidTotal) : '—')}
+              {kpi(L(fa, 'Severance provision', 'ذخیرهٔ سنوات'), canSeeAmounts ? money(annual.severanceProvision) : '—')}
+            </div>
+          )}
+
+          <DataTable<EidRow> tableId="hr-payroll-eid" rows={eidRows} locale={fa ? 'fa' : 'en'}
+            columns={[
+              { key: 'employeeCode', labelEn: 'Code', labelFa: 'کد پرسنلی',
+                render: r => <span className="font-mono text-xs text-brand" dir="ltr">{r.employeeCode}</span> },
+              { key: 'employeeName', labelEn: 'Employee', labelFa: 'کارمند' },
+              { key: 'jalaliYear', labelEn: 'Year', labelFa: 'سال', render: r => <span>{num(r.jalaliYear)}</span> },
+              { key: 'serviceDays', labelEn: 'Service days', labelFa: 'روزهای خدمت', numeric: true,
+                render: r => <span className="tabular-nums">{num(r.serviceDays)}</span> },
+              { key: 'amount', labelEn: 'Eid bonus', labelFa: 'عیدی', numeric: true,
+                render: r => <span className="tabular-nums font-semibold text-text-primary">{money(r.amount)}</span> },
+              { key: 'tax', labelEn: 'Tax', labelFa: 'مالیات', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.tax)}</span> },
+              { key: 'net', labelEn: 'Net', labelFa: 'خالص', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.net)}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: 'وضعیت',
+                render: r => <Badge color={r.status === 'paid' ? 'green' : r.status === 'reversed' ? 'red'
+                  : r.status === 'approved' ? 'blue' : 'slate'}>{r.status}</Badge> },
+            ]}
+            rowActions={[
+              { id: 'approve', labelEn: 'Approve', labelFa: 'تأیید', icon: '✓',
+                hidden: r => r.status !== 'draft',
+                onClick: r => post({ action: 'eid.approve', id: r.id }, 'Approved', 'تأیید شد', loadEid) },
+              { id: 'post', labelEn: 'Post to ledger', labelFa: 'ثبت در دفتر کل', icon: '📘',
+                hidden: r => r.status !== 'approved',
+                onClick: r => post({ action: 'eid.post', id: r.id }, 'Posted', 'ثبت شد', loadEid) },
+              { id: 'reverse', labelEn: 'Reverse', labelFa: 'برگشت', icon: '↩', danger: true,
+                hidden: r => r.status === 'reversed' || r.status === 'draft',
+                onClick: r => post({ action: 'eid.reverse', id: r.id },
+                  'Reversed — the original stays', 'برگشت خورد — اصلی سرِ جایش ماند', loadEid) },
+            ]} />
+        </div>
+      )}
+
+      {tab === 'severance' && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <h3 className="text-sm font-semibold text-text-primary mb-2">
+              {L(fa, 'Severance is not the seniority allowance', 'سنوات پایان خدمت با پایهٔ سنوات یکی نیست')}</h3>
+            <p className="text-sm text-text-secondary">
+              {L(fa,
+                'Two different things share a Persian word. «پایهٔ سنوات» is a monthly allowance added to pay every month — it is an earning type, configured on the Earning types tab. Severance is a termination benefit: one month’s pay for each year of service, paid when someone leaves. This tab is only about the second one. Service days are read from the append-only employment history, so a later raise cannot change how long someone worked.',
+                'دو چیز کاملاً متفاوت یک نام فارسی مشترک دارند. «پایهٔ سنوات» یک مزایای ماهانه است که هر ماه به حقوق اضافه می‌شود — یک قلم حقوقی است و در تب «اقلام حقوقی» تنظیم می‌شود. «سنوات پایان خدمت» مزایای ترک خدمت است: یک ماه مزد به ازای هر سال سابقه، هنگام خروج. این تب فقط دربارهٔ دومی است. روزهای خدمت از تاریخچهٔ استخدامیِ فقط‌افزودنی خوانده می‌شود، پس افزایش حقوقِ بعدی نمی‌تواند مدت خدمت را تغییر دهد.')}
+            </p>
+            <div className="flex justify-end mt-3">
+              <Btn onClick={() => { setSevForm({ employeeId: '', endDate: '' }); setSevModal(true) }}>
+                {L(fa, 'Calculate severance', 'محاسبهٔ سنوات')}</Btn>
+            </div>
+          </Card>
+
+          <DataTable<SeveranceRow> tableId="hr-payroll-severance" rows={sevRows} locale={fa ? 'fa' : 'en'}
+            columns={[
+              { key: 'employeeName', labelEn: 'Employee', labelFa: 'کارمند' },
+              { key: 'fromDate', labelEn: 'From', labelFa: 'از تاریخ',
+                render: r => <span className="text-xs" dir="ltr">{r.fromDate}</span> },
+              { key: 'toDate', labelEn: 'To', labelFa: 'تا تاریخ',
+                render: r => <span className="text-xs" dir="ltr">{r.toDate}</span> },
+              { key: 'serviceDays', labelEn: 'Service days', labelFa: 'روزهای خدمت', numeric: true,
+                render: r => <span className="tabular-nums">{num(r.serviceDays)}</span> },
+              { key: 'basePolicy', labelEn: 'Base', labelFa: 'مبنا',
+                render: r => <span className="text-xs text-text-tertiary">
+                  {r.basePolicy === 'average' ? L(fa, 'Average', 'میانگین') : L(fa, 'Last month', 'آخرین ماه')}</span> },
+              { key: 'amount', labelEn: 'Severance', labelFa: 'سنوات', numeric: true,
+                render: r => <span className="tabular-nums font-semibold text-text-primary">{money(r.amount)}</span> },
+              { key: 'accruedBefore', labelEn: 'Already provisioned', labelFa: 'ذخیرهٔ انباشته', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.accruedBefore)}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: 'وضعیت',
+                render: r => <Badge color={r.status === 'paid' ? 'green' : r.status === 'approved' ? 'blue' : 'slate'}>
+                  {r.status}</Badge> },
+            ]}
+            rowActions={[
+              { id: 'approve', labelEn: 'Approve', labelFa: 'تأیید', icon: '✓',
+                hidden: r => r.status !== 'draft',
+                onClick: r => post({ action: 'severance.approve', id: r.id }, 'Approved', 'تأیید شد', loadSeverance) },
+              { id: 'post', labelEn: 'Post to ledger', labelFa: 'ثبت در دفتر کل', icon: '📘',
+                hidden: r => r.status !== 'approved',
+                onClick: r => post({ action: 'severance.post', id: r.id }, 'Posted', 'ثبت شد', loadSeverance) },
+            ]} />
+        </div>
+      )}
+
+      {tab === 'settlements' && (
+        <div className="space-y-4">
+          <Card className="p-4 flex items-start justify-between gap-4">
+            <p className="text-sm text-text-secondary">
+              {L(fa,
+                'The settlement pulls each figure from the module that owns it — the last payslip, severance, the pro-rated Eid bonus, unused leave from the balance ledger, and the outstanding loan — so it can never disagree with the records it summarises. A NEGATIVE total means the leaver owes the company, and it is shown as negative rather than quietly written off.',
+                'تسویه‌حساب هر عدد را از همان ماژولی می‌خواند که مالکش است — آخرین فیش، سنوات، عیدی نسبی، مرخصی استفاده‌نشده از دفتر مانده، و مانده وام — پس هرگز با سوابقی که خلاصه‌شان می‌کند اختلاف پیدا نمی‌کند. جمع منفی یعنی کارمند به شرکت بدهکار است و منفی نشان داده می‌شود، نه اینکه بی‌صدا صرف‌نظر شود.')}
+            </p>
+            <Btn onClick={() => { setSetForm({ employeeId: '', endDate: '', reason: '', otherDeductions: '' }); setSetModal(true) }}>
+              {L(fa, 'New settlement', 'تسویه‌حساب جدید')}</Btn>
+          </Card>
+
+          <DataTable<SettlementRow> tableId="hr-payroll-settlements" rows={settlements} locale={fa ? 'fa' : 'en'}
+            columns={[
+              { key: 'employeeName', labelEn: 'Employee', labelFa: 'کارمند' },
+              { key: 'endDate', labelEn: 'End date', labelFa: 'تاریخ خاتمه',
+                render: r => <span className="text-xs" dir="ltr">{r.endDate}</span> },
+              { key: 'finalPay', labelEn: 'Final pay', labelFa: 'آخرین فیش', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.finalPay)}</span> },
+              { key: 'severance', labelEn: 'Severance', labelFa: 'سنوات', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.severance)}</span> },
+              { key: 'eid', labelEn: 'Eid', labelFa: 'عیدی', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.eid)}</span> },
+              { key: 'leaveEncashment', labelEn: 'Unused leave', labelFa: 'بازخرید مرخصی', numeric: true,
+                render: r => <span className="tabular-nums">
+                  {money(r.leaveEncashment)}{r.leaveDays ? ` (${num(r.leaveDays)})` : ''}</span> },
+              { key: 'loanOutstanding', labelEn: 'Loan', labelFa: 'مانده وام', numeric: true,
+                render: r => <span className="tabular-nums">{money(r.loanOutstanding)}</span> },
+              { key: 'total', labelEn: 'Total', labelFa: 'جمع تسویه', numeric: true,
+                render: r => <span className={`tabular-nums font-semibold ${(r.total ?? 0) < 0 ? 'text-danger' : 'text-text-primary'}`}>
+                  {money(r.total)}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: 'وضعیت',
+                render: r => <Badge color={r.status === 'paid' ? 'green' : r.status === 'approved' ? 'blue' : 'slate'}>
+                  {r.status}</Badge> },
+            ]}
+            rowActions={[
+              { id: 'approve', labelEn: 'Approve', labelFa: 'تأیید', icon: '✓',
+                hidden: r => r.status !== 'draft',
+                onClick: r => post({ action: 'settlement.approve', id: r.id }, 'Approved', 'تأیید شد', loadSettlements) },
+              { id: 'post', labelEn: 'Post & close', labelFa: 'ثبت و خاتمه', icon: '📘',
+                hidden: r => r.status !== 'approved',
+                onClick: r => post({ action: 'settlement.post', id: r.id },
+                  'Posted — the employee is now terminated', 'ثبت شد — وضعیت کارمند به ترک خدمت تغییر کرد',
+                  () => { loadSettlements(); load() }) },
+            ]} />
+        </div>
+      )}
+
+      {tab === 'exports' && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <Select label={L(fa, 'Payroll run', 'دورهٔ حقوق')} value={exportPeriod}
+              onChange={setExportPeriod}
+              options={[{ value: '', label: L(fa, 'Select a run…', 'یک دوره انتخاب کنید…') },
+                ...periods.map(p => ({ value: String(p.id), label: `${monthName(p.jalaliMonth)} ${num(p.jalaliYear)}` }))]} />
+          </Card>
+
+          {layouts.map(l => (
+            <Card key={l.id} className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-text-primary">{fa ? l.titleFa : l.titleEn}</h3>
+                  <p className="text-2xs text-text-tertiary mt-1">
+                    {l.columns.map(c => c.labelFa).join(' · ')}
+                  </p>
+                  {!l.verified && l.note && (
+                    <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+                      <p className="text-xs text-text-secondary">⚠️ {l.note}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge color={l.verified ? 'green' : 'yellow'}>
+                    {l.verified ? L(fa, 'Verified', 'تأییدشده') : L(fa, 'Not verified', 'تأیید نشده')}</Badge>
+                  <Btn size="sm" disabled={!exportPeriod}
+                    onClick={() => { window.location.href = `/api/admin/hr/payroll?view=export&periodId=${exportPeriod}&layout=${l.key}` }}>
+                    {L(fa, 'Download', 'دریافت فایل')}</Btn>
+                  {!l.verified && (
+                    <Btn size="sm" variant="ghost" onClick={() => post({
+                      action: 'export.saveLayout', key: l.key, columns: l.columns,
+                      verified: true, note: null,
+                    }, 'Marked verified', 'به‌عنوان تأییدشده علامت خورد', loadLayouts)}>
+                      {L(fa, 'I checked it against the portal', 'با سامانه تطبیق دادم')}</Btn>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {tab === 'rulesets' && (
         <div className="space-y-4">
           <Card className="p-4">
@@ -645,6 +913,69 @@ export function PayrollManager() {
                 {l.status === 'settled' ? L(fa, 'Settled', 'تسویه‌شده') : L(fa, 'Active', 'جاری')}</Badge> },
           ]} />
       )}
+
+
+      {/* ── severance ── */}
+      <Modal open={sevModal} onClose={() => setSevModal(false)}
+        title={L(fa, 'Calculate severance', 'محاسبهٔ سنوات پایان خدمت')}>
+        <div className="space-y-3">
+          <Select label={L(fa, 'Employee', 'کارمند')} value={sevForm.employeeId}
+            onChange={v => setSevForm(f => ({ ...f, employeeId: v }))}
+            options={[{ value: '', label: L(fa, 'Select an employee…', 'یک کارمند انتخاب کنید…') },
+              ...employees.map(e => ({ value: String(e.id), label: e.fullName }))]} />
+          <Input label={L(fa, 'Last day of service', 'آخرین روز خدمت')} value={sevForm.endDate}
+            onChange={v => setSevForm(f => ({ ...f, endDate: v }))} placeholder="2026-08-22" />
+          <p className="text-2xs text-text-tertiary">
+            {L(fa,
+              'A partial year is pro-rated, not rounded down — rounding down to whole years underpays everyone who did not leave on their anniversary.',
+              'سال ناقص به تناسب محاسبه می‌شود، نه گرد به پایین — گرد کردن به سال کامل، حق هر کسی را که سرِ سالگرد استخدامش نرفته کم می‌گذارد.')}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setSevModal(false)}>{L(fa, 'Cancel', 'انصراف')}</Btn>
+            <Btn disabled={!sevForm.employeeId || !sevForm.endDate} onClick={async () => {
+              const ok = await post({
+                action: 'severance.calculate', employeeId: Number(sevForm.employeeId),
+                endDate: sevForm.endDate,
+              }, 'Severance calculated', 'سنوات محاسبه شد', loadSeverance)
+              if (ok) setSevModal(false)
+            }}>{L(fa, 'Calculate', 'محاسبه')}</Btn>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── settlement ── */}
+      <Modal open={setModal} onClose={() => setSetModal(false)}
+        title={L(fa, 'Final settlement', 'تسویه‌حساب پایان خدمت')}>
+        <div className="space-y-3">
+          <Select label={L(fa, 'Employee', 'کارمند')} value={setForm.employeeId}
+            onChange={v => setSetForm(f => ({ ...f, employeeId: v }))}
+            options={[{ value: '', label: L(fa, 'Select an employee…', 'یک کارمند انتخاب کنید…') },
+              ...employees.map(e => ({ value: String(e.id), label: e.fullName }))]} />
+          <Input label={L(fa, 'Last day of service', 'آخرین روز خدمت')} value={setForm.endDate}
+            onChange={v => setSetForm(f => ({ ...f, endDate: v }))} placeholder="2026-08-22" />
+          <Input label={L(fa, 'Reason', 'دلیل خاتمه')} value={setForm.reason}
+            onChange={v => setSetForm(f => ({ ...f, reason: v }))} />
+          <Input label={L(fa, 'Other deductions', 'سایر کسورات')} type="number"
+            value={setForm.otherDeductions}
+            onChange={v => setSetForm(f => ({ ...f, otherDeductions: v }))} />
+          <p className="text-2xs text-text-tertiary">
+            {L(fa,
+              'Calculate severance and the Eid bonus FIRST — the settlement collects what already exists rather than recomputing it.',
+              'اول سنوات و عیدی را محاسبه کنید — تسویه‌حساب آنچه را که از قبل وجود دارد جمع می‌کند، دوباره حساب نمی‌کند.')}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setSetModal(false)}>{L(fa, 'Cancel', 'انصراف')}</Btn>
+            <Btn disabled={!setForm.employeeId || !setForm.endDate} onClick={async () => {
+              const ok = await post({
+                action: 'settlement.build', employeeId: Number(setForm.employeeId),
+                endDate: setForm.endDate, reason: setForm.reason || null,
+                otherDeductions: Number(setForm.otherDeductions || 0),
+              }, 'Settlement prepared', 'تسویه‌حساب تنظیم شد', loadSettlements)
+              if (ok) setSetModal(false)
+            }}>{L(fa, 'Prepare', 'تنظیم')}</Btn>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── copy ruleset ── */}
       <Modal open={copyModal} onClose={() => setCopyModal(false)}

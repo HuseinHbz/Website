@@ -26,6 +26,7 @@ const SUITES = [
   { name: '28.1 HR personnel + employment history', script: 'verify-28-hr.ts', db: 'rg_28' },
   { name: '28.2 HR leave ledger + attendance', script: 'verify-28-2-leave.ts', db: 'rg_282' },
   { name: '28.3-الف payroll (rules as data, immutable slips)', script: 'verify-28-3-payroll.ts', db: 'rg_283' },
+  { name: '28.3-ب annual (Eid, severance, settlement)', script: 'verify-28-3b-annual.ts', db: 'rg_283b' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

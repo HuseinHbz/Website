@@ -25,6 +25,13 @@ import {
   postPeriodToGl, payPeriod, lockPeriod, correctSlip, reversePeriodGl,
   listSlips, slipDetail, periodTotals, listLoans, createLoan, payrollOverview,
 } from '@/lib/hr/payrollData'
+import {
+  listEid, calculateEidForYear, approveEid, postEidToGl, reverseEid,
+  listSeverance, calculateSeveranceFor, approveSeverance, postSeveranceToGl,
+  accrueSeveranceForPeriod, listSettlements, buildSettlement, approveSettlement,
+  postSettlementToGl, listExportLayouts, saveExportLayout, renderLegalExport,
+  annualOverview,
+} from '@/lib/hr/annualData'
 import { pgQuery } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -110,6 +117,52 @@ const schemas = {
     slipId: z.number().int().positive(),
     manual: z.record(z.string(), z.number()).optional(),
   }),
+  // ── 28.3-ب ──
+  eidCalc: z.object({
+    action: z.literal('eid.calculate'),
+    jalaliYear: z.number().int().min(1300).max(1500),
+  }),
+  eidOp: z.object({
+    action: z.enum(['eid.approve', 'eid.post', 'eid.reverse']),
+    id: z.number().int().positive(),
+  }),
+  severanceCalc: z.object({
+    action: z.literal('severance.calculate'),
+    employeeId: z.number().int().positive(),
+    endDate: z.string().trim().min(8).max(24),
+  }),
+  severanceOp: z.object({
+    action: z.enum(['severance.approve', 'severance.post']),
+    id: z.number().int().positive(),
+  }),
+  severanceAccrue: z.object({
+    action: z.literal('severance.accrue'),
+    periodId: z.number().int().positive(),
+  }),
+  settlementBuild: z.object({
+    action: z.literal('settlement.build'),
+    employeeId: z.number().int().positive(),
+    endDate: z.string().trim().min(8).max(24),
+    reason: z.string().trim().max(300).optional().nullable(),
+    otherDeductions: z.number().min(0).max(1_000_000_000_000).optional(),
+  }),
+  settlementOp: z.object({
+    action: z.enum(['settlement.approve', 'settlement.post']),
+    id: z.number().int().positive(),
+  }),
+  exportLayout: z.object({
+    action: z.literal('export.saveLayout'),
+    key: z.string().trim().min(1).max(64),
+    columns: z.array(z.object({
+      key: z.string().trim().min(1).max(64),
+      labelFa: z.string().trim().min(1).max(120),
+      labelEn: z.string().trim().max(120).optional(),
+    })).min(1).max(60),
+    delimiter: z.string().max(4).optional(),
+    includeHeader: z.boolean().optional(),
+    verified: z.boolean().optional(),
+    note: z.string().trim().max(400).optional().nullable(),
+  }),
   loan: z.object({
     action: z.literal('loan.create'),
     employeeId: z.number().int().positive(),
@@ -166,6 +219,66 @@ export async function GET(req: NextRequest) {
       const brackets = await bracketsOf(id)
       if (!brackets.length) return badRequest('no brackets configured')
       return NextResponse.json({ breakdown: taxBreakdown(income, brackets) })
+    }
+
+    if (view === 'eid') {
+      const sc = await scopeFor(auth.user.id)
+      const rows = await listEid(sp.get('year') ? Number(sp.get('year')) : undefined,
+        { scopeClause: sc.clause, scopeParams: sc.params })
+      return NextResponse.json({
+        eid: canSeeAmounts ? rows
+          : stripFields(rows as unknown as Record<string, unknown>[],
+              SENSITIVE_FIELDS['hr.payroll:amounts_view'].fields),
+        overview: await annualOverview(), canSeeAmounts,
+      })
+    }
+
+    if (view === 'severance') {
+      const sc = await scopeFor(auth.user.id)
+      const rows = await listSeverance({
+        employeeId: sp.get('employeeId') ? Number(sp.get('employeeId')) : undefined,
+        scopeClause: sc.clause, scopeParams: sc.params,
+      })
+      return NextResponse.json({
+        severance: canSeeAmounts ? rows
+          : stripFields(rows as unknown as Record<string, unknown>[],
+              SENSITIVE_FIELDS['hr.payroll:amounts_view'].fields),
+        overview: await annualOverview(), canSeeAmounts,
+      })
+    }
+
+    if (view === 'settlements') {
+      const sc = await scopeFor(auth.user.id)
+      const rows = await listSettlements({ scopeClause: sc.clause, scopeParams: sc.params })
+      return NextResponse.json({
+        settlements: canSeeAmounts ? rows
+          : stripFields(rows as unknown as Record<string, unknown>[],
+              SENSITIVE_FIELDS['hr.payroll:amounts_view'].fields),
+        canSeeAmounts,
+      })
+    }
+
+    if (view === 'exportLayouts') {
+      return NextResponse.json({ layouts: await listExportLayouts() })
+    }
+
+    // The legal export itself. Amounts are the whole point of the file, so it
+    // needs the amounts grant — a coordinator without it cannot download it.
+    if (view === 'export') {
+      if (!canSeeAmounts) return notFound()
+      const r = await renderLegalExport(Number(sp.get('periodId')), sp.get('layout') ?? '')
+      if (!r.ok) return badRequest(r.error ?? 'Failed')
+      await logAction(auth.user, 'VIEW', 'payroll_export_layouts', 0, null,
+        { periodId: Number(sp.get('periodId')), layout: sp.get('layout') })
+      return new NextResponse(r.csv, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${r.filename}"`,
+          // Surfaced in a header too, so a script that downloads the file still
+          // learns the layout was never checked against a real submission.
+          'X-Layout-Verified': r.verified ? '1' : '0',
+        },
+      })
     }
 
     if (view === 'loans') {
@@ -365,6 +478,119 @@ export async function POST(req: NextRequest) {
         await logAction(auth.user, 'CREATE', 'payroll_loans', id, null,
           { employeeId: d.employeeId, installments: d.installments })
         return NextResponse.json({ id }, { status: 201 })
+      }
+
+      // ── 28.3-ب: annual entitlements ──
+      case 'eid.calculate': {
+        const parsed = await readJson(req, schemas.eidCalc)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:calculate', 'edit')
+        if (denied) return denied
+        const r = await runOnce(auth.user.id, 'hr/payroll/eid', parsed.data,
+          () => calculateEidForYear(parsed.data.jalaliYear, auth.user.id))
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_eid_calculations', 0, null,
+          { jalaliYear: parsed.data.jalaliYear, count: r.count })
+        return NextResponse.json(r, { status: 201 })
+      }
+
+      case 'eid.approve':
+      case 'eid.post':
+      case 'eid.reverse': {
+        const parsed = await readJson(req, schemas.eidOp)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:approve', 'manage_settings')
+        if (denied) return denied
+        const { id, action } = parsed.data
+        const r = action === 'eid.approve' ? await approveEid(id, auth.user.id)
+          : action === 'eid.post' ? await postEidToGl(id, auth.user.id)
+            : await reverseEid(id, auth.user.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_eid_calculations', id, null, { action })
+        return NextResponse.json(r)
+      }
+
+      case 'severance.calculate': {
+        const parsed = await readJson(req, schemas.severanceCalc)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:calculate', 'edit')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await runOnce(auth.user.id, 'hr/payroll/severance', d,
+          () => calculateSeveranceFor(d.employeeId, d.endDate, auth.user.id))
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_severance_calculations', r.id!, null,
+          { employeeId: d.employeeId, endDate: d.endDate })
+        return NextResponse.json(r, { status: 201 })
+      }
+
+      case 'severance.approve':
+      case 'severance.post': {
+        const parsed = await readJson(req, schemas.severanceOp)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:approve', 'manage_settings')
+        if (denied) return denied
+        const { id, action } = parsed.data
+        const r = action === 'severance.approve'
+          ? await approveSeverance(id, auth.user.id)
+          : await postSeveranceToGl(id, auth.user.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_severance_calculations', id, null, { action })
+        return NextResponse.json(r)
+      }
+
+      case 'severance.accrue': {
+        const parsed = await readJson(req, schemas.severanceAccrue)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:approve', 'manage_settings')
+        if (denied) return denied
+        const r = await accrueSeveranceForPeriod(parsed.data.periodId, auth.user.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_severance_accruals', parsed.data.periodId, null,
+          { employees: r.employees })
+        return NextResponse.json(r)
+      }
+
+      case 'settlement.build': {
+        const parsed = await readJson(req, schemas.settlementBuild)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:calculate', 'edit')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await runOnce(auth.user.id, 'hr/payroll/settlement', d,
+          () => buildSettlement(d.employeeId, d.endDate, d.reason ?? null, d.otherDeductions ?? 0, auth.user.id))
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_settlements', r.id!, null,
+          { employeeId: d.employeeId, endDate: d.endDate })
+        return NextResponse.json(r, { status: 201 })
+      }
+
+      case 'settlement.approve':
+      case 'settlement.post': {
+        const parsed = await readJson(req, schemas.settlementOp)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:pay', 'manage_settings')
+        if (denied) return denied
+        const { id, action } = parsed.data
+        const r = action === 'settlement.approve'
+          ? await approveSettlement(id, auth.user.id)
+          : await postSettlementToGl(id, auth.user.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_settlements', id, null, { action })
+        return NextResponse.json(r)
+      }
+
+      case 'export.saveLayout': {
+        const parsed = await readJson(req, schemas.exportLayout)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:settings_write', 'manage_settings')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await saveExportLayout(d.key, d)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_export_layouts', 0, null,
+          { key: d.key, columns: d.columns.length, verified: d.verified })
+        return NextResponse.json(r)
       }
 
       default:

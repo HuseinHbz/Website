@@ -2,8 +2,8 @@
 
 > **Scope reality, stated up front.** The phase brief calls this five sub-phases
 > and says each closes independently with its own gate. **28.1 and 28.2 are
-> complete and verified; 28.3-الف is built and verified but AWAITS the
-> accountant's reconciliation test. 28.3-ب, 28.4 and 28.5 are not started.**
+> complete and verified; 28.3-الف and 28.3-ب are built and verified but AWAIT
+> the accountant's reconciliation test. 28.4 and 28.5 are not started.**
 > Nothing below is claimed for the rest.
 
 ---
@@ -15,7 +15,7 @@
 | **28.1** پرسنل و پروندهٔ کارکنان | ✅ **بسته شد** | live-PG **27/27** · 30 unit tests · module audit **81/81** · browser fa/en × light/dark |
 | **28.2** مرخصی، حضور و غیاب | ✅ **بسته شد** | live-PG **43/43** · 40 unit tests · 12 audits 0 · regressions 17/17 |
 | **28.3-الف** هستهٔ ماهانهٔ حقوق | ⚠️ **ساخته و verify شد — منتظر آزمون تطبیق** | live-PG **66/66** · 74 unit tests · [گزارش](phase28.3a-payroll-core-report.md) |
-| **28.3-ب** عیدی و سنوات | ⏳ شروع نشده | زیرساختش در الف آماده است (`eidBase`/`severanceBase`) |
+| **28.3-ب** عیدی، سنوات و خروجی قانونی | ⚠️ **ساخته و verify شد — منتظر آزمون تطبیق** | live-PG **73/73** · 49 unit tests · [گزارش](phase28.3b-payroll-annual-report.md) |
 | **28.4** پورتال کارمند | ⏳ شروع نشده | — |
 | **28.5** استخدام، آموزش، ارزیابی | ⏳ شروع نشده | — |
 
