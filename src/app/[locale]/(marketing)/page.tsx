@@ -61,7 +61,7 @@ async function resolvePhase23Hero(locale: string) {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
 
-  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero, heroVariant, dbTestimonials] = await Promise.all([
+  const [dbProjects, dbServices, dbSkills, dbCerts, dbClients, dbTimeline, dbAbout, dbHero, heroVariant, dbTestimonials, heroBgVideo] = await Promise.all([
     getPublicProjects(),
     getPublicServices(),
     getPublicSkills(),
@@ -72,6 +72,7 @@ export default async function HomePage({ params }: Props) {
     getPublicHero(locale),
     getPublicSetting('hero_variant'),
     getPublicTestimonials(),
+    getPublicSetting('hero_bg_video'),
   ])
 
   const active = await resolvePhase23Hero(locale)
@@ -81,7 +82,7 @@ export default async function HomePage({ params }: Props) {
       <JsonLd schema={siteGraphSchema()} />
       {active
         ? <HeroExperience heroId={active.hero.id} config={active.hero.config} locale={locale as 'fa' | 'en'} experimentKey={active.experimentKey} variantId={active.variantId} />
-        : <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} />}
+        : <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} bgVideoId={heroBgVideo || null} />}
       <ProofBar locale={locale} />
       <EnterpriseMetrics locale={locale} />
       <ServicesSection locale={locale} dbServices={dbServices} />

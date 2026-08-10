@@ -8,10 +8,11 @@ import type { Column } from '@/lib/admin/dataTable'
 import { HERO_TEMPLATES, HERO_CATEGORIES } from '@/lib/hero/templates'
 import { validateHero } from '@/lib/hero/rules'
 import type { HeroConfig, HeroRecord, HeroStatus, HeroCta, Locale } from '@/lib/hero/types'
+import { HERO_BG_VIDEOS } from '@/lib/heroBgVideos'
 import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
 
-type Tab = 'dashboard' | 'heroes' | 'templates' | 'library' | 'experiments' | 'analytics'
+type Tab = 'dashboard' | 'heroes' | 'templates' | 'background' | 'library' | 'experiments' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -30,6 +31,7 @@ export function HeroCenter() {
     { id: 'dashboard', en: 'Dashboard', fa: 'داشبورد' },
     { id: 'heroes', en: 'Heroes', fa: 'هیروها' },
     { id: 'templates', en: 'Templates', fa: 'قالب‌ها' },
+    { id: 'background', en: 'Video Background', fa: 'پس‌زمینه ویدیویی' },
     { id: 'library', en: 'Animation Library', fa: 'کتابخانه انیمیشن' },
     { id: 'experiments', en: 'A/B Testing', fa: 'آزمون A/B' },
     { id: 'analytics', en: 'Analytics', fa: 'تحلیل‌ها' },
@@ -47,6 +49,7 @@ export function HeroCenter() {
       {tab === 'dashboard' && <Dashboard rtl={rtl} onOpen={setEditingId} />}
       {tab === 'heroes' && <Heroes rtl={rtl} locale={locale} toast={toast} onOpen={setEditingId} />}
       {tab === 'templates' && <Templates rtl={rtl} toast={toast} onOpen={setEditingId} />}
+      {tab === 'background' && <VideoBackground rtl={rtl} toast={toast} />}
       {tab === 'library' && <AnimationLibrary rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'experiments' && <Experiments rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'analytics' && <Analytics rtl={rtl} locale={locale} />}
@@ -190,6 +193,82 @@ function Templates({ rtl, toast, onOpen }: { rtl: boolean; toast: Toast; onOpen:
           </Card>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Video Background tab — lets an operator pick one of the 19 pre-rendered
+ * loop videos as the homepage hero's background layer, without touching the
+ * hero's text/CTA/tabs/content (the legacy Hero.tsx component, currently
+ * live since no Phase-23 hero is published, is unchanged apart from an
+ * optional video layer painted behind its existing grid/glow background —
+ * see src/lib/heroBgVideos.ts + HeroVideoBg in Hero.tsx).
+ * Persisted as the `hero_bg_video` site_settings key via the existing
+ * generic `/api/admin/settings` GET/PUT endpoint (no new API surface).
+ */
+function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
+  const [current, setCurrent] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/settings')
+      const d = await r.json().catch(() => ({}))
+      setCurrent(d.hero_bg_video || '')
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function select(id: string) {
+    setSaving(id)
+    try {
+      const r = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hero_bg_video: id }) })
+      if (r.ok) { setCurrent(id); toast(id ? lc(rtl, 'Hero background video set', 'ویدیوی پس‌زمینه هیرو تنظیم شد') : lc(rtl, 'Hero background video cleared', 'ویدیوی پس‌زمینه حذف شد'), 'success') }
+      else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+    } finally { setSaving(null) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <p className="text-sm text-text-secondary">
+          {lc(rtl,
+            'Choose a looping background video for the live homepage hero (the currently-active hero section, not a Phase-23 template). Content, CTAs, stats and tabs are untouched — only the background layer changes. Respects reduced-motion for accessibility.',
+            'یک ویدیوی حلقه‌ای برای پس‌زمینه بخش هیروی زنده صفحه اصلی انتخاب کنید. متن، دکمه‌ها، آمار و تب‌ها تغییر نمی‌کنند — فقط لایه پس‌زمینه عوض می‌شود. برای دسترس‌پذیری، حالت کاهش حرکت رعایت می‌شود.'
+          )}
+        </p>
+      </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <button type="button" className={`text-start rounded-xl border-2 ${!current ? 'border-brand' : 'border-transparent'}`} onClick={() => !saving && select('')}>
+          <Card className="p-3 flex flex-col gap-2 cursor-pointer">
+            <div className="h-28 rounded-lg bg-surface-2 border border-subtle flex items-center justify-center text-2xl text-text-tertiary">✕</div>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-text-primary">{lc(rtl, 'None (default)', 'هیچکدام (پیش‌فرض)')}</h4>
+              {!current && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+            </div>
+          </Card>
+        </button>
+        {HERO_BG_VIDEOS.map(v => (
+          <button type="button" key={v.id} className={`text-start rounded-xl border-2 ${current === v.id ? 'border-brand' : 'border-transparent'}`} onClick={() => !saving && select(v.id)}>
+            <Card className="p-3 flex flex-col gap-2 cursor-pointer">
+              <div className="h-28 rounded-lg overflow-hidden bg-surface-2 border border-subtle relative">
+                <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline
+                  onMouseEnter={e => e.currentTarget.play().catch(() => {})}
+                  onMouseLeave={e => e.currentTarget.pause()} />
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <h4 className="text-xs font-semibold text-text-primary">{rtl ? v.labelFa : v.labelEn}</h4>
+                {current === v.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                {saving === v.id && <Badge color="slate">…</Badge>}
+              </div>
+            </Card>
+          </button>
+        ))}
+      </div>
+      {loading && <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>}
     </div>
   )
 }

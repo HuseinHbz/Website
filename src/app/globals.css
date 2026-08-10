@@ -1185,6 +1185,21 @@
   }
   .btn-sheen::after { transition: none !important; }
   .nav-link-indicator::after { transition: none !important; }
+  .hero-bg-video { display: none !important; }
+}
+
+/* Hero background video (admin-selectable, `/admin/hero` → Video Background).
+   z-index:0 keeps it beneath the existing grid/glow overlays and content
+   (both painted afterward in source order); a translucent scrim is layered
+   on top by .hero-bg-video-scrim so text contrast is unaffected either way. */
+.hero-bg-video {
+  z-index: 0;
+  opacity: 0.55;
+  filter: saturate(1.1);
+}
+.hero-bg-video-scrim {
+  z-index: 0;
+  background: linear-gradient(180deg, var(--color-bg-base) 0%, rgba(5,7,20,0.55) 35%, rgba(5,7,20,0.75) 100%);
 }
 
 /* ── Native <select> controls (unlayered so it beats Tailwind utilities) ──────

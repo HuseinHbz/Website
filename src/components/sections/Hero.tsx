@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { CHART_PALETTE } from '@/lib/design/tokens'
+import { heroBgVideoById } from '@/lib/heroBgVideos'
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface DbHero {
@@ -21,6 +22,10 @@ export interface HeroProps {
   locale: string
   dbHero?: DbHero | null
   variant?: string
+  /** Optional id from HERO_BG_VIDEOS (src/lib/heroBgVideos.ts), set from
+   *  admin `/admin/hero` → Video Background tab. Null/undefined = no video,
+   *  identical rendering to before (existing grid/glow background only). */
+  bgVideoId?: string | null
 }
 
 export interface HeroContent {
@@ -1136,10 +1141,34 @@ function VariantCyber({ c }: { c: HeroContent }) {
 }
 
 /* ── Background layers per variant ──────────────────────────────── */
-function HeroBg({ variant }: { variant: string }) {
+/** Optional looping video background layer, selected in admin (`/admin/hero`
+ *  → Video Background). Sits behind every existing gradient/grid overlay so
+ *  none of the current hero look changes when no video is selected, and the
+ *  existing readability treatment (grid + radial glow + top/bottom fade) still
+ *  applies on top of the footage when one is. Muted/looped/inline so autoplay
+ *  is allowed; hidden entirely under prefers-reduced-motion (CSS, globals.css). */
+function HeroVideoBg({ bgVideoId }: { bgVideoId?: string | null }) {
+  const video = heroBgVideoById(bgVideoId)
+  if (!video) return null
+  return (
+    <>
+      <video
+        key={video.id}
+        className="hero-bg-video absolute inset-0 w-full h-full object-cover pointer-events-none"
+        src={`/videos/hero-bg/${video.file}`}
+        autoPlay muted loop playsInline preload="auto"
+        aria-hidden="true"
+      />
+      <div className="hero-bg-video-scrim absolute inset-0 pointer-events-none" aria-hidden="true" />
+    </>
+  )
+}
+
+function HeroBg({ variant, bgVideoId }: { variant: string; bgVideoId?: string | null }) {
   const isTerminal = variant === 'terminal'
   return (
     <>
+      <HeroVideoBg bgVideoId={bgVideoId} />
       <div className="absolute inset-0 grid-bg opacity-100 pointer-events-none" aria-hidden="true"/>
       {isTerminal
         ? <div className="absolute inset-0 pointer-events-none" style={{ background:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,100,0.008) 2px,rgba(0,255,100,0.008) 4px)' }}/>
@@ -1163,7 +1192,7 @@ function HeroBg({ variant }: { variant: string }) {
 }
 
 /* ── Main export ─────────────────────────────────────────────────── */
-export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
+export function Hero({ locale, dbHero, variant = 'split', bgVideoId }: HeroProps) {
   const isRTL = locale === 'fa'
   const ref = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
@@ -1201,7 +1230,7 @@ export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
       className="relative min-h-[640px] lg:min-h-[780px] lg:max-h-[900px] flex items-center overflow-hidden bg-background pt-16"
       aria-label={isRTL ? 'بخش اصلی' : 'Hero section'}
       dir={isRTL ? 'rtl' : 'ltr'}>
-      <HeroBg variant={variant} />
+      <HeroBg variant={variant} bgVideoId={bgVideoId} />
       <motion.div style={{ y, opacity }} className="relative z-10 w-full">
         <VariantComponent c={c} />
       </motion.div>
