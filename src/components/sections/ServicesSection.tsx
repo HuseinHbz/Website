@@ -39,7 +39,7 @@ const SERVICES: ServiceData[] = [
     titleFa: 'طراحی و معماری شبکه',
     categoryEn: 'Infrastructure',
     categoryFa: 'زیرساخت',
-    color: '#6366f1',
+    color: '#7477ff',
     shortDescEn: 'Enterprise LAN/WAN design with high availability, redundancy, and performance optimization.',
     shortDescFa: 'طراحی LAN/WAN سازمانی با دسترسی‌پذیری بالا، افزونگی و بهینه‌سازی عملکرد.',
     featuresEn: ['LAN / WAN Architecture', 'VPN & SD-WAN Solutions', 'Wireless Infrastructure', 'Network Segmentation', 'QoS & Traffic Management'],
@@ -137,7 +137,7 @@ const SERVICES: ServiceData[] = [
     titleFa: 'راه‌حل‌های VoIP',
     categoryEn: 'Communications',
     categoryFa: 'ارتباطات',
-    color: '#818cf8',
+    color: '#9698ff',
     shortDescEn: 'Modern IP telephony systems and unified communications for businesses.',
     shortDescFa: 'سیستم‌های تلفنی IP مدرن و ارتباطات یکپارچه برای کسب‌وکارها.',
     featuresEn: ['Asterisk / FreePBX', 'IP Phone Configuration', 'Call Center Solutions', 'SIP Trunk Integration', 'IVR & Auto-Attendant'],
@@ -151,7 +151,7 @@ const SERVICES: ServiceData[] = [
     titleFa: 'خودکارسازی زیرساخت',
     categoryEn: 'DevOps',
     categoryFa: 'دواپس',
-    color: '#06b6d4',
+    color: '#22d3ee',
     shortDescEn: 'Automate repetitive tasks and provisioning to reduce human error and speed up operations.',
     shortDescFa: 'خودکارسازی وظایف تکراری و فراهم‌سازی برای کاهش خطای انسانی و تسریع عملیات.',
     featuresEn: ['Ansible Playbooks', 'Configuration Management', 'CI/CD for Infrastructure', 'Network Automation', 'Monitoring Automation'],
@@ -182,7 +182,7 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
         titleFa: s.titleFa,
         categoryEn: s.categoryEn,
         categoryFa: s.categoryFa,
-        color: s.color || '#6366f1',
+        color: s.color || '#7477ff',
         shortDescEn: s.shortDescEn || '',
         shortDescFa: s.shortDescFa || '',
         featuresEn: parseArr(s.featuresEn),
@@ -379,7 +379,7 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
             <Link
               href="/consultation"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 hover:scale-105"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)', boxShadow: '0 8px 30px rgba(99,102,241,0.3)' }}
+              style={{ background: 'linear-gradient(135deg, #7477ff, #9698ff)', boxShadow: '0 8px 30px rgba(99,102,241,0.3)' }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

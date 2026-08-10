@@ -112,7 +112,7 @@ export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioP
     : CLIENTS
 
   const techPartners = dbClients !== null && dbClients !== undefined
-    ? dbClients.filter(c => c.isTechPartner).map(c => ({ name: c.nameEn, icon: '🔧', color: '#6366f1', logoUrl: c.logoUrl }))
+    ? dbClients.filter(c => c.isTechPartner).map(c => ({ name: c.nameEn, icon: '🔧', color: '#7477ff', logoUrl: c.logoUrl }))
     : TECH_PARTNERS
 
   return (

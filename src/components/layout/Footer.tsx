@@ -90,7 +90,7 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
             <Link href={buildLocalizedPath('/')} className="flex items-center gap-3 mb-4 group">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)', boxShadow: '0 0 16px rgba(99,102,241,0.3)' }}
+                style={{ background: 'linear-gradient(135deg, #7477ff, #9698ff)', boxShadow: '0 0 16px rgba(99,102,241,0.3)' }}
               >
                 HBZ
               </div>

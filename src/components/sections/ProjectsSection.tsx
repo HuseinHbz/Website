@@ -63,7 +63,7 @@ const FALLBACK_PROJECTS: DbProject[] = [
     resultsFa: JSON.stringify(['امتیاز WiFi مهمان ۴.۸/۵', 'بیش از ۲۰۰ تماس VoIP روزانه', 'نگهداری CCTV ۳۰ روزه']),
     tagsEn: JSON.stringify(['Ubiquiti', 'Sophos', 'Asterisk', 'CCTV', 'TrueNAS']),
     tagsFa: JSON.stringify(['Ubiquiti', 'Sophos', 'Asterisk', 'CCTV', 'TrueNAS']),
-    coverImage: null, gallery: null, color: '#818cf8', year: '2024', featured: false,
+    coverImage: null, gallery: null, color: '#9698ff', year: '2024', featured: false,
   },
   {
     id: 4, slug: 'industrial-enterprise', nameEn: 'Industrial Enterprise', nameFa: 'مجتمع صنعتی',
@@ -76,7 +76,7 @@ const FALLBACK_PROJECTS: DbProject[] = [
     resultsFa: JSON.stringify(['صفر توقف تولید در حین مهاجرت', 'Failover زیر یک ثانیه', 'کاهش ۴۰٪ توقف‌های شبکه‌ای']),
     tagsEn: JSON.stringify(['Cisco', 'Grafana', 'SCADA', 'Industrial Switches', 'Prometheus']),
     tagsFa: JSON.stringify(['Cisco', 'Grafana', 'SCADA', 'سوئیچ صنعتی', 'Prometheus']),
-    coverImage: null, gallery: null, color: '#06b6d4', year: '2023', featured: false,
+    coverImage: null, gallery: null, color: '#22d3ee', year: '2023', featured: false,
     isConfidential: true,
   },
 ]
@@ -135,7 +135,7 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
               : (p.executiveSummaryEn || p.challengeEn || '')
             const tags = parseJsonArray(p.tagsEn)
             const results = parseJsonArray(isRTL ? p.resultsFa : p.resultsEn)
-            const color = p.color || '#6366f1'
+            const color = p.color || '#7477ff'
 
             return (
               <motion.article

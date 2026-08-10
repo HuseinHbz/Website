@@ -29,7 +29,7 @@ const METRICS: Metric[] = [
     labelFa: 'سال تجربه سازمانی',
     sublabel: 'Across diverse industries',
     sublabelFa: 'در صنایع مختلف',
-    color: '#6366f1',
+    color: '#7477ff',
     icon: '◈',
   },
   {
@@ -40,7 +40,7 @@ const METRICS: Metric[] = [
     labelFa: 'پروژه زیرساختی',
     sublabel: 'Successfully delivered',
     sublabelFa: 'با موفقیت تحویل شده',
-    color: '#06b6d4',
+    color: '#22d3ee',
     icon: '◉',
   },
   {

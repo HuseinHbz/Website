@@ -52,7 +52,7 @@ export function ClosingCta({ locale }: ClosingCtaProps) {
           <motion.div variants={slideUp} className="flex justify-center mb-6">
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
-              style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8' }}
+              style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#9698ff' }}
             >
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
               {isRTL ? 'آماده پذیرش پروژه سازمانی' : 'Available for Enterprise Engagements'}

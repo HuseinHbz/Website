@@ -58,7 +58,10 @@ export function Header({ locale, nav }: HeaderProps) {
   }
 
   return (
-    <header
+    <motion.header
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
       className={cn(
         'fixed top-0 inset-x-0 z-40 transition-all duration-500',
         isScrolled
@@ -76,10 +79,10 @@ export function Header({ locale, nav }: HeaderProps) {
             {/* HBZ Logo Mark */}
             <div className="relative">
               <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-base text-white tracking-tight"
+                className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-base text-white tracking-tight transition-transform duration-300 group-hover:scale-105"
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-                  boxShadow: '0 0 16px rgba(99,102,241,0.4)',
+                  background: 'linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-hover) 100%)',
+                  boxShadow: '0 0 16px rgba(116,119,255,0.4)',
                 }}
               >
                 HBZ
@@ -101,15 +104,16 @@ export function Header({ locale, nav }: HeaderProps) {
             onKeyDown={e => { if (e.key === 'Escape') setOpenDrop(null) }}>
             {items.map((item) => {
               const label = isRTL ? item.labelFa : item.labelEn
+              const active = isBranchActive(item)
               const cls = cn(
-                'px-3.5 py-2 text-sm rounded-lg transition-all duration-150',
+                'nav-link-indicator px-3.5 py-2 text-sm rounded-lg transition-all duration-150',
                 focusRing,
-                isBranchActive(item)
-                  ? 'text-accent bg-accent/10 font-medium'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-white/5',
+                active
+                  ? 'text-accent font-medium'
+                  : 'text-text-secondary hover:text-text-primary',
               )
               if (item.children.length === 0) {
-                return <Link key={item.key} href={buildLocalizedPath(item.href)} className={cls}>{label}</Link>
+                return <Link key={item.key} href={buildLocalizedPath(item.href)} data-active={active} className={cls}>{label}</Link>
               }
               const open = openDrop === item.key
               return (
@@ -123,6 +127,7 @@ export function Header({ locale, nav }: HeaderProps) {
                     type="button"
                     aria-expanded={open}
                     aria-haspopup="true"
+                    data-active={active}
                     className={cn(cls, 'inline-flex items-center gap-1')}
                     onClick={() => setOpenDrop(open ? null : item.key)}
                   >
@@ -195,11 +200,11 @@ export function Header({ locale, nav }: HeaderProps) {
             <Link
               href={buildLocalizedPath('/consultation')}
               className={cn(
-                'px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-200',
+                'btn-sheen px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-200',
                 'hover:scale-105 hover:shadow-lg hover:shadow-accent/30',
                 focusRing
               )}
-              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+              style={{ background: 'linear-gradient(135deg, var(--color-brand), var(--color-brand-hover))' }}
             >
               {isRTL ? 'رزرو مشاوره' : 'Book Consultation'}
             </Link>
@@ -222,7 +227,7 @@ export function Header({ locale, nav }: HeaderProps) {
               aria-expanded={isMenuOpen}
               onClick={() => setIsMenuOpen((v) => !v)}
               className={cn(
-                'p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/5',
+                'w-11 h-11 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/5',
                 'transition-colors duration-150',
                 focusRing
               )}
@@ -306,8 +311,8 @@ export function Header({ locale, nav }: HeaderProps) {
               <div className="pt-3 mt-2 border-t border-border">
                 <Link
                   href={buildLocalizedPath('/consultation')}
-                  className="flex items-center justify-center w-full px-5 py-3 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+                  className="btn-sheen flex items-center justify-center w-full min-h-[44px] px-5 py-3 rounded-xl text-sm font-semibold text-white"
+                  style={{ background: 'linear-gradient(135deg, var(--color-brand), var(--color-brand-hover))' }}
                 >
                   {isRTL ? 'رزرو مشاوره رایگان' : 'Book Free Consultation'}
                 </Link>
@@ -316,6 +321,6 @@ export function Header({ locale, nav }: HeaderProps) {
           </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   )
 }

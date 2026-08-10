@@ -109,15 +109,15 @@ function Badge({ label }: { label: string }) {
 function StatBar({ stats }: { stats: HeroContent['stats'] }) {
   const validStats = stats.filter(s => s.value)
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 border border-border rounded-xl overflow-hidden bg-surface/30 backdrop-blur-sm">
+    <div className="grid grid-cols-2 sm:grid-cols-4 border border-border rounded-xl overflow-hidden bg-surface/40 backdrop-blur-sm">
       {validStats.map((s, i) => (
-        <div key={i} className={`flex flex-col items-center py-4 px-3 text-center ${
+        <div key={i} className={`flex flex-col items-center py-5 px-3 text-center ${
           i < validStats.length - 1
             ? i === 1 ? 'sm:border-r border-border' : 'border-r border-border'
             : ''
         } ${i < 2 ? 'border-b sm:border-b-0 border-border' : ''}`}>
-          <span className="text-xl lg:text-2xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
-          <span className="text-3xs text-text-muted mt-0.5 leading-tight">{s.label}</span>
+          <span className="text-2xl lg:text-3xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
+          <span className="text-xs text-text-muted mt-1 leading-tight">{s.label}</span>
         </div>
       ))}
     </div>
@@ -128,20 +128,20 @@ function CtaButtons({ c, row = false }: { c: HeroContent; row?: boolean }) {
   return (
     <div className={`flex flex-wrap gap-3 ${row ? 'justify-center' : ''}`}>
       <button onClick={() => { window.location.href = c.ctaPrimaryHref }}
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:scale-[1.03]"
-        style={{ background: 'linear-gradient(135deg,#6366f1,#818cf8)', boxShadow: '0 0 20px rgba(99,102,241,0.35)' }}>
+        className="btn-sheen inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.03]"
+        style={{ background: 'linear-gradient(135deg, var(--color-brand), var(--color-brand-hover))', boxShadow: '0 0 20px rgba(116,119,255,0.35)' }}>
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0l-4-4m4 4l-4 4" />
         </svg>
         {c.ctaPrimary}
       </button>
       <button onClick={() => { window.location.href = c.ctaSecondaryHref }}
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-text-primary border border-border hover:border-accent/40 hover:bg-surface/60 transition-all">
+        className="group inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg text-sm font-semibold text-text-primary border border-border hover:border-accent/40 hover:bg-surface/60 transition-all duration-300">
         {c.ctaSecondary}
       </button>
       <button onClick={() => { window.open(c.ctaTertiaryHref, '_blank') }}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-text-muted hover:text-text-primary transition-all">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        className="group inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg text-sm text-text-muted hover:text-text-primary transition-all duration-300">
+        <svg className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
         {c.ctaTertiary}
@@ -157,12 +157,12 @@ function MiniNetworkSVG() {
         <filter id="ng2"><feGaussianBlur stdDeviation="1.2" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         <linearGradient id="ea" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.9"/>
-          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.4"/>
+          <stop offset="0%" stopColor="#7477ff" stopOpacity="0.9"/>
+          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.4"/>
         </linearGradient>
         <linearGradient id="eb" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3"/>
-          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.1"/>
+          <stop offset="0%" stopColor="#7477ff" stopOpacity="0.3"/>
+          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.1"/>
         </linearGradient>
       </defs>
       {[['50,18','18,42',true],['50,18','80,40',true],['18,42','10,66',true],['80,40','38,62',true],
@@ -178,20 +178,20 @@ function MiniNetworkSVG() {
           opacity={act ? 0.9 : 0.4}
           style={act ? { animation: `dashFlow ${2+i*0.25}s linear infinite` } : undefined}/>
       })}
-      {([['50','18','Cisco','#1ba0d7',1],['18','42','MikroTik','#c03030',-1],['80','40','Linux','#f59e0b',1],
-        ['38','62','VMware','#60b6e0',-1],['10','66','Security','#10b981',-1],
-        ['82','62','Cloud','#6366f1',1],['58','78','Monitor','#f59e0b',1],['28','82','Ansible','#818cf8',-1]
+      {([['50','18','Cisco','#22d3ee',1],['18','42','MikroTik','#f0576b',-1],['80','40','Linux','#f5b84b',1],
+        ['38','62','VMware','#38bdf8',-1],['10','66','Security','#22c997',-1],
+        ['82','62','Cloud','#7477ff',1],['58','78','Monitor','#f5b84b',1],['28','82','Ansible','#8b5cf6',-1]
       ] as [string,string,string,string,number][]).map(([cx,cy,lbl,col,dir],i) => {
         const labelY = dir > 0 ? Number(cy) + 8.5 : Number(cy) - 6
         return (
-          <g key={i} filter="url(#ng2)">
+          <g key={i} className="glow-breathe-svg" style={{ '--glow-color': `${col}80`, animationDelay: `${i * 0.35}s`, animationDuration: `${3 + (i % 3)}s` } as React.CSSProperties}>
             <circle cx={cx} cy={cy} r="5" fill={`${col}25`} stroke={col} strokeWidth="0.8"/>
             <text x={cx} y={labelY} textAnchor="middle" fill={col} fontSize="3.2" fontWeight="700" opacity="0.95">{lbl}</text>
           </g>
         )
       })}
-      {[['50,18','18,42','#818cf8',2.2],['50,18','80,40','#06b6d4',2.6],
-        ['18,42','10,66','#10b981',2.0],['80,40','38,62','#6366f1',2.4]
+      {[['50,18','18,42','#8b5cf6',2.2],['50,18','80,40','#22d3ee',2.6],
+        ['18,42','10,66','#22c997',2.0],['80,40','38,62','#7477ff',2.4]
       ].map(([path, ,col,dur],i) => {
         const pts=String(path).split(',')
         return <circle key={`p${i}`} r="0.9" fill={String(col)} opacity="0.9">
@@ -222,63 +222,68 @@ function ScrollIndicator({ label }: { label: string }) {
 ══════════════════════════════════════════════════════════════════ */
 function VariantSplit({ c }: { c: HeroContent }) {
   return (
-    <div className="container-site py-16 lg:py-20">
-      <div className={`flex flex-col lg:flex-row items-center gap-12 lg:gap-16 ${c.isRTL ? 'lg:flex-row-reverse' : ''}`}>
-        <motion.div initial="hidden" animate="visible"
-          variants={{ hidden:{}, visible:{ transition:{ staggerChildren:0.1 } } }}
-          className="flex-1 flex flex-col gap-6 lg:gap-7">
-          <motion.div variants={{ hidden:{opacity:0}, visible:{opacity:1} }}>
-            <Badge label={c.badge} />
-          </motion.div>
-          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }} className="flex flex-col gap-2">
-            <span className="text-xs font-semibold tracking-[0.25em] uppercase text-text-muted">
-              {c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
-            </span>
-            <h1 className="text-7xl sm:text-8xl lg:text-9xl font-black tracking-tight leading-[1.05]"
-              style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#94a3b8 35%,#6366f1 65%,#818cf8 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-              HBZ
-            </h1>
-          </motion.div>
-          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
-            <p className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight"
-              style={{ background:'linear-gradient(135deg,#e2e8f0,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-              {c.headline}
-            </p>
-            <p className="text-sm font-medium tracking-wider text-text-muted uppercase mt-2">{c.headlineHi}</p>
-          </motion.div>
-          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
-            <p className="text-sm sm:text-base text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</p>
-          </motion.div>
-          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
-            <CtaButtons c={c} />
-          </motion.div>
-          <motion.div variants={{ hidden:{opacity:0}, visible:{opacity:1} }} className="mt-2">
-            <StatBar stats={c.stats} />
-          </motion.div>
-        </motion.div>
-
-        <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
-          transition={{ delay:0.4, duration:0.8 }}
-          className="hidden lg:flex flex-shrink-0 w-[380px] xl:w-[440px] aspect-square items-center justify-center relative">
-          <div className="absolute inset-0 rounded-full"
-            style={{ background:'radial-gradient(circle, rgba(99,102,241,0.1) 0%, rgba(6,182,212,0.05) 40%, transparent 70%)' }}/>
-          <div className="absolute inset-4 rounded-full border border-border/30"/>
-          <div className="absolute inset-8"><MiniNetworkSVG /></div>
-          {[
-            { label:'Cisco', color:'#1ba0d7', cls:'top-6 left-6' },
-            { label:'MikroTik', color:'#c03030', cls:'top-10 right-4' },
-            { label:'VMware', color:'#60b6e0', cls:'top-1/2 -translate-y-1/2 -right-2' },
-            { label:'Fortinet', color:'#ee3124', cls:'bottom-6 right-6' },
-          ].map((b,i) => (
-            <motion.div key={b.label} initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
-              transition={{ delay:0.8+i*0.15, duration:0.5 }}
-              className={`absolute ${b.cls} flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold`}
-              style={{ background:'rgba(10,10,20,0.85)', border:`1px solid ${b.color}33`, color:b.color, backdropFilter:'blur(8px)' }}>
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:b.color }}/>
-              {b.label}
+    <div className="relative min-h-[640px] lg:min-h-[820px] flex items-center">
+      <div className="relative z-10 py-14 lg:py-0 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`flex flex-col lg:flex-row items-center gap-10 lg:gap-16 ${c.isRTL ? 'lg:flex-row-reverse' : ''}`}>
+          <motion.div initial="hidden" animate="visible"
+            variants={{ hidden:{}, visible:{ transition:{ staggerChildren:0.1 } } }}
+            className="flex-1 flex flex-col gap-5 lg:gap-6 max-w-2xl">
+            <motion.div variants={{ hidden:{opacity:0,y:12}, visible:{opacity:1,y:0} }}>
+              <Badge label={c.badge} />
             </motion.div>
-          ))}
-        </motion.div>
+            <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }} className="flex flex-col gap-2">
+              <span className="text-sm font-semibold tracking-[0.2em] uppercase text-text-muted">
+                {c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
+              </span>
+              <h1 className="text-7xl sm:text-8xl lg:text-9xl font-black tracking-tight leading-[1.05]"
+                style={{ background:'linear-gradient(135deg,#f7f9ff 0%,#a5aec4 35%,#7477ff 65%,#9698ff 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                HBZ
+              </h1>
+            </motion.div>
+            <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
+              <p className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight"
+                style={{ background:'linear-gradient(135deg,#e2e8f0,#7477ff)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                {c.headline}
+              </p>
+              <p className="text-sm font-medium tracking-wider text-text-muted uppercase mt-2">{c.headlineHi}</p>
+            </motion.div>
+            <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
+              <p className="text-md sm:text-lg text-text-secondary leading-relaxed">{c.subheadline}</p>
+            </motion.div>
+            <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
+              <CtaButtons c={c} />
+            </motion.div>
+            <motion.div variants={{ hidden:{opacity:0,y:12}, visible:{opacity:1,y:0} }} className="mt-2">
+              <StatBar stats={c.stats} />
+            </motion.div>
+          </motion.div>
+
+          <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
+            transition={{ delay:0.35, duration:0.7, ease:'easeOut' }}
+            className="hidden lg:flex flex-shrink-0 w-[380px] xl:w-[440px] aspect-square items-center justify-center relative">
+            <div className="absolute inset-0 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(116,119,255,0.10) 0%, rgba(34,211,238,0.05) 40%, transparent 70%)' }}/>
+            <div className="absolute inset-4 rounded-full border border-border/40"/>
+            <div className="absolute inset-8"><MiniNetworkSVG /></div>
+            {[
+              { label:'Cisco', color:'#22d3ee', cls:'top-6 left-6' },
+              { label:'MikroTik', color:'#f0576b', cls:'top-10 right-4' },
+              { label:'VMware', color:'#38bdf8', cls:'top-1/2 -translate-y-1/2 -right-2' },
+              { label:'Fortinet', color:'#f0576b', cls:'bottom-6 right-6' },
+            ].map((b,i) => (
+              <motion.div key={b.label} initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
+                transition={{ delay:0.75+i*0.15, duration:0.5 }}
+                className={`node-float absolute ${b.cls} flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold`}
+                style={{
+                  background:'rgba(8,11,24,0.85)', border:`1px solid ${b.color}33`, color:b.color, backdropFilter:'blur(8px)',
+                  '--float-delay': `${i * 0.6}s`,
+                } as React.CSSProperties}>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:b.color }}/>
+                {b.label}
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </div>
     </div>
   )
@@ -1145,10 +1150,10 @@ function HeroBg({ variant }: { variant: string }) {
             <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 50% 60% at 15% 50%, rgba(6,182,212,0.07) 0%, transparent 70%)' }}/>
             <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 50% 60% at 85% 50%, rgba(99,102,241,0.07) 0%, transparent 70%)' }}/>
           </>
-        : <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 60% 55% at 30% 50%, rgba(99,102,241,0.08) 0%, transparent 70%)' }}/>
+        : <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 60% 55% at 30% 50%, rgba(116,119,255,0.07) 0%, transparent 70%), radial-gradient(ellipse 50% 50% at 80% 40%, rgba(34,211,238,0.05) 0%, transparent 70%)' }}/>
       }
       {variant === 'gradient'
-        ? <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(99,102,241,0.1) 0%, rgba(6,182,212,0.05) 40%, transparent 70%)' }}/>
+        ? <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(116,119,255,0.1) 0%, rgba(34,211,238,0.05) 40%, transparent 70%)' }}/>
         : null
       }
       <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-background to-transparent pointer-events-none"/>
@@ -1193,7 +1198,7 @@ export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
 
   return (
     <section ref={ref}
-      className="relative min-h-[100svh] flex items-center overflow-hidden bg-background pt-16"
+      className="relative min-h-[640px] lg:min-h-[780px] lg:max-h-[900px] flex items-center overflow-hidden bg-background pt-16"
       aria-label={isRTL ? 'بخش اصلی' : 'Hero section'}
       dir={isRTL ? 'rtl' : 'ltr'}>
       <HeroBg variant={variant} />

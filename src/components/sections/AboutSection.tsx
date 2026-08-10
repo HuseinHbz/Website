@@ -209,16 +209,16 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
   const isRTL = locale === 'fa'
 
   const TIMELINE_DATA: TimelineItem[] = (dbTimeline && dbTimeline.length > 0)
-    ? dbTimeline.map(t => ({ year: t.year, titleEn: t.titleEn, titleFa: t.titleFa, descEn: t.descEn || '', descFa: t.descFa || '', color: t.color || '#6366f1' }))
+    ? dbTimeline.map(t => ({ year: t.year, titleEn: t.titleEn, titleFa: t.titleFa, descEn: t.descEn || '', descFa: t.descFa || '', color: t.color || '#7477ff' }))
     : TIMELINE
 
   // 26.29 BUG-114: demo data ONLY when never configured (null); [] = deliberately deactivated
   const SKILLS_DATA: SkillItem[] = dbSkills !== null && dbSkills !== undefined
-    ? dbSkills.map(s => ({ nameEn: s.nameEn, nameFa: s.nameFa, categoryEn: s.categoryEn, categoryFa: s.categoryFa, level: s.level, color: s.color || '#6366f1', icon: s.icon || null }))
+    ? dbSkills.map(s => ({ nameEn: s.nameEn, nameFa: s.nameFa, categoryEn: s.categoryEn, categoryFa: s.categoryFa, level: s.level, color: s.color || '#7477ff', icon: s.icon || null }))
     : SKILLS
 
   const CERTS_DATA: CertItem[] = dbCerts !== null && dbCerts !== undefined
-    ? dbCerts.map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, issuer: c.issuer || '', color: c.color || '#6366f1' }))
+    ? dbCerts.map(c => ({ nameEn: c.nameEn, nameFa: c.nameFa, issuer: c.issuer || '', color: c.color || '#7477ff' }))
     : CERTS
 
   const categoryGroups = groupByCategory(SKILLS_DATA, isRTL)
@@ -296,7 +296,7 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                         className="absolute inset-0 rounded-2xl pointer-events-none"
                         style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(99,102,241,0.15) 0%, transparent 70%)' }}
                       />
-                      <span className="font-black text-5xl text-white tracking-tight relative z-10" style={{ background: 'linear-gradient(135deg, #f1f5f9, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>HBZ</span>
+                      <span className="font-black text-5xl text-white tracking-tight relative z-10" style={{ background: 'linear-gradient(135deg, #f1f5f9, #9698ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>HBZ</span>
                       <span className="text-xs text-text-muted mt-2 relative z-10 tracking-wider uppercase">Infrastructure</span>
                       <span className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-emerald-500 border-2 border-background z-10" />
                     </div>

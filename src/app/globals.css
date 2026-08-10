@@ -128,6 +128,66 @@
     --scrollbar-thumb-hover: #6366f1;
   }
 
+  /* ── Public-site "Premium Enterprise" theme ─────────────────
+     Scoped to .hbz-marketing (the (marketing) layout wrapper) ONLY —
+     the admin panel keeps its own indigo/cyan dark theme untouched.
+     Central palette per the redesign brief; nothing below is repeated
+     as a raw hex anywhere else — components consume these vars. */
+  .hbz-marketing {
+    --color-bg-base:      #050714;
+    --color-bg-secondary: #080b18;
+    --color-bg-surface:   #0d1224;
+    --color-bg-elevated:  #11182d;
+    --color-bg-sunken:    #030309;
+    --color-bg-overlay:   rgba(5, 7, 20, 0.88);
+    --color-bg-glass:     rgba(13, 18, 36, 0.72);
+
+    --color-text-primary:   #f7f9ff;
+    --color-text-secondary: #a5aec4;
+    --color-text-tertiary:  #737e98;
+    --color-text-disabled:  #454e66;
+    --color-text-link:      #9698ff;
+
+    --color-border-default: rgba(137, 147, 255, 0.18);
+    --color-border-subtle:  rgba(137, 147, 255, 0.10);
+    --color-border-strong:  rgba(137, 147, 255, 0.32);
+    --color-border-focus:   #7477ff;
+
+    --color-brand:        #7477ff;
+    --color-brand-hover:  #9698ff;
+    --color-brand-active: #5b5eff;
+    --color-brand-muted:  rgba(116, 119, 255, 0.16);
+    --color-brand-subtle: rgba(116, 119, 255, 0.08);
+
+    --color-violet:  #8b5cf6;
+    --color-accent:       #22d3ee;
+    --color-accent-hover: #67e3f5;
+    --color-accent-muted: rgba(34, 211, 238, 0.15);
+
+    --color-blue: #38bdf8;
+
+    --color-success:      #22c997;
+    --color-success-muted:rgba(34, 201, 151, 0.12);
+    --color-success-text: #4de0b3;
+    --color-warning:      #f5b84b;
+    --color-warning-muted:rgba(245, 184, 75, 0.12);
+    --color-warning-text: #ffcd76;
+    --color-danger:       #f0576b;
+    --color-danger-muted: rgba(240, 87, 107, 0.12);
+    --color-danger-text:  #f98a97;
+    --color-info:         #38bdf8;
+    --color-info-muted:   rgba(56, 189, 248, 0.12);
+    --color-info-text:    #7dd3fc;
+
+    --shadow-brand: 0 8px 32px rgba(116, 119, 255, 0.32);
+    --shadow-brand-lg: 0 16px 48px rgba(116, 119, 255, 0.42);
+    --shadow-glow:  0 0 24px rgba(116, 119, 255, 0.35), 0 0 48px rgba(34, 211, 238, 0.12);
+    --shadow-cyan:  0 8px 32px rgba(34, 211, 238, 0.28);
+
+    background: var(--color-bg-base);
+    color: var(--color-text-primary);
+  }
+
   /* ── Light Theme ─────────────────────────────────────────── */
   [data-theme='light'] {
     --color-bg-base:      #ffffff;
@@ -512,8 +572,8 @@
 
   .glow-text {
     text-shadow:
-      0 0 40px rgba(99,102,241,0.5),
-      0 0 80px rgba(99,102,241,0.2);
+      0 0 40px rgba(116,119,255,0.5),
+      0 0 80px rgba(116,119,255,0.2);
   }
 
   /* ── Surface cards ───────────────────────────────────────── */
@@ -542,7 +602,7 @@
     background: var(--color-bg-glass);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(116, 119, 255, 0.1);
     border-radius: var(--radius-2xl);
   }
 
@@ -550,20 +610,20 @@
     background: var(--color-bg-glass);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(116, 119, 255, 0.1);
     border-radius: var(--radius-2xl);
     transition: all var(--motion-moderate) var(--motion-spring);
     will-change: transform;
   }
 
   .glass-card-hover:hover {
-    border-color: rgba(99, 102, 241, 0.28);
+    border-color: rgba(116, 119, 255, 0.28);
     background: var(--color-bg-elevated);
     transform: translateY(-3px);
     box-shadow:
       var(--shadow-xl),
-      0 0 0 1px rgba(99, 102, 241, 0.08),
-      0 0 40px rgba(99, 102, 241, 0.07);
+      0 0 0 1px rgba(116, 119, 255, 0.08),
+      0 0 40px rgba(116, 119, 255, 0.07);
   }
 
   .enterprise-card {
@@ -589,12 +649,12 @@
   .enterprise-card:hover::before { opacity: 1; }
 
   .enterprise-card:hover {
-    border-color: rgba(99, 102, 241, 0.25);
+    border-color: rgba(116, 119, 255, 0.25);
     transform: translateY(-4px);
     box-shadow:
       var(--shadow-xl),
-      0 0 0 1px rgba(99, 102, 241, 0.1),
-      0 0 60px rgba(99, 102, 241, 0.06);
+      0 0 0 1px rgba(116, 119, 255, 0.1),
+      0 0 60px rgba(116, 119, 255, 0.06);
   }
 
   /* A subtle ALWAYS-ON tint of the card's own accent color, intensifying on
@@ -618,7 +678,7 @@
     height: 1px;
     background: linear-gradient(90deg,
       transparent,
-      var(--card-accent, rgba(99,102,241,0.5)),
+      var(--card-accent, rgba(116,119,255,0.5)),
       transparent);
     opacity: 0.6;
     transition: opacity var(--motion-normal) var(--motion-ease-out);
@@ -650,19 +710,19 @@
     height: 1px;
     background: linear-gradient(90deg,
       transparent,
-      rgba(99,102,241,0.6),
+      rgba(116,119,255,0.6),
       transparent);
     opacity: 0;
     transition: opacity var(--motion-moderate) var(--motion-ease-out);
   }
 
   .service-card:hover {
-    border-color: rgba(99, 102, 241, 0.28);
-    transform: translateY(-5px);
+    border-color: rgba(116, 119, 255, 0.28);
+    transform: translateY(-4px);
     box-shadow:
       var(--shadow-2xl),
-      0 0 0 1px rgba(99, 102, 241, 0.08),
-      0 0 40px rgba(99, 102, 241, 0.06);
+      0 0 0 1px rgba(116, 119, 255, 0.08),
+      0 0 40px rgba(116, 119, 255, 0.06);
   }
 
   .service-card:hover::before { opacity: 1; }
@@ -722,7 +782,7 @@
   }
 
   .btn-outline-enterprise:hover {
-    border-color: rgba(99, 102, 241, 0.5);
+    border-color: rgba(116, 119, 255, 0.5);
     color: var(--color-brand-hover);
     background: var(--color-brand-subtle);
     transform: translateY(-1px);
@@ -738,29 +798,29 @@
   /* ── Backgrounds & decorative ────────────────────────────── */
   .grid-bg {
     background-image:
-      linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(116,119,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(116,119,255,0.04) 1px, transparent 1px);
     background-size: 64px 64px;
   }
 
   .grid-bg-fine {
     background-image:
-      linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(116,119,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(116,119,255,0.03) 1px, transparent 1px);
     background-size: 32px 32px;
   }
 
   .hero-glow {
     background: radial-gradient(ellipse 80% 60% at 50% 0%,
-      rgba(99,102,241,0.18) 0%, transparent 70%);
+      rgba(116,119,255,0.18) 0%, transparent 70%);
   }
 
   .accent-divider {
     height: 1px;
     background: linear-gradient(90deg,
       transparent,
-      rgba(99,102,241,0.4),
-      rgba(6,182,212,0.3),
+      rgba(116,119,255,0.4),
+      rgba(34,211,238,0.3),
       transparent);
   }
 
@@ -800,7 +860,7 @@
     top: 32px;
     bottom: -20px;
     width: 1px;
-    background: linear-gradient(to bottom, rgba(99,102,241,0.4), transparent);
+    background: linear-gradient(to bottom, rgba(116,119,255,0.4), transparent);
   }
 
   .timeline-item:last-child::before { display: none; }
@@ -813,8 +873,8 @@
     height: 18px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--color-brand), var(--color-brand-hover));
-    border: 2px solid rgba(99,102,241,0.3);
-    box-shadow: 0 0 12px rgba(99,102,241,0.5), 0 0 24px rgba(99,102,241,0.2);
+    border: 2px solid rgba(116,119,255,0.3);
+    box-shadow: 0 0 12px rgba(116,119,255,0.5), 0 0 24px rgba(116,119,255,0.2);
   }
 
   [dir='rtl'] .timeline-item { padding-left: 0; padding-right: 44px; }
@@ -983,8 +1043,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.4); }
-  50%       { box-shadow: 0 0 20px rgba(99,102,241,0.7); }
+  0%, 100% { box-shadow: 0 0 8px rgba(116,119,255,0.4); }
+  50%       { box-shadow: 0 0 20px rgba(116,119,255,0.7); }
 }
 
 @keyframes pulse-ring {
@@ -1039,6 +1099,92 @@
 .dash-flow {
   stroke-dasharray: 6 4;
   animation: dashFlow 1.5s linear infinite;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Public-site redesign — micro-interactions & ambient motion
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Slow glow-intensity breathing on a node/badge/button, 3–5s range. */
+@keyframes glowBreathe {
+  0%, 100% { box-shadow: 0 0 12px 0 var(--glow-color, rgba(116,119,255,0.35)); }
+  50%      { box-shadow: 0 0 26px 4px var(--glow-color, rgba(116,119,255,0.55)); }
+}
+.glow-breathe {
+  animation: glowBreathe 4s ease-in-out infinite;
+}
+
+/* SVG-safe variant — box-shadow does not reliably render on SVG elements, so
+   nodes in the hero network diagram breathe via a drop-shadow filter instead. */
+@keyframes glowBreatheSvg {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--glow-color, rgba(116,119,255,0.4))); }
+  50%      { filter: drop-shadow(0 0 7px var(--glow-color, rgba(116,119,255,0.7))); }
+}
+.glow-breathe-svg {
+  animation: glowBreatheSvg 4s ease-in-out infinite;
+}
+
+/* Very small, slow vertical drift for hero network nodes — deliberately subtle. */
+@keyframes nodeFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.node-float {
+  animation: nodeFloat 5s ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+/* Primary-button sheen: a soft diagonal highlight sweeps across on hover. */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.22) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.7s cubic-bezier(0.22,1,0.36,1);
+  pointer-events: none;
+}
+.btn-sheen:hover::after { transform: translateX(120%); }
+
+/* Header nav link — animated active/hover underline indicator. */
+.nav-link-indicator {
+  position: relative;
+}
+.nav-link-indicator::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-brand), var(--color-accent));
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s var(--motion-spring, cubic-bezier(0.22,1,0.36,1));
+}
+.nav-link-indicator:hover::after,
+.nav-link-indicator[data-active='true']::after {
+  transform: scaleX(1);
+}
+
+/* Very slow, low-amplitude breathing glow for a final CTA panel. */
+@keyframes ctaBreathe {
+  0%, 100% { box-shadow: 0 0 40px 0 rgba(116,119,255,0.10), 0 0 80px 0 rgba(34,211,238,0.05); }
+  50%      { box-shadow: 0 0 60px 8px rgba(116,119,255,0.18), 0 0 100px 10px rgba(34,211,238,0.09); }
+}
+.cta-breathe {
+  animation: ctaBreathe 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-breathe, .glow-breathe-svg, .node-float, .cta-breathe {
+    animation: none !important;
+  }
+  .btn-sheen::after { transition: none !important; }
+  .nav-link-indicator::after { transition: none !important; }
 }
 
 /* ── Native <select> controls (unlayered so it beats Tailwind utilities) ──────
@@ -1126,7 +1272,7 @@ select.form-input option {
 
 /* Emphasis / loop */
 @keyframes hxPulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
-@keyframes hxGlow { 0%,100% { filter: drop-shadow(0 0 0 rgba(99,102,241,0)) } 50% { filter: drop-shadow(0 0 14px rgba(99,102,241,.6)) } }
+@keyframes hxGlow { 0%,100% { filter: drop-shadow(0 0 0 rgba(116,119,255,0)) } 50% { filter: drop-shadow(0 0 14px rgba(116,119,255,.6)) } }
 @keyframes hxFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
 @keyframes hxWave { 0%,100% { transform: rotate(0deg) } 25% { transform: rotate(2deg) } 75% { transform: rotate(-2deg) } }
 @keyframes hxSpin { to { transform: rotate(360deg) } }
@@ -1158,8 +1304,8 @@ select.form-input option {
 @keyframes hxOrbitReverse { to { transform: rotate(-360deg) } }
 @keyframes hxOrbitTilt { 0% { transform: perspective(600px) rotateX(55deg) rotate(0) } 100% { transform: perspective(600px) rotateX(55deg) rotate(360deg) } }
 @keyframes hxNodePulse { 0%,100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.09); opacity: .8 } }
-@keyframes hxNodeGlow { 0%,100% { filter: drop-shadow(0 0 2px rgba(99,102,241,.3)) } 50% { filter: drop-shadow(0 0 16px rgba(99,102,241,.85)) } }
-@keyframes hxNodeRipple { 0% { box-shadow: 0 0 0 0 rgba(99,102,241,.5) } 100% { box-shadow: 0 0 0 22px rgba(99,102,241,0) } }
+@keyframes hxNodeGlow { 0%,100% { filter: drop-shadow(0 0 2px rgba(116,119,255,.3)) } 50% { filter: drop-shadow(0 0 16px rgba(116,119,255,.85)) } }
+@keyframes hxNodeRipple { 0% { box-shadow: 0 0 0 0 rgba(116,119,255,.5) } 100% { box-shadow: 0 0 0 22px rgba(116,119,255,0) } }
 @keyframes hxConstellation { 0%,100% { opacity: 1 } 40% { opacity: .55 } 70% { opacity: .85 } }
 @keyframes hxConstellationDrift { 0%,100% { transform: translate(0,0) } 33% { transform: translate(4px,-6px) } 66% { transform: translate(-5px,3px) } }
 @keyframes hxRadarSweep { to { transform: rotate(360deg) } }

@@ -13,8 +13,8 @@ export function ProofBar({ locale }: ProofBarProps) {
   const isRTL = locale === 'fa'
 
   const STATS = [
-    { value: t('experienceValue'), label: t('experience'), icon: '🏆', color: '#6366f1' },
-    { value: t('projectsValue'),   label: t('projects'),   icon: '🏗️', color: '#06b6d4' },
+    { value: t('experienceValue'), label: t('experience'), icon: '🏆', color: '#7477ff' },
+    { value: t('projectsValue'),   label: t('projects'),   icon: '🏗️', color: '#22d3ee' },
     { value: t('endpointsValue'),  label: t('endpoints'),  icon: '🖧',  color: '#10b981' },
     { value: t('uptimeValue'),     label: t('uptime'),     icon: '⏱️', color: '#f59e0b' },
   ]
