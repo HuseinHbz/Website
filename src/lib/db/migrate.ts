@@ -3960,6 +3960,192 @@ export async function runMigrations() {
       WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='hr_portal_request');
   `)
 
+  // ── Phase 28.5 — recruitment, training, performance review ─────────────────
+  //
+  // `courses`/`course_categories`/`course_lessons` were audited before adding
+  // anything: they are the PUBLIC academy catalog (no employee_id, no
+  // company_id, no "mandatory for this employee" concept, instructor is a
+  // `users` row, not `hr_employees`). That is a structurally different thing
+  // from an internal training assignment, so the catalog is REUSED
+  // (hr_training_enrollments.course_id → courses.id) but the enrollment/
+  // completion/certificate record is its own table, not a duplicate catalog.
+  // Likewise `certifications` is Husein's own public credential showcase
+  // (single-owner, site-wide) — not a per-employee table, so it is left alone.
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS hr_job_openings (
+      id SERIAL PRIMARY KEY,
+      title_fa TEXT NOT NULL,
+      title_en TEXT,
+      position_id INTEGER REFERENCES hr_positions(id) ON DELETE SET NULL,
+      department_id INTEGER,
+      description TEXT,
+      requirements TEXT,
+      headcount INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed','cancelled')),
+      opens_at TEXT,
+      closes_at TEXT,
+      company_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_openings_status ON hr_job_openings(status);
+
+    CREATE TABLE IF NOT EXISTS hr_candidates (
+      id SERIAL PRIMARY KEY,
+      full_name TEXT NOT NULL,
+      mobile TEXT,
+      email TEXT,
+      resume_media_id INTEGER,
+      source TEXT NOT NULL DEFAULT 'site' CHECK(source IN ('site','referral','agency','other')),
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','in_process','hired','rejected','withdrawn')),
+      converted_employee_id INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_candidates_status ON hr_candidates(status);
+
+    -- R8: resume + interview data is sensitive. row/field scope over this
+    -- table is enforced in the data layer (hr.recruitment), not by a column.
+    CREATE TABLE IF NOT EXISTS hr_applications (
+      id SERIAL PRIMARY KEY,
+      candidate_id INTEGER NOT NULL REFERENCES hr_candidates(id) ON DELETE CASCADE,
+      opening_id INTEGER NOT NULL REFERENCES hr_job_openings(id) ON DELETE CASCADE,
+      stage TEXT NOT NULL DEFAULT 'screening'
+        CHECK(stage IN ('screening','interview_1','interview_2','offer','rejected','hired')),
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_applications_stage ON hr_applications(stage);
+    CREATE INDEX IF NOT EXISTS idx_hr_applications_candidate ON hr_applications(candidate_id);
+
+    CREATE TABLE IF NOT EXISTS hr_interviews (
+      id SERIAL PRIMARY KEY,
+      application_id INTEGER NOT NULL REFERENCES hr_applications(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL DEFAULT 'online' CHECK(kind IN ('onsite','online','phone')),
+      scheduled_at TEXT,
+      interviewer_id TEXT REFERENCES users(id),
+      score INTEGER,
+      note TEXT,
+      result TEXT CHECK(result IN ('pending','pass','fail')) DEFAULT 'pending',
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_interviews_app ON hr_interviews(application_id);
+    CREATE INDEX IF NOT EXISTS idx_hr_interviews_interviewer ON hr_interviews(interviewer_id);
+
+    CREATE TABLE IF NOT EXISTS hr_offers (
+      id SERIAL PRIMARY KEY,
+      application_id INTEGER NOT NULL REFERENCES hr_applications(id) ON DELETE CASCADE,
+      proposed_salary NUMERIC(16,2) NOT NULL,
+      start_date TEXT,
+      status TEXT NOT NULL DEFAULT 'sent' CHECK(status IN ('sent','accepted','rejected','expired')),
+      approved_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_offers_app ON hr_offers(application_id);
+
+    -- بند ۲ — training, riding on the EXISTING academy catalog.
+    CREATE TABLE IF NOT EXISTS hr_training_enrollments (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+      mandatory INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress','completed','dropped')),
+      score NUMERIC(6,2),
+      enrolled_at TEXT NOT NULL DEFAULT (${NOW}),
+      completed_at TEXT,
+      company_id INTEGER,
+      UNIQUE(employee_id, course_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_train_enroll_emp ON hr_training_enrollments(employee_id, status);
+
+    CREATE TABLE IF NOT EXISTS hr_training_certificates (
+      id SERIAL PRIMARY KEY,
+      enrollment_id INTEGER NOT NULL REFERENCES hr_training_enrollments(id) ON DELETE CASCADE,
+      issued_at TEXT NOT NULL DEFAULT (${NOW}),
+      expires_at TEXT,
+      certificate_no TEXT NOT NULL,
+      company_id INTEGER,
+      UNIQUE(certificate_no)
+    );
+
+    -- بند ۳ — performance review. Append-only: a cycle's hr_reviews row is
+    -- never edited after finalization; a correction is a NEW cycle, exactly
+    -- the 28.1 employment-history discipline applied to review scores.
+    CREATE TABLE IF NOT EXISTS hr_review_cycles (
+      id SERIAL PRIMARY KEY,
+      name_fa TEXT NOT NULL,
+      name_en TEXT,
+      period TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','open','closed')),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS hr_review_templates (
+      id SERIAL PRIMARY KEY,
+      name_fa TEXT NOT NULL,
+      name_en TEXT,
+      criteria_json TEXT NOT NULL DEFAULT '[]',
+      active INTEGER NOT NULL DEFAULT 1,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+
+    CREATE TABLE IF NOT EXISTS hr_reviews (
+      id SERIAL PRIMARY KEY,
+      cycle_id INTEGER NOT NULL REFERENCES hr_review_cycles(id) ON DELETE CASCADE,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      reviewer_id INTEGER REFERENCES hr_employees(id) ON DELETE SET NULL,
+      template_id INTEGER REFERENCES hr_review_templates(id) ON DELETE SET NULL,
+      kind TEXT NOT NULL DEFAULT 'manager' CHECK(kind IN ('self','manager','peer','review_360')),
+      scores_json TEXT NOT NULL DEFAULT '{}',
+      overall_score NUMERIC(5,2),
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','submitted','finalized')),
+      approval_request_id INTEGER,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_reviews_cycle ON hr_reviews(cycle_id);
+    CREATE INDEX IF NOT EXISTS idx_hr_reviews_emp ON hr_reviews(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_hr_reviews_reviewer ON hr_reviews(reviewer_id);
+
+    CREATE TABLE IF NOT EXISTS hr_okrs (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER REFERENCES hr_employees(id) ON DELETE CASCADE,
+      cycle_id INTEGER REFERENCES hr_review_cycles(id) ON DELETE SET NULL,
+      objective TEXT NOT NULL,
+      key_results_json TEXT NOT NULL DEFAULT '[]',
+      progress_pct NUMERIC(5,2) NOT NULL DEFAULT 0,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_okrs_emp ON hr_okrs(employee_id);
+
+    -- Default approval rules for the two new doc types, same reasoning as
+    -- hr_portal_request above: absence of a configured rule must read as
+    -- "needs administrator sign-off", never as silent auto-approval.
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, levels, priority, active)
+      SELECT 'hr_offer', 'Salary offer approval', 'تأیید پیشنهاد حقوق', 0,
+             '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
+      WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='hr_offer');
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, levels, priority, active)
+      SELECT 'hr_review', 'Performance review finalization', 'نهایی‌سازی ارزیابی عملکرد', 0,
+             '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
+      WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='hr_review');
+  `)
+
   await pgQuery(`
     SELECT 1;
   `)

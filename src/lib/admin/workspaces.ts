@@ -114,6 +114,11 @@ export const WORKSPACES: Workspace[] = [
       { labelEn: 'Employees', labelFa: 'پرسنل', href: '/admin/employees', icon: '👥' },
       { labelEn: 'Leave & Attendance', labelFa: 'مرخصی و حضور و غیاب', href: '/admin/leave', icon: '🗓️' },
       { labelEn: 'Payroll', labelFa: 'حقوق و دستمزد', href: '/admin/payroll', icon: '💵' },
+      // Phase 28.5 — the least-priority HR sub-phase (per the master plan);
+      // recruitment/training are unconditional, review is data-gated inside.
+      { labelEn: 'Recruitment', labelFa: 'استخدام', href: '/admin/recruitment', icon: '🧲' },
+      { labelEn: 'Training', labelFa: 'آموزش سازمانی', href: '/admin/training', icon: '🎓' },
+      { labelEn: 'Performance Reviews', labelFa: 'ارزیابی عملکرد', href: '/admin/reviews', icon: '📈' },
     ] }],
   },
   {

@@ -29,6 +29,7 @@ const SUITES = [
   { name: '28.3-ب annual (Eid, severance, settlement)', script: 'verify-28-3b-annual.ts', db: 'rg_283b' },
   { name: '28.3-ج bank payment + advances', script: 'verify-28-3c-completion.ts', db: 'rg_283c' },
   { name: '28.4 employee portal (IDOR matrix, independent session)', script: 'verify-28-4-portal.ts', db: 'rg_284' },
+  { name: '28.5 recruitment, training & review (data-gated)', script: 'verify-28-5-recruitment.ts', db: 'rg_285' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

@@ -296,6 +296,16 @@
    403** (26.25a pattern, existence never leaked), and `employeeId` is read
    only from the server session, never from the request body/query.
    (نشست پورتال کارمند هرگز با نشست مشتری یا ادمین secret مشترک ندارد.)
+53. **A catalog that already exists PUBLICLY is reused, never forked for an
+   internal use case (28.5 بند۲).** `courses` is the public academy catalog
+   (no `employee_id`, no `company_id`, no "mandatory"/"completion" concept) —
+   auditing it first showed that difference is structural, so employee
+   training rides the SAME `courses.id` and only the assignment/completion/
+   certificate layer (`hr_training_enrollments`/`hr_training_certificates`) is
+   new. Before adding a table, check whether an existing one already models
+   the content and only needs a thin per-user layer on top — the 26.32 Root C
+   lesson (one table, one owner) generalised to "one catalog, many consumers".
+   (کاتالوگ عمومی موجود reuse می‌شود، برای مصرف داخلی fork نمی‌شود.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

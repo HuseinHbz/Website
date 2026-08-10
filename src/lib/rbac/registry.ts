@@ -65,6 +65,13 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   // calculation, approving it, paying it, and editing the statutory parameters
   // are four different people's jobs in any organisation that can be audited.
   'hr.payroll': ['calculate', 'approve', 'pay', 'settings_write', 'amounts_view'],
+  // Phase 28.5 — sending a salary offer or converting a candidate to an
+  // employee are the two irreversible-ish recruitment actions; a coordinator
+  // can run the pipeline without being able to commit the company to either.
+  'hr.recruitment': ['offer', 'hire'],
+  // Finalizing a review freezes it (append-only) — a manager can score their
+  // team but only HR can close the book on a cycle.
+  'hr.reviews': ['finalize'],
   'erp.inventory': ['cost_view'],   // بند ۶.۲ — sensitive-field grant (unit cost / valuation)
   'erp.approvals': ['approve', 'reject', 'delegate'],
   'erp.moadian': ['submit'],
