@@ -522,7 +522,7 @@ async function insertSlip(
  */
 export async function calculatePeriod(
   periodId: number, userId: string,
-): Promise<{ ok: boolean; error?: string; slips?: number; employees?: number }> {
+): Promise<{ ok: boolean; error?: string; slips?: number; employees?: number; advanceWarnings?: string[] }> {
   const period = await periodById(periodId)
   if (!period) return { ok: false, error: 'Period not found' }
   if (!isRecalculable(period.status)) {
@@ -540,6 +540,14 @@ export async function calculatePeriod(
 
   await pgQuery(`DELETE FROM payroll_slips WHERE period_id=$1 AND status='draft'`, [periodId])
 
+  // 28.3-ج: an advance scheduled for THIS month is a one-off deduction, read
+  // by employee — never an instalment, so it appears once and never again.
+  const { advanceDeductionsFor } = await import('./annualData')
+  const advances = await advanceDeductionsFor(period.jalaliYear, period.jalaliMonth)
+  const advanceByEmployee = new Map<number, { advanceId: number; amount: number }>()
+  for (const a of advances) advanceByEmployee.set(a.employeeId, a)
+
+  const advanceWarnings: string[] = []
   let count = 0
   for (const e of employees) {
     const history = await pgQuery<import('./employees').EmploymentRecord>(
@@ -556,6 +564,7 @@ export async function calculatePeriod(
     const nameRow = (await pgQuery<{ full: string }>(
       `SELECT (first_name||' '||last_name) AS full FROM hr_employees WHERE id=$1`, [e.id]))[0]
 
+    const advance = advanceByEmployee.get(e.id)
     const result = calculateSlip({
       employee: {
         id: e.id, fullName: nameRow?.full ?? '', childrenCount: Number(e.children ?? 0),
@@ -565,16 +574,34 @@ export async function calculatePeriod(
       worked, loans,
       params: params as PayrollParameter[],
       brackets, earningTypes: earningTypes as EarningType[],
+      otherDeductions: advance
+        ? [{ key: 'advance', labelFa: 'کسر مساعده', labelEn: 'Advance deduction', amount: advance.amount }]
+        : undefined,
     })
 
     await insertSlip(periodId, e.id, period.rulesetId, worked, result)
+    // 🔴 An advance larger than the net it is deducted from must never leave
+    // the net silently negative — the same principle as the 26.26 BUG-013
+    // guard on a financial return. calculateSlip does not clamp, so a net
+    // below zero here is a real signal that this deduction was scheduled
+    // wrongly for this month; it is surfaced, not hidden.
+    if (advance) {
+      const { markAdvanceDeducted } = await import('./annualData')
+      const { advanceExceedsNet } = await import('./annual')
+      if (advanceExceedsNet(advance.amount, result.net)) {
+        advanceWarnings.push(
+          `${nameRow?.full ?? e.id}: کسر مساعده (${Math.round(advance.amount).toLocaleString('en-US')}) از خالص فیش (${Math.round(result.net).toLocaleString('en-US')}) بیشتر است`)
+      }
+      await markAdvanceDeducted(advance.advanceId)
+    }
     count++
   }
 
   await pgQuery(
     `UPDATE payroll_periods SET status='calculated', calculated_by=$2, calculated_at=${NOW} WHERE id=$1`,
     [periodId, userId])
-  return { ok: true, slips: count, employees: employees.length }
+  return { ok: true, slips: count, employees: employees.length,
+    advanceWarnings: advanceWarnings.length ? advanceWarnings : undefined }
 }
 
 // ── approval, GL, payment ───────────────────────────────────────────────────

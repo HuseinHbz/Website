@@ -265,6 +265,24 @@
    defined from the UI with no migration. The tax exemption lives in the bracket
    table as the leading 0% band and is NEVER also subtracted separately — doing
    both exempts it twice, silently. (مشمولیت داده است نه کد.)
+50. **A bank file layout is DATA, never compiled in (28.3-ج بند۱).** Each bank
+   has its own column order and changes it without notice; `payroll_bank_formats`
+   holds it, a new bank is added from the UI with no release, and a format
+   ships unverified until the operator checks a real submission against it. A
+   payment batch is generated ONCE per period (`UNIQUE(period_id)`) — a retried
+   click returns the existing batch, never a second payment run — and an
+   employee with no or invalid IBAN (mod-97 check digit, not just the IR+24
+   shape) REFUSES the whole batch by name rather than dropping silently from
+   the file. Confirming a batch is what settles salaries payable to zero — the
+   loop this sub-phase closes. (فرمت فایل بانک داده است، نه کد.)
+51. **An advance is NOT a loan (28.3-ج بند۲).** A loan amortises over several
+   instalments; an advance is a single lump sum deducted once, in a NAMED
+   month, never repeating. They are separate tables (`payroll_advances` vs
+   `payroll_loans`) because their repayment shape differs, not because the
+   money differs. The cap is a company-policy parameter (% of monthly salary),
+   and an advance whose deduction would exceed the month's net pay surfaces a
+   named warning rather than a silently negative net. (مساعده و وام دو مفهوم
+   جدا — مساعده یک‌جا و در یک ماه معین کسر می‌شود.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

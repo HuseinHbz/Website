@@ -3466,6 +3466,104 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_payroll_loan_inst ON payroll_loan_installments(loan_id);
 
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Phase 28.3-ج — bank payment, advances, and the monthly cycle's last link.
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    -- 🔴 The file format is DATA. Each bank has its own column order and it
+    -- changes without notice; a hardcoded formatter means every bank change is
+    -- a release. A generic CSV ships as the default, seeded non-destructively.
+    CREATE TABLE IF NOT EXISTS payroll_bank_formats (
+      id SERIAL PRIMARY KEY,
+      key TEXT NOT NULL,
+      bank_name TEXT NOT NULL,
+      file_type TEXT NOT NULL DEFAULT 'csv' CHECK(file_type IN ('csv','txt','xlsx')),
+      delimiter TEXT NOT NULL DEFAULT ',',
+      encoding TEXT NOT NULL DEFAULT 'utf-8',
+      include_header INTEGER NOT NULL DEFAULT 1,
+      columns TEXT NOT NULL,
+      verified INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_bank_fmt_key
+      ON payroll_bank_formats(key, COALESCE(company_id, 0));
+
+    CREATE TABLE IF NOT EXISTS payroll_bank_batches (
+      id SERIAL PRIMARY KEY,
+      period_id INTEGER NOT NULL REFERENCES payroll_periods(id),
+      format_id INTEGER REFERENCES payroll_bank_formats(id),
+      source_account TEXT,
+      payment_date TEXT,
+      record_count INTEGER NOT NULL DEFAULT 0,
+      total_amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK(status IN ('draft','generated','sent','confirmed')),
+      gl_entry_id INTEGER,
+      created_by TEXT REFERENCES users(id),
+      approved_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    -- 🔴 idempotency: one batch per period, ever — a retried "generate" click
+    -- must not create a second payment run for the same money.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_bank_batch_period ON payroll_bank_batches(period_id);
+
+    CREATE TABLE IF NOT EXISTS payroll_bank_batch_lines (
+      id SERIAL PRIMARY KEY,
+      batch_id INTEGER NOT NULL REFERENCES payroll_bank_batches(id) ON DELETE CASCADE,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id),
+      iban TEXT,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending','sent','confirmed','rejected')),
+      reject_reason TEXT,
+      company_id INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_bank_lines ON payroll_bank_batch_lines(batch_id);
+
+    -- Advances are NOT loans: a one-off deduction in a named month, no
+    -- instalment schedule.
+    CREATE TABLE IF NOT EXISTS payroll_advances (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+      requested_at TEXT,
+      paid_at TEXT,
+      deduct_jalali_year INTEGER NOT NULL,
+      deduct_jalali_month INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'requested'
+        CHECK(status IN ('requested','approved','paid','deducted','cancelled')),
+      approval_request_id INTEGER,
+      gl_entry_id INTEGER,
+      note TEXT,
+      created_by TEXT REFERENCES users(id),
+      approved_by TEXT REFERENCES users(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_advances ON payroll_advances(employee_id, status);
+
+    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES
+      ('1170','Employee Advances Receivable','مساعدهٔ دریافتنی از کارکنان','asset')
+    ON CONFLICT (code) DO NOTHING;
+
+    INSERT INTO erp_settings (key, value)
+    SELECT * FROM (VALUES ('gl_map_payroll_advance','1170')) AS v(k,val)
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings s WHERE s.key = v.k);
+
+    -- Seed: a generic CSV format the operator can copy and adapt, marked
+    -- unverified because no real bank template was supplied.
+    INSERT INTO payroll_bank_formats (key, bank_name, file_type, delimiter, encoding, columns, verified, note)
+    SELECT 'generic_csv', 'فرمت عمومی CSV (نمونه — قالب بانک واقعی را جایگزین کنید)', 'csv', ',', 'utf-8',
+      '[{"key": "row", "labelFa": "ردیف"}, {"key": "iban", "labelFa": "شبا"}, {"key": "amount", "labelFa": "مبلغ"}, {"key": "employeeName", "labelFa": "نام"}, {"key": "description", "labelFa": "شرح"}]', 0, 'با بانک سازمان تطبیق داده نشده — نمونهٔ اولیه است، جایگزین کنید'
+    WHERE NOT EXISTS (SELECT 1 FROM payroll_bank_formats WHERE key='generic_csv');
+
+    -- ── GL account map + accounts (28.3-الف بند ۶) ──────────────────────────
+
     -- ── GL account map + accounts (28.3-الف بند ۶) ──────────────────────────
     INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES
       ('2300','Salaries Payable','حقوق پرداختنی','liability'),
@@ -3676,6 +3774,13 @@ export async function runMigrations() {
         ['company', 'severance_accrual_enabled', 'ذخیرهٔ ماهانهٔ سنوات', 'Monthly severance provision', 'boolean', 0, null, '🔴 پیش‌فرض خاموش — شناسایی ماهانهٔ بدهی سنوات را با حسابدار خود تصمیم بگیرید', 11],
         ['company', 'leave_encashment_enabled', 'بازخرید مرخصی استفاده‌نشده', 'Encash unused leave', 'boolean', 1, null, null, 12],
         ['company', 'leave_encashment_max_days', 'سقف روز قابل بازخرید', 'Maximum encashable leave days', 'integer', 9, 'روز', 'صفر یعنی بدون سقف', 13],
+        // ── 28.3-ج: advances + conditional-inclusion caps ──
+        ['company', 'advance_max_percent_of_salary', 'سقف مساعده (٪ حقوق ماهانه)', 'Advance cap (% of monthly salary)', 'percent', 50, '٪', 'سیاست شرکت — قابل تنظیم', 14],
+        ['tax', 'housing_taxable_cap', 'سقف معافیت مالیاتی حق مسکن', 'Housing allowance tax-exempt cap', 'amount', 30_000_000, 'ریال', 'طبق بخشنامهٔ سال — مقدار اولیه برابر با کل مبلغ یعنی کاملاً معاف', 3],
+        ['tax', 'food_taxable_cap', 'سقف معافیت مالیاتی بن کارگری', 'Food allowance tax-exempt cap', 'amount', 22_000_000, 'ریال', 'طبق بخشنامهٔ سال', 4],
+        ['tax', 'mission_taxable_cap', 'سقف معافیت مالیاتی هزینهٔ مأموریت', 'Mission expense tax-exempt cap', 'amount', 0, 'ریال', 'صفر یعنی نامحدود تا مبلغ واقعی — با بخشنامهٔ سال تنظیم شود', 5],
+        ['insurance', 'sick_leave_employer_threshold_days', 'سقف روز استعلاجی بر عهدهٔ کارفرما', 'Sick-leave days at employer cost', 'integer', 3, 'روز', '🔴 با حسابدار تطبیق دهید — روزهای اول استعلاجی معمولاً بر عهدهٔ کارفرماست، بقیه بر عهدهٔ تأمین اجتماعی', 5],
+        ['insurance', 'sick_leave_insurance_rate_percent', 'نرخ غرامت استعلاجی تأمین اجتماعی', 'Social-security sick-pay rate', 'percent', 100, '٪', 'درصدی از مزد روزانه که تأمین اجتماعی برای روزهای پس از سقف می‌پردازد', 6],
       ]
       for (const [g, k, fa, en, t, v, unit, desc, sort] of params) {
         await pgQuery(

@@ -21,7 +21,8 @@ import {
   leaveEncashment, calculateSettlement, renderExport,
   eidPostingLines, severancePostingLines, severanceAccrualPostingLines,
   settlementPostingLines, annualPostingBalanced,
-  type ExportColumn, type AnnualPostingLine,
+  validateBankLines, bankBatchPostingLines, advanceCap, checkAdvance,
+  type ExportColumn, type AnnualPostingLine, type BankLineInput,
 } from './annual'
 import { parametersOf, bracketsOf, rulesetFor, periodById } from './payrollData'
 
@@ -677,4 +678,336 @@ export async function annualOverview() {
     severanceProvision: Math.round(Number(provision ?? 0)),
     settlements: Number(settlements ?? 0),
   }
+}
+
+// ── 🔴 bank payment (28.3-ج بند۱) — closing the monthly cycle's last link ────
+
+export interface BankFormat {
+  id: number; key: string; bankName: string; fileType: string
+  delimiter: string; encoding: string; includeHeader: boolean
+  columns: ExportColumn[]; verified: boolean; active: boolean; note: string | null
+}
+
+export async function listBankFormats(): Promise<BankFormat[]> {
+  const rows = await pgQuery<{ id: number; key: string; bankName: string; fileType: string; delimiter: string; encoding: string; includeHeader: number; columns: string; verified: number; active: number; note: string | null }>(
+    `SELECT id, key, bank_name AS "bankName", file_type AS "fileType", delimiter, encoding,
+            include_header AS "includeHeader", columns, verified, active, note
+     FROM payroll_bank_formats WHERE active=1 ORDER BY bank_name`)
+  return rows.map(r => ({
+    ...r, includeHeader: r.includeHeader === 1, verified: r.verified === 1, active: r.active === 1,
+    columns: JSON.parse(r.columns) as ExportColumn[],
+  }))
+}
+
+export async function saveBankFormat(
+  key: string, d: { bankName?: string; columns?: ExportColumn[]; delimiter?: string; fileType?: string; includeHeader?: boolean; verified?: boolean; note?: string | null },
+): Promise<{ ok: boolean; error?: string }> {
+  if (d.columns && !d.columns.length) return { ok: false, error: 'حداقل یک ستون لازم است' }
+  await pgQuery(
+    `UPDATE payroll_bank_formats SET
+       bank_name=COALESCE($2,bank_name), columns=COALESCE($3,columns),
+       delimiter=COALESCE($4,delimiter), file_type=COALESCE($5,file_type),
+       include_header=COALESCE($6,include_header), verified=COALESCE($7,verified), note=$8
+     WHERE key=$1`,
+    [key, d.bankName ?? null, d.columns ? JSON.stringify(d.columns) : null,
+      d.delimiter ?? null, d.fileType ?? null,
+      d.includeHeader == null ? null : (d.includeHeader ? 1 : 0),
+      d.verified == null ? null : (d.verified ? 1 : 0), d.note ?? null])
+  return { ok: true }
+}
+
+/** Add a bank the operator's organisation uses — no code change required. */
+export async function addBankFormat(
+  key: string, bankName: string, columns: ExportColumn[],
+): Promise<{ ok: boolean; id?: number; error?: string }> {
+  const row = (await pgQuery<{ id: number }>(
+    `INSERT INTO payroll_bank_formats (key, bank_name, columns, verified)
+     VALUES ($1,$2,$3,0) ON CONFLICT (key, COALESCE(company_id,0)) DO NOTHING RETURNING id`,
+    [key, bankName, JSON.stringify(columns)]))[0]
+  if (!row) return { ok: false, error: `فرمت ${key} از قبل وجود دارد` }
+  return { ok: true, id: row.id }
+}
+
+export interface BankBatchRow {
+  id: number; periodId: number; formatId: number | null; formatName: string | null
+  sourceAccount: string | null; paymentDate: string | null
+  recordCount: number; totalAmount: number; status: string; glEntryId: number | null
+}
+
+export async function listBankBatches(): Promise<BankBatchRow[]> {
+  return await pgQuery<BankBatchRow>(
+    `SELECT b.id, b.period_id AS "periodId", b.format_id AS "formatId", f.bank_name AS "formatName",
+            b.source_account AS "sourceAccount", b.payment_date AS "paymentDate",
+            b.record_count AS "recordCount", b.total_amount::float AS "totalAmount",
+            b.status, b.gl_entry_id AS "glEntryId"
+     FROM payroll_bank_batches b LEFT JOIN payroll_bank_formats f ON f.id = b.format_id
+     ORDER BY b.id DESC`)
+}
+
+export interface BankBatchLineRow {
+  id: number; employeeId: number; employeeName: string; employeeCode: string
+  iban: string | null; amount: number; status: string
+}
+
+export async function bankBatchLines(batchId: number): Promise<BankBatchLineRow[]> {
+  return await pgQuery<BankBatchLineRow>(
+    `SELECT l.id, l.employee_id AS "employeeId", (e.first_name||' '||e.last_name) AS "employeeName",
+            e.employee_code AS "employeeCode", l.iban, l.amount::float AS amount, l.status
+     FROM payroll_bank_batch_lines l JOIN hr_employees e ON e.id = l.employee_id
+     WHERE l.batch_id=$1 ORDER BY e.employee_code`, [batchId])
+}
+
+/**
+ * Preview the batch WITHOUT writing anything — the refusals an operator needs
+ * to see and fix before generation, exactly like the tax-bracket preview.
+ */
+export async function previewBankBatch(periodId: number) {
+  const rows = await pgQuery<{ employeeId: number; employeeName: string; iban: string | null; amount: number }>(
+    `SELECT s.employee_id AS "employeeId", (e.first_name||' '||e.last_name) AS "employeeName",
+            e.iban, s.net::float AS amount
+     FROM payroll_slips s JOIN hr_employees e ON e.id = s.employee_id
+     WHERE s.period_id=$1 AND s.status IN ('approved','paid','correction')`, [periodId])
+  const lines: BankLineInput[] = rows.map(r => ({
+    employeeId: r.employeeId, employeeName: r.employeeName, iban: r.iban, amount: r.amount,
+  }))
+  return validateBankLines(lines)
+}
+
+/**
+ * 🔴 Generate the bank batch for an approved period.
+ *
+ * Idempotent by construction — `payroll_bank_batches.period_id` is UNIQUE, so
+ * a retried "generate" click hits the existing batch instead of creating a
+ * second payment run for the same money. Any employee who fails validation
+ * is a REFUSAL that names them; the batch is not generated with them silently
+ * missing.
+ */
+export async function generateBankBatch(
+  periodId: number, formatId: number, sourceAccount: string | null, paymentDate: string, userId: string,
+): Promise<{ ok: boolean; error?: string; id?: number; alreadyExists?: boolean; refusals?: { employeeName: string; reasonFa: string }[] }> {
+  const existing = (await pgQuery<{ id: number }>(
+    `SELECT id FROM payroll_bank_batches WHERE period_id=$1`, [periodId]))[0]
+  if (existing) return { ok: true, id: existing.id, alreadyExists: true }
+
+  const period = await periodById(periodId)
+  if (!period) return { ok: false, error: 'Period not found' }
+  if (period.status !== 'approved' && period.status !== 'paid') {
+    return { ok: false, error: 'دسته فقط از دورهٔ تأییدشده ساخته می‌شود' }
+  }
+
+  const checks = await previewBankBatch(periodId)
+  const { BANK_LINE_REFUSAL_LABELS } = await import('./annual')
+  const refusals = checks.filter(c => !c.ok)
+  if (refusals.length) {
+    return {
+      ok: false,
+      error: `${refusals.length} کارمند مشکل دارند و از فایل کنار گذاشته شدند — ابتدا رفع کنید`,
+      refusals: refusals.map(r => ({
+        employeeName: r.employeeName, reasonFa: BANK_LINE_REFUSAL_LABELS[r.reason!].fa,
+      })),
+    }
+  }
+  if (!checks.length) return { ok: false, error: 'این دوره فیش تأییدشده‌ای برای پرداخت ندارد' }
+
+  const rows = await pgQuery<{ employeeId: number; employeeName: string; iban: string | null; amount: number }>(
+    `SELECT s.employee_id AS "employeeId", (e.first_name||' '||e.last_name) AS "employeeName",
+            e.iban, s.net::float AS amount
+     FROM payroll_slips s JOIN hr_employees e ON e.id = s.employee_id
+     WHERE s.period_id=$1 AND s.status IN ('approved','paid','correction')`, [periodId])
+  const total = round2Money(rows.reduce((s, r) => s + r.amount, 0))
+
+  const batch = (await pgQuery<{ id: number }>(
+    `INSERT INTO payroll_bank_batches
+       (period_id, format_id, source_account, payment_date, record_count, total_amount, status, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,'generated',$7)
+     ON CONFLICT (period_id) DO NOTHING RETURNING id`,
+    [periodId, formatId, sourceAccount, paymentDate, rows.length, total, userId]))[0]
+  if (!batch) {
+    // A concurrent request won the race — return its batch rather than error.
+    const won = (await pgQuery<{ id: number }>(`SELECT id FROM payroll_bank_batches WHERE period_id=$1`, [periodId]))[0]
+    return { ok: true, id: won!.id, alreadyExists: true }
+  }
+
+  for (const r of rows) {
+    await pgQuery(
+      `INSERT INTO payroll_bank_batch_lines (batch_id, employee_id, iban, amount, description)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [batch.id, r.employeeId, r.iban, r.amount,
+        `حقوق ${period.jalaliYear}/${String(period.jalaliMonth).padStart(2, '0')}`])
+  }
+  return { ok: true, id: batch.id }
+}
+
+function round2Money(n: number) { return Math.round(n * 100) / 100 }
+
+export async function renderBankFile(batchId: number): Promise<{ ok: boolean; error?: string; csv?: string; verified?: boolean; note?: string | null; filename?: string }> {
+  const batch = (await pgQuery<{ formatId: number | null }>(
+    `SELECT format_id AS "formatId" FROM payroll_bank_batches WHERE id=$1`, [batchId]))[0]
+  if (!batch) return { ok: false, error: 'Not found' }
+  const format = (await listBankFormats()).find(f => f.id === batch.formatId)
+  if (!format) return { ok: false, error: 'قالب بانک یافت نشد' }
+
+  const lines = await bankBatchLines(batchId)
+  const rows = lines.map((l, i) => ({
+    row: i + 1, iban: l.iban, amount: l.amount, employeeName: l.employeeName, description: l.employeeCode,
+  }))
+  const csv = renderExport(rows, format.columns, { delimiter: format.delimiter, includeHeader: format.includeHeader })
+  return { ok: true, csv, verified: format.verified, note: format.note, filename: `payroll-bank-${batchId}.${format.fileType}` }
+}
+
+/** Mark the batch sent (uploaded to the bank's portal). */
+export async function markBatchSent(batchId: number): Promise<{ ok: boolean; error?: string }> {
+  const row = (await pgQuery<{ status: string }>(`SELECT status FROM payroll_bank_batches WHERE id=$1`, [batchId]))[0]
+  if (!row) return { ok: false, error: 'Not found' }
+  if (row.status !== 'generated') return { ok: false, error: `وضعیت ${row.status} قابل ارسال نیست` }
+  await pgQuery(`UPDATE payroll_bank_batches SET status='sent' WHERE id=$1`, [batchId])
+  await pgQuery(`UPDATE payroll_bank_batch_lines SET status='sent' WHERE batch_id=$1`, [batchId])
+  return { ok: true }
+}
+
+/**
+ * 🔴 Confirm the batch was paid — this is what SETTLES salaries payable.
+ *
+ * Individual lines the bank rejected (bad account, blocked account) are
+ * recorded with their reason and can be corrected and resubmitted; only the
+ * confirmed lines settle the ledger, so a bounced payment never silently
+ * counts as paid.
+ */
+export async function confirmBatch(
+  batchId: number, rejectedEmployeeIds: number[], userId: string,
+): Promise<{ ok: boolean; error?: string; entryId?: number; alreadyPosted?: boolean }> {
+  const batch = (await pgQuery<{ status: string; glEntryId: number | null; paymentDate: string | null; totalAmount: number }>(
+    `SELECT status, gl_entry_id AS "glEntryId", payment_date AS "paymentDate", total_amount::float AS "totalAmount"
+     FROM payroll_bank_batches WHERE id=$1`, [batchId]))[0]
+  if (!batch) return { ok: false, error: 'Not found' }
+  if (batch.glEntryId) return { ok: true, entryId: batch.glEntryId, alreadyPosted: true }
+  if (batch.status !== 'generated' && batch.status !== 'sent') {
+    return { ok: false, error: `وضعیت ${batch.status} قابل تأیید نیست` }
+  }
+
+  if (rejectedEmployeeIds.length) {
+    await pgQuery(
+      `UPDATE payroll_bank_batch_lines SET status='rejected', reject_reason='بانک رد کرد'
+       WHERE batch_id=$1 AND employee_id = ANY($2::int[])`, [batchId, rejectedEmployeeIds])
+  }
+  await pgQuery(
+    `UPDATE payroll_bank_batch_lines SET status='confirmed' WHERE batch_id=$1 AND status <> 'rejected'`,
+    [batchId])
+
+  const confirmedTotal = Number((await pgQuery<{ n: string }>(
+    `SELECT COALESCE(SUM(amount),0)::text AS n FROM payroll_bank_batch_lines WHERE batch_id=$1 AND status='confirmed'`,
+    [batchId]))[0]?.n ?? 0)
+  if (confirmedTotal <= 0) {
+    await pgQuery(`UPDATE payroll_bank_batches SET status='confirmed', approved_by=$2 WHERE id=$1`, [batchId, userId])
+    return { ok: true }
+  }
+
+  const map = await annualGlMap()
+  const bankCode = map['1010'] ?? '1010'
+  const lines = bankBatchPostingLines(confirmedTotal, bankCode)
+  const posted = await postAnnualEntry(
+    batch.paymentDate ?? new Date().toISOString().slice(0, 10),
+    'تسویهٔ حقوق از طریق بانک', `bank-batch:${batchId}`, lines, userId)
+  if (!posted.ok) return posted
+
+  await pgQuery(`UPDATE payroll_bank_batches SET status='confirmed', gl_entry_id=$2, approved_by=$3 WHERE id=$1`,
+    [batchId, posted.entryId, userId])
+  return posted
+}
+
+// ── 🔴 advances — a lump-sum deduction, NOT a loan (28.3-ج بند۲) ────────────
+
+export interface AdvanceRow {
+  id: number; employeeId: number; employeeName: string; amount: number
+  deductJalaliYear: number; deductJalaliMonth: number; status: string; glEntryId: number | null
+}
+
+export async function listAdvances(employeeId?: number): Promise<AdvanceRow[]> {
+  const params: unknown[] = []
+  let where = '1=1'
+  if (employeeId) { params.push(employeeId); where += ` AND a.employee_id=$1` }
+  return await pgQuery<AdvanceRow>(
+    `SELECT a.id, a.employee_id AS "employeeId", (e.first_name||' '||e.last_name) AS "employeeName",
+            a.amount::float AS amount, a.deduct_jalali_year AS "deductJalaliYear",
+            a.deduct_jalali_month AS "deductJalaliMonth", a.status, a.gl_entry_id AS "glEntryId"
+     FROM payroll_advances a JOIN hr_employees e ON e.id = a.employee_id
+     WHERE ${where} ORDER BY a.id DESC`, params)
+}
+
+/** Request an advance, gated by the configured cap. */
+export async function requestAdvance(
+  employeeId: number, amount: number, deductYear: number, deductMonth: number, note: string | null, userId: string,
+): Promise<{ ok: boolean; error?: string; id?: number }> {
+  const history = await pgQuery<import('./employees').EmploymentRecord>(
+    `SELECT id, start_date AS "startDate", end_date AS "endDate",
+            base_salary::float AS "baseSalary", contract_type AS "contractType"
+     FROM hr_employment WHERE employee_id=$1 ORDER BY start_date`, [employeeId])
+  const current = employmentOn(history, new Date().toISOString().slice(0, 10))
+  if (!current) return { ok: false, error: 'سابقهٔ استخدامی فعالی برای این کارمند یافت نشد' }
+
+  const ruleset = await rulesetFor(new Date().toISOString().slice(0, 10))
+  const params = ruleset ? (await parametersOf(ruleset.id) as PayrollParameter[]) : []
+  const maxPercent = params.find(p => p.key === 'advance_max_percent_of_salary')?.value ?? 0
+  const check = checkAdvance(amount, current.baseSalary, maxPercent)
+  if (!check.ok) {
+    return { ok: false, error: `مبلغ درخواستی بیشتر از سقف مساعده (${Math.round(check.cap).toLocaleString('en-US')} ریال) است` }
+  }
+
+  const row = (await pgQuery<{ id: number }>(
+    `INSERT INTO payroll_advances (employee_id, amount, requested_at, deduct_jalali_year, deduct_jalali_month, status, note, created_by)
+     VALUES ($1,$2,${NOW},$3,$4,'requested',$5,$6) RETURNING id`,
+    [employeeId, amount, deductYear, deductMonth, note, userId]))[0]
+  return { ok: true, id: row.id }
+}
+
+export async function approveAdvance(id: number, userId: string): Promise<{ ok: boolean; error?: string }> {
+  const row = (await pgQuery<{ status: string; created_by: string | null }>(
+    `SELECT status, created_by FROM payroll_advances WHERE id=$1`, [id]))[0]
+  if (!row) return { ok: false, error: 'Not found' }
+  if (row.status !== 'requested') return { ok: false, error: `وضعیت ${row.status} قابل تأیید نیست` }
+  const { isSeparationViolation } = await import('@/lib/approval/engine')
+  if (row.created_by && isSeparationViolation('payroll_period', row.created_by, userId)) {
+    return { ok: false, error: 'درخواست‌کننده نمی‌تواند مساعدهٔ خودش را تأیید کند' }
+  }
+  await pgQuery(`UPDATE payroll_advances SET status='approved', approved_by=$2 WHERE id=$1`, [id, userId])
+  return { ok: true }
+}
+
+/** Pay the advance out — Dr advances receivable / Cr bank. */
+export async function payAdvance(id: number, userId: string): Promise<{ ok: boolean; error?: string; entryId?: number }> {
+  const row = (await pgQuery<{ employee_id: number; amount: number; status: string; gl_entry_id: number | null }>(
+    `SELECT employee_id, amount::float AS amount, status, gl_entry_id FROM payroll_advances WHERE id=$1`, [id]))[0]
+  if (!row) return { ok: false, error: 'Not found' }
+  if (row.gl_entry_id) return { ok: true, entryId: row.gl_entry_id }
+  if (row.status !== 'approved') return { ok: false, error: 'فقط مساعدهٔ تأییدشده پرداخت می‌شود' }
+
+  const map = await annualGlMap()
+  const advCode = map['1170'] ?? '1170'
+  const bankCode = map['1010'] ?? '1010'
+  const lines: AnnualPostingLine[] = [
+    { accountCode: advCode, debit: round2Money(row.amount), credit: 0, memo: 'مساعدهٔ پرداختی' },
+    { accountCode: bankCode, debit: 0, credit: round2Money(row.amount), memo: 'پرداخت مساعده' },
+  ]
+  const posted = await postAnnualEntry(new Date().toISOString().slice(0, 10), 'مساعدهٔ کارکنان', `advance:${id}`, lines, userId)
+  if (!posted.ok) return posted
+  await pgQuery(`UPDATE payroll_advances SET status='paid', paid_at=${NOW}, gl_entry_id=$2 WHERE id=$1`,
+    [id, posted.entryId])
+  return posted
+}
+
+/**
+ * The advance deduction due for a period — read by the slip engine as an
+ * `otherDeductions` line, exactly like a loan installment but with no
+ * amortisation schedule.
+ */
+export async function advanceDeductionsFor(jalaliYear: number, jalaliMonth: number): Promise<{ employeeId: number; advanceId: number; amount: number }[]> {
+  const rows = await pgQuery<{ id: number; employee_id: number; amount: number }>(
+    `SELECT id, employee_id, amount::float AS amount FROM payroll_advances
+     WHERE status='paid' AND deduct_jalali_year=$1 AND deduct_jalali_month=$2`,
+    [jalaliYear, jalaliMonth])
+  return rows.map(r => ({ employeeId: r.employee_id, advanceId: r.id, amount: r.amount }))
+}
+
+export async function markAdvanceDeducted(advanceId: number): Promise<void> {
+  await pgQuery(`UPDATE payroll_advances SET status='deducted' WHERE id=$1`, [advanceId])
 }

@@ -13,6 +13,8 @@ import {
   eidPostingLines, severancePostingLines, severanceAccrualPostingLines,
   settlementPostingLines, annualPostingBalanced,
   csvField, renderExport,
+  splitSickLeave, ibanCheckDigitValid, validateBankLines, bankBatchPostingLines,
+  advanceCap, checkAdvance, advanceExceedsNet,
 } from '../annual'
 import type { PayrollParameter } from '../payroll'
 
@@ -328,6 +330,107 @@ describe('GL posting', () => {
 })
 
 // ── exports ─────────────────────────────────────────────────────────────────
+
+// ── sick leave split ─────────────────────────────────────────────────────
+
+describe('sick leave pay split', () => {
+  const opts = { employerThresholdDays: 3, insuranceRatePercent: 100 }
+
+  it('a short sick leave is entirely at employer cost', () => {
+    const r = splitSickLeave(2, 10_000_000, opts)
+    expect(r).toMatchObject({ employerDays: 2, insuranceDays: 0, employerAmount: 20_000_000, insuranceAmount: 0 })
+  })
+
+  it('🔴 a long sick leave splits at the threshold', () => {
+    const r = splitSickLeave(10, 10_000_000, opts)
+    expect(r.employerDays).toBe(3)
+    expect(r.insuranceDays).toBe(7)
+    expect(r.employerAmount).toBe(30_000_000)
+    expect(r.insuranceAmount).toBe(70_000_000)
+  })
+
+  it('the threshold and rate are parameters — changing them changes the split', () => {
+    const r = splitSickLeave(10, 10_000_000, { employerThresholdDays: 5, insuranceRatePercent: 80 })
+    expect(r.employerDays).toBe(5)
+    expect(r.insuranceAmount).toBe(5 * 10_000_000 * 0.8)
+  })
+
+  it('zero days splits to nothing', () => {
+    expect(splitSickLeave(0, 10_000_000, opts)).toMatchObject({ employerDays: 0, insuranceDays: 0 })
+  })
+})
+
+// ── 🔴 bank payment ──────────────────────────────────────────────────────
+
+describe('🔴 IBAN check digit', () => {
+  it('accepts a structurally valid IBAN with the correct check digit', () => {
+    // A known-valid Iranian IBAN (mod-97 check digit verified).
+    expect(ibanCheckDigitValid('IR062960000000100324200001')).toBe(true)
+  })
+  it('rejects a transposed digit that the format regex alone would accept', () => {
+    // Swap two digits in the account body — still IR + 24 digits, wrong check.
+    expect(ibanCheckDigitValid('IR062960000000100324200010')).toBe(false)
+  })
+  it('rejects a malformed IBAN outright', () => {
+    expect(ibanCheckDigitValid('IR123')).toBe(false)
+    expect(ibanCheckDigitValid('GB062960000000100324200001')).toBe(false)
+  })
+})
+
+describe('🔴 bank batch line validation refuses rather than silently drops', () => {
+  const base = { employeeId: 1, employeeName: 'حسین', iban: 'IR062960000000100324200001', amount: 1_000_000 }
+
+  it('accepts a valid line', () => {
+    expect(validateBankLines([base])[0]).toMatchObject({ ok: true })
+  })
+  it('🔴 an employee with no IBAN is refused BY NAME, not dropped silently', () => {
+    const r = validateBankLines([{ ...base, iban: null }])[0]
+    expect(r).toMatchObject({ ok: false, reason: 'missing_iban', employeeName: 'حسین' })
+  })
+  it('an invalid IBAN is refused', () => {
+    expect(validateBankLines([{ ...base, iban: 'IR000000000000000000000000' }])[0].reason).toBe('invalid_iban')
+  })
+  it('a non-positive amount is refused', () => {
+    expect(validateBankLines([{ ...base, amount: 0 }])[0].reason).toBe('non_positive_amount')
+  })
+  it('the same employee twice in one batch is refused', () => {
+    const results = validateBankLines([base, { ...base }])
+    expect(results[1].reason).toBe('duplicate_employee')
+  })
+})
+
+describe('bank batch settlement posting', () => {
+  it('debits salaries payable and credits the bank account', () => {
+    const lines = bankBatchPostingLines(500_000_000, '1010')
+    expect(annualPostingBalanced(lines)).toBe(true)
+    expect(lines.find(l => l.accountCode === '2300')?.debit).toBe(500_000_000)
+    expect(lines.find(l => l.accountCode === '1010')?.credit).toBe(500_000_000)
+  })
+  it('a zero-amount batch posts nothing', () => {
+    expect(bankBatchPostingLines(0, '1010')).toEqual([])
+  })
+})
+
+// ── 🔴 advances ──────────────────────────────────────────────────────────
+
+describe('🔴 advances are not loans', () => {
+  it('the cap is a percentage of monthly salary', () => {
+    expect(advanceCap(200_000_000, 50)).toBe(100_000_000)
+  })
+  it('a request within the cap is accepted', () => {
+    expect(checkAdvance(50_000_000, 200_000_000, 50)).toMatchObject({ ok: true, cap: 100_000_000 })
+  })
+  it('🔴 a request beyond the cap is refused, with the cap reported', () => {
+    expect(checkAdvance(150_000_000, 200_000_000, 50)).toMatchObject({ ok: false, reason: 'exceeds_cap', cap: 100_000_000 })
+  })
+  it('a zero cap parameter means no cap enforced', () => {
+    expect(checkAdvance(1_000_000_000, 200_000_000, 0).ok).toBe(true)
+  })
+  it('🔴 an advance exceeding the projected net is flagged, not silently allowed to go negative', () => {
+    expect(advanceExceedsNet(100_000_000, 80_000_000)).toBe(true)
+    expect(advanceExceedsNet(50_000_000, 80_000_000)).toBe(false)
+  })
+})
 
 describe('legal exports', () => {
   const columns = [

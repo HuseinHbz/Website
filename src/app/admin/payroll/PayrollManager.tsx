@@ -55,12 +55,14 @@ interface Slip {
 }
 interface TaxRow { seq: number; from: number; to: number | null; ratePercent: number; amountInBracket: number; tax: number }
 
-type Tab = 'periods' | 'slips' | 'eid' | 'severance' | 'settlements' | 'exports'
+type Tab = 'periods' | 'slips' | 'bank' | 'advances' | 'eid' | 'severance' | 'settlements' | 'exports'
   | 'rulesets' | 'tax' | 'insurance' | 'earnings' | 'loans'
 
 const TABS: { id: Tab; en: string; fa: string }[] = [
   { id: 'periods', en: 'Payroll runs', fa: 'دوره‌های حقوق' },
   { id: 'slips', en: 'Payslips', fa: 'فیش‌ها' },
+  { id: 'bank', en: 'Bank payment', fa: 'پرداخت بانکی' },
+  { id: 'advances', en: 'Advances', fa: 'مساعده' },
   { id: 'eid', en: 'Eid bonus', fa: 'عیدی' },
   { id: 'severance', en: 'Severance', fa: 'سنوات پایان خدمت' },
   { id: 'settlements', en: 'Final settlement', fa: 'تسویه‌حساب' },
@@ -95,6 +97,19 @@ interface ExportLayout {
   delimiter: string; includeHeader: boolean
   columns: { key: string; labelFa: string }[]
   verified: boolean; note: string | null
+}
+interface BankFormat {
+  id: number; key: string; bankName: string; fileType: string
+  columns: { key: string; labelFa: string }[]; verified: boolean; note: string | null
+}
+interface BankBatch {
+  id: number; periodId: number; formatId: number | null; formatName: string | null
+  sourceAccount: string | null; paymentDate: string | null
+  recordCount: number; totalAmount?: number; status: string; glEntryId: number | null
+}
+interface AdvanceRow {
+  id: number; employeeId: number; employeeName: string; amount?: number
+  deductJalaliYear: number; deductJalaliMonth: number; status: string; glEntryId: number | null
 }
 
 const GROUP_LABELS: Record<string, { en: string; fa: string }> = {
@@ -159,6 +174,14 @@ export function PayrollManager() {
   const [setModal, setSetModal] = useState(false)
   const [exportPeriod, setExportPeriod] = useState('')
   const [employees, setEmployees] = useState<{ id: number; fullName: string }[]>([])
+
+  const [bankFormats, setBankFormats] = useState<BankFormat[]>([])
+  const [bankBatches, setBankBatches] = useState<BankBatch[]>([])
+  const [advances, setAdvances] = useState<AdvanceRow[]>([])
+  const [genForm, setGenForm] = useState({ periodId: '', formatId: '', sourceAccount: '', paymentDate: '' })
+  const [genModal, setGenModal] = useState(false)
+  const [advForm, setAdvForm] = useState({ employeeId: '', amount: '', deductJalaliYear: '', deductJalaliMonth: '1', note: '' })
+  const [advModal, setAdvModal] = useState(false)
 
   const [previewIncome, setPreviewIncome] = useState('1000000000')
   const [preview, setPreview] = useState<TaxRow[] | null>(null)
@@ -232,12 +255,27 @@ export function PayrollManager() {
     if (r.ok) setLayouts((await r.json()).layouts ?? [])
   }, [])
 
+  const loadBankFormats = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=bankFormats')
+    if (r.ok) setBankFormats((await r.json()).formats ?? [])
+  }, [])
+  const loadBankBatches = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=bankBatches')
+    if (r.ok) setBankBatches((await r.json()).batches ?? [])
+  }, [])
+  const loadAdvances = useCallback(async () => {
+    const r = await fetch('/api/admin/hr/payroll?view=advances')
+    if (r.ok) setAdvances((await r.json()).advances ?? [])
+  }, [])
+
   useEffect(() => {
     if (tab === 'eid') loadEid()
     if (tab === 'severance') loadSeverance()
     if (tab === 'settlements') loadSettlements()
     if (tab === 'exports') loadLayouts()
-  }, [tab, loadEid, loadSeverance, loadSettlements, loadLayouts])
+    if (tab === 'bank') { loadBankFormats(); loadBankBatches() }
+    if (tab === 'advances') loadAdvances()
+  }, [tab, loadEid, loadSeverance, loadSettlements, loadLayouts, loadBankFormats, loadBankBatches, loadAdvances])
 
   async function post(body: Record<string, unknown>, okEn: string, okFa: string, after?: () => void) {
     const res = await fetch('/api/admin/hr/payroll', {
@@ -510,6 +548,91 @@ export function PayrollManager() {
         </div>
       )}
 
+
+
+      {tab === 'bank' && (
+        <div className="space-y-4">
+          <Card className="p-4 flex items-start justify-between gap-4">
+            <p className="text-sm text-text-secondary">
+              {L(fa,
+                'A batch is generated ONCE per period — a retried click hits the same batch, never a second payment run. An employee with no or invalid IBAN is refused by name, never silently dropped from the file. Confirming the batch settles salaries payable to zero.',
+                'دسته فقط یک‌بار برای هر دوره تولید می‌شود — کلیک دوباره همان دسته را برمی‌گرداند، نه دستهٔ جدید. کارمند بدون شبا یا با شبای نامعتبر با ذکر نام رد می‌شود، نه حذف خاموش از فایل. تأیید دسته، حقوق پرداختنی را صفر می‌کند.')}
+            </p>
+            <Btn onClick={() => { setGenForm({ periodId: '', formatId: '', sourceAccount: '', paymentDate: '' }); setGenModal(true) }}>
+              {L(fa, 'Generate batch', 'تولید دسته')}</Btn>
+          </Card>
+
+          {bankFormats.some(f => !f.verified) && (
+            <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
+              <p className="text-sm text-text-secondary">
+                ⚠️ {L(fa,
+                  'One or more bank formats are not verified against a real bank template. Check the file with your bank before relying on it.',
+                  'یک یا چند فرمت بانکی با نمونهٔ واقعی بانک تطبیق داده نشده‌اند. پیش از اتکا به فایل، با بانک بررسی کنید.')}
+              </p>
+            </div>
+          )}
+
+          <DataTable<BankBatch> tableId="hr-payroll-bank-batches" rows={bankBatches} locale={fa ? 'fa' : 'en'}
+            columns={[
+              { key: 'formatName', labelEn: 'Bank', labelFa: 'بانک', render: b => <span>{b.formatName ?? '—'}</span> },
+              { key: 'recordCount', labelEn: 'Records', labelFa: 'تعداد رکورد', numeric: true,
+                render: b => <span className="tabular-nums">{num(b.recordCount)}</span> },
+              { key: 'totalAmount', labelEn: 'Total', labelFa: 'مبلغ کل', numeric: true,
+                render: b => <span className="tabular-nums font-semibold">{money(b.totalAmount)}</span> },
+              { key: 'paymentDate', labelEn: 'Payment date', labelFa: 'تاریخ پرداخت',
+                render: b => <span className="text-xs" dir="ltr">{b.paymentDate ?? '—'}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: 'وضعیت',
+                render: b => <Badge color={b.status === 'confirmed' ? 'green' : b.status === 'sent' ? 'blue' : 'slate'}>
+                  {b.status}</Badge> },
+            ]}
+            rowActions={[
+              { id: 'download', labelEn: 'Download file', labelFa: 'دریافت فایل', icon: '⬇',
+                onClick: b => { window.location.href = `/api/admin/hr/payroll?view=bankFile&id=${b.id}` } },
+              { id: 'send', labelEn: 'Mark sent', labelFa: 'ثبت ارسال', icon: '📤',
+                hidden: b => b.status !== 'generated',
+                onClick: b => post({ action: 'bankBatch.send', id: b.id }, 'Marked sent', 'ثبت شد', loadBankBatches) },
+              { id: 'confirm', labelEn: 'Confirm payment', labelFa: 'تأیید پرداخت', icon: '✓',
+                hidden: b => b.status === 'draft' || b.status === 'confirmed',
+                onClick: b => post({ action: 'bankBatch.confirm', id: b.id, rejectedEmployeeIds: [] },
+                  'Payment confirmed — salaries payable settled', 'پرداخت تأیید شد — حقوق پرداختنی تسویه شد',
+                  () => { loadBankBatches(); load() }) },
+            ]} />
+        </div>
+      )}
+
+      {tab === 'advances' && (
+        <div className="space-y-4">
+          <Card className="p-4 flex items-start justify-between gap-4">
+            <p className="text-sm text-text-secondary">
+              {L(fa,
+                'An advance is NOT a loan: a single lump sum deducted once, in the named month, with no instalment schedule. The cap is company policy, and a request beyond it is refused with the cap shown.',
+                'مساعده وام نیست: یک مبلغ یک‌جا که فقط در ماه تعیین‌شده و بدون اقساط کسر می‌شود. سقف آن سیاست شرکت است و درخواست بیش از سقف با نمایش همان سقف رد می‌شود.')}
+            </p>
+            <Btn onClick={() => { setAdvForm({ employeeId: '', amount: '', deductJalaliYear: '', deductJalaliMonth: '1', note: '' }); setAdvModal(true) }}>
+              {L(fa, 'New advance', 'مساعدهٔ جدید')}</Btn>
+          </Card>
+
+          <DataTable<AdvanceRow> tableId="hr-payroll-advances" rows={advances} locale={fa ? 'fa' : 'en'}
+            columns={[
+              { key: 'employeeName', labelEn: 'Employee', labelFa: 'کارمند' },
+              { key: 'amount', labelEn: 'Amount', labelFa: 'مبلغ', numeric: true,
+                render: a => <span className="tabular-nums font-semibold">{money(a.amount)}</span> },
+              { key: 'deductJalaliMonth', labelEn: 'Deducted in', labelFa: 'کسر در',
+                render: a => <span>{monthName(a.deductJalaliMonth)} {num(a.deductJalaliYear)}</span> },
+              { key: 'status', labelEn: 'Status', labelFa: 'وضعیت',
+                render: a => <Badge color={a.status === 'deducted' ? 'green' : a.status === 'paid' ? 'blue'
+                  : a.status === 'approved' ? 'yellow' : 'slate'}>{a.status}</Badge> },
+            ]}
+            rowActions={[
+              { id: 'approve', labelEn: 'Approve', labelFa: 'تأیید', icon: '✓',
+                hidden: a => a.status !== 'requested',
+                onClick: a => post({ action: 'advance.approve', id: a.id }, 'Approved', 'تأیید شد', loadAdvances) },
+              { id: 'pay', labelEn: 'Pay out', labelFa: 'پرداخت', icon: '💵',
+                hidden: a => a.status !== 'approved',
+                onClick: a => post({ action: 'advance.pay', id: a.id }, 'Paid', 'پرداخت شد', loadAdvances) },
+            ]} />
+        </div>
+      )}
 
       {tab === 'eid' && (
         <div className="space-y-4">
@@ -914,6 +1037,69 @@ export function PayrollManager() {
           ]} />
       )}
 
+
+
+      {/* ── generate bank batch ── */}
+      <Modal open={genModal} onClose={() => setGenModal(false)} title={L(fa, 'Generate bank batch', 'تولید دستهٔ بانکی')}>
+        <div className="space-y-3">
+          <Select label={L(fa, 'Payroll run', 'دورهٔ حقوق')} value={genForm.periodId}
+            onChange={v => setGenForm(f => ({ ...f, periodId: v }))}
+            options={[{ value: '', label: L(fa, 'Select…', 'انتخاب کنید…') },
+              ...periods.filter(p => p.status === 'approved' || p.status === 'paid')
+                .map(p => ({ value: String(p.id), label: `${monthName(p.jalaliMonth)} ${num(p.jalaliYear)}` }))]} />
+          <Select label={L(fa, 'Bank format', 'فرمت بانک')} value={genForm.formatId}
+            onChange={v => setGenForm(f => ({ ...f, formatId: v }))}
+            options={[{ value: '', label: L(fa, 'Select…', 'انتخاب کنید…') },
+              ...bankFormats.map(f => ({ value: String(f.id), label: `${f.bankName}${f.verified ? '' : ` (${L(fa, 'unverified', 'تأییدنشده')})`}` }))]} />
+          <Input label={L(fa, 'Source account', 'شمارهٔ حساب مبدأ')} value={genForm.sourceAccount}
+            onChange={v => setGenForm(f => ({ ...f, sourceAccount: v }))} />
+          <Input label={L(fa, 'Payment date', 'تاریخ پرداخت')} value={genForm.paymentDate}
+            onChange={v => setGenForm(f => ({ ...f, paymentDate: v }))} placeholder="2026-08-01" />
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setGenModal(false)}>{L(fa, 'Cancel', 'انصراف')}</Btn>
+            <Btn disabled={!genForm.periodId || !genForm.formatId || !genForm.paymentDate} onClick={async () => {
+              const ok = await post({
+                action: 'bankBatch.generate', periodId: Number(genForm.periodId),
+                formatId: Number(genForm.formatId), sourceAccount: genForm.sourceAccount || null,
+                paymentDate: genForm.paymentDate,
+              }, 'Batch generated', 'دسته تولید شد', loadBankBatches)
+              if (ok) setGenModal(false)
+            }}>{L(fa, 'Generate', 'تولید')}</Btn>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── advance ── */}
+      <Modal open={advModal} onClose={() => setAdvModal(false)} title={L(fa, 'New advance', 'مساعدهٔ جدید')}>
+        <div className="space-y-3">
+          <Select label={L(fa, 'Employee', 'کارمند')} value={advForm.employeeId}
+            onChange={v => setAdvForm(f => ({ ...f, employeeId: v }))}
+            options={[{ value: '', label: L(fa, 'Select an employee…', 'یک کارمند انتخاب کنید…') },
+              ...employees.map(e => ({ value: String(e.id), label: e.fullName }))]} />
+          <Input label={L(fa, 'Amount', 'مبلغ')} type="number" value={advForm.amount}
+            onChange={v => setAdvForm(f => ({ ...f, amount: v }))} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label={L(fa, 'Deduct in year', 'کسر در سال')} type="number" value={advForm.deductJalaliYear}
+              onChange={v => setAdvForm(f => ({ ...f, deductJalaliYear: v }))} placeholder="1405" />
+            <Select label={L(fa, 'Deduct in month', 'کسر در ماه')} value={advForm.deductJalaliMonth}
+              onChange={v => setAdvForm(f => ({ ...f, deductJalaliMonth: v }))}
+              options={JALALI_MONTHS_FA.map((m, i) => ({ value: String(i + 1), label: fa ? m : JALALI_MONTHS_EN[i] }))} />
+          </div>
+          <Input label={L(fa, 'Note', 'یادداشت')} value={advForm.note}
+            onChange={v => setAdvForm(f => ({ ...f, note: v }))} />
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setAdvModal(false)}>{L(fa, 'Cancel', 'انصراف')}</Btn>
+            <Btn disabled={!advForm.employeeId || !advForm.amount || !advForm.deductJalaliYear} onClick={async () => {
+              const ok = await post({
+                action: 'advance.request', employeeId: Number(advForm.employeeId),
+                amount: Number(advForm.amount), deductJalaliYear: Number(advForm.deductJalaliYear),
+                deductJalaliMonth: Number(advForm.deductJalaliMonth), note: advForm.note || null,
+              }, 'Advance requested', 'مساعده ثبت شد', loadAdvances)
+              if (ok) setAdvModal(false)
+            }}>{L(fa, 'Request', 'ثبت درخواست')}</Btn>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── severance ── */}
       <Modal open={sevModal} onClose={() => setSevModal(false)}

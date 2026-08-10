@@ -3,7 +3,10 @@
 > **Scope reality, stated up front.** The phase brief calls this five sub-phases
 > and says each closes independently with its own gate. **28.1 and 28.2 are
 > complete and verified; 28.3-الف and 28.3-ب are built and verified but AWAIT
-> the accountant's reconciliation test. 28.4 and 28.5 are not started.**
+> the accountant's reconciliation test; 28.3-ج (bank payment + advances) is
+> CLOSED — it closes the monthly cycle's last open link (salaries payable
+> settles to zero) and does not itself need accountant reconciliation, though
+> its sick-leave formula does. 28.4 and 28.5 are not started.**
 > Nothing below is claimed for the rest.
 
 ---
@@ -16,6 +19,7 @@
 | **28.2** مرخصی، حضور و غیاب | ✅ **بسته شد** | live-PG **43/43** · 40 unit tests · 12 audits 0 · regressions 17/17 |
 | **28.3-الف** هستهٔ ماهانهٔ حقوق | ⚠️ **ساخته و verify شد — منتظر آزمون تطبیق** | live-PG **66/66** · 74 unit tests · [گزارش](phase28.3a-payroll-core-report.md) |
 | **28.3-ب** عیدی، سنوات و خروجی قانونی | ⚠️ **ساخته و verify شد — منتظر آزمون تطبیق** | live-PG **73/73** · 49 unit tests · [گزارش](phase28.3b-payroll-annual-report.md) |
+| **28.3-ج** پرداخت بانکی، مساعده و تکمیل | ✅ **بسته شد** (بند۱،۲،۴.۱،۴.۲) — بند۳/۴.۴/۵ deferred با دلیل | live-PG **40/40** · 19 unit tests · [گزارش](phase28.3c-payroll-completion-report.md) |
 | **28.4** پورتال کارمند | ⏳ شروع نشده | — |
 | **28.5** استخدام، آموزش، ارزیابی | ⏳ شروع نشده | — |
 

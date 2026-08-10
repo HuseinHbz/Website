@@ -365,6 +365,152 @@ export function settlementPostingLines(t: {
   return lines
 }
 
+// ── 🔴 sick leave pay split (28.3-ج بند۴.۱) ─────────────────────────────────
+
+export interface SickLeaveSplit {
+  days: number
+  employerDays: number
+  employerAmount: number
+  insuranceDays: number
+  insuranceAmount: number
+}
+
+/**
+ * Split a sick-leave span between the employer and social security.
+ *
+ * The first `employerThresholdDays` are the employer's own cost (paid as
+ * ordinary salary — they never leave the payslip); the remainder is a claim
+ * against social security, tracked here as a receivable/notional figure rather
+ * than deducted from the employee, because the organisation still advances it
+ * and later claims it back. 🔴 The threshold and the daily rate are parameters
+ * — never a number compiled into this function.
+ */
+export function splitSickLeave(
+  days: number, dailyBase: number,
+  opts: { employerThresholdDays: number; insuranceRatePercent: number },
+): SickLeaveSplit {
+  const employerDays = Math.min(days, Math.max(0, opts.employerThresholdDays))
+  const insuranceDays = Math.max(0, days - employerDays)
+  return {
+    days,
+    employerDays, employerAmount: round2(employerDays * dailyBase),
+    insuranceDays, insuranceAmount: round2(insuranceDays * dailyBase * opts.insuranceRatePercent / 100),
+  }
+}
+
+// ── 🔴 bank payment (28.3-ج بند۱) ───────────────────────────────────────────
+
+/**
+ * Iranian IBAN check digit (mod-97), on top of the IR+24-digit shape already
+ * validated by `isValidIban` in `employees.ts`.
+ *
+ * The format check alone accepts a transposed digit; the check digit is what
+ * actually catches it BEFORE a wrong account is paid. IBAN → move the four
+ * check characters to the end, convert letters to numbers (A=10…Z=35), and
+ * the whole number mod 97 must equal 1.
+ */
+export function ibanCheckDigitValid(iban: string): boolean {
+  const clean = iban.replace(/[\s-]/g, '').toUpperCase()
+  if (!/^IR\d{24}$/.test(clean)) return false
+  const rearranged = clean.slice(4) + clean.slice(0, 4)
+  const numeric = rearranged.replace(/[A-Z]/g, ch => String(ch.charCodeAt(0) - 55))
+  // mod 97 over a very long digit string, done in chunks to stay within safe
+  // integer range — the standard iterative-mod algorithm for IBAN validation.
+  let remainder = 0
+  for (const ch of numeric) remainder = (remainder * 10 + Number(ch)) % 97
+  return remainder === 1
+}
+
+export interface BankLineInput {
+  employeeId: number
+  employeeName: string
+  iban: string | null
+  amount: number
+}
+
+export interface BankLineCheck {
+  employeeId: number
+  employeeName: string
+  ok: boolean
+  reason?: 'missing_iban' | 'invalid_iban' | 'non_positive_amount' | 'duplicate_employee'
+}
+
+/**
+ * Validate a batch's lines before a file is generated.
+ *
+ * 🔴 An employee with no IBAN, or an invalid one, is a REFUSAL naming them —
+ * never a silent drop from the file. Someone who is silently missing from a
+ * payment file does not get paid and nobody notices until they ask.
+ */
+export function validateBankLines(lines: BankLineInput[]): BankLineCheck[] {
+  const seen = new Set<number>()
+  return lines.map(l => {
+    if (seen.has(l.employeeId)) {
+      return { employeeId: l.employeeId, employeeName: l.employeeName, ok: false, reason: 'duplicate_employee' }
+    }
+    seen.add(l.employeeId)
+    if (l.amount <= 0) {
+      return { employeeId: l.employeeId, employeeName: l.employeeName, ok: false, reason: 'non_positive_amount' }
+    }
+    if (!l.iban) {
+      return { employeeId: l.employeeId, employeeName: l.employeeName, ok: false, reason: 'missing_iban' }
+    }
+    if (!ibanCheckDigitValid(l.iban)) {
+      return { employeeId: l.employeeId, employeeName: l.employeeName, ok: false, reason: 'invalid_iban' }
+    }
+    return { employeeId: l.employeeId, employeeName: l.employeeName, ok: true }
+  })
+}
+
+export const BANK_LINE_REFUSAL_LABELS: Record<NonNullable<BankLineCheck['reason']>, { en: string; fa: string }> = {
+  missing_iban: { en: 'No IBAN on file', fa: 'شبا ثبت نشده است' },
+  invalid_iban: { en: 'Invalid IBAN (check digit fails)', fa: 'شبا نامعتبر است (رقم کنترلی نادرست)' },
+  non_positive_amount: { en: 'Non-positive amount', fa: 'مبلغ نامعتبر است' },
+  duplicate_employee: { en: 'Employee appears twice in the batch', fa: 'کارمند دوبار در دسته آمده است' },
+}
+
+/** Settling the bank batch: Dr salaries payable / Cr bank. */
+export function bankBatchPostingLines(totalAmount: number, bankAccountCode: string): AnnualPostingLine[] {
+  if (totalAmount <= 0) return []
+  return [
+    { accountCode: '2300', debit: round2(totalAmount), credit: 0, memo: 'تسویهٔ حقوق پرداختنی از طریق بانک' },
+    { accountCode: bankAccountCode, debit: 0, credit: round2(totalAmount), memo: 'پرداخت حقوق' },
+  ]
+}
+
+// ── 🔴 advances — NOT loans (28.3-ج بند۲) ───────────────────────────────────
+
+/**
+ * An advance's cap: a percentage of monthly salary, company policy.
+ *
+ * Unlike a loan, an advance is a single lump sum against ONE upcoming
+ * deduction — no instalment schedule — which is why it is a separate model
+ * rather than a loan with `installments: 1`.
+ */
+export function advanceCap(monthlySalary: number, maxPercent: number): number {
+  if (monthlySalary <= 0 || maxPercent <= 0) return 0
+  return round2(monthlySalary * maxPercent / 100)
+}
+
+export interface AdvanceCheck { ok: boolean; cap: number; reason?: 'exceeds_cap' }
+
+export function checkAdvance(amount: number, monthlySalary: number, maxPercent: number): AdvanceCheck {
+  const cap = advanceCap(monthlySalary, maxPercent)
+  if (cap > 0 && amount > cap) return { ok: false, cap, reason: 'exceeds_cap' }
+  return { ok: true, cap }
+}
+
+/**
+ * 🔴 An advance larger than the net pay it will be deducted from is a WARNING,
+ * never a negative net. The slip engine (28.3-الف) already refuses to let
+ * total deductions exceed what is being paid out for any single item; this is
+ * the advance-specific check surfaced BEFORE the deduction is scheduled, so
+ * the operator sees it while there is still a chance to phase it differently.
+ */
+export function advanceExceedsNet(advanceAmount: number, projectedNet: number): boolean {
+  return advanceAmount > projectedNet && projectedNet >= 0
+}
+
 // ── legal exports ───────────────────────────────────────────────────────────
 
 export interface ExportColumn { key: string; labelFa: string; labelEn?: string }

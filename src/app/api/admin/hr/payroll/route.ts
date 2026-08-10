@@ -31,6 +31,9 @@ import {
   accrueSeveranceForPeriod, listSettlements, buildSettlement, approveSettlement,
   postSettlementToGl, listExportLayouts, saveExportLayout, renderLegalExport,
   annualOverview,
+  listBankFormats, saveBankFormat, addBankFormat, listBankBatches, bankBatchLines,
+  previewBankBatch, generateBankBatch, renderBankFile, markBatchSent, confirmBatch,
+  listAdvances, requestAdvance, approveAdvance, payAdvance,
 } from '@/lib/hr/annualData'
 import { pgQuery } from '@/lib/db'
 
@@ -163,6 +166,59 @@ const schemas = {
     verified: z.boolean().optional(),
     note: z.string().trim().max(400).optional().nullable(),
   }),
+  // ── 28.3-ج ──
+  bankFormatSave: z.object({
+    action: z.literal('bankFormat.save'),
+    key: z.string().trim().min(1).max(64),
+    bankName: z.string().trim().max(160).optional(),
+    columns: z.array(z.object({
+      key: z.string().trim().min(1).max(64),
+      labelFa: z.string().trim().min(1).max(120),
+      labelEn: z.string().trim().max(120).optional(),
+    })).min(1).max(60).optional(),
+    delimiter: z.string().max(4).optional(),
+    fileType: z.enum(['csv', 'txt', 'xlsx']).optional(),
+    includeHeader: z.boolean().optional(),
+    verified: z.boolean().optional(),
+    note: z.string().trim().max(400).optional().nullable(),
+  }),
+  bankFormatAdd: z.object({
+    action: z.literal('bankFormat.add'),
+    key: z.string().trim().min(1).max(64).regex(/^[a-z0-9_]+$/),
+    bankName: z.string().trim().min(1).max(160),
+    columns: z.array(z.object({
+      key: z.string().trim().min(1).max(64),
+      labelFa: z.string().trim().min(1).max(120),
+    })).min(1).max(60),
+  }),
+  bankBatchGenerate: z.object({
+    action: z.literal('bankBatch.generate'),
+    periodId: z.number().int().positive(),
+    formatId: z.number().int().positive(),
+    sourceAccount: z.string().trim().max(64).optional().nullable(),
+    paymentDate: z.string().trim().min(8).max(24),
+  }),
+  bankBatchOp: z.object({
+    action: z.enum(['bankBatch.send']),
+    id: z.number().int().positive(),
+  }),
+  bankBatchConfirm: z.object({
+    action: z.literal('bankBatch.confirm'),
+    id: z.number().int().positive(),
+    rejectedEmployeeIds: z.array(z.number().int().positive()).optional(),
+  }),
+  advanceRequest: z.object({
+    action: z.literal('advance.request'),
+    employeeId: z.number().int().positive(),
+    amount: z.number().min(0).max(1_000_000_000_000),
+    deductJalaliYear: z.number().int().min(1300).max(1500),
+    deductJalaliMonth: z.number().int().min(1).max(12),
+    note: z.string().trim().max(300).optional().nullable(),
+  }),
+  advanceOp: z.object({
+    action: z.enum(['advance.approve', 'advance.pay']),
+    id: z.number().int().positive(),
+  }),
   loan: z.object({
     action: z.literal('loan.create'),
     employeeId: z.number().int().positive(),
@@ -279,6 +335,35 @@ export async function GET(req: NextRequest) {
           'X-Layout-Verified': r.verified ? '1' : '0',
         },
       })
+    }
+
+    if (view === 'bankFormats') {
+      return NextResponse.json({ formats: await listBankFormats() })
+    }
+    if (view === 'bankBatches') {
+      return NextResponse.json({ batches: await listBankBatches() })
+    }
+    if (view === 'bankBatchLines') {
+      return NextResponse.json({ lines: await bankBatchLines(Number(sp.get('id'))) })
+    }
+    if (view === 'bankBatchPreview') {
+      return NextResponse.json({ checks: await previewBankBatch(Number(sp.get('periodId'))) })
+    }
+    if (view === 'bankFile') {
+      if (!canSeeAmounts) return notFound()
+      const r = await renderBankFile(Number(sp.get('id')))
+      if (!r.ok) return badRequest(r.error ?? 'Failed')
+      await logAction(auth.user, 'VIEW', 'payroll_bank_batches', Number(sp.get('id')))
+      return new NextResponse(r.csv, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${r.filename}"`,
+          'X-Layout-Verified': r.verified ? '1' : '0',
+        },
+      })
+    }
+    if (view === 'advances') {
+      return NextResponse.json({ advances: await listAdvances(sp.get('employeeId') ? Number(sp.get('employeeId')) : undefined) })
     }
 
     if (view === 'loans') {
@@ -590,6 +675,94 @@ export async function POST(req: NextRequest) {
         if (!r.ok) return badRequest(r.error ?? 'Failed')
         await logAction(auth.user, 'UPDATE', 'payroll_export_layouts', 0, null,
           { key: d.key, columns: d.columns.length, verified: d.verified })
+        return NextResponse.json(r)
+      }
+
+      // ── 28.3-ج ──
+      case 'bankFormat.save': {
+        const parsed = await readJson(req, schemas.bankFormatSave)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:settings_write', 'manage_settings')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await saveBankFormat(d.key, d)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_bank_formats', 0, null, { key: d.key })
+        return NextResponse.json(r)
+      }
+
+      case 'bankFormat.add': {
+        const parsed = await readJson(req, schemas.bankFormatAdd)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:settings_write', 'manage_settings')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await runOnce(auth.user.id, 'hr/payroll/bankFormat', d,
+          () => addBankFormat(d.key, d.bankName, d.columns))
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_bank_formats', r.id!, null, { key: d.key })
+        return NextResponse.json(r, { status: 201 })
+      }
+
+      case 'bankBatch.generate': {
+        const parsed = await readJson(req, schemas.bankBatchGenerate)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:pay', 'manage_settings')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await runOnce(auth.user.id, 'hr/payroll/bankBatch', d,
+          () => generateBankBatch(d.periodId, d.formatId, d.sourceAccount ?? null, d.paymentDate, auth.user.id))
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_bank_batches', r.id!, null, { periodId: d.periodId })
+        return NextResponse.json(r, { status: r.alreadyExists ? 200 : 201 })
+      }
+
+      case 'bankBatch.send': {
+        const parsed = await readJson(req, schemas.bankBatchOp)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:pay', 'manage_settings')
+        if (denied) return denied
+        const r = await markBatchSent(parsed.data.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_bank_batches', parsed.data.id, null, { action: 'send' })
+        return NextResponse.json(r)
+      }
+
+      case 'bankBatch.confirm': {
+        const parsed = await readJson(req, schemas.bankBatchConfirm)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:pay', 'manage_settings')
+        if (denied) return denied
+        const d = parsed.data
+        const r = await confirmBatch(d.id, d.rejectedEmployeeIds ?? [], auth.user.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_bank_batches', d.id, null,
+          { action: 'confirm', rejected: (d.rejectedEmployeeIds ?? []).length })
+        return NextResponse.json(r)
+      }
+
+      case 'advance.request': {
+        const parsed = await readJson(req, schemas.advanceRequest)
+        if ('error' in parsed) return parsed.error
+        const d = parsed.data
+        const r = await runOnce(auth.user.id, 'hr/payroll/advance', d,
+          () => requestAdvance(d.employeeId, d.amount, d.deductJalaliYear, d.deductJalaliMonth, d.note ?? null, auth.user.id))
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'CREATE', 'payroll_advances', r.id!, null,
+          { employeeId: d.employeeId, deductJalaliYear: d.deductJalaliYear, deductJalaliMonth: d.deductJalaliMonth })
+        return NextResponse.json(r, { status: 201 })
+      }
+
+      case 'advance.approve':
+      case 'advance.pay': {
+        const parsed = await readJson(req, schemas.advanceOp)
+        if ('error' in parsed) return parsed.error
+        const denied = await requireOp(auth.user, 'hr.payroll:pay', 'manage_settings')
+        if (denied) return denied
+        const { id, action } = parsed.data
+        const r = action === 'advance.approve' ? await approveAdvance(id, auth.user.id) : await payAdvance(id, auth.user.id)
+        if (!r.ok) return badRequest(r.error ?? 'Failed')
+        await logAction(auth.user, 'UPDATE', 'payroll_advances', id, null, { action })
         return NextResponse.json(r)
       }
 
