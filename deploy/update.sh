@@ -72,22 +72,19 @@ fi
 [[ ! -d "$APP_DIR/.git" ]] && error "مخزن یافت نشد: $APP_DIR — ابتدا install.sh اجرا کنید"
 
 # ─── ترمیم خودکار مالکیت کلون (self-heal) ────────────────────────────────────
-# اسکریپت با sudo -u "$APP_USER" روی مخزن git عملیات می‌کند؛ اگر فایل/پوشه‌ای در
-# کلون به‌هر دلیل (ویرایش دستی با root، یک اجرای قطع‌شدهٔ قبلی و…) صاحبِ root یا
-# کاربر دیگری شده باشد، «git reset --hard» با «Permission denied» در unlink
-# متوقف می‌شود و آپدیت را کامل می‌شکند — دقیقاً همان کلاس خطایی که اینجا رفع
-# می‌شود. چون این اسکریپت خودش با root اجرا می‌شود (چک بالا)، ترمیم مالکیت هر
-# بار پیش از عملیات git، این کلاس خطا را قبل از رخ‌دادن می‌بندد؛ idempotent و
-# بی‌خطر روی مخزنی که مالکیتش از قبل درست است.
-step "بررسی/ترمیم مالکیت فایل‌های کلون..."
-# جست‌وجوی نامالک در کل درخت (نه فقط سطح بالا) — فایل‌های ناهم‌مالک معمولاً در
-# پوشه‌های تازه‌ساخته‌شدهٔ عمیق‌تر پیش می‌آیند (مثلاً بعد از یک pull جزئاً موفق).
-# node_modules/.git/.next حذف می‌شوند تا جست‌وجو سریع بماند.
-if [[ -n "$(find "$APP_DIR" \( -path "$APP_DIR/node_modules" -o -path "$APP_DIR/.git" -o -path "$APP_DIR/.next" \) -prune -o \! -user "$APP_USER" -print -quit 2>/dev/null)" ]]; then
-  warn "مالکیت برخی فایل‌های کلون با کاربر $APP_USER نیست — ترمیم می‌شود..."
-  chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
-  info "مالکیت $APP_DIR به $APP_USER ترمیم شد"
-fi
+# 26.30-fix-ownership: نسخهٔ اول self-heal ابتدا با find تشخیص می‌داد که آیا
+# مالکیت اشتباهی وجود دارد، و فقط در آن صورت chown -R می‌زد. حادثهٔ بعدی نشان
+# داد این کافی نیست: پس از یک git pull دستیِ خارج از این اسکریپت (که خودش
+# می‌تواند فایل با مالکیت root بسازد)، یک اجرای بعدیِ update.sh دوباره با
+# «Permission denied» روی فایل‌های تازه‌ساخته‌شدهٔ فاز ۲۸.۵ متوقف شد.
+# 🔴 راه‌حل قطعی: به‌جای «تشخیص بده بعد تصمیم بگیر»، مالکیت کل درخت — فایل و
+# پوشه، بدون قید و شرط — پیش از **هر دو** نقطهٔ بحرانی (fetch و reset --hard)
+# تضمین می‌شود. هزینهٔ chown روی یک درخت سالم ناچیز است؛ idempotent و بی‌خطر.
+heal_ownership() {
+  sudo find "$APP_DIR" -mindepth 1 \
+    \( -path "$APP_DIR/node_modules" -o -path "$APP_DIR/.git" -o -path "$APP_DIR/.next" \) -prune \
+    -o -exec chown "$APP_USER":"$APP_USER" {} +
+}
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -135,6 +132,7 @@ echo ""
 echo "═══════════════════════════════════════════════════"
 echo "  HBZ Website — آپدیت  (branch: $BRANCH)"
 echo "═══════════════════════════════════════════════════"
+warn "🔴 روی این کلون هرگز git pull/fetch/checkout دستی نزنید — همیشه فقط از همین اسکریپت (sudo bash deploy/update.sh) استفاده کنید."
 echo ""
 
 # ─── commit فعلی ─────────────────────────────────────────────────────────────
@@ -144,6 +142,8 @@ step "نسخه فعلی: $PREV_COMMIT (branch: $PREV_BRANCH)"
 
 # ─── git pull ─────────────────────────────────────────────────────────────────
 step "دریافت آخرین تغییرات از branch $BRANCH..."
+step "ترمیم مالکیت کلون پیش از fetch..."
+heal_ownership
 sudo -u "$APP_USER" git -C "$APP_DIR" config core.fileMode false 2>/dev/null || true
 sudo -u "$APP_USER" git -C "$APP_DIR" fetch origin "$BRANCH"
 # مثل install.sh: تغییرات محلی روی فایل‌های تحت گیت، checkout را abort می‌کرد.
@@ -152,6 +152,11 @@ if ! sudo -u "$APP_USER" git -C "$APP_DIR" diff --quiet; then
   sudo -u "$APP_USER" git -C "$APP_DIR" diff HEAD > "$PATCH" 2>/dev/null || true
   warn "تغییرات محلی کنار گذاشته شد (بکاپ: $PATCH)"
 fi
+# 🔴 نقطهٔ بحرانی دوم — بین fetch و reset --hard هم یک git pull دستیِ موازی یا
+# یک مرحلهٔ دیگر می‌تواند دوباره مالکیت را بهم بزند؛ درست پیش از reset دوباره
+# ترمیم می‌کنیم، نه فقط یک‌بار در ابتدای اسکریپت.
+step "ترمیم مالکیت کلون پیش از reset --hard..."
+heal_ownership
 sudo -u "$APP_USER" git -C "$APP_DIR" checkout -f "$BRANCH" 2>/dev/null \
   || sudo -u "$APP_USER" git -C "$APP_DIR" checkout -f -B "$BRANCH" "origin/$BRANCH"
 sudo -u "$APP_USER" git -C "$APP_DIR" reset --hard "origin/$BRANCH"
