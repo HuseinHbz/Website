@@ -23,7 +23,7 @@ export function routeMatches(cond: RouteCondition | null | undefined, facts: Rec
 export const DOC_TYPES = [
   'purchase_request', 'purchase_order', 'invoice', 'payment_request', 'journal_entry', 'expense_claim',
   'discount_approval', 'large_contract', 'credit_override',
-  'leave_request', 'recruitment_request',
+  'leave_request', 'recruitment_request', 'hr_portal_request',
   'asset_purchase', 'asset_disposal',
   'budget_change', 'project_expense',
 ] as const

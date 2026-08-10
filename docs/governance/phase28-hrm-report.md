@@ -6,7 +6,10 @@
 > the accountant's reconciliation test; 28.3-ج (bank payment + advances) is
 > CLOSED — it closes the monthly cycle's last open link (salaries payable
 > settles to zero) and does not itself need accountant reconciliation, though
-> its sick-leave formula does. 28.4 and 28.5 are not started.**
+> its sick-leave formula does. **28.4 (employee portal) is CLOSED** — the
+> full IDOR matrix and session-independence matrix are live-PG verified
+> (38/38); it needs no accountant reconciliation (no money math of its own).
+> 28.5 is not started.**
 > Nothing below is claimed for the rest.
 
 ---
@@ -20,7 +23,7 @@
 | **28.3-الف** هستهٔ ماهانهٔ حقوق | ⚠️ **ساخته و verify شد — منتظر آزمون تطبیق** | live-PG **66/66** · 74 unit tests · [گزارش](phase28.3a-payroll-core-report.md) |
 | **28.3-ب** عیدی، سنوات و خروجی قانونی | ⚠️ **ساخته و verify شد — منتظر آزمون تطبیق** | live-PG **73/73** · 49 unit tests · [گزارش](phase28.3b-payroll-annual-report.md) |
 | **28.3-ج** پرداخت بانکی، مساعده و تکمیل | ✅ **بسته شد** (بند۱،۲،۴.۱،۴.۲) — بند۳/۴.۴/۵ deferred با دلیل | live-PG **40/40** · 19 unit tests · [گزارش](phase28.3c-payroll-completion-report.md) |
-| **28.4** پورتال کارمند | ⏳ شروع نشده | — |
+| **28.4** پورتال کارمند | ✅ **بسته شد** | live-PG **38/38** (ماتریس IDOR کامل + استقلال نشست) · [گزارش](phase28.4-employee-portal-report.md) |
 | **28.5** استخدام، آموزش، ارزیابی | ⏳ شروع نشده | — |
 
 ---

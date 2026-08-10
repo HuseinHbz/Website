@@ -3902,6 +3902,64 @@ export async function runMigrations() {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // Phase 28.4 — employee portal.
+  //
+  // 🔴 hr_portal_sessions is COMPLETELY INDEPENDENT of customer_portal_sessions
+  // and the admin JWT: its own table, its own cookie name (`hr_portal_token`
+  // vs `portal_token` vs `admin_token`), its own opaque sha256-hashed token.
+  // Reusing the pattern (OTP hashed/single-use/expiry, opaque token) is
+  // correct; reusing the SESSION would let a customer's cookie authenticate
+  // as an employee or vice versa — exactly what R9/بند۱ forbids.
+  // ═══════════════════════════════════════════════════════════════════════
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS hr_portal_sessions (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL DEFAULT 'otp' CHECK(channel IN ('otp','magic_link')),
+      identifier TEXT NOT NULL,
+      otp_hash TEXT,
+      otp_expires_at TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      token_hash TEXT,
+      verified INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT,
+      revoked INTEGER NOT NULL DEFAULT 0,
+      ip TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_portal_sess_token ON hr_portal_sessions(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_hr_portal_sess_emp ON hr_portal_sessions(employee_id);
+
+    -- Administrative "asks" that route through the existing approval engine.
+    -- 🔴 An info-correction request is NEVER auto-applied — it is a PROPOSAL
+    -- HR reviews and applies by hand through the employee editor, because a
+    -- national-id or IBAN change is exactly the kind of thing R8 protects.
+    CREATE TABLE IF NOT EXISTS hr_portal_requests (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES hr_employees(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK(kind IN ('certificate','advance','mission','info_correction')),
+      payload TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','fulfilled')),
+      approval_request_id INTEGER,
+      note TEXT,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_hr_portal_req_emp ON hr_portal_requests(employee_id, status);
+
+    -- A default rule so an hr_portal_request does not auto-approve just
+    -- because no rule was configured (the same 28.2 lesson: absence of a
+    -- matrix rule must not read as "granted").
+    INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, levels, priority, active)
+      SELECT 'hr_portal_request', 'Employee portal request', 'درخواست پورتال کارمند', 0,
+             '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
+      WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='hr_portal_request');
+  `)
+
   await pgQuery(`
     SELECT 1;
   `)

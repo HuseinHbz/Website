@@ -283,6 +283,19 @@
    and an advance whose deduction would exceed the month's net pay surfaces a
    named warning rather than a silently negative net. (مساعده و وام دو مفهوم
    جدا — مساعده یک‌جا و در یک ماه معین کسر می‌شود.)
+52. **The employee-portal session NEVER shares a secret with the customer or
+   admin session (28.4).** Three portals, three cookies, three session tables
+   (`admin_sessions` / `customer_portal_sessions` / `hr_portal_sessions`) —
+   code (OTP lifecycle, ownership-guard pattern, print stylesheet) is reused,
+   the SESSION never is. A customer token on `/api/hr-portal/*` and an
+   employee token on `/api/portal/*` both answer 401 — not because either is
+   rejected, but because each resolver only ever looks in its own table. An
+   employee who also holds an admin account still gets two fully independent
+   logins. HR data is the worst-case IDOR surface (colleagues can see each
+   other's payroll) — a foreign payslip/leave-request id answers **404, never
+   403** (26.25a pattern, existence never leaked), and `employeeId` is read
+   only from the server session, never from the request body/query.
+   (نشست پورتال کارمند هرگز با نشست مشتری یا ادمین secret مشترک ندارد.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

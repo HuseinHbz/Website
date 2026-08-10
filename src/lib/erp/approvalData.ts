@@ -51,7 +51,7 @@ export interface RequestInput {
 }
 
 /** Create an approval request: resolves + snapshots the plan from the matrix. */
-export async function createApprovalRequest(input: RequestInput, userId: string): Promise<{ id: number; levels: number; autoApproved: boolean }> {
+export async function createApprovalRequest(input: RequestInput, userId: string | null): Promise<{ id: number; levels: number; autoApproved: boolean }> {
   const matrix = await loadMatrix(input.docType)
   const plan = resolveApprovalPlan(matrix, { docType: input.docType, amount: input.amount, context: { department: input.department, cost_center: input.costCenterId, project: input.projectId, ...(input.context ?? {}) } })
   const autoApproved = plan.length === 0   // no rule → nothing to approve
@@ -154,6 +154,9 @@ export async function actOnRequest(id: number, user: AdminUser, decision: Decisi
     [id, state.status, state.currentLevel ?? row.currentLevel])
 
   if (state.status === 'approved') { await advanceDocument(row); await queueNotification(id, 'completion', row.title) }
+  else if (state.status === 'rejected' && row.refType === 'hr_portal_requests' && row.refId) {
+    await pgQuery(`UPDATE hr_portal_requests SET status='rejected' WHERE id=$1 AND status='pending'`, [row.refId])
+  }
   return { status: state.status }
 }
 
@@ -178,6 +181,11 @@ async function advanceDocument(row: RequestRow): Promise<void> {
       // 26.23 maker/checker: full approval posts the draft journal entry.
       const { postEntryById } = await import('./glPosting')
       await postEntryById(row.refId)
+    } else if (row.refType === 'hr_portal_requests') {
+      // 28.4: mirror the approval decision onto the portal-request row so the
+      // employee's status view stays in sync — the approval itself remains
+      // the source of truth; this is a display mirror, never a second engine.
+      await pgQuery(`UPDATE hr_portal_requests SET status='approved' WHERE id=$1 AND status='pending'`, [row.refId])
     }
   } catch { /* document advance is best-effort; the approval itself is authoritative */ }
 }

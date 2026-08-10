@@ -95,7 +95,7 @@ export async function leaveLedger(employeeId: number, leaveTypeId?: number): Pro
  */
 export async function postLeaveTransaction(
   employeeId: number, leaveTypeId: number, kind: LeaveTxKind, days: number,
-  opts: { refType?: string; refId?: number; note?: string; period?: string; userId?: string } = {},
+  opts: { refType?: string; refId?: number; note?: string; period?: string; userId?: string | null } = {},
 ): Promise<number> {
   const row = (await pgQuery<{ id: number }>(
     `INSERT INTO hr_leave_transactions
@@ -188,7 +188,7 @@ export async function listLeaveRequests(opts: { employeeId?: number; status?: st
  */
 export async function createLeaveRequest(
   d: { employeeId: number; leaveTypeId: number; startDate: string; endDate: string; halfDay?: boolean; reason?: string | null },
-  userId: string,
+  userId: string | null,
 ): Promise<{ ok: boolean; reason?: string; id?: number; days?: number }> {
   const type = (await listLeaveTypes()).find(t => t.id === d.leaveTypeId)
   if (!type) return { ok: false, reason: 'invalid_range' }
@@ -238,7 +238,7 @@ export async function createLeaveRequest(
 }
 
 /** Approve a request and DEBIT the balance — the days move only now. */
-export async function approveLeave(requestId: number, userId: string): Promise<{ ok: boolean; error?: string }> {
+export async function approveLeave(requestId: number, userId: string | null): Promise<{ ok: boolean; error?: string }> {
   const r = (await pgQuery<{ id: number; employee_id: number; leave_type_id: number; days: number; status: string }>(
     `SELECT id, employee_id, leave_type_id, days::float AS days, status
      FROM hr_leave_requests WHERE id=$1`, [requestId]))[0]
@@ -257,7 +257,7 @@ export async function approveLeave(requestId: number, userId: string): Promise<{
   return { ok: true }
 }
 
-export async function rejectLeave(requestId: number, userId: string): Promise<{ ok: boolean; error?: string }> {
+export async function rejectLeave(requestId: number, userId: string | null): Promise<{ ok: boolean; error?: string }> {
   const r = (await pgQuery<{ status: string }>(`SELECT status FROM hr_leave_requests WHERE id=$1`, [requestId]))[0]
   if (!r) return { ok: false, error: 'Request not found' }
   if (r.status === 'approved') return { ok: false, error: 'Cancel the approved leave instead of rejecting it' }
@@ -274,7 +274,7 @@ export async function rejectLeave(requestId: number, userId: string): Promise<{ 
  * remain visible and net to zero, so the ledger still explains the balance.
  * Idempotent — cancelling twice does not credit the days twice.
  */
-export async function cancelLeave(requestId: number, userId: string): Promise<{ ok: boolean; error?: string; returned?: number }> {
+export async function cancelLeave(requestId: number, userId: string | null): Promise<{ ok: boolean; error?: string; returned?: number }> {
   const r = (await pgQuery<{ id: number; employee_id: number; leave_type_id: number; days: number; status: string }>(
     `SELECT id, employee_id, leave_type_id, days::float AS days, status
      FROM hr_leave_requests WHERE id=$1`, [requestId]))[0]

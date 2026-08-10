@@ -88,4 +88,8 @@ export const limiters = {
 
   /** Portal OTP verify: 10 / 15 min per IP (attempt cap is also per-session). */
   portalVerify: (ip: string) => rateLimit(`pver:${ip}`, { limit: 10, windowSec: 900 }),
+
+  /** Employee-portal OTP request/verify (28.4) — same shape, separate bucket. */
+  hrPortalOtp: (ip: string) => rateLimit(`hpotp:${ip}`, { limit: 5, windowSec: 900 }),
+  hrPortalVerify: (ip: string) => rateLimit(`hpver:${ip}`, { limit: 10, windowSec: 900 }),
 }
