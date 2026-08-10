@@ -7,6 +7,9 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: PaddingSize
   hover?: boolean
   bordered?: boolean
+  /** Persistent (not just on-hover) accent-tinted border + soft glow — the
+   * neon-card treatment used across the redesigned marketing sections. */
+  glow?: boolean
 }
 
 const paddingClasses: Record<PaddingSize, string> = {
@@ -18,7 +21,7 @@ const paddingClasses: Record<PaddingSize, string> = {
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   (
-    { padding = 'md', hover = false, bordered = true, className, children, ...props },
+    { padding = 'md', hover = false, bordered = true, glow = false, className, children, ...props },
     ref
   ) => {
     return (
@@ -26,9 +29,10 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           'bg-surface rounded-xl',
-          bordered && 'border border-border',
+          bordered && (glow ? 'border border-accent/20' : 'border border-border'),
+          glow && 'shadow-lg shadow-accent/5',
           hover &&
-            'transition-all duration-300 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/5 hover:-translate-y-0.5',
+            'transition-all duration-300 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10 hover:-translate-y-0.5',
           paddingClasses[padding],
           className
         )}

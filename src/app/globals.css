@@ -462,6 +462,29 @@
     background-clip: text;
   }
 
+  /* Emerald/teal gradient — the big glowing stat-number treatment. */
+  .gradient-text-emerald {
+    background: linear-gradient(135deg, var(--color-success), var(--color-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Category badge pill — small colored label on a card corner ────── */
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    background: var(--pill-color, var(--color-brand-muted));
+    color: var(--pill-text, var(--color-brand-hover));
+    border: 1px solid var(--pill-border, var(--color-brand-muted));
+  }
+
   .gradient-text-premium {
     background: linear-gradient(135deg,
       var(--color-text-primary) 0%,
@@ -545,7 +568,7 @@
 
   .enterprise-card {
     background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid color-mix(in srgb, var(--card-accent, #6366f1) 16%, var(--color-border-subtle));
     border-radius: var(--radius-2xl);
     position: relative;
     overflow: hidden;
@@ -574,14 +597,18 @@
       0 0 60px rgba(99, 102, 241, 0.06);
   }
 
+  /* A subtle ALWAYS-ON tint of the card's own accent color, intensifying on
+     hover — the "neon-bordered card" look, driven by --card-accent so each
+     card can carry its own color without a new class per accent. */
   .metric-card {
     background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid color-mix(in srgb, var(--card-accent, #6366f1) 22%, var(--color-border-subtle));
     border-radius: var(--radius-xl);
     padding: 24px;
     position: relative;
     overflow: hidden;
     transition: all var(--motion-moderate) var(--motion-spring);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-accent, #6366f1) 6%, transparent) inset;
   }
 
   .metric-card::after {
@@ -593,21 +620,21 @@
       transparent,
       var(--card-accent, rgba(99,102,241,0.5)),
       transparent);
-    opacity: 0;
+    opacity: 0.6;
     transition: opacity var(--motion-normal) var(--motion-ease-out);
   }
 
   .metric-card:hover::after { opacity: 1; }
 
   .metric-card:hover {
-    border-color: rgba(99, 102, 241, 0.2);
+    border-color: color-mix(in srgb, var(--card-accent, #6366f1) 45%, var(--color-border-subtle));
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg), 0 0 30px rgba(99, 102, 241, 0.05);
+    box-shadow: var(--shadow-lg), 0 0 30px color-mix(in srgb, var(--card-accent, #6366f1) 18%, transparent);
   }
 
   .service-card {
     background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-default);
+    border: 1px solid color-mix(in srgb, var(--card-accent, #6366f1) 14%, var(--color-border-default));
     border-radius: var(--radius-2xl);
     padding: 28px;
     transition: all var(--motion-moderate) var(--motion-spring);

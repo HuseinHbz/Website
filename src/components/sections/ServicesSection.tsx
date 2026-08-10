@@ -267,6 +267,7 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.4 }}
                 className="service-card cursor-pointer"
+                style={{ '--card-accent': service.color } as React.CSSProperties}
                 onClick={() => setExpandedService(expandedService === service.id ? null : service.id)}
               >
                 <div
@@ -281,8 +282,8 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
                     {service.icon}
                   </div>
                   <span
-                    className="text-xs font-semibold px-2 py-1 rounded-md"
-                    style={{ background: `${service.color}15`, color: service.color }}
+                    className="badge-pill"
+                    style={{ '--pill-color': `${service.color}18`, '--pill-text': service.color, '--pill-border': `${service.color}30` } as React.CSSProperties}
                   >
                     {isRTL ? service.categoryFa : service.categoryEn}
                   </span>

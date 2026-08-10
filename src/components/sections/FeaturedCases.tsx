@@ -13,10 +13,6 @@ interface FeaturedCasesProps {
 
 const caseKeys = ['case1', 'case2', 'case3'] as const
 
-const industryColors: Record<string, string> = {
-  default: 'bg-accent/10 text-accent',
-}
-
 function ArrowIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -77,10 +73,10 @@ export function FeaturedCases({ locale }: FeaturedCasesProps) {
         >
           {caseKeys.map((key) => (
             <motion.div key={key} variants={slideUp} className="h-full">
-              <Card hover padding="lg" className="h-full flex flex-col group">
+              <Card hover glow padding="lg" className="h-full flex flex-col group">
                 {/* Industry badge */}
                 <div className="mb-4">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-accent/10 text-accent">
+                  <span className="badge-pill" style={{ '--pill-color': 'var(--color-accent-muted)', '--pill-text': 'var(--color-accent-hover)', '--pill-border': 'var(--color-accent-muted)' } as React.CSSProperties}>
                     {t(`${key}.industry` as Parameters<typeof t>[0])}
                   </span>
                 </div>

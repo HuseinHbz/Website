@@ -66,8 +66,13 @@ export function ProfessionalCredentials({ locale = 'en', items }: { locale?: str
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: Math.min(i * 0.05, 0.4) }}
-                className="h-full rounded-xl p-4 text-center transition-colors hover:border-accent/40"
-                style={{ background: 'rgba(13,13,23,0.8)', border: '1px solid rgba(26,26,46,0.8)' }}
+                className="h-full rounded-xl p-4 text-center transition-all duration-300"
+                style={{
+                  background: 'rgba(13,13,23,0.8)',
+                  border: `1px solid ${accent}2e`,
+                  boxShadow: `0 0 0 1px ${accent}10 inset`,
+                  '--card-accent': accent,
+                } as React.CSSProperties}
               >
                 <div
                   className="w-10 h-10 mx-auto mb-3 rounded-lg flex items-center justify-center text-lg"
@@ -79,7 +84,11 @@ export function ProfessionalCredentials({ locale = 'en', items }: { locale?: str
                     : <span>{c.icon || TYPE_ICON[c.type] || '🏅'}</span>}
                 </div>
                 <p className="text-sm font-semibold text-text-primary leading-snug">{name}</p>
-                {c.issuer && <p className="text-xs text-text-muted mt-1">{c.issuer}</p>}
+                {c.issuer && (
+                  <span className="badge-pill mt-1.5" style={{ '--pill-color': `${accent}18`, '--pill-text': accent, '--pill-border': `${accent}30` } as React.CSSProperties}>
+                    {c.issuer}
+                  </span>
+                )}
                 {c.issueDate && (
                   <p className="text-2xs text-text-muted mt-0.5">
                     {isRTL ? String(c.issueDate).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : c.issueDate}
