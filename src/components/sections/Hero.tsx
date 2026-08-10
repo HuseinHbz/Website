@@ -267,7 +267,7 @@ function VariantSplit({ c }: { c: HeroContent }) {
           {[
             { label:'Cisco', color:'#1ba0d7', cls:'top-6 left-6' },
             { label:'MikroTik', color:'#c03030', cls:'top-10 right-4' },
-            { label:'VMware', color:'#60b6e0', cls:'bottom-10 left-4' },
+            { label:'VMware', color:'#60b6e0', cls:'top-1/2 -translate-y-1/2 -right-2' },
             { label:'Fortinet', color:'#ee3124', cls:'bottom-6 right-6' },
           ].map((b,i) => (
             <motion.div key={b.label} initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
