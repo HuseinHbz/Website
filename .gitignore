@@ -38,5 +38,8 @@ public/uploads/
 test-results/
 playwright-report/
 .lighthouseci/
+# e2e/global-setup.ts regenerates this on every test run (fresh login) — a
+# live admin session/JWT must never be committed, even a disposable one.
+e2e/.auth/
 data/backups-engine/
 deploy/.install.conf

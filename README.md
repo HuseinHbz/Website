@@ -13,7 +13,7 @@ deploy/                ← اسکریپت‌های نصب، آپدیت و تعم
 docs/                  ← مستندات عملیاتی و راهنماها
 ```
 
-**یک اپ Next.js** روی port `3000`، SQLite به عنوان database.  
+**یک اپ Next.js** روی port `3000`، PostgreSQL به عنوان database.  
 ادمین پنل در همان اپ در مسیر `/admin`.
 
 ---
@@ -212,7 +212,7 @@ sudo bash deploy/install.sh
 ```
 
 اسکریپت این کارها را انجام می‌دهد:
-1. نصب وابستگی‌های سیستم (Node.js، PM2، Nginx، sqlite3)
+1. نصب وابستگی‌های سیستم (Node.js، PM2، Nginx، PostgreSQL)
 2. Clone ریپو در `/var/www/habibazar`
 3. Build Next.js
 4. نصب Nginx config

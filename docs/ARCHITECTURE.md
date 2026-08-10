@@ -1,5 +1,9 @@
 # HBZ Platform — Architecture Summary
 
+> This is a high-level orientation doc; it does not track every phase. The
+> canonical, actively-maintained reference for stack/schema/module details is
+> `CLAUDE.md` at the repo root — read that first for anything current.
+
 ## Stack
 
 | Layer | Technology | Version |
@@ -8,8 +12,8 @@
 | Runtime | Node.js | 20 LTS |
 | Language | TypeScript | 5.x |
 | Styling | Tailwind CSS + CSS Custom Properties | 3.x |
-| Database | SQLite (better-sqlite3) | 12.x |
-| ORM | Drizzle ORM | 0.45 |
+| Database | **PostgreSQL** (via `pg`, async pool) | 16/17 |
+| ORM | Drizzle ORM (`pg-core`) | 0.45 |
 | Authentication | JWT (jose) + bcryptjs + TOTP | - |
 | Internationalisation | next-intl | 3.x |
 | UI Animations | Framer Motion | 11.x |
@@ -21,38 +25,40 @@
 
 ## Directory Structure
 
+The app lives at the **repo root** (the older nested `outputs/habibazar-web/`
+layout was flattened away in Phase 26.26d — `npm` commands run from the root).
+
 ```
 Website/
-├── outputs/
-│   ├── habibazar-web/          # Next.js application
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   │   ├── [locale]/   # FA/EN localised routes
-│   │   │   │   │   ├── (marketing)/  # Public pages
-│   │   │   │   │   └── ai/     # AI platform
-│   │   │   │   ├── admin/      # Admin panel (no locale)
-│   │   │   │   └── api/        # API routes
-│   │   │   ├── components/
-│   │   │   │   ├── ds/         # Design System library
-│   │   │   │   ├── admin/      # Admin UI components
-│   │   │   │   └── seo/        # SEO/JSON-LD components
-│   │   │   └── lib/
-│   │   │       ├── db/         # Drizzle schema, migrations, seed
-│   │   │       ├── admin/      # Admin auth, RBAC
-│   │   │       ├── ds/         # Design tokens
-│   │   │       ├── logger.ts   # Structured logging
-│   │   │       ├── rateLimit.ts
-│   │   │       ├── retry.ts
-│   │   │       ├── circuitBreaker.ts
-│   │   │       └── env.ts      # Environment validation
+├── src/
+│   ├── app/
+│   │   ├── [locale]/          # FA/EN localised routes
+│   │   │   ├── (marketing)/   # Public pages
+│   │   │   └── ai/            # AI platform
+│   │   ├── admin/             # Admin panel (no locale)
+│   │   └── api/                # API routes (public + /api/admin/*)
+│   ├── components/
+│   │   ├── ds/                # ThemeProvider + Toast (app-wide)
+│   │   ├── admin/              # Admin UI components
+│   │   └── seo/                # SEO/JSON-LD components
+│   └── lib/
+│       ├── db/                 # Drizzle schema (schema.ts), raw migrate.ts, seed
+│       ├── admin/              # Admin auth, RBAC
+│       ├── erp/, hr/, crm/     # Domain server layers (ERP/HR/CRM modules)
+│       ├── logger.ts           # Structured logging
+│       ├── rateLimit.ts
+│       ├── retry.ts
+│       ├── circuitBreaker.ts
+│       └── env.ts              # Environment validation
 ├── deploy/                     # Deployment scripts
 │   ├── install.sh
 │   ├── update.sh
 │   ├── fix-pm2.sh
+│   ├── uninstall.sh
 │   ├── backup.sh
-│   └── health-check.sh
-├── docs/                       # Documentation
-└── .github/workflows/ci.yml    # CI/CD pipeline
+│   └── postgres/                # PostgreSQL provision/migrate/verify scripts
+├── docs/                        # Documentation
+└── .github/workflows/ci.yml     # CI/CD pipeline
 ```
 
 ---
@@ -75,7 +81,7 @@ Next.js Middleware (rate limiting, JWT auth, intl redirect)
     └── Public API   → /api/ routes (rate limited)
                           │
                           ▼
-                    SQLite (WAL mode) via Drizzle ORM
+                    PostgreSQL (async pool) via Drizzle ORM + raw pgQuery
 ```
 
 ---
@@ -91,7 +97,7 @@ Login → bcrypt verify → JWT issue (jose) → HttpOnly cookie
          ├── Valid → pass to route handler
          └── Invalid → 401 (API) or redirect to /admin/login (UI)
 
-Admin roles: super_admin → admin → viewer
+Admin roles: super_admin → administrator → editor (plus read-only auditor/viewer roles, Phase 26.22)
 TOTP: optional 2FA via otplib (TOTP)
 ```
 
