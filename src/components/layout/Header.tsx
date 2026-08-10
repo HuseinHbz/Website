@@ -63,7 +63,7 @@ export function Header({ locale, nav }: HeaderProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className={cn(
-        'fixed top-0 inset-x-0 z-40 transition-all duration-500',
+        'site-header fixed top-0 inset-x-0 z-40 transition-all duration-500',
         isScrolled
           ? 'bg-background/95 backdrop-blur-xl border-b border-border/60 shadow-xl shadow-black/30'
           : 'bg-transparent'

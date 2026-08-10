@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { HERO_TEMPLATES, LEGACY_TEMPLATES, PREMIUM_TEMPLATES, PREMIUM_TEMPLATES_V2, getTemplate, defaultConfig, templatesByCategory } from '../templates'
+import { HERO_BACKGROUND_PRESETS } from '../backgrounds'
 import { validateHero, canPublish, contrastRatio, parseHex } from '../rules'
 import { bucketOf, pickVariant, experimentResult, type Experiment } from '../experiment'
 import { resolveHero, ruleMatches, type RequestContext } from '../personalize'
@@ -27,11 +28,25 @@ describe('template registry', () => {
   })
 })
 
+describe('hero background registry', () => {
+  it('exposes exactly 20 unique presets: 10 videos + 10 lightweight animations', () => {
+    expect(HERO_BACKGROUND_PRESETS).toHaveLength(20)
+    expect(new Set(HERO_BACKGROUND_PRESETS.map(p => p.id)).size).toBe(20)
+    expect(HERO_BACKGROUND_PRESETS.filter(p => p.kind === 'video')).toHaveLength(10)
+    expect(HERO_BACKGROUND_PRESETS.filter(p => p.kind === 'animation')).toHaveLength(10)
+  })
+
+  it.each(HERO_BACKGROUND_PRESETS.filter(p => p.kind === 'animation'))('registers $id as a code animation without a video payload', preset => {
+    expect(preset.animation).toBe(preset.id)
+    expect(preset.src).toBeUndefined()
+  })
+})
+
 const baseConfig = (over: Partial<HeroConfig> = {}): HeroConfig => ({
   template: 'executive',
   content: {
-    en: { headline: 'Enterprise Infrastructure', subheadline: 'We build.', ctas: [{ label: 'Get started', href: '/contact' }], stats: [] },
-    fa: { headline: 'زیرساخت سازمانی', subheadline: 'می‌سازیم.', ctas: [], stats: [] },
+    en: { headline: 'Enterprise Infrastructure', subheadline: 'We build.', ctas: [{ label: 'Get started', href: '/contact' }] },
+    fa: { headline: 'زیرساخت سازمانی', subheadline: 'می‌سازیم.', ctas: [] },
   },
   style: { titleSize: 56, subtitleSize: 20 },
   ...over,

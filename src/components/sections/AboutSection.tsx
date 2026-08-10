@@ -141,25 +141,19 @@ function SkillCard({ skill, isRTL, index }: { skill: SkillItem; isRTL: boolean; 
         <p className="text-sm font-semibold text-text-primary truncate">
           {isRTL ? skill.nameFa : skill.nameEn}
         </p>
+        <p className="mb-1 text-[10px] font-medium text-text-muted">
+          {isRTL ? skill.categoryFa : skill.categoryEn}
+        </p>
         <LevelDots level={skill.level} color={skill.color} />
       </div>
-      {/* Level % */}
-      <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: skill.color }}>
-        {skill.level}%
+      {/* Evidence-led proficiency level; the stored numeric value remains the source. */}
+      <span className="text-xs font-bold flex-shrink-0" style={{ color: skill.color }}>
+        {isRTL
+          ? (skill.level >= 90 ? 'متخصص' : skill.level >= 80 ? 'پیشرفته' : 'اجرایی')
+          : (skill.level >= 90 ? 'Expert' : skill.level >= 80 ? 'Advanced' : 'Practitioner')}
       </span>
     </motion.div>
   )
-}
-
-const CATEGORY_ICONS: Record<string, string> = {
-  'Networking': '🌐', 'شبکه': '🌐',
-  'Security': '🛡️', 'امنیت': '🛡️',
-  'Virtualization': '🖥️', 'مجازی‌سازی': '🖥️',
-  'Systems': '⚙️', 'سیستم': '⚙️',
-  'Monitoring': '📊', 'پایش': '📊',
-  'Automation': '🤖', 'خودکارسازی': '🤖',
-  'Operations': '💾', 'عملیات': '💾',
-  'Communications': '📞', 'ارتباطات': '📞',
 }
 
 function CertCard({ cert, isRTL, index }: { cert: CertItem; isRTL: boolean; index: number }) {
@@ -222,6 +216,25 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
     : CERTS
 
   const categoryGroups = groupByCategory(SKILLS_DATA, isRTL)
+  const categoryEntries = Array.from(categoryGroups.entries())
+  const skillPanels = [
+    {
+      title: isRTL ? 'شبکه و ارتباطات' : 'Network & Communications',
+      entries: categoryEntries.filter(([name]) => /network|communication|شبکه|ارتباط/i.test(name)),
+    },
+    {
+      title: isRTL ? 'امنیت و زیرساخت' : 'Security & Infrastructure',
+      entries: categoryEntries.filter(([name]) => /security|virtual|system|امنیت|مجازی|سیستم/i.test(name)),
+    },
+    {
+      title: isRTL ? 'پایش و عملیات' : 'Monitoring & Operations',
+      entries: categoryEntries.filter(([name]) => /monitor|automation|operation|پایش|خودکار|عملیات/i.test(name)),
+    },
+  ]
+  const assignedCategories = new Set(skillPanels.flatMap(panel => panel.entries.map(([name]) => name)))
+  categoryEntries.filter(([name]) => !assignedCategories.has(name)).forEach((entry, index) => {
+    skillPanels[index % skillPanels.length].entries.push(entry)
+  })
 
   const BIO_FA = `حسین حبیب‌آذر (HBZ) معمار ارشد زیرساخت و مشاور امنیت شبکه با بیش از ۱۰ سال تجربه سازمانی در صنایع مختلف ایران است.`
   const BIO_DETAIL_FA = `او در طراحی معماری شبکه‌های مقاوم، پیاده‌سازی چارچوب‌های امنیتی چندلایه و ساخت پایپ‌لاین‌های خودکار زیرساخت تخصص دارد که هزینه‌های عملیاتی را کاهش داده و قابلیت اطمینان را افزایش می‌دهد.`
@@ -264,7 +277,7 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
         </motion.div>
 
         {/* Bio + Timeline */}
-        <div className="grid md:grid-cols-2 gap-12 md:gap-20 mb-24">
+        <div className="about-profile-grid grid md:grid-cols-2 gap-12 md:gap-16 mb-24">
           {/* Bio Card */}
           <motion.div
             initial={{ opacity: 0, x: isRTL ? 30 : -30 }}
@@ -272,7 +285,7 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <div className="glass-card p-8 h-full">
+            <div className="about-bio-card glass-card p-8 h-full">
               {/* Profile image — focal point */}
               <div className="flex justify-center mb-8">
                 <div className="relative">
@@ -417,7 +430,7 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
               <span className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center text-sm">◎</span>
               {isRTL ? 'مسیر رهبری' : 'Leadership Journey'}
             </h3>
-            <div className="space-y-8">
+            <div className="about-timeline space-y-8">
               {TIMELINE_DATA.map((item, i) => (
                 <motion.div
                   key={`${item.year}-${i}`}
@@ -473,24 +486,23 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
             </p>
           </div>
 
-          <div className="space-y-8">
-            {Array.from(categoryGroups.entries()).map(([category, catSkills], ci) => (
+          <div className="skills-dashboard-grid grid gap-5 lg:grid-cols-3">
+            {skillPanels.map((panel, ci) => (
               <motion.div
-                key={category}
+                key={panel.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: ci * 0.1, duration: 0.5 }}
+                className="skills-dashboard-panel overflow-hidden rounded-2xl border border-border bg-surface/60"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-lg">{CATEGORY_ICONS[category] || '⚡'}</span>
-                  <h4 className="text-sm font-bold text-text-primary uppercase tracking-widest">{category}</h4>
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-text-muted">{catSkills.length} {isRTL ? 'مهارت' : 'skills'}</span>
+                <div className="skills-panel-heading flex items-center justify-between border-b border-border px-5 py-4">
+                  <h4 className="text-base font-bold text-text-primary">{panel.title}</h4>
+                  <span className="text-xs text-text-muted">{panel.entries.reduce((count, [, skills]) => count + skills.length, 0)} {isRTL ? 'مهارت' : 'skills'}</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {catSkills.map((skill, si) => (
-                    <SkillCard key={skill.nameEn} skill={skill} isRTL={isRTL} index={ci * 5 + si} />
+                <div className="space-y-3 p-4">
+                  {panel.entries.flatMap(([, skills]) => skills).map((skill, si) => (
+                    <SkillCard key={skill.nameEn} skill={skill} isRTL={isRTL} index={ci * 8 + si} />
                   ))}
                 </div>
               </motion.div>

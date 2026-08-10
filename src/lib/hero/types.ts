@@ -19,9 +19,6 @@ export interface HeroCta {
   icon?: string
 }
 
-/** A single statistic pill. */
-export interface HeroStat { label: string; value: string }
-
 /** Per-language content of a hero (independent EN / FA). */
 export interface HeroContentL {
   badge?: string
@@ -29,7 +26,6 @@ export interface HeroContentL {
   headlineHighlight?: string
   subheadline?: string
   ctas?: HeroCta[]
-  stats?: HeroStat[]
   /** Foreground media (image/video/lottie url). */
   mediaUrl?: string
   mediaAlt?: string
@@ -67,7 +63,7 @@ export interface HeroStyle {
 /** A builder block (drag-and-drop). Config-driven, order-preserving. */
 export type HeroBlockType =
   | 'text' | 'button' | 'image' | 'video' | 'background' | 'particles' | 'card'
-  | 'stats' | 'logos' | 'timeline' | 'pricing' | 'testimonials' | 'features'
+  | 'logos' | 'timeline' | 'pricing' | 'testimonials' | 'features'
   | 'technologies' | 'icon' | 'custom'
 export interface HeroBlock {
   id: string
@@ -94,7 +90,6 @@ export interface HeroAnimations {
   headline?: HeroElementAnimation
   subheadline?: HeroElementAnimation
   ctas?: HeroElementAnimation
-  stats?: HeroElementAnimation
   media?: HeroElementAnimation
   background?: HeroElementAnimation
 }

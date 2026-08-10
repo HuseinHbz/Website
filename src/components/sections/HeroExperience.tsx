@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { HeroConfig, HeroElementAnimation, Locale } from '@/lib/hero/types'
 import { getTemplate } from '@/lib/hero/templates'
 import { resolveAnimation, type HeroAnimation } from '@/lib/hero/animations'
+import { HeroBackgroundAnimation } from '@/components/hero/HeroBackgroundAnimation'
 
 type Layout = 'centered' | 'split' | 'showcase'
 const LAYOUT_BY_CATEGORY: Record<string, Layout> = {
@@ -114,13 +115,6 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
           })}
         </div>
       )}
-      {(c.stats ?? []).length > 0 && (
-        <div className={`mt-12 flex flex-wrap gap-10${anim('stats').className}`} style={anim('stats').style}>
-          {(c.stats ?? []).map((st, i) => (
-            <div key={i}><div className="text-3xl font-bold text-brand">{st.value}</div><div className="text-sm opacity-70 mt-1">{st.label}</div></div>
-          ))}
-        </div>
-      )}
     </div>
   )
 
@@ -140,7 +134,9 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
       {/* Animated / canvas / gradient background layer */}
       {(bg === 'gradient' || bg === 'animation' || bg === 'canvas') && (
         <div aria-hidden className="absolute inset-0 -z-10" style={{ background: 'linear-gradient(135deg,#0b1120 0%,#111c31 45%,#1e293b 100%)' }}>
-          {!reduce && (bg === 'animation' || bg === 'canvas') && (
+          {bg === 'animation' && s.background?.animation ? (
+            <HeroBackgroundAnimation preset={s.background.animation} paused={reduce || lowEnd} />
+          ) : !reduce && (bg === 'animation' || bg === 'canvas') && (
             <>
               <div className="absolute -top-40 -start-40 w-[36rem] h-[36rem] rounded-full bg-brand/20 blur-3xl animate-pulse" />
               <div className="absolute -bottom-40 -end-40 w-[32rem] h-[32rem] rounded-full bg-accent/20 blur-3xl animate-pulse" style={{ animationDelay: '1.2s' }} />

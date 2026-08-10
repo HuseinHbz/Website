@@ -87,7 +87,7 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
   const projects = dbProjects !== null && dbProjects !== undefined ? dbProjects : FALLBACK_PROJECTS
   const featured = projects.filter(p => p.featured)
   const rest = projects.filter(p => !p.featured)
-  const display = [...featured, ...rest].slice(0, 6)
+  const display = [...featured, ...rest].slice(0, 4)
 
   return (
     <section className="section-padding relative overflow-hidden" id="case-studies">
@@ -124,9 +124,9 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
+          className="case-bento-grid grid md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 gap-5 mb-12"
         >
-          {display.map((p) => {
+          {display.map((p, index) => {
             const name = isRTL ? p.nameFa : p.nameEn
             const industry = isRTL ? p.industryFa : p.industryEn
             const client = (isRTL ? p.clientFa : p.clientEn) || ''
@@ -141,7 +141,7 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
               <motion.article
                 key={p.slug}
                 variants={springUp}
-                className="group relative overflow-hidden rounded-2xl transition-all duration-300"
+                className={`case-bento-card case-bento-card-${index} group relative overflow-hidden rounded-2xl transition-all duration-300 ${index < 2 ? 'lg:row-span-2' : ''}`}
                 style={{ background: 'rgba(10,10,18,0.9)', border: '1px solid rgba(255,255,255,0.06)' }}
                 whileHover={{ y: -4 }}
               >

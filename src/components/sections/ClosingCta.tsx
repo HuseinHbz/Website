@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { slideUp, staggerContainer, blurReveal, staggerFast } from '@/lib/motion'
-import { SITE } from '@/lib/site'
+import { ConsultationForm } from '@/components/forms/ConsultationForm'
 
 interface ClosingCtaProps {
   locale: string
@@ -47,9 +47,10 @@ export function ClosingCta({ locale }: ClosingCtaProps) {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="text-center max-w-3xl mx-auto"
+          className="closing-cta-grid mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[.86fr_1.14fr] lg:text-start"
         >
-          <motion.div variants={slideUp} className="flex justify-center mb-6">
+          <div className="closing-cta-copy text-center lg:text-start">
+          <motion.div variants={slideUp} className="flex justify-center lg:justify-start mb-6">
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
               style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#9698ff' }}
@@ -80,7 +81,7 @@ export function ClosingCta({ locale }: ClosingCtaProps) {
               : 'Serving: CTOs, CIOs, IT Directors, and Enterprise Technology Leaders'}
           </motion.p>
 
-          <motion.div variants={blurReveal} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.div variants={blurReveal} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
             <a
               href={buildPath('/consultation')}
               className="btn-enterprise"
@@ -101,13 +102,17 @@ export function ClosingCta({ locale }: ClosingCtaProps) {
             </a>
           </motion.div>
 
-          <motion.div variants={slideUp} className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-text-muted">
+          <motion.div variants={slideUp} className="mt-10 flex flex-wrap justify-center lg:justify-start gap-5 text-sm text-text-muted">
             {TRUST_ITEMS.map((item) => (
               <span key={item.text} className="flex items-center gap-1.5">
                 <span className="text-success font-bold">{item.icon}</span>
                 {item.text}
               </span>
             ))}
+          </motion.div>
+          </div>
+          <motion.div variants={blurReveal} className="closing-cta-form rounded-3xl border border-border bg-background/55 p-2 shadow-2xl backdrop-blur-xl">
+            <ConsultationForm kind="ASSESSMENT" locale={locale} />
           </motion.div>
         </motion.div>
       </div>

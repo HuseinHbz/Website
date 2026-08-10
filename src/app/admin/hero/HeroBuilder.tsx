@@ -9,7 +9,9 @@ import { ANIMATION_PRESETS, EASING_CSS, type AnimationEasing } from '@/lib/hero/
 import type { HeroAnimations, HeroElementAnimation } from '@/lib/hero/types'
 import { animationPerformance, accessibilityReport } from '@/lib/hero/performance'
 import { recommendAnimations } from '@/lib/hero/recommend'
-import type { HeroConfig, HeroContentL, HeroCta, HeroStat, HeroStatus, Locale } from '@/lib/hero/types'
+import { HERO_BACKGROUND_PRESETS, type HeroBackgroundPreset } from '@/lib/hero/backgrounds'
+import { HeroBackgroundAnimation } from '@/components/hero/HeroBackgroundAnimation'
+import type { HeroConfig, HeroContentL, HeroCta, HeroStatus, Locale } from '@/lib/hero/types'
 
 type Toast = ReturnType<typeof useToast>['toast']
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
@@ -196,21 +198,6 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
             {(cur.ctas ?? []).length === 0 && <p className="text-xs text-text-tertiary">{lc(rtl, 'No buttons.', 'دکمه‌ای نیست.')}</p>}
           </Card>
 
-          {/* Stats */}
-          <Card className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Statistics', 'آمار')}</h3>
-              <Btn size="sm" variant="secondary" onClick={() => patchContent(editLocale, c => ({ ...c, stats: [...(c.stats ?? []), { label: '', value: '' }] }))}>+ {lc(rtl, 'Add', 'افزودن')}</Btn>
-            </div>
-            {(cur.stats ?? []).map((st, i) => (
-              <div key={i} className="flex gap-2 items-end">
-                <Input label={lc(rtl, 'Value', 'مقدار')} value={st.value} onChange={v => patchContent(editLocale, c => ({ ...c, stats: (c.stats ?? []).map((x, j) => (j === i ? { ...x, value: v } : x)) }))} />
-                <Input label={lc(rtl, 'Label', 'برچسب')} value={st.label} onChange={v => patchContent(editLocale, c => ({ ...c, stats: (c.stats ?? []).map((x, j) => (j === i ? { ...x, label: v } : x)) }))} />
-                <Btn size="sm" variant="ghost" onClick={() => patchContent(editLocale, c => ({ ...c, stats: (c.stats ?? []).filter((_, j) => j !== i) }))}>✕</Btn>
-              </div>
-            ))}
-          </Card>
-
           {/* Style system */}
           <Card className="p-4 space-y-3">
             <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Style', 'سبک')}</h3>
@@ -227,7 +214,7 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
                 <label className="block text-xs text-text-tertiary mb-1">{lc(rtl, 'Text color', 'رنگ متن')}</label>
                 <input type="color" value={config.style.textColor ?? '#ffffff'} onChange={e => patchStyle(s => ({ ...s, textColor: e.target.value }))} className="h-9 w-full rounded bg-transparent" />
               </div>
-              <Select label={lc(rtl, 'Background', 'پس‌زمینه')} value={config.style.background?.kind ?? 'gradient'} onChange={v => patchStyle(s => ({ ...s, background: { ...(s.background ?? {}), kind: v as HeroConfig['style']['background'] extends undefined ? never : NonNullable<HeroConfig['style']['background']>['kind'] } }))} options={(tmpl?.backgrounds ?? ['gradient']).map(b => ({ value: b, label: b }))} />
+              <Select label={lc(rtl, 'Background', 'پس‌زمینه')} value={config.style.background?.kind ?? 'gradient'} onChange={v => patchStyle(s => ({ ...s, background: { ...(s.background ?? {}), kind: v as HeroConfig['style']['background'] extends undefined ? never : NonNullable<HeroConfig['style']['background']>['kind'] } }))} options={[...new Set([...(tmpl?.backgrounds ?? ['gradient']), 'video' as const])].map(b => ({ value: b, label: b }))} />
             </div>
             {config.style.background?.kind === 'solid' && (
               <div>
@@ -238,6 +225,19 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
             {(config.style.background?.kind === 'image' || config.style.background?.kind === 'video') && (
               <Input label={lc(rtl, 'Background URL', 'آدرس پس‌زمینه')} value={config.style.background?.value ?? ''} onChange={v => patchStyle(s => ({ ...s, background: { ...(s.background ?? { kind: 'image' }), kind: s.background?.kind ?? 'image', value: v } }))} />
             )}
+            <HeroBackgroundPicker
+              rtl={rtl}
+              value={config.style.background?.value}
+              animation={config.style.background?.animation}
+              kind={config.style.background?.kind}
+              reduceMotion={!!config.reduceMotion}
+              onSelect={preset => patchStyle(s => ({
+                ...s,
+                background: preset.kind === 'video'
+                  ? { kind: 'video', value: preset.src }
+                  : { kind: 'animation', animation: preset.animation },
+              }))}
+            />
             <label className="flex items-center gap-2 text-sm text-text-secondary">
               <input type="checkbox" checked={!!config.reduceMotion} onChange={e => patchConfig(c => ({ ...c, reduceMotion: e.target.checked }))} />
               {lc(rtl, 'Reduce motion (accessibility)', 'کاهش حرکت')}
@@ -248,7 +248,7 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
           <Card className="p-4 space-y-3">
             <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Animations', 'انیمیشن‌ها')}</h3>
             <p className="text-xs text-text-tertiary">{lc(rtl, `Assign one of ${ANIMATION_PRESETS.length - 1} presets per element. Heavy/looping animations auto-disable on low-end devices and reduced-motion.`, 'برای هر عنصر یک پریست انتخاب کنید. انیمیشن‌های سنگین در دستگاه‌های ضعیف و حالت کاهش حرکت خودکار غیرفعال می‌شوند.')}</p>
-            {(['badge', 'headline', 'subheadline', 'ctas', 'stats', 'media'] as (keyof HeroAnimations)[]).map(key => (
+            {(['badge', 'headline', 'subheadline', 'ctas', 'media'] as (keyof HeroAnimations)[]).map(key => (
               <AnimRow key={key} rtl={rtl} label={key} value={config.animations?.[key]} onChange={fn => patchAnim(key, fn)} />
             ))}
           </Card>
@@ -312,6 +312,63 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
             </ul>
           </Card>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function HeroBackgroundPicker({ rtl, value, animation, kind, reduceMotion, onSelect }: {
+  rtl: boolean
+  value?: string
+  animation?: string
+  kind?: HeroConfig['style']['background'] extends undefined ? never : NonNullable<HeroConfig['style']['background']>['kind']
+  reduceMotion: boolean
+  onSelect: (preset: HeroBackgroundPreset) => void
+}) {
+  return (
+    <div className="space-y-2 border-t border-subtle pt-3">
+      <div>
+        <p className="text-xs font-semibold text-text-primary">{lc(rtl, 'Ready-made hero backgrounds', 'بک‌گراندهای آماده هیرو')}</p>
+        <p className="mt-1 text-3xs text-text-tertiary">{lc(rtl, 'Choose a preview to apply it instantly. Save the hero to publish the change.', 'برای اعمال فوری، یکی از پیش‌نمایش‌ها را انتخاب کنید؛ سپس هیرو را ذخیره کنید.')}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {HERO_BACKGROUND_PRESETS.map(preset => {
+          const active = preset.kind === 'video'
+            ? kind === 'video' && value === preset.src
+            : kind === 'animation' && animation === preset.animation
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onSelect(preset)}
+              aria-pressed={active}
+              className={`group overflow-hidden rounded-xl border text-start transition-all ${active ? 'border-brand ring-2 ring-brand/30' : 'border-subtle hover:border-brand/60'}`}
+            >
+              <span className="relative block aspect-video overflow-hidden bg-[#07101f]">
+                {preset.kind === 'video' && preset.src ? (
+                  <video
+                    src={preset.src}
+                    autoPlay={!reduceMotion}
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : preset.animation ? (
+                  <HeroBackgroundAnimation preset={preset.animation} paused={reduceMotion} compact />
+                ) : (
+                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_30%,rgba(34,211,238,.32),transparent_30%),radial-gradient(circle_at_75%_70%,rgba(116,119,255,.35),transparent_32%),linear-gradient(135deg,#07101f,#11182d)]" />
+                )}
+                <span className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                {active && <span className="absolute end-2 top-2 rounded-full bg-brand px-2 py-0.5 text-3xs font-bold text-white">✓</span>}
+              </span>
+              <span className="block truncate bg-surface-2 px-2.5 py-2 text-3xs font-medium text-text-secondary">
+                {rtl ? preset.nameFa : preset.nameEn}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -428,6 +485,9 @@ function HeroPreview({ config, locale, theme }: { config: HeroConfig; locale: Lo
       {bg === 'video' && s.background?.value && (
         <video src={s.background.value} autoPlay={!config.reduceMotion} muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
       )}
+      {bg === 'animation' && s.background?.animation && (
+        <HeroBackgroundAnimation preset={s.background.animation} paused={!!config.reduceMotion} compact />
+      )}
       {s.overlay ? <div className="absolute inset-0 bg-background" style={{ opacity: s.overlay }} /> : null}
       <div className="relative z-10 px-8 py-12 w-full" style={{ maxWidth: s.containerWidth ? `${s.containerWidth}px` : undefined }}>
         {c.badge && <span className="inline-block mb-4 px-3 py-1 rounded-full text-xs font-medium border border-current/30 opacity-90">{c.badge}</span>}
@@ -443,13 +503,6 @@ function HeroPreview({ config, locale, theme }: { config: HeroConfig; locale: Lo
                 className={`px-5 py-2.5 text-sm font-semibold ${cta.variant === 'primary' ? 'bg-brand text-white' : cta.variant === 'secondary' ? 'border border-current' : 'underline'}`}>
                 {cta.label || (rtl ? 'دکمه' : 'Button')}
               </span>
-            ))}
-          </div>
-        )}
-        {(c.stats ?? []).length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-8">
-            {(c.stats ?? []).map((st, i) => (
-              <div key={i}><div className="text-2xl font-bold">{st.value}</div><div className="text-xs opacity-70">{st.label}</div></div>
             ))}
           </div>
         )}

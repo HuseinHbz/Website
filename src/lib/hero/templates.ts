@@ -34,7 +34,7 @@ export interface HeroTemplate {
 const DEFAULT_CONSTRAINTS: HeroTemplate['constraints'] = {
   maxTitle: 80, maxSubtitle: 200, maxButtons: 3, maxCtaLen: 32, minFontSize: 24, maxFontSize: 96,
 }
-const COMMON_BLOCKS: HeroBlockType[] = ['text', 'button', 'stats', 'image', 'background', 'icon']
+const COMMON_BLOCKS: HeroBlockType[] = ['text', 'button', 'image', 'background', 'icon']
 
 const legacy = (id: string, nameEn: string, nameFa: string, category: HeroTemplate['category']): HeroTemplate => ({
   id, nameEn, nameFa, category, blocks: COMMON_BLOCKS,
@@ -130,23 +130,23 @@ const prem = (id: string, nameEn: string, nameFa: string, category: HeroTemplate
 export const PREMIUM_TEMPLATES_V2: HeroTemplate[] = [
   prem('devops-pipeline', 'DevOps Pipeline', 'خط لوله DevOps', 'technology', ['gradient', 'animation', 'canvas'], [...COMMON_BLOCKS, 'technologies', 'features']),
   prem('networking-grid', 'Networking Grid', 'شبکه‌بندی', 'cloud', ['animation', 'canvas', 'gradient'], [...COMMON_BLOCKS, 'technologies']),
-  prem('infrastructure-core', 'Infrastructure Core', 'هستهٔ زیرساخت', 'cloud', ['gradient', 'image', 'animation'], [...COMMON_BLOCKS, 'stats', 'logos']),
+  prem('infrastructure-core', 'Infrastructure Core', 'هستهٔ زیرساخت', 'cloud', ['gradient', 'image', 'animation'], [...COMMON_BLOCKS, 'logos']),
   prem('modern-startup', 'Modern Startup', 'استارتاپ مدرن', 'product', ['gradient', 'animation'], [...COMMON_BLOCKS, 'features', 'card']),
   prem('enterprise-suite', 'Enterprise Suite', 'مجموعهٔ سازمانی', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'logos', 'testimonials']),
   prem('creative-agency', 'Creative Agency', 'آژانس خلاق', 'media', ['gradient', 'image', 'video'], [...COMMON_BLOCKS, 'card', 'logos']),
   prem('minimal-mono', 'Minimal Mono', 'مینیمال تک‌رنگ', 'portfolio', ['solid', 'gradient'], ['text', 'button', 'image', 'icon', 'background']),
-  prem('dark-executive', 'Dark Executive', 'اجرایی تیره', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'stats']),
+  prem('dark-executive', 'Dark Executive', 'اجرایی تیره', 'corporate', ['solid', 'gradient', 'image'], COMMON_BLOCKS),
   prem('light-editorial', 'Light Editorial', 'روشن مطبوعاتی', 'media', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'card']),
-  prem('healthcare-trust', 'Healthcare Trust', 'سلامت مطمئن', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features', 'stats']),
-  prem('education-campus', 'Education Campus', 'کمپ آموزشی', 'corporate', ['gradient', 'image'], [...COMMON_BLOCKS, 'features', 'stats']),
-  prem('industrial-heavy', 'Industrial', 'صنعتی', 'product', ['image', 'gradient', 'solid'], [...COMMON_BLOCKS, 'stats']),
-  prem('construction-build', 'Construction', 'ساخت‌وساز', 'product', ['image', 'gradient'], [...COMMON_BLOCKS, 'stats']),
+  prem('healthcare-trust', 'Healthcare Trust', 'سلامت مطمئن', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features']),
+  prem('education-campus', 'Education Campus', 'کمپ آموزشی', 'corporate', ['gradient', 'image'], [...COMMON_BLOCKS, 'features']),
+  prem('industrial-heavy', 'Industrial', 'صنعتی', 'product', ['image', 'gradient', 'solid'], COMMON_BLOCKS),
+  prem('construction-build', 'Construction', 'ساخت‌وساز', 'product', ['image', 'gradient'], COMMON_BLOCKS),
   prem('government-civic', 'Government', 'دولتی', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features']),
-  prem('finance-markets', 'Finance & Markets', 'مالی و بازار', 'corporate', ['gradient', 'animation', 'solid'], [...COMMON_BLOCKS, 'stats', 'features']),
+  prem('finance-markets', 'Finance & Markets', 'مالی و بازار', 'corporate', ['gradient', 'animation', 'solid'], [...COMMON_BLOCKS, 'features']),
   prem('insurance-shield', 'Insurance', 'بیمه', 'corporate', ['solid', 'gradient', 'image'], [...COMMON_BLOCKS, 'features']),
   prem('retail-commerce', 'Retail Commerce', 'خرده‌فروشی', 'product', ['gradient', 'image', 'animation'], [...COMMON_BLOCKS, 'pricing', 'card']),
-  prem('manufacturing-line', 'Manufacturing', 'تولید', 'product', ['image', 'gradient'], [...COMMON_BLOCKS, 'stats', 'technologies']),
-  prem('energy-power', 'Energy & Power', 'انرژی', 'cloud', ['gradient', 'animation', 'image'], [...COMMON_BLOCKS, 'stats']),
+  prem('manufacturing-line', 'Manufacturing', 'تولید', 'product', ['image', 'gradient'], [...COMMON_BLOCKS, 'technologies']),
+  prem('energy-power', 'Energy & Power', 'انرژی', 'cloud', ['gradient', 'animation', 'image'], COMMON_BLOCKS),
   prem('saas-hybrid', 'SaaS Hybrid', 'سس هیبرید', 'product', ['gradient', 'animation', 'canvas'], [...COMMON_BLOCKS, 'pricing', 'features', 'card']),
 ]
 
@@ -164,7 +164,7 @@ export const HERO_CATEGORIES = [...new Set(HERO_TEMPLATES.map(t => t.category))]
 /** A minimal valid default config for a given template (used by "new hero"). */
 export function defaultConfig(templateId: string): HeroConfig {
   const t = getTemplate(templateId) ?? HERO_TEMPLATES[0]
-  const emptyL = { headline: '', subheadline: '', ctas: [], stats: [] }
+  const emptyL = { headline: '', subheadline: '', ctas: [] }
   return {
     template: t.id,
     content: { en: { ...emptyL }, fa: { ...emptyL } },

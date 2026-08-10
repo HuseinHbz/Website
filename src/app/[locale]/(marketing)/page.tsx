@@ -5,7 +5,6 @@ import { Hero } from '@/components/sections/Hero'
 import { HeroExperience } from '@/components/sections/HeroExperience'
 import { resolveActiveHero } from '@/lib/hero/heroData'
 import type { RequestContext } from '@/lib/hero/personalize'
-import { ProofBar } from '@/components/sections/ProofBar'
 import { EnterpriseMetrics } from '@/components/sections/EnterpriseMetrics'
 import { ServicesSection } from '@/components/sections/ServicesSection'
 import { ProjectsSection } from '@/components/sections/ProjectsSection'
@@ -79,19 +78,20 @@ export default async function HomePage({ params }: Props) {
   return (
     <>
       <JsonLd schema={siteGraphSchema()} />
-      {active
-        ? <HeroExperience heroId={active.hero.id} config={active.hero.config} locale={locale as 'fa' | 'en'} experimentKey={active.experimentKey} variantId={active.variantId} />
-        : <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} />}
-      <ProofBar locale={locale} />
-      <EnterpriseMetrics locale={locale} />
-      <ServicesSection locale={locale} dbServices={dbServices} />
-      <ProjectsSection locale={locale} dbProjects={dbProjects} />
-      <AboutSection locale={locale} dbAbout={dbAbout} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
-      <CompanyPortfolio locale={locale} dbClients={dbClients} />
-      {/* 26.31 بند ۵ — testimonials out of their double-hidden solutions page */}
-      <TestimonialsSection locale={locale} items={dbTestimonials} />
-      <AiTeaser locale={locale} />
-      <ClosingCta locale={locale} />
+      <div className="home-enterprise">
+        {active
+          ? <HeroExperience heroId={active.hero.id} config={active.hero.config} locale={locale as 'fa' | 'en'} experimentKey={active.experimentKey} variantId={active.variantId} />
+          : <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} />}
+        <EnterpriseMetrics locale={locale} />
+        <ServicesSection locale={locale} dbServices={dbServices} />
+        <ProjectsSection locale={locale} dbProjects={dbProjects} />
+        <AboutSection locale={locale} dbAbout={dbAbout} dbTimeline={dbTimeline} dbSkills={dbSkills} dbCerts={dbCerts} />
+        <CompanyPortfolio locale={locale} dbClients={dbClients} />
+        {/* 26.31 بند ۵ — testimonials out of their double-hidden solutions page */}
+        <TestimonialsSection locale={locale} items={dbTestimonials} />
+        <AiTeaser locale={locale} />
+        <ClosingCta locale={locale} />
+      </div>
     </>
   )
 }

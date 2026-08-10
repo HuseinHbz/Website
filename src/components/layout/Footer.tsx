@@ -79,7 +79,7 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
   }
 
   return (
-    <footer className="relative border-t border-border overflow-hidden">
+    <footer className="site-footer relative border-t border-border overflow-hidden">
       <div className="absolute inset-0 grid-bg opacity-40" />
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
 

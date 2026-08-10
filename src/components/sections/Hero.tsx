@@ -11,10 +11,6 @@ interface DbHero {
   ctaPrimary?: string | null; ctaPrimaryHref?: string | null
   ctaSecondary?: string | null; ctaSecondaryHref?: string | null
   ctaTertiary?: string | null; ctaTertiaryHref?: string | null
-  stat1Label?: string | null; stat1Value?: string | null
-  stat2Label?: string | null; stat2Value?: string | null
-  stat3Label?: string | null; stat3Value?: string | null
-  stat4Label?: string | null; stat4Value?: string | null
 }
 
 export interface HeroProps {
@@ -28,7 +24,6 @@ export interface HeroContent {
   ctaPrimary: string; ctaPrimaryHref: string
   ctaSecondary: string; ctaSecondaryHref: string
   ctaTertiary: string; ctaTertiaryHref: string
-  stats: { value: string; label: string; color: string }[]
   isRTL: boolean
 }
 
@@ -52,12 +47,6 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
     ctaPrimary: 'مشاهده پروژه‌ها', ctaPrimaryHref: `/${locale}/projects`,
     ctaSecondary: 'رزرو مشاوره', ctaSecondaryHref: `/${locale}/consultation`,
     ctaTertiary: 'دانلود رزومه', ctaTertiaryHref: '/resume.pdf',
-    stats: [
-      { value: '+۱۰', label: 'سال تجربه', color: CHART_PALETTE[0] },
-      { value: '+۵۰', label: 'پروژه زیرساختی', color: CHART_PALETTE[1] },
-      { value: '+۱۰۰۰', label: 'تجهیزات مدیریتی', color: CHART_PALETTE[2] },
-      { value: '+۲۰', label: 'استقرار سازمانی', color: CHART_PALETTE[3] },
-    ],
   } : {
     badge: 'Available for enterprise projects',
     headline: 'Infrastructure Architect',
@@ -66,12 +55,6 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
     ctaPrimary: 'View Projects', ctaPrimaryHref: `/${locale}/projects`,
     ctaSecondary: 'Book Consultation', ctaSecondaryHref: `/${locale}/consultation`,
     ctaTertiary: 'Download Resume', ctaTertiaryHref: '/resume.pdf',
-    stats: [
-      { value: '10+', label: 'Years Experience', color: CHART_PALETTE[0] },
-      { value: '50+', label: 'Infrastructure Projects', color: CHART_PALETTE[1] },
-      { value: '1000+', label: 'Managed Endpoints', color: CHART_PALETTE[2] },
-      { value: '20+', label: 'Enterprise Deployments', color: CHART_PALETTE[3] },
-    ],
   }
   const h = dbHero
   return {
@@ -86,12 +69,6 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
     ctaSecondaryHref: resolveHref(locale, h?.ctaSecondaryHref, D.ctaSecondaryHref),
     ctaTertiary:      h?.ctaTertiary      || D.ctaTertiary,
     ctaTertiaryHref:  resolveHref(locale, h?.ctaTertiaryHref,  D.ctaTertiaryHref),
-    stats: h?.stat1Value ? [
-      { value: h.stat1Value, label: h.stat1Label || '', color: CHART_PALETTE[0] },
-      { value: h.stat2Value || '', label: h.stat2Label || '', color: CHART_PALETTE[1] },
-      { value: h.stat3Value || '', label: h.stat3Label || '', color: CHART_PALETTE[2] },
-      { value: h.stat4Value || '', label: h.stat4Label || '', color: CHART_PALETTE[3] },
-    ] : D.stats,
   }
 }
 
@@ -106,6 +83,7 @@ function Badge({ label }: { label: string }) {
   )
 }
 
+<<<<<<< Updated upstream
 function StatBar({ stats }: { stats: HeroContent['stats'] }) {
   const validStats = stats.filter(s => s.value)
   return (
@@ -124,24 +102,40 @@ function StatBar({ stats }: { stats: HeroContent['stats'] }) {
   )
 }
 
+=======
+>>>>>>> Stashed changes
 function CtaButtons({ c, row = false }: { c: HeroContent; row?: boolean }) {
   return (
-    <div className={`flex flex-wrap gap-3 ${row ? 'justify-center' : ''}`}>
+    <div className={`hero-actions flex flex-wrap gap-3 ${row ? 'justify-center' : ''}`}>
       <button onClick={() => { window.location.href = c.ctaPrimaryHref }}
+<<<<<<< Updated upstream
         className="btn-sheen inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.03]"
         style={{ background: 'linear-gradient(135deg, var(--color-brand), var(--color-brand-hover))', boxShadow: '0 0 20px rgba(116,119,255,0.35)' }}>
+=======
+        className="hero-primary-cta inline-flex min-h-12 items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-all"
+        style={{ background: 'linear-gradient(135deg,#6366f1,#818cf8)', boxShadow: '0 0 20px rgba(99,102,241,0.35)' }}>
+>>>>>>> Stashed changes
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0l-4-4m4 4l-4 4" />
         </svg>
         {c.ctaPrimary}
       </button>
       <button onClick={() => { window.location.href = c.ctaSecondaryHref }}
+<<<<<<< Updated upstream
         className="group inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg text-sm font-semibold text-text-primary border border-border hover:border-accent/40 hover:bg-surface/60 transition-all duration-300">
         {c.ctaSecondary}
       </button>
       <button onClick={() => { window.open(c.ctaTertiaryHref, '_blank') }}
         className="group inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg text-sm text-text-muted hover:text-text-primary transition-all duration-300">
         <svg className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+=======
+        className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-text-primary hover:border-accent/50 hover:bg-surface/80 transition-all">
+        {c.ctaSecondary}
+      </button>
+      <button onClick={() => { window.open(c.ctaTertiaryHref, '_blank') }}
+        className="inline-flex min-h-12 items-center gap-2 rounded-xl px-4 py-3 text-sm text-text-muted hover:text-text-primary transition-all">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+>>>>>>> Stashed changes
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
         {c.ctaTertiary}
@@ -151,9 +145,21 @@ function CtaButtons({ c, row = false }: { c: HeroContent; row?: boolean }) {
 }
 
 function MiniNetworkSVG() {
+  const nodes = [
+    { label: 'Cisco', x: 300, y: 70, color: '#38bdf8', icon: 'C' },
+    { label: 'MikroTik', x: 472, y: 148, color: '#f5b85c', icon: 'M' },
+    { label: 'Linux', x: 530, y: 290, color: '#a3e635', icon: 'L' },
+    { label: 'Cloud', x: 458, y: 440, color: '#8b8cff', icon: 'C' },
+    { label: 'Monitoring', x: 300, y: 510, color: '#f5b85c', icon: 'M' },
+    { label: 'Security', x: 125, y: 430, color: '#9ca3ff', icon: 'S' },
+    { label: 'VMware', x: 80, y: 240, color: '#42d9c8', icon: 'V' },
+  ]
+  const hubX = 300
+  const hubY = 296
   return (
-    <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+    <svg viewBox="0 0 600 580" className="h-full w-full overflow-visible" preserveAspectRatio="xMidYMid meet" aria-label="Enterprise infrastructure network">
       <defs>
+<<<<<<< Updated upstream
         <filter id="ng2"><feGaussianBlur stdDeviation="1.2" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         <linearGradient id="ea" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -199,6 +205,71 @@ function MiniNetworkSVG() {
             path={`M${pts[0]},${pts[1]} L${pts[2]},${pts[3]}`}/>
         </circle>
       })}
+=======
+        <filter id="hero-network-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="hero-packet-glow" x="-300%" y="-300%" width="700%" height="700%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="hero-hub-fill">
+          <stop offset="0%" stopColor="#eefcff" stopOpacity=".98" />
+          <stop offset="28%" stopColor="#7dd3fc" stopOpacity=".92" />
+          <stop offset="68%" stopColor="#6366f1" stopOpacity=".45" />
+          <stop offset="100%" stopColor="#11182d" stopOpacity=".15" />
+        </radialGradient>
+        <linearGradient id="hero-edge-cyan" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#67e8f9" stopOpacity=".92" />
+          <stop offset="100%" stopColor="#7477ff" stopOpacity=".28" />
+        </linearGradient>
+      </defs>
+      <g opacity=".48">
+        <circle cx={hubX} cy={hubY} r="212" fill="none" stroke="#67e8f9" strokeWidth="1" strokeDasharray="3 11" />
+        <circle cx={hubX} cy={hubY} r="170" fill="none" stroke="#8b8cff" strokeWidth="1" strokeDasharray="1 8" />
+        <circle cx={hubX} cy={hubY} r="126" fill="none" stroke="#67e8f9" strokeWidth=".8" opacity=".4" />
+      </g>
+      {Array.from({ length: 34 }, (_, i) => (
+        <circle key={`star-${i}`} cx={24 + ((i * 83) % 548)} cy={18 + ((i * 137) % 530)} r={(i % 3) + .65} fill={i % 4 === 0 ? '#f5b85c' : '#dffaff'} opacity={(i % 5 + 2) / 9} className="hero-network-star" style={{ animationDelay: `${(i % 9) * -.42}s` }} />
+      ))}
+
+      <g className="hero-network-links">
+        {nodes.map((node, i) => (
+          <g key={`link-${node.label}`}>
+            <path d={`M ${hubX} ${hubY} Q ${(hubX + node.x) / 2 + (i % 2 ? 22 : -22)} ${(hubY + node.y) / 2} ${node.x} ${node.y}`} fill="none" stroke="url(#hero-edge-cyan)" strokeWidth="2" opacity=".72" />
+            <path d={`M ${hubX} ${hubY} Q ${(hubX + node.x) / 2 - (i % 2 ? 32 : -32)} ${(hubY + node.y) / 2 + 12} ${node.x} ${node.y}`} fill="none" stroke={node.color} strokeWidth=".9" opacity=".34" strokeDasharray="4 8" />
+            <circle r="4" fill="#f8ffff" filter="url(#hero-packet-glow)">
+              <animateMotion dur={`${2.8 + i * .36}s`} repeatCount="indefinite" begin={`${i * -.7}s`} path={`M ${hubX} ${hubY} Q ${(hubX + node.x) / 2 + (i % 2 ? 22 : -22)} ${(hubY + node.y) / 2} ${node.x} ${node.y}`} />
+            </circle>
+          </g>
+        ))}
+        {nodes.map((node, i) => {
+          const next = nodes[(i + 1) % nodes.length]
+          return <path key={`ring-${node.label}`} d={`M ${node.x} ${node.y} Q ${hubX} ${hubY - 250 + i * 16} ${next.x} ${next.y}`} fill="none" stroke={node.color} strokeWidth=".8" opacity=".23" />
+        })}
+      </g>
+
+      <g className="hero-network-hub" filter="url(#hero-network-glow)">
+        <circle cx={hubX} cy={hubY} r="82" fill="#7dd3fc" opacity=".08"><animate attributeName="r" values="74;90;74" dur="5s" repeatCount="indefinite" /></circle>
+        <circle cx={hubX} cy={hubY} r="66" fill="url(#hero-hub-fill)" stroke="#dffaff" strokeWidth="2.4" />
+        <circle cx={hubX} cy={hubY} r="49" fill="#0c1830" stroke="#dffaff" strokeWidth="1.2" opacity=".82" />
+        <circle cx={hubX} cy={hubY} r="31" fill="#7477ff" opacity=".34" />
+        <text x={hubX} y={hubY - 2} textAnchor="middle" fill="#f7fdff" fontSize="18" fontWeight="900">HBZ</text>
+        <text x={hubX} y={hubY + 17} textAnchor="middle" fill="#9fe7f5" fontSize="9" fontWeight="700" letterSpacing="2">CORE</text>
+      </g>
+
+      {nodes.map((node, i) => (
+        <g key={node.label} className="hero-network-node" filter="url(#hero-network-glow)" style={{ animationDelay: `${i * -.75}s` }}>
+          <circle cx={node.x} cy={node.y} r="42" fill={node.color} opacity=".08"><animate attributeName="r" values="37;46;37" dur={`${4.2 + i * .25}s`} repeatCount="indefinite" /></circle>
+          <circle cx={node.x} cy={node.y} r="31" fill="#07101f" stroke={node.color} strokeWidth="2.3" />
+          <circle cx={node.x} cy={node.y} r="22" fill={node.color} opacity=".17" />
+          <text x={node.x} y={node.y + 6} textAnchor="middle" fill="#f7fdff" fontSize="17" fontWeight="900">{node.icon}</text>
+          <rect x={node.x - 49} y={node.y + 39} width="98" height="24" rx="12" fill="#07101f" stroke={node.color} strokeOpacity=".28" />
+          <text x={node.x} y={node.y + 56} textAnchor="middle" fill={node.color} fontSize="14" fontWeight="800">{node.label}</text>
+        </g>
+      ))}
+>>>>>>> Stashed changes
     </svg>
   )
 }
@@ -222,6 +293,7 @@ function ScrollIndicator({ label }: { label: string }) {
 ══════════════════════════════════════════════════════════════════ */
 function VariantSplit({ c }: { c: HeroContent }) {
   return (
+<<<<<<< Updated upstream
     <div className="relative min-h-[640px] lg:min-h-[820px] flex items-center">
       <div className="relative z-10 py-14 lg:py-0 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex flex-col lg:flex-row items-center gap-10 lg:gap-16 ${c.isRTL ? 'lg:flex-row-reverse' : ''}`}>
@@ -284,6 +356,44 @@ function VariantSplit({ c }: { c: HeroContent }) {
             ))}
           </motion.div>
         </div>
+=======
+    <div className="container-wide py-10 sm:py-14 lg:py-12">
+      <div className="hero-command-grid grid items-center gap-10 lg:grid-cols-[minmax(410px,.88fr)_minmax(500px,1.12fr)] lg:gap-8">
+        <motion.div initial="hidden" animate="visible"
+          variants={{ hidden:{}, visible:{ transition:{ staggerChildren:0.1 } } }}
+          className="hero-copy flex min-w-0 flex-col gap-6 lg:gap-7">
+          <motion.div variants={{ hidden:{opacity:0}, visible:{opacity:1} }}>
+            <Badge label={c.badge} />
+          </motion.div>
+          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }} className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 text-xs font-semibold tracking-[0.2em] uppercase text-text-muted">
+              <span className="hero-kicker-mark">HBZ</span>
+              <span>{c.isRTL ? 'حسین حبیب‌آذر · معماری زیرساخت سازمانی' : 'Husein Habibazar · Enterprise Infrastructure'}</span>
+            </div>
+            <h1 data-text="HBZ" aria-label="HBZ" className="hero-heading hero-hbz max-w-4xl text-7xl font-black tracking-tight text-text-primary sm:text-8xl lg:text-9xl xl:text-[8.5rem]">
+              HBZ
+            </h1>
+            <p className="hero-role text-4xl font-black leading-tight text-text-primary sm:text-5xl lg:text-6xl">{c.headline}</p>
+          </motion.div>
+          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
+            <p className="hero-specialties text-base font-bold tracking-wide text-accent sm:text-lg">{c.headlineHi}</p>
+          </motion.div>
+          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
+            <p className="max-w-2xl text-base leading-8 text-text-secondary sm:text-lg">{c.subheadline}</p>
+          </motion.div>
+          <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
+            <CtaButtons c={c} />
+          </motion.div>
+        </motion.div>
+
+        <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
+          transition={{ delay:0.4, duration:0.8 }}
+          className="hero-network-panel relative mx-auto flex aspect-[1.08] w-full max-w-[650px] items-center justify-center">
+          <div className="hero-panel-grid absolute inset-0" />
+          <div className="absolute inset-[-2%]"><MiniNetworkSVG /></div>
+        </motion.div>
+
+>>>>>>> Stashed changes
       </div>
     </div>
   )
@@ -354,9 +464,6 @@ function VariantGlass({ c }: { c: HeroContent }) {
         <p className="text-sm text-text-secondary leading-relaxed max-w-2xl mx-auto">{c.subheadline}</p>
         <CtaButtons c={c} row />
       </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="w-full">
-        <StatBar stats={c.stats} />
-      </motion.div>
     </div>
   )
 }
@@ -387,10 +494,6 @@ function VariantTerminal({ c }: { c: HeroContent }) {
             <span className="text-slate-300">skills --top 5</span></div>
           <div style={{ color:'#4a6a4a', paddingLeft:'1rem' }}>▸ <span style={{ color:'#06b6d4' }}>Cisco</span> · <span style={{ color:'#06b6d4' }}>MikroTik</span> · <span style={{ color:'#06b6d4' }}>VMware</span> · <span style={{ color:'#06b6d4' }}>Fortinet</span> · <span style={{ color:'#06b6d4' }}>Zabbix</span></div>
           <br/>
-          <div><span style={{ color:'#4ade80' }}>husein@hbz</span><span style={{ color:'#3a5a3a' }}>:~$ </span>
-            <span className="text-slate-300">stats</span></div>
-          <div style={{ color:'#4a6a4a', paddingLeft:'1rem' }}>▸ {c.stats.filter(s=>s.value).map(s => `${s.label.split(' ')[0]}=`+s.value).join('  ')}</div>
-          <br/>
           <div className="flex flex-wrap gap-2 mt-1">
             <button onClick={() => { window.location.href = c.ctaPrimaryHref }}
               className="px-4 py-1.5 rounded text-xs font-mono font-medium transition-colors"
@@ -410,9 +513,6 @@ function VariantTerminal({ c }: { c: HeroContent }) {
           </div>
         </div>
       </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="w-full">
-        <StatBar stats={c.stats} />
-      </motion.div>
     </div>
   )
 }
@@ -426,7 +526,7 @@ function VariantBento({ c }: { c: HeroContent }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-auto">
         {/* Main card — spans 2 cols */}
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-          className="md:col-span-2 rounded-2xl p-8 flex flex-col gap-5 relative overflow-hidden"
+          className="md:col-span-3 rounded-2xl p-8 flex flex-col gap-5 relative overflow-hidden"
           style={{ background:'rgba(13,13,23,0.9)', border:'1px solid rgba(99,102,241,0.22)', boxShadow:'0 0 40px rgba(99,102,241,0.06)' }}>
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
             style={{ background:'radial-gradient(circle,rgba(99,102,241,0.12) 0%,transparent 70%)', transform:'translate(30%,-30%)' }}/>
@@ -438,18 +538,6 @@ function VariantBento({ c }: { c: HeroContent }) {
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed max-w-md">{c.subheadline}</p>
           <CtaButtons c={c} />
-        </motion.div>
-
-        {/* Stats card */}
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-          className="rounded-2xl p-6 flex flex-col justify-center gap-4"
-          style={{ background:'rgba(13,13,23,0.9)', border:'1px solid rgba(99,102,241,0.15)' }}>
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-2xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-              <span className="text-xs text-text-muted leading-tight">{s.label}</span>
-            </div>
-          ))}
         </motion.div>
 
         {/* Tech tags card */}
@@ -497,15 +585,6 @@ function VariantLuxury({ c }: { c: HeroContent }) {
         className="text-sm text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.7 }}>
         <CtaButtons c={c} row />
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.85 }}
-        className="flex gap-8 border-t border-border pt-6 mt-2">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="text-center">
-            <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-3xs text-text-muted uppercase tracking-wider mt-0.5">{s.label}</div>
-          </div>
-        ))}
       </motion.div>
     </div>
   )
@@ -564,16 +643,6 @@ function VariantNeon({ c }: { c: HeroContent }) {
           className="px-5 py-2.5 rounded-lg text-sm text-text-muted border border-border/40 transition-all hover:text-text-primary">
           ↓ {c.ctaTertiary}
         </button>
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }} className="w-full max-w-lg">
-        <div className="flex border border-border/40 rounded-xl overflow-hidden">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className={`flex-1 py-4 text-center ${i<c.stats.length-1?'border-r border-border/40':''}`}>
-              <div className="text-xl font-black" style={{ background:'linear-gradient(90deg,#06b6d4,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{s.value}</div>
-              <div className="text-3xs text-text-muted mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
       </motion.div>
     </div>
   )
@@ -642,14 +711,6 @@ function VariantMagazine({ c }: { c: HeroContent }) {
               ))}
             </div>
           </div>
-          <div className="flex gap-4 pt-3 border-t border-border">
-            {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
-              <div key={i} className="text-center">
-                <div className="text-base font-black" style={{ color:s.color }}>{s.value}</div>
-                <div className="text-4xs text-text-muted">{s.label.split(' ')[0]}</div>
-              </div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </div>
@@ -680,16 +741,6 @@ function VariantCentered({ c }: { c: HeroContent }) {
         className="text-base text-text-secondary leading-relaxed max-w-2xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5 }}>
         <CtaButtons c={c} row />
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.7 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4 w-full max-w-3xl">
-        {c.stats.map((s,i) => s.value && (
-          <motion.div key={i} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.8+i*0.1 }}
-            className="metric-card text-center hover:border-accent/40 transition-all">
-            <div className="text-2xl md:text-3xl font-bold tabular-nums" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-xs text-text-muted mt-1 leading-tight">{s.label}</div>
-          </motion.div>
-        ))}
       </motion.div>
     </div>
   )
@@ -727,17 +778,6 @@ function VariantGradient({ c }: { c: HeroContent }) {
         className="text-sm text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}>
         <CtaButtons c={c} row />
-      </motion.div>
-      {/* Gradient stat pills */}
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }}
-        className="flex flex-wrap justify-center gap-3">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-xl border"
-            style={{ background:`${s.color}0d`, borderColor:`${s.color}30` }}>
-            <span className="text-xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-            <span className="text-xs text-text-muted">{s.label}</span>
-          </div>
-        ))}
       </motion.div>
     </div>
   )
@@ -777,11 +817,6 @@ function VariantTimeline({ c }: { c: HeroContent }) {
               </div>
             </div>
           ))}
-          <div className="mt-2 pt-3 border-t border-border flex gap-6">
-            {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
-              <div key={i}><div className="text-lg font-black" style={{ color:s.color }}>{s.value}</div><div className="text-4xs text-text-muted">{s.label.split(' ')[0]}</div></div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </div>
@@ -808,20 +843,6 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
           <p className="text-sm text-text-secondary leading-relaxed mb-6">{c.subheadline}</p>
           <CtaButtons c={c} />
         </motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-          className="hidden lg:flex flex-col gap-3 absolute right-8 top-1/2 -translate-y-1/2">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="px-5 py-3 rounded-xl text-right"
-              style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}30`, backdropFilter:'blur(12px)' }}>
-              <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-3xs text-text-muted">{s.label}</div>
-            </div>
-          ))}
-        </motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-          className="lg:hidden mt-6">
-          <StatBar stats={c.stats} />
-        </motion.div>
       </div>
     </div>
   )
@@ -831,10 +852,10 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
    VARIANT 13 — CODE BLOCK (monospace source-code aesthetic)
 ══════════════════════════════════════════════════════════════════ */
 function VariantCode({ c }: { c: HeroContent }) {
-  const linesFa = [`// حسین حبیب‌آذر — معمار زیرساخت`,`const profile = {`,`  نام: "حسین",`,`  تخصص: "${c.headline}",`,`  تجربه: "${c.stats[0]?.value} سال",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
-  const linesEn = [`// Husein Habibazar — Infrastructure Architect`,`const profile = {`,`  name: "Husein",`,`  role: "${c.headline}",`,`  experience: "${c.stats[0]?.value} years",`,`  status: "✓ Open to Work"`,`}`]
+  const linesFa = [`// حسین حبیب‌آذر — معمار زیرساخت`,`const profile = {`,`  نام: "حسین",`,`  تخصص: "${c.headline}",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
+  const linesEn = [`// Husein Habibazar — Infrastructure Architect`,`const profile = {`,`  name: "Husein",`,`  role: "${c.headline}",`,`  status: "✓ Open to Work"`,`}`]
   const lines = c.isRTL ? linesFa : linesEn
-  const colors = ['#94a3b8','#6366f1','#06b6d4','#f1f5f9','#10b981','#f59e0b','#6366f1']
+  const colors = ['#94a3b8','#6366f1','#06b6d4','#f1f5f9','#10b981','#6366f1']
   return (
     <div className="container-site py-20 max-w-5xl mx-auto">
       <div className={`flex flex-col lg:flex-row items-start gap-12 ${c.isRTL?'lg:flex-row-reverse':''}`}>
@@ -861,14 +882,6 @@ function VariantCode({ c }: { c: HeroContent }) {
           <Badge label={c.badge} />
           <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
           <CtaButtons c={c} />
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {c.stats.filter(s=>s.value).map((s,i) => (
-              <div key={i} className="p-3 rounded-lg text-center" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}25` }}>
-                <div className="text-lg font-mono font-black" style={{ color:s.color }}>{s.value}</div>
-                <div className="text-4xs text-text-muted mt-0.5">{s.label.split(' ')[0]}</div>
-              </div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </div>
@@ -894,14 +907,6 @@ function VariantPortrait({ c }: { c: HeroContent }) {
           <div className="text-center">
             <p className="text-sm font-bold text-text-primary">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</p>
             <p className="text-xs text-accent">{c.isRTL?'معمار زیرساخت':'Infrastructure Architect'}</p>
-          </div>
-          <div className="flex flex-col gap-1.5 w-full">
-            {c.stats.filter(s=>s.value).map((s,i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}20` }}>
-                <span className="text-3xs text-text-muted">{s.label}</span>
-                <span className="text-sm font-black" style={{ color:s.color }}>{s.value}</span>
-              </div>
-            ))}
           </div>
         </motion.div>
         <motion.div initial={{ opacity:0, x:c.isRTL?-30:30 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3 }} className="flex-1 flex flex-col gap-6">
@@ -934,17 +939,6 @@ function VariantMetric({ c }: { c: HeroContent }) {
         <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
         <div className="mt-2"><CtaButtons c={c} row /></div>
       </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <motion.div key={i} initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5+i*0.12 }}
-            className="relative rounded-2xl p-6 overflow-hidden" style={{ background:'rgba(10,10,20,0.9)', border:`1px solid ${s.color}25` }}>
-            <div className="absolute inset-0 pointer-events-none" style={{ background:`radial-gradient(ellipse 80% 60% at 50% 100%, ${s.color}10, transparent)` }}/>
-            <div className="text-4xl md:text-5xl font-black tabular-nums leading-none" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-xs text-text-muted mt-2 leading-tight">{s.label}</div>
-          </motion.div>
-        ))}
-      </motion.div>
     </div>
   )
 }
@@ -972,14 +966,6 @@ function VariantWave({ c }: { c: HeroContent }) {
       </motion.div>
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }} className="text-sm text-text-secondary max-w-lg leading-relaxed">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}><CtaButtons c={c} row /></motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.7 }} className="flex flex-wrap justify-center gap-4">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <span className="text-3xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-            <span className="text-3xs text-text-muted uppercase tracking-wider">{s.label}</span>
-          </div>
-        ))}
-      </motion.div>
     </div>
   )
 }
@@ -1008,12 +994,6 @@ function VariantSidebar({ c }: { c: HeroContent }) {
         </motion.div>
         <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-sm text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</motion.p>
         <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
-          className="flex gap-6 pt-4 border-t border-border">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i}><div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div><div className="text-3xs text-text-muted">{s.label}</div></div>
-          ))}
-        </motion.div>
       </div>
     </div>
   )
@@ -1037,15 +1017,6 @@ function VariantHolo({ c }: { c: HeroContent }) {
         </h1>
         <p className="text-sm text-text-secondary max-w-xl mx-auto leading-relaxed mb-6">{c.subheadline}</p>
         <CtaButtons c={c} row />
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-        className="grid grid-cols-4 gap-3 w-full">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="py-3 rounded-xl text-center" style={{ background:`linear-gradient(135deg,${s.color}0d,${s.color}06)`, border:`1px solid ${s.color}20` }}>
-            <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-4xs text-text-muted mt-1">{s.label}</div>
-          </div>
-        ))}
       </motion.div>
     </div>
   )
@@ -1071,13 +1042,6 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
           <div className="mt-6"><CtaButtons c={c} /></div>
         </motion.div>
         <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.35 }} className="flex flex-col gap-5">
-          <p className="text-4xs tracking-[0.35em] uppercase text-text-muted border-b border-border pb-2">{c.isRTL?'آمار کلیدی':'Key Statistics'}</p>
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="border-b border-border pb-4 last:border-0 last:pb-0">
-              <div className="text-3xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
-            </div>
-          ))}
           <div className="flex flex-wrap gap-1 mt-2">
             {['Cisco','VMware','MikroTik','Fortinet','Linux'].map(t => (
               <span key={t} className="text-4xs border border-border rounded px-1.5 py-0.5 text-text-muted">{t}</span>
@@ -1120,16 +1084,6 @@ function VariantCyber({ c }: { c: HeroContent }) {
         </motion.div>
         <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="text-sm text-text-secondary max-w-xl leading-relaxed">{c.subheadline}</motion.p>
         <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}><CtaButtons c={c} row /></motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }}
-          className="grid grid-cols-4 gap-3 w-full max-w-2xl">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="py-3 px-2 rounded text-center font-mono"
-              style={{ background:'rgba(6,182,212,0.04)', border:'1px solid rgba(6,182,212,0.2)' }}>
-              <div className="text-xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-4xs text-cyan-500/60 mt-0.5">{s.label.split(' ')[0]}</div>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </div>
   )
@@ -1141,6 +1095,15 @@ function HeroBg({ variant }: { variant: string }) {
   return (
     <>
       <div className="absolute inset-0 grid-bg opacity-100 pointer-events-none" aria-hidden="true"/>
+      {variant === 'split' && (
+        <div className="hero-cosmos absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="hero-nebula absolute inset-0" />
+          <span className="hero-light-streak hero-light-streak-1" />
+          <span className="hero-light-streak hero-light-streak-2" />
+          <span className="hero-light-streak hero-light-streak-3" />
+          <div className="hero-scanline absolute inset-0" />
+        </div>
+      )}
       {isTerminal
         ? <div className="absolute inset-0 pointer-events-none" style={{ background:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,100,0.008) 2px,rgba(0,255,100,0.008) 4px)' }}/>
         : null
@@ -1198,7 +1161,11 @@ export function Hero({ locale, dbHero, variant = 'split' }: HeroProps) {
 
   return (
     <section ref={ref}
+<<<<<<< Updated upstream
       className="relative min-h-[640px] lg:min-h-[780px] lg:max-h-[900px] flex items-center overflow-hidden bg-background pt-16"
+=======
+      className="home-hero relative min-h-[780px] lg:min-h-[860px] flex items-center overflow-hidden bg-background pt-16"
+>>>>>>> Stashed changes
       aria-label={isRTL ? 'بخش اصلی' : 'Hero section'}
       dir={isRTL ? 'rtl' : 'ltr'}>
       <HeroBg variant={variant} />
