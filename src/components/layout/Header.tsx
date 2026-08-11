@@ -137,7 +137,12 @@ export function Header({ locale, nav }: HeaderProps) {
                   {open && (
                     <div
                       className={cn(
-                        'absolute top-full mt-1 min-w-[13rem] rounded-xl border border-border bg-background/98 backdrop-blur-xl p-1.5 shadow-xl z-50',
+                        // w-max + a viewport-relative cap: the old fixed
+                        // min-w-[13rem] never grew for a longer item list on a
+                        // large monitor and could also overflow a narrow
+                        // window — this sizes to content, capped to the
+                        // viewport, and never crosses the screen edge.
+                        'absolute top-full mt-1 w-max max-w-[calc(100vw-2rem)] min-w-[13rem] rounded-xl border border-border bg-background/98 backdrop-blur-xl p-1.5 shadow-xl z-50',
                         isRTL ? 'right-0' : 'left-0',
                       )}
                       role="menu"
@@ -259,7 +264,11 @@ export function Header({ locale, nav }: HeaderProps) {
             id="mobile-menu"
             className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl overflow-hidden"
           >
-            <nav className="container-site py-4 flex flex-col gap-1">
+            {/* max-h + its own scroll: on a short viewport (small phone, or a
+                landscape phone) a long menu used to just get cut off by the
+                fixed header sitting above the fold — this keeps the whole
+                menu reachable regardless of screen height. */}
+            <nav className="container-site py-4 flex flex-col gap-1 max-h-[calc(100vh-4.5rem)] overflow-y-auto">
               {items.map((item) => {
                 const label = isRTL ? item.labelFa : item.labelEn
                 const cls = cn(

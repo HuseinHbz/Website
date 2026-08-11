@@ -272,11 +272,19 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 4k:grid-cols-4 gap-5">
           {visible.map(l => (
             <div key={l.id} className={`rounded-2xl border-2 overflow-hidden transition-colors ${current === l.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
-              <button type="button" onClick={() => !saving && select(l.id)} className="block w-full">
+              {/* A real <button> can't legally wrap the live preview — it renders
+                  the actual Hero component, including real <button> CTAs, and a
+                  button-inside-button is invalid HTML that browsers silently
+                  restructure (breaking the click handler + a hydration warning).
+                  role="button" on a div is the standard fix for "clickable, but
+                  contains other interactive elements". */}
+              <div role="button" tabIndex={0} onClick={() => !saving && select(l.id)}
+                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !saving) { e.preventDefault(); select(l.id) } }}
+                className="block w-full cursor-pointer">
                 <div className="h-40 sm:h-44 bg-surface-2 border-b border-subtle">
-                  <HeroLayoutPreview variant={l.id} locale={rtl ? 'fa' : 'en'} scale={0.145} />
+                  <HeroLayoutPreview variant={l.id} />
                 </div>
-              </button>
+              </div>
               <div className="flex items-center justify-between gap-2 p-3">
                 <button type="button" onClick={() => !saving && select(l.id)} className="text-start flex-1">
                   <h4 className="text-sm font-semibold text-text-primary">{rtl ? l.nameFa : l.nameEn}</h4>
@@ -408,7 +416,8 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
                 <div key={row.id} className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === id ? 'border-brand' : 'border-transparent'}`}>
                   <button type="button" onClick={() => !saving && select(id)} className="w-full">
                     <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
-                      <video src={row.url} className="w-full h-full object-cover" muted loop playsInline
+                      <video src={row.url} className="w-full h-full object-cover" muted loop playsInline preload="auto"
+                        onLoadedMetadata={e => { try { e.currentTarget.currentTime = 0.1 } catch {} }}
                         onMouseEnter={e => e.currentTarget.play().catch(() => {})}
                         onMouseLeave={e => e.currentTarget.pause()} />
                     </div>
@@ -444,7 +453,8 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
             <button type="button" key={v.id} onClick={() => !saving && select(v.id)}
               className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === v.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
               <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
-                <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline
+                <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline preload="auto"
+                  onLoadedMetadata={e => { try { e.currentTarget.currentTime = 0.1 } catch {} }}
                   onMouseEnter={e => e.currentTarget.play().catch(() => {})}
                   onMouseLeave={e => e.currentTarget.pause()} />
               </div>
