@@ -8,6 +8,19 @@ const nextConfig = {
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
   async headers() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.habibazar.ir'
+    // 'unsafe-eval' lets any injected script call eval()/Function() — one of
+    // the two things that make script-src 'unsafe-inline' + 'unsafe-eval'
+    // together close to no restriction at all against XSS. Next's dev-mode
+    // HMR/eval-source-map genuinely needs it; a production build does not
+    // (verified: full app walk — public site, admin CMS incl. recharts/
+    // framer-motion/RichTextEditor — with zero CSP violations after removing
+    // it). 'unsafe-inline' stays for now — removing it needs Next's nonce
+    // mechanism wired through every inline script (hydration payload,
+    // styled-jsx, admin RichTextEditor previews) and is a distinct, riskier
+    // change flagged for its own pass rather than attempted blind here.
+    const scriptSrc = process.env.NODE_ENV === 'production'
+      ? `script-src 'self' 'unsafe-inline'`
+      : `script-src 'self' 'unsafe-eval' 'unsafe-inline'`
     return [
       {
         source: '/(.*)',
@@ -16,7 +29,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-eval' 'unsafe-inline'`,
+              scriptSrc,
               `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
               `font-src 'self' https://fonts.gstatic.com`,
               `img-src 'self' data: blob: https:`,

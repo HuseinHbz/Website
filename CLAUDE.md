@@ -1812,7 +1812,12 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   (jose, 8h) in an httpOnly cookie `admin_token`; a DB session row is created.
 - `getAdminUser()` re-verifies JWT + live DB session + active user.
 - Roles: `super_admin | administrator | editor` (`canDo(role, action)`).
-- Seeded admin: **`admin@habibazar.com` / `HBZ@Admin2025!`** (change after first login).
+- Seeded admin: **`admin@habibazar.com`**. In dev/test/CI (`NODE_ENV !== 'production'`)
+  the password is the fixed **`HBZ@Admin2025!`** (E2E/audits/load-test all hardcode
+  this). On a real production boot the password is `ADMIN_SEED_PASSWORD` if set, else
+  a fresh random password printed ONCE to the server log — retrieve it from PM2 logs
+  on first install and change it after first login. Only applies the first time the
+  row is created; an existing install's password is never touched.
 
 ## Testing & validation (run at the repo root)
 - `npm run type-check` · `npm run lint` · `npm run test` (vitest) ·

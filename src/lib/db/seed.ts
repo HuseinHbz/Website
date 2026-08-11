@@ -2,21 +2,51 @@ import { hashPassword } from '@/lib/admin/password'
 import { nanoid } from 'nanoid'
 import { eq, sql } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
+import { randomBytes } from 'node:crypto'
 import { db, schema } from './index'
+import { logger } from '@/lib/logger'
 
 async function count(tbl: PgTable): Promise<number> {
   const [row] = await db.select({ c: sql<number>`count(*)` }).from(tbl)
   return Number(row?.c ?? 0)
 }
 
+/** A base64url random string, sliced and padded with a fixed marker so it
+ *  always satisfies a typical upper/lower/digit/symbol password policy —
+ *  used only for the one-time seed password below. */
+export function generateRandomPassword(): string {
+  return `Hbz-${randomBytes(12).toString('base64url')}!9`
+}
+
 export async function seedDatabase() {
   const s = schema
 
-  // Super admin user (idempotent)
+  // Super admin user (idempotent). The password used to be the fixed,
+  // publicly-documented string "HBZ@Admin2025!" — fine as a one-time
+  // convenience note, genuinely dangerous as the ACTUAL credential a real
+  // PRODUCTION install ships with, since anyone who has ever read the docs
+  // (or this repo) knows it. A real production seed now uses
+  // `ADMIN_SEED_PASSWORD` if the operator set one (e.g. a deploy secret),
+  // or a fresh cryptographically random password otherwise — printed to the
+  // server log exactly once, on the install that creates the row, so it's
+  // retrievable from PM2 logs. Dev/test/CI (NODE_ENV !== 'production') keep
+  // the old fixed password so E2E (e2e/helpers.ts), the module audits
+  // (scripts/module-audit*.ts) and the load test (scripts/load-test.mjs) —
+  // which all hardcode it as their fallback credential — keep working
+  // unchanged; only a real deployed server's credential actually needs to
+  // stop being a known, published string. This only runs when the user
+  // doesn't exist yet, so it changes nothing for any install that already
+  // has this row (including one where the operator already changed the
+  // seeded password, per the docs' own instruction to do so after login).
   const existingUser = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, 'admin@habibazar.com')).limit(1)
   if (existingUser.length === 0) {
-    const hash = await hashPassword('HBZ@Admin2025!') // async scrypt (26.25b بند ۰.۲)
+    const isProd = process.env.NODE_ENV === 'production'
+    const seedPassword = process.env.ADMIN_SEED_PASSWORD || (isProd ? generateRandomPassword() : 'HBZ@Admin2025!')
+    const hash = await hashPassword(seedPassword) // async scrypt (26.25b بند ۰.۲)
     await db.insert(s.users).values({ id: nanoid(), name: 'Husein Habibazar', email: 'admin@habibazar.com', passwordHash: hash, role: 'super_admin' }).onConflictDoNothing()
+    if (isProd && !process.env.ADMIN_SEED_PASSWORD) {
+      logger.warn(`Seeded the first admin account with a randomly generated password — email: admin@habibazar.com | password: ${seedPassword} | SAVE THIS NOW, it will not be shown again, and change it after first login.`)
+    }
   }
 
   // Site settings

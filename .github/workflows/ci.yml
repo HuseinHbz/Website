@@ -117,6 +117,11 @@ jobs:
       NODE_ENV: production
       # 26.25 بند ۰: measure true 2xx throughput, not a 429 storm (test-only).
       RATE_LIMIT_DISABLED: '1'
+      # The seed now generates a random admin password on a real production
+      # boot (NODE_ENV=production, which this job sets to build/run the real
+      # server binary) — pin the deterministic one explicitly so
+      # scripts/load-test.mjs's hardcoded login fallback keeps working.
+      ADMIN_SEED_PASSWORD: 'HBZ@Admin2025!'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -188,6 +193,10 @@ jobs:
       ADMIN_JWT_SECRET: ci-e2e-secret-placeholder
       NODE_ENV: production
       RATE_LIMIT_DISABLED: '1'
+      # See load-test job above — pins the deterministic seed password so
+      # e2e/helpers.ts's hardcoded login fallback keeps working under
+      # NODE_ENV=production.
+      ADMIN_SEED_PASSWORD: 'HBZ@Admin2025!'
       # localhost (not 127.0.0.1): the portal cookie is Secure in production and
       # Playwright's request context only keeps Secure cookies on a trustworthy
       # origin — localhost qualifies, 127.0.0.1 does not (26.26d finding).
