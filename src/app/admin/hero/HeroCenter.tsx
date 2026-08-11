@@ -12,10 +12,11 @@ import { HERO_BG_VIDEOS } from '@/lib/heroBgVideos'
 import { HERO_ORBIT_STYLES, DEFAULT_ORBIT_STYLE } from '@/lib/heroOrbitStyles'
 import { HERO_LAYOUTS, DEFAULT_HERO_LAYOUT } from '@/lib/heroLayouts'
 import { OrbitalNetwork } from '@/components/sections/OrbitalNetwork'
+import { HeroLayoutPreview } from '@/components/sections/HeroLayoutPreview'
 import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
 
-type Tab = 'dashboard' | 'heroes' | 'layout' | 'templates' | 'background' | 'library' | 'experiments' | 'analytics'
+type Tab = 'dashboard' | 'heroes' | 'layout' | 'background' | 'library' | 'experiments' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -34,7 +35,6 @@ export function HeroCenter() {
     { id: 'dashboard', en: 'Dashboard', fa: 'داشبورد' },
     { id: 'heroes', en: 'Heroes', fa: 'هیروها' },
     { id: 'layout', en: 'Layout', fa: 'چیدمان' },
-    { id: 'templates', en: 'Templates', fa: 'قالب‌ها' },
     { id: 'background', en: 'Video Background', fa: 'پس‌زمینه ویدیویی' },
     { id: 'library', en: 'Animation Library', fa: 'کتابخانه انیمیشن' },
     { id: 'experiments', en: 'A/B Testing', fa: 'آزمون A/B' },
@@ -53,7 +53,6 @@ export function HeroCenter() {
       {tab === 'dashboard' && <Dashboard rtl={rtl} onOpen={setEditingId} />}
       {tab === 'heroes' && <Heroes rtl={rtl} locale={locale} toast={toast} onOpen={setEditingId} />}
       {tab === 'layout' && <LayoutPicker rtl={rtl} toast={toast} />}
-      {tab === 'templates' && <Templates rtl={rtl} toast={toast} onOpen={setEditingId} />}
       {tab === 'background' && <VideoBackground rtl={rtl} toast={toast} />}
       {tab === 'library' && <AnimationLibrary rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'experiments' && <Experiments rtl={rtl} locale={locale} toast={toast} />}
@@ -170,14 +169,22 @@ function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | '
  * rectangles — a real animated, non-rectangular orb preview per pick).
  */
 /**
- * Layout tab — the 20 Hero.tsx layout variants (split/minimal/glass/
- * terminal/bento/...) already existed in code, selected via the
- * `hero_variant` site_settings key that page.tsx already reads — there was
- * just no admin UI to pick one. This is that picker; same generic
- * settings GET/PUT endpoint as every other Hero admin control.
+ * چیدمان (Layout) tab — merges what used to be two separate tabs
+ * ("Templates" = the orbit-network animation picker, "Layout" = the 20
+ * Hero.tsx layout compositions) into one, per the maintainer's instruction.
+ * Both write the same generic settings GET/PUT endpoint every other Hero
+ * admin control uses. Each layout card is a REAL live-rendered preview
+ * (HeroLayoutPreview — the actual Hero component, scaled down, not a
+ * screenshot or a static icon), and can be hidden from the picker (soft
+ * "delete" — the code stays, it's just no longer offered) or restored
+ * ("add" back) via `hero_layout_hidden`, since these are code-defined
+ * compositions, not uploadable files — there is nothing to literally
+ * delete/re-upload the way a background video can be.
  */
 function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [current, setCurrent] = useState<string>('')
+  const [orbitCurrent, setOrbitCurrent] = useState<string>('')
+  const [hidden, setHidden] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
@@ -187,6 +194,8 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
       const r = await fetch('/api/admin/settings')
       const d = await r.json().catch(() => ({}))
       setCurrent(d.hero_variant || DEFAULT_HERO_LAYOUT)
+      setOrbitCurrent(d.hero_orbit_style || DEFAULT_ORBIT_STYLE)
+      try { setHidden(JSON.parse(d.hero_layout_hidden || '[]')) } catch { setHidden([]) }
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -200,85 +209,106 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
     } finally { setSaving(null) }
   }
 
-  return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <p className="text-sm text-text-secondary">
-          {lc(rtl,
-            'Pick which of the 20 built-in layout compositions the live homepage hero uses. Content (text, CTAs) stays exactly the same — only the arrangement changes. The orbit network animation and background video (other tabs) apply on top of whichever layout is active where the layout supports them.',
-            'یکی از ۲۰ چیدمان آماده را برای بخش هیروی زندهٔ صفحه اصلی انتخاب کنید. محتوا (متن، دکمه‌ها) دقیقاً همان می‌ماند — فقط چینش عوض می‌شود. انیمیشن شبکهٔ مداری و ویدیوی پس‌زمینه (تب‌های دیگر) روی هر چیدمانی که پشتیبانی کند اعمال می‌شوند.'
-          )}
-        </p>
-      </Card>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {HERO_LAYOUTS.map(l => (
-          <button type="button" key={l.id} onClick={() => !saving && select(l.id)}
-            className={`text-start rounded-2xl p-4 border-2 transition-colors ${current === l.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
-            <Card className="p-4 flex flex-col gap-2">
-              <div className="h-16 rounded-lg bg-gradient-to-br from-brand/15 to-accent/10 border border-subtle flex items-center justify-center text-2xl">⬡</div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-text-primary">{rtl ? l.nameFa : l.nameEn}</h4>
-                {current === l.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
-                {saving === l.id && <Badge color="slate">…</Badge>}
-              </div>
-            </Card>
-          </button>
-        ))}
-      </div>
-      {loading && <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>}
-    </div>
-  )
-}
-
-function Templates({ rtl, toast }: { rtl: boolean; toast: Toast; onOpen?: (id: number) => void }) {
-  const [current, setCurrent] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await fetch('/api/admin/settings')
-      const d = await r.json().catch(() => ({}))
-      setCurrent(d.hero_orbit_style || DEFAULT_ORBIT_STYLE)
-    } finally { setLoading(false) }
-  }, [])
-  useEffect(() => { load() }, [load])
-
-  async function select(id: string) {
-    setSaving(id)
+  async function selectOrbit(id: string) {
+    setSaving(`orbit:${id}`)
     try {
       const r = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hero_orbit_style: id }) })
-      if (r.ok) { setCurrent(id); toast(lc(rtl, 'Orbit animation set', 'انیمیشن مداری تنظیم شد'), 'success') }
+      if (r.ok) { setOrbitCurrent(id); toast(lc(rtl, 'Orbit animation set', 'انیمیشن مداری تنظیم شد'), 'success') }
       else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
     } finally { setSaving(null) }
   }
 
+  async function setHiddenList(next: string[]) {
+    setHidden(next)
+    await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hero_layout_hidden: JSON.stringify(next) }) })
+  }
+  async function hideLayout(id: string) {
+    if (id === current) { toast(lc(rtl, "Can't hide the active layout — pick another first", 'چیدمان فعال را نمی‌توان حذف کرد — اول یکی دیگر را انتخاب کنید'), 'error'); return }
+    await setHiddenList([...hidden, id])
+    toast(lc(rtl, 'Hidden from the picker', 'از لیست پنهان شد'), 'success')
+  }
+  async function restoreLayout(id: string) {
+    await setHiddenList(hidden.filter(h => h !== id))
+    toast(lc(rtl, 'Restored', 'بازگردانده شد'), 'success')
+  }
+
+  const visible = HERO_LAYOUTS.filter(l => !hidden.includes(l.id))
+  const hiddenLayouts = HERO_LAYOUTS.filter(l => hidden.includes(l.id))
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card className="p-4">
         <p className="text-sm text-text-secondary">
           {lc(rtl,
-            'Pick the orbit network animation behind the live homepage hero — independent of its text content and its background video. Every node connects into the HBZ hub at the center. More styles will be added here later.',
-            'انیمیشن شبکهٔ مداری پشت بخش هیروی زندهٔ صفحه اصلی را انتخاب کنید — مستقل از متن و از ویدیوی پس‌زمینه. همهٔ گره‌ها به هاب HBZ در مرکز وصل‌اند. طرح‌های بیشتر بعداً به همین‌جا اضافه می‌شوند.'
+            'Pick which of the built-in layout compositions the live homepage hero uses. Content (text, CTAs) stays exactly the same — only the arrangement changes. Sizes/fonts scale up through 4K displays. Each card below is a real live preview of that layout, not a static icon.',
+            'یکی از چیدمان‌های آماده را برای بخش هیروی زندهٔ صفحه اصلی انتخاب کنید. محتوا (متن، دکمه‌ها) دقیقاً همان می‌ماند — فقط چینش عوض می‌شود. اندازه و فونت‌ها تا مانیتورهای 4K نسبت به ابعاد صفحه تنظیم می‌شوند. هر کارت پایین یک پیش‌نمایش زندهٔ واقعی از همان چیدمان است، نه یک آیکون ثابت.'
           )}
         </p>
       </Card>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        {HERO_ORBIT_STYLES.map(s => (
-          <button type="button" key={s.id} onClick={() => !saving && select(s.id)}
-            className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === s.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
-            <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
-              <OrbitalNetwork compact />
-            </div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-xs font-semibold text-text-primary">{rtl ? s.nameFa : s.nameEn}</h4>
-              {current === s.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
-              {saving === s.id && <Badge color="slate">…</Badge>}
-            </div>
+
+      {/* Network animation — folded in here from the old separate "Templates" tab */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">{lc(rtl, 'Network animation', 'انیمیشن شبکه‌ای')}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          {HERO_ORBIT_STYLES.map(s => (
+            <button type="button" key={s.id} onClick={() => !saving && selectOrbit(s.id)}
+              className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${orbitCurrent === s.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+              <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
+                <OrbitalNetwork compact />
+              </div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-text-primary">{rtl ? s.nameFa : s.nameEn}</h4>
+                {orbitCurrent === s.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                {saving === `orbit:${s.id}` && <Badge color="slate">…</Badge>}
+              </div>
           </button>
         ))}
+        </div>
       </div>
+
+      {/* Layout compositions — real live previews, select + hide/restore */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">{lc(rtl, 'Layouts', 'چیدمان‌ها')}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 4k:grid-cols-4 gap-5">
+          {visible.map(l => (
+            <div key={l.id} className={`rounded-2xl border-2 overflow-hidden transition-colors ${current === l.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+              <button type="button" onClick={() => !saving && select(l.id)} className="block w-full">
+                <div className="h-40 sm:h-44 bg-surface-2 border-b border-subtle">
+                  <HeroLayoutPreview variant={l.id} locale={rtl ? 'fa' : 'en'} scale={0.145} />
+                </div>
+              </button>
+              <div className="flex items-center justify-between gap-2 p-3">
+                <button type="button" onClick={() => !saving && select(l.id)} className="text-start flex-1">
+                  <h4 className="text-sm font-semibold text-text-primary">{rtl ? l.nameFa : l.nameEn}</h4>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {current === l.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                    {saving === l.id && <Badge color="slate">…</Badge>}
+                  </div>
+                </button>
+                <button type="button" onClick={() => hideLayout(l.id)} title={lc(rtl, 'Hide', 'حذف')}
+                  className="text-3xs text-red-400 hover:text-red-300 transition-colors shrink-0">
+                  🗑 {lc(rtl, 'Hide', 'حذف')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {hiddenLayouts.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">{lc(rtl, 'Hidden', 'پنهان‌شده')}</p>
+          <div className="flex flex-wrap gap-2">
+            {hiddenLayouts.map(l => (
+              <button type="button" key={l.id} onClick={() => restoreLayout(l.id)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-white/5 text-text-secondary hover:text-text-primary transition-colors">
+                + {lc(rtl, 'Restore', 'بازگرداندن')}: {rtl ? l.nameFa : l.nameEn}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading && <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>}
     </div>
   )

@@ -401,16 +401,20 @@
 @layer components {
 
   /* ── Layout ──────────────────────────────────────────────── */
+  /* Content stays centered and readable up through 4K displays instead of
+     stretching edge-to-edge (which would make body text unreadably wide)
+     — the cap widens in two steps at very large viewports so a 2560px+
+     screen isn't just the same 1280px column drowning in empty margin. */
   .container-site {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 3xl:max-w-[96rem] 4k:max-w-[110rem];
   }
 
   .container-narrow {
-    @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 3xl:max-w-5xl;
   }
 
   .container-wide {
-    @apply max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8;
+    @apply max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 3xl:max-w-[110rem] 4k:max-w-[130rem];
   }
 
   .section-padding {

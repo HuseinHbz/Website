@@ -119,24 +119,6 @@ function Badge({ label }: { label: string }) {
   )
 }
 
-function StatBar({ stats }: { stats: HeroContent['stats'] }) {
-  const validStats = stats.filter(s => s.value)
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 border border-border rounded-xl overflow-hidden bg-surface/40 backdrop-blur-sm">
-      {validStats.map((s, i) => (
-        <div key={i} className={`flex flex-col items-center py-5 px-3 text-center ${
-          i < validStats.length - 1
-            ? i === 1 ? 'sm:border-r border-border' : 'border-r border-border'
-            : ''
-        } ${i < 2 ? 'border-b sm:border-b-0 border-border' : ''}`}>
-          <span className="text-2xl lg:text-3xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
-          <span className="text-xs text-text-muted mt-1 leading-tight">{s.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function CtaButtons({ c, row = false }: { c: HeroContent; row?: boolean }) {
   return (
     <div className={`flex flex-wrap gap-3 ${row ? 'justify-center' : ''}`}>
@@ -305,9 +287,6 @@ function VariantGlass({ c }: { c: HeroContent }) {
         <p className="text-base text-text-secondary leading-relaxed max-w-2xl mx-auto">{c.subheadline}</p>
         <CtaButtons c={c} row />
       </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="w-full">
-        <StatBar stats={c.stats} />
-      </motion.div>
     </div>
   )
 }
@@ -338,10 +317,6 @@ function VariantTerminal({ c }: { c: HeroContent }) {
             <span className="text-slate-300">skills --top 5</span></div>
           <div style={{ color:'#4a6a4a', paddingLeft:'1rem' }}>▸ <span style={{ color:'#06b6d4' }}>Cisco</span> · <span style={{ color:'#06b6d4' }}>MikroTik</span> · <span style={{ color:'#06b6d4' }}>VMware</span> · <span style={{ color:'#06b6d4' }}>Fortinet</span> · <span style={{ color:'#06b6d4' }}>Zabbix</span></div>
           <br/>
-          <div><span style={{ color:'#4ade80' }}>husein@hbz</span><span style={{ color:'#3a5a3a' }}>:~$ </span>
-            <span className="text-slate-300">stats</span></div>
-          <div style={{ color:'#4a6a4a', paddingLeft:'1rem' }}>▸ {c.stats.filter(s=>s.value).map(s => `${s.label.split(' ')[0]}=`+s.value).join('  ')}</div>
-          <br/>
           <div className="flex flex-wrap gap-2 mt-1">
             <button onClick={() => { window.location.href = c.ctaPrimaryHref }}
               className="px-4 py-1.5 rounded text-xs font-mono font-medium transition-colors"
@@ -361,9 +336,6 @@ function VariantTerminal({ c }: { c: HeroContent }) {
           </div>
         </div>
       </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="w-full">
-        <StatBar stats={c.stats} />
-      </motion.div>
     </div>
   )
 }
@@ -375,9 +347,9 @@ function VariantBento({ c }: { c: HeroContent }) {
   return (
     <div className="container-site py-24 max-w-5xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-auto">
-        {/* Main card — spans 2 cols */}
+        {/* Main card — spans all 3 cols (stats card removed) */}
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-          className="md:col-span-2 rounded-2xl p-8 flex flex-col gap-5 relative overflow-hidden"
+          className="md:col-span-3 rounded-2xl p-8 flex flex-col gap-5 relative overflow-hidden"
           style={{ background:'rgba(13,13,23,0.9)', border:'1px solid rgba(99,102,241,0.22)', boxShadow:'0 0 40px rgba(99,102,241,0.06)' }}>
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
             style={{ background:'radial-gradient(circle,rgba(99,102,241,0.12) 0%,transparent 70%)', transform:'translate(30%,-30%)' }}/>
@@ -389,18 +361,6 @@ function VariantBento({ c }: { c: HeroContent }) {
           </h1>
           <p className="text-base text-text-secondary leading-relaxed max-w-md">{c.subheadline}</p>
           <CtaButtons c={c} />
-        </motion.div>
-
-        {/* Stats card */}
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-          className="rounded-2xl p-6 flex flex-col justify-center gap-4"
-          style={{ background:'rgba(13,13,23,0.9)', border:'1px solid rgba(99,102,241,0.15)' }}>
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-2xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-              <span className="text-xs text-text-muted leading-tight">{s.label}</span>
-            </div>
-          ))}
         </motion.div>
 
         {/* Tech tags card */}
@@ -448,15 +408,6 @@ function VariantLuxury({ c }: { c: HeroContent }) {
         className="text-base text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.7 }}>
         <CtaButtons c={c} row />
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.85 }}
-        className="flex gap-8 border-t border-border pt-6 mt-2">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="text-center">
-            <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-3xs text-text-muted uppercase tracking-wider mt-0.5">{s.label}</div>
-          </div>
-        ))}
       </motion.div>
     </div>
   )
@@ -515,16 +466,6 @@ function VariantNeon({ c }: { c: HeroContent }) {
           className="px-5 py-2.5 rounded-lg text-sm text-text-muted border border-border/40 transition-all hover:text-text-primary">
           ↓ {c.ctaTertiary}
         </button>
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }} className="w-full max-w-lg">
-        <div className="flex border border-border/40 rounded-xl overflow-hidden">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className={`flex-1 py-4 text-center ${i<c.stats.length-1?'border-r border-border/40':''}`}>
-              <div className="text-xl font-black" style={{ background:'linear-gradient(90deg,#06b6d4,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{s.value}</div>
-              <div className="text-3xs text-text-muted mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
       </motion.div>
     </div>
   )
@@ -593,14 +534,6 @@ function VariantMagazine({ c }: { c: HeroContent }) {
               ))}
             </div>
           </div>
-          <div className="flex gap-4 pt-3 border-t border-border">
-            {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
-              <div key={i} className="text-center">
-                <div className="text-base font-black" style={{ color:s.color }}>{s.value}</div>
-                <div className="text-4xs text-text-muted">{s.label.split(' ')[0]}</div>
-              </div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </div>
@@ -631,16 +564,6 @@ function VariantCentered({ c }: { c: HeroContent }) {
         className="text-base text-text-secondary leading-relaxed max-w-2xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5 }}>
         <CtaButtons c={c} row />
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.7 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4 w-full max-w-3xl">
-        {c.stats.map((s,i) => s.value && (
-          <motion.div key={i} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.8+i*0.1 }}
-            className="metric-card text-center hover:border-accent/40 transition-all">
-            <div className="text-2xl md:text-3xl font-bold tabular-nums" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-xs text-text-muted mt-1 leading-tight">{s.label}</div>
-          </motion.div>
-        ))}
       </motion.div>
     </div>
   )
@@ -678,17 +601,6 @@ function VariantGradient({ c }: { c: HeroContent }) {
         className="text-base text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}>
         <CtaButtons c={c} row />
-      </motion.div>
-      {/* Gradient stat pills */}
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }}
-        className="flex flex-wrap justify-center gap-3">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-xl border"
-            style={{ background:`${s.color}0d`, borderColor:`${s.color}30` }}>
-            <span className="text-xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-            <span className="text-xs text-text-muted">{s.label}</span>
-          </div>
-        ))}
       </motion.div>
     </div>
   )
@@ -728,11 +640,6 @@ function VariantTimeline({ c }: { c: HeroContent }) {
               </div>
             </div>
           ))}
-          <div className="mt-2 pt-3 border-t border-border flex gap-6">
-            {c.stats.slice(0,3).filter(s=>s.value).map((s,i) => (
-              <div key={i}><div className="text-lg font-black" style={{ color:s.color }}>{s.value}</div><div className="text-4xs text-text-muted">{s.label.split(' ')[0]}</div></div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </div>
@@ -759,20 +666,6 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
           <p className="text-base text-text-secondary leading-relaxed mb-6">{c.subheadline}</p>
           <CtaButtons c={c} />
         </motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-          className="hidden lg:flex flex-col gap-3 absolute right-8 top-1/2 -translate-y-1/2">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="px-5 py-3 rounded-xl text-right"
-              style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}30`, backdropFilter:'blur(12px)' }}>
-              <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-3xs text-text-muted">{s.label}</div>
-            </div>
-          ))}
-        </motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-          className="lg:hidden mt-6">
-          <StatBar stats={c.stats} />
-        </motion.div>
       </div>
     </div>
   )
@@ -782,10 +675,10 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
    VARIANT 13 — CODE BLOCK (monospace source-code aesthetic)
 ══════════════════════════════════════════════════════════════════ */
 function VariantCode({ c }: { c: HeroContent }) {
-  const linesFa = [`// حسین حبیب‌آذر — معمار زیرساخت`,`const profile = {`,`  نام: "حسین",`,`  تخصص: "${c.headline}",`,`  تجربه: "${c.stats[0]?.value} سال",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
-  const linesEn = [`// Husein Habibazar — Infrastructure Architect`,`const profile = {`,`  name: "Husein",`,`  role: "${c.headline}",`,`  experience: "${c.stats[0]?.value} years",`,`  status: "✓ Open to Work"`,`}`]
+  const linesFa = [`// حسین حبیب‌آذر — معمار زیرساخت`,`const profile = {`,`  نام: "حسین",`,`  تخصص: "${c.headline}",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
+  const linesEn = [`// Husein Habibazar — Infrastructure Architect`,`const profile = {`,`  name: "Husein",`,`  role: "${c.headline}",`,`  status: "✓ Open to Work"`,`}`]
   const lines = c.isRTL ? linesFa : linesEn
-  const colors = ['#94a3b8','#6366f1','#06b6d4','#f1f5f9','#10b981','#f59e0b','#6366f1']
+  const colors = ['#94a3b8','#6366f1','#06b6d4','#f1f5f9','#f59e0b','#6366f1']
   return (
     <div className="container-site py-20 max-w-5xl mx-auto">
       <div className={`flex flex-col lg:flex-row items-start gap-12 ${c.isRTL?'lg:flex-row-reverse':''}`}>
@@ -812,14 +705,6 @@ function VariantCode({ c }: { c: HeroContent }) {
           <Badge label={c.badge} />
           <p className="text-base text-text-secondary leading-relaxed">{c.subheadline}</p>
           <CtaButtons c={c} />
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {c.stats.filter(s=>s.value).map((s,i) => (
-              <div key={i} className="p-3 rounded-lg text-center" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}25` }}>
-                <div className="text-lg font-mono font-black" style={{ color:s.color }}>{s.value}</div>
-                <div className="text-4xs text-text-muted mt-0.5">{s.label.split(' ')[0]}</div>
-              </div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </div>
@@ -845,14 +730,6 @@ function VariantPortrait({ c }: { c: HeroContent }) {
           <div className="text-center">
             <p className="text-sm font-bold text-text-primary">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</p>
             <p className="text-xs text-accent">{c.isRTL?'معمار زیرساخت':'Infrastructure Architect'}</p>
-          </div>
-          <div className="flex flex-col gap-1.5 w-full">
-            {c.stats.filter(s=>s.value).map((s,i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background:'rgba(10,10,20,0.8)', border:`1px solid ${s.color}20` }}>
-                <span className="text-3xs text-text-muted">{s.label}</span>
-                <span className="text-sm font-black" style={{ color:s.color }}>{s.value}</span>
-              </div>
-            ))}
           </div>
         </motion.div>
         <motion.div initial={{ opacity:0, x:c.isRTL?-30:30 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3 }} className="flex-1 flex flex-col gap-6">
@@ -887,12 +764,16 @@ function VariantMetric({ c }: { c: HeroContent }) {
       </motion.div>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}
         className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <motion.div key={i} initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5+i*0.12 }}
-            className="relative rounded-2xl p-6 overflow-hidden" style={{ background:'rgba(10,10,20,0.9)', border:`1px solid ${s.color}25` }}>
-            <div className="absolute inset-0 pointer-events-none" style={{ background:`radial-gradient(ellipse 80% 60% at 50% 100%, ${s.color}10, transparent)` }}/>
-            <div className="text-4xl md:text-5xl font-black tabular-nums leading-none" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-xs text-text-muted mt-2 leading-tight">{s.label}</div>
+        {[
+          { label: 'Cisco', color: '#22d3ee' }, { label: 'MikroTik', color: '#f0576b' },
+          { label: 'VMware', color: '#38bdf8' }, { label: 'Fortinet', color: '#f0576b' },
+          { label: 'Zabbix', color: '#f5b84b' }, { label: 'Proxmox', color: '#8b5cf6' },
+          { label: 'Linux', color: '#22c997' }, { label: 'Ansible', color: '#7477ff' },
+        ].map((t,i) => (
+          <motion.div key={t.label} initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5+i*0.08 }}
+            className="relative rounded-2xl p-6 overflow-hidden flex items-center justify-center" style={{ background:'rgba(10,10,20,0.9)', border:`1px solid ${t.color}25` }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background:`radial-gradient(ellipse 80% 60% at 50% 100%, ${t.color}10, transparent)` }}/>
+            <span className="text-lg font-bold" style={{ color: t.color }}>{t.label}</span>
           </motion.div>
         ))}
       </motion.div>
@@ -921,16 +802,8 @@ function VariantWave({ c }: { c: HeroContent }) {
           {c.headline}
         </h1>
       </motion.div>
-      <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }} className="text-sm text-text-secondary max-w-lg leading-relaxed">{c.subheadline}</motion.p>
+      <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }} className="text-base text-text-secondary max-w-lg leading-relaxed">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}><CtaButtons c={c} row /></motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.7 }} className="flex flex-wrap justify-center gap-4">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <span className="text-3xl font-black tabular-nums" style={{ color:s.color }}>{s.value}</span>
-            <span className="text-3xs text-text-muted uppercase tracking-wider">{s.label}</span>
-          </div>
-        ))}
-      </motion.div>
     </div>
   )
 }
@@ -959,12 +832,6 @@ function VariantSidebar({ c }: { c: HeroContent }) {
         </motion.div>
         <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-base text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</motion.p>
         <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
-          className="flex gap-6 pt-4 border-t border-border">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i}><div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div><div className="text-3xs text-text-muted">{s.label}</div></div>
-          ))}
-        </motion.div>
       </div>
     </div>
   )
@@ -986,17 +853,8 @@ function VariantHolo({ c }: { c: HeroContent }) {
           style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#818cf8 20%,#06b6d4 40%,#10b981 60%,#f59e0b 80%,#818cf8 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
           {c.headline}
         </h1>
-        <p className="text-sm text-text-secondary max-w-xl mx-auto leading-relaxed mb-6">{c.subheadline}</p>
+        <p className="text-base text-text-secondary max-w-xl mx-auto leading-relaxed mb-6">{c.subheadline}</p>
         <CtaButtons c={c} row />
-      </motion.div>
-      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-        className="grid grid-cols-4 gap-3 w-full">
-        {c.stats.filter(s=>s.value).map((s,i) => (
-          <div key={i} className="py-3 rounded-xl text-center" style={{ background:`linear-gradient(135deg,${s.color}0d,${s.color}06)`, border:`1px solid ${s.color}20` }}>
-            <div className="text-2xl font-black" style={{ color:s.color }}>{s.value}</div>
-            <div className="text-4xs text-text-muted mt-1">{s.label}</div>
-          </div>
-        ))}
       </motion.div>
     </div>
   )
@@ -1022,11 +880,14 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
           <div className="mt-6"><CtaButtons c={c} /></div>
         </motion.div>
         <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.35 }} className="flex flex-col gap-5">
-          <p className="text-4xs tracking-[0.35em] uppercase text-text-muted border-b border-border pb-2">{c.isRTL?'آمار کلیدی':'Key Statistics'}</p>
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="border-b border-border pb-4 last:border-0 last:pb-0">
-              <div className="text-3xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
+          <p className="text-4xs tracking-[0.35em] uppercase text-text-muted border-b border-border pb-2">{c.isRTL?'حوزه‌های تخصصی':'Core Expertise'}</p>
+          {(c.isRTL
+            ? ['طراحی و معماری شبکه','امنیت زیرساخت سازمانی','مجازی‌سازی و ابر','خودکارسازی زیرساخت']
+            : ['Network Design & Architecture','Enterprise Infrastructure Security','Virtualization & Cloud','Infrastructure Automation']
+          ).map((t,i) => (
+            <div key={t} className="border-b border-border pb-3 last:border-0 last:pb-0 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: ['#7477ff','#22c997','#38bdf8','#f5b84b'][i] }}/>
+              <span className="text-sm text-text-secondary">{t}</span>
             </div>
           ))}
           <div className="flex flex-wrap gap-1 mt-2">
@@ -1069,18 +930,8 @@ function VariantCyber({ c }: { c: HeroContent }) {
           className="px-5 py-2 rounded border border-indigo-500/30 font-mono text-sm" style={{ color:'#818cf8', background:'rgba(99,102,241,0.06)' }}>
           › {c.headline} ‹
         </motion.div>
-        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="text-sm text-text-secondary max-w-xl leading-relaxed">{c.subheadline}</motion.p>
+        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="text-base text-text-secondary max-w-xl leading-relaxed">{c.subheadline}</motion.p>
         <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}><CtaButtons c={c} row /></motion.div>
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.75 }}
-          className="grid grid-cols-4 gap-3 w-full max-w-2xl">
-          {c.stats.filter(s=>s.value).map((s,i) => (
-            <div key={i} className="py-3 px-2 rounded text-center font-mono"
-              style={{ background:'rgba(6,182,212,0.04)', border:'1px solid rgba(6,182,212,0.2)' }}>
-              <div className="text-xl font-black" style={{ color:s.color }}>{s.value}</div>
-              <div className="text-4xs text-cyan-500/60 mt-0.5">{s.label.split(' ')[0]}</div>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </div>
   )
