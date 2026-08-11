@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Card, Btn, Input, Select, PageHeader, Badge, useToast } from '@/components/admin/ui'
+import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
@@ -117,6 +117,7 @@ function Dashboard({ rtl, onOpen }: { rtl: boolean; onOpen: (id: number) => void
 function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | 'en'; toast: Toast; onOpen: (id: number) => void }) {
   const [rows, setRows] = useState<(HeroRecord & { valid: boolean })[]>([])
   const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
   const load = useCallback(async () => {
     setLoading(true)
     try { const r = await fetch('/api/admin/heroes'); const d = await r.json(); setRows(d.heroes ?? []) } finally { setLoading(false) }
@@ -157,8 +158,63 @@ function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | '
 
   return (
     <Card className="p-4">
-      <DataTable tableId="heroes" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={h => String(h.id)} onRowClick={h => onOpen(h.id)} rowActions={rowActions} bulkActions={bulkActions} selectable exportName="heroes" onRefresh={load} emptyLabel={lc(rtl, 'No heroes — create one from a template.', 'هیرویی نیست.')} />
+      <DataTable tableId="heroes" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={h => String(h.id)} onRowClick={h => onOpen(h.id)} rowActions={rowActions} bulkActions={bulkActions} selectable exportName="heroes" onRefresh={load}
+        quickCreate={{ labelEn: 'New Hero', labelFa: 'هیروی جدید', onClick: () => setCreating(true) }}
+        emptyLabel={lc(rtl, 'No heroes — create one from a template.', 'هیرویی نیست — یکی از یک قالب بسازید.')} />
+      <NewHeroModal open={creating} rtl={rtl} onClose={() => setCreating(false)} onCreated={id => { setCreating(false); load(); onOpen(id) }} />
     </Card>
+  )
+}
+
+/**
+ * The "New Hero" flow — the entire builder/A-B/analytics platform (Phase 23)
+ * had a full create API (`POST /api/admin/heroes {action:'create',…}`,
+ * template validation, slug dedup) and a builder that only ever EDITS an
+ * existing numeric id — but nothing in the UI ever called create. There was
+ * no button, no modal, nothing: an operator opening the Heroes tab for the
+ * first time had no way whatsoever to make a hero, on a platform built
+ * entirely around making heroes. Reuses the create API exactly as designed;
+ * on success jumps straight into the builder for the new hero (the natural
+ * next step after naming it), same as clicking "Open Builder" on a row.
+ */
+function NewHeroModal({ open, rtl, onClose, onCreated }: { open: boolean; rtl: boolean; onClose: () => void; onCreated: (id: number) => void }) {
+  const [name, setName] = useState('')
+  const [template, setTemplate] = useState(HERO_TEMPLATES[0]?.id ?? '')
+  const [targetPath, setTargetPath] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => { if (open) { setName(''); setTemplate(HERO_TEMPLATES[0]?.id ?? ''); setTargetPath(''); setError('') } }, [open])
+
+  async function submit() {
+    if (name.trim().length < 2) { setError(lc(rtl, 'Name must be at least 2 characters', 'نام باید حداقل ۲ کاراکتر باشد')); return }
+    setCreating(true)
+    setError('')
+    try {
+      const r = await fetch('/api/admin/heroes', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', name: name.trim(), template, targetPath: targetPath.trim() || undefined }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.id) onCreated(d.id)
+      else setError(d.error || lc(rtl, 'Failed to create', 'ایجاد ناموفق بود'))
+    } finally { setCreating(false) }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={lc(rtl, 'New Hero', 'هیروی جدید')} size="md">
+      <div className="space-y-4">
+        <Input label={lc(rtl, 'Name *', 'نام *')} value={name} onChange={setName} placeholder={lc(rtl, 'e.g. Homepage — Enterprise', 'مثلاً صفحه اصلی — سازمانی')} />
+        <Select label={lc(rtl, 'Template', 'قالب')} value={template} onChange={setTemplate}
+          options={HERO_TEMPLATES.map(t => ({ value: t.id, label: `${rtl ? t.nameFa : t.nameEn}${t.premium ? ' ★' : ''}` }))} />
+        <Input label={lc(rtl, 'Target path (optional)', 'مسیر مقصد (اختیاری)')} value={targetPath} onChange={setTargetPath} placeholder="/" />
+        {error && <p className="text-xs text-danger-text bg-danger-muted rounded-lg px-3 py-2">{error}</p>}
+        <div className="flex gap-3">
+          <Btn onClick={submit} disabled={creating}>{creating ? lc(rtl, 'Creating…', 'در حال ساخت…') : lc(rtl, 'Create & Open Builder', 'ساخت و بازکردن سازنده')}</Btn>
+          <Btn variant="secondary" onClick={onClose}>{lc(rtl, 'Cancel', 'لغو')}</Btn>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
