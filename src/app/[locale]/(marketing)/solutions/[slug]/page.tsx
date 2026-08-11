@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = fa ? (solution.nameFa || solution.nameEn) : solution.nameEn
   const description = fa ? (solution.taglineFa || solution.taglineEn || '') : (solution.taglineEn || '')
   return {
-    title: `${title} | HBZ Technology`,
+    title,
     description,
     keywords: solution.seoKeywords || undefined,
     openGraph: {

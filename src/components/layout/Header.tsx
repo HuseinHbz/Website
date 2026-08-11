@@ -9,14 +9,24 @@ import { focusRing } from '@/lib/a11y'
 import { DEFAULT_HEADER, type NavNode } from '@/lib/navigation'
 import { SITE } from '@/lib/site'
 
+export interface HeaderBrand {
+  name: string
+  subtitle: string
+  logoUrl: string | null
+  logoAlt: string
+}
+
 interface HeaderProps {
   locale: string
   /** 26.31 بند ۱ — the menu now comes from the DB (server layout passes it in).
    *  Undefined only in old call sites/tests → the built-in structure (R4). */
   nav?: NavNode[]
+  /** Brand & Identity Settings (Admin → System → برند و هویت سایت). Undefined
+   *  only in old call sites/tests → the exact pre-existing hardcoded identity (R4). */
+  brand?: HeaderBrand
 }
 
-export function Header({ locale, nav }: HeaderProps) {
+export function Header({ locale, nav, brand }: HeaderProps) {
   const items: NavNode[] = nav && nav.length > 0 ? nav : DEFAULT_HEADER
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openDrop, setOpenDrop] = useState<string | null>(null)
@@ -24,6 +34,11 @@ export function Header({ locale, nav }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
   const isRTL = locale === 'fa'
+  // Undefined only in old call sites/tests → the exact pre-existing hardcoded
+  // identity, per locale (R4 — never blank/wrong before a brand prop exists).
+  const b: HeaderBrand = brand ?? (isRTL
+    ? { name: 'حسین حبیب‌آذر', subtitle: 'معمار زیرساخت', logoUrl: null, logoAlt: 'لوگوی HBZ' }
+    : { name: 'Husein Habibazar', subtitle: 'Infrastructure Architect', logoUrl: null, logoAlt: 'HBZ logo' })
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40)
@@ -76,25 +91,33 @@ export function Header({ locale, nav }: HeaderProps) {
             href={buildLocalizedPath('/')}
             className={cn('flex items-center gap-3 group', focusRing, 'rounded-md')}
           >
-            {/* HBZ Logo Mark */}
-            <div className="relative">
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-base text-white tracking-tight transition-transform duration-300 group-hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-hover) 100%)',
-                  boxShadow: '0 0 16px rgba(116,119,255,0.4)',
-                }}
-              >
-                HBZ
-              </div>
+            {/* Logo mark — an uploaded logo (Admin → برند و هویت سایت) if set,
+                else the built-in "HBZ" gradient badge (R4, unchanged default). */}
+            <div className="relative shrink-0">
+              {b.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- CMS/uploaded asset, see .eslintrc no-img-element
+                <img src={b.logoUrl} alt={b.logoAlt} className="w-9 h-9 rounded-lg object-contain transition-transform duration-300 group-hover:scale-105" />
+              ) : (
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-base text-white tracking-tight transition-transform duration-300 group-hover:scale-105"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-hover) 100%)',
+                    boxShadow: '0 0 16px rgba(116,119,255,0.4)',
+                  }}
+                >
+                  HBZ
+                </div>
+              )}
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-success border-2 border-background" />
             </div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">
-                {isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
+            {/* max-w + truncate: a long custom brand name/subtitle must never
+                break the header layout or push the nav off — R3 responsive rule. */}
+            <div className="hidden sm:block min-w-0 max-w-[12rem] lg:max-w-[16rem]">
+              <div className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
+                {b.name}
               </div>
-              <div className="text-xs text-text-muted leading-none">
-                {isRTL ? 'معمار زیرساخت' : 'Infrastructure Architect'}
+              <div className="text-xs text-text-muted leading-none truncate">
+                {b.subtitle}
               </div>
             </div>
           </Link>

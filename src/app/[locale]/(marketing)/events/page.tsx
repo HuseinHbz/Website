@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const fa = locale === 'fa'
   return {
-    title: fa ? 'رویدادها و همایش‌ها | HBZ Technology' : 'Events & Community | HBZ Technology',
+    title: fa ? 'رویدادها و همایش‌ها' : 'Events & Community',
     description: fa
       ? 'وبینار، همایش، کارگاه و گردهمایی تخصصی برای متخصصان فناوری اطلاعات سازمانی.'
       : 'Webinars, conferences, workshops and community meetups for enterprise IT professionals.',

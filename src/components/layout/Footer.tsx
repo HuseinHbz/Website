@@ -4,18 +4,24 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { DEFAULT_FOOTER, type NavNode } from '@/lib/navigation'
 import { SITE } from '@/lib/site'
+import type { HeaderBrand } from './Header'
 
 interface FooterProps {
   locale?: string
   /** 26.31 بند ۳ — footer columns from the DB menu (location='footer').
    *  Undefined → the built-in columns, so the footer is never empty (R4). */
   nav?: NavNode[]
+  /** Brand & Identity Settings — same resolved shape/source as Header's. */
+  brand?: HeaderBrand
 }
 
-export function Footer({ locale = 'en', nav }: FooterProps) {
+export function Footer({ locale = 'en', nav, brand }: FooterProps) {
   const t = useTranslations('footer')
   const isRTL = locale === 'fa'
   const currentYear = new Date().getFullYear()
+  const b: HeaderBrand = brand ?? (isRTL
+    ? { name: 'حسین حبیب‌آذر', subtitle: 'معمار زیرساخت', logoUrl: null, logoAlt: 'لوگوی HBZ' }
+    : { name: 'Husein Habibazar', subtitle: 'Infrastructure Architect', logoUrl: null, logoAlt: 'HBZ logo' })
 
   const LINKS_EN = {
     Services: [
@@ -88,18 +94,23 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href={buildLocalizedPath('/')} className="flex items-center gap-3 mb-4 group">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white"
-                style={{ background: 'linear-gradient(135deg, #7477ff, #9698ff)', boxShadow: '0 0 16px rgba(99,102,241,0.3)' }}
-              >
-                HBZ
-              </div>
-              <div>
-                <div className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">
-                  {isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
+              {b.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- CMS/uploaded asset
+                <img src={b.logoUrl} alt={b.logoAlt} className="w-10 h-10 rounded-xl object-contain shrink-0" />
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #7477ff, #9698ff)', boxShadow: '0 0 16px rgba(99,102,241,0.3)' }}
+                >
+                  HBZ
                 </div>
-                <div className="text-xs text-text-muted">
-                  {isRTL ? 'معمار زیرساخت' : 'Infrastructure Architect'}
+              )}
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
+                  {b.name}
+                </div>
+                <div className="text-xs text-text-muted truncate">
+                  {b.subtitle}
                 </div>
               </div>
             </Link>
@@ -140,7 +151,7 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
 
         <div className="py-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-muted">
-            © {currentYear} {isRTL ? 'حسین حبیب‌آذر (HBZ).' : 'Husein Habibazar (HBZ).'}{' '}
+            © {currentYear} {b.name} (HBZ).{' '}
             {t('rights')}.
           </p>
           <p className="text-xs text-text-muted">

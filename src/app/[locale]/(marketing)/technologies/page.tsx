@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const fa = locale === 'fa'
   return {
-    title: fa ? 'اکوسیستم فناوری | HBZ Technology' : 'Technology Ecosystem | HBZ Technology',
+    title: fa ? 'اکوسیستم فناوری' : 'Technology Ecosystem',
     description: fa
       ? 'بیش از ۲۰ فناوری سازمانی: شبکه، مجازی‌سازی، ابر، امنیت، پایش، اتوماسیون و کانتینرها.'
       : '20+ enterprise technologies: networking, virtualization, cloud, security, monitoring, automation, and containers.',

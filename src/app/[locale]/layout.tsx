@@ -9,6 +9,7 @@ import { SITE } from '@/lib/site'
 import { AnalyticsTracker } from '@/components/AnalyticsTracker'
 import { ThemeProvider } from '@/components/ds/ThemeProvider'
 import { ToastProvider } from '@/components/ds/Toast'
+import { getBrandSettings, resolveTitleTemplate, versionedLogoUrl } from '@/lib/branding/settings'
 import '../globals.css'
 
 const inter = Inter({
@@ -34,26 +35,35 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'seo' })
+  const brand = await getBrandSettings()
 
   const isFA = locale === 'fa'
   const canonicalUrl =
     SITE.url + (isFA ? '' : `/${locale}`)
 
+  // homepage_title_{fa,en} → the browser tab title on / and /en; empty
+  // falls back to the pre-existing next-intl translation (R4, no visible
+  // change before a first edit). Internal pages inherit `template` below.
+  const homeTitle = (isFA ? brand.homepageTitleFa : brand.homepageTitleEn) || t('homeTitle')
+  const ownerName = isFA ? brand.brandNameFa : brand.brandNameEn
+  const logo = versionedLogoUrl(brand)
+
   return {
     metadataBase: new URL(SITE.url),
-    icons: {
-      icon: [
-        { url: '/favicon.svg', type: 'image/svg+xml' },
-      ],
-      apple: '/favicon.svg',
-    },
+    icons: logo
+      ? { icon: [{ url: logo }], apple: logo, shortcut: logo }
+      : { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }], apple: '/favicon.svg' },
     title: {
-      default: t('homeTitle'),
-      template: `%s | ${SITE.name}`,
+      default: homeTitle,
+      template: resolveTitleTemplate(brand, locale),
     },
     description: t('homeDesc'),
-    authors: [{ name: SITE.owner, url: SITE.url }],
-    creator: SITE.owner,
+    authors: [{ name: ownerName, url: SITE.url }],
+    creator: ownerName,
+    // publisher/og:site_name stay the short org name (SITE.name, "HBZ") —
+    // a distinct concept from the person/brand name field above, and not
+    // one of the fields this feature makes editable, so its default must
+    // not shift just because brandName does.
     publisher: SITE.name,
     alternates: {
       canonical: canonicalUrl,
@@ -68,20 +78,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       alternateLocale: isFA ? 'en_US' : 'fa_IR',
       url: canonicalUrl,
       siteName: SITE.name,
-      title: t('homeTitle'),
+      title: homeTitle,
       description: t('homeDesc'),
       images: [
         {
           url: `${SITE.url}/og-image.png`,
           width: 1200,
           height: 630,
-          alt: SITE.owner,
+          alt: ownerName,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: t('homeTitle'),
+      title: homeTitle,
       description: t('homeDesc'),
       images: [`${SITE.url}/og-image.png`],
     },

@@ -3,6 +3,7 @@ import { ClosingCta } from '@/components/sections/ClosingCta'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { personSchema } from '@/lib/schema'
 import { SITE } from '@/lib/site'
+import { getBrandSettings } from '@/lib/branding/settings'
 import type { Metadata } from 'next'
 import { getPublicAbout, getPublicTimeline, getPublicSkills, getPublicCerts, getPublicCredentials, getPublicSetting } from '@/lib/publicData'
 import { ProfessionalCredentials } from '@/components/sections/ProfessionalCredentials'
@@ -12,8 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isRTL = locale === 'fa'
   return {
     title: isRTL
-      ? 'درباره حسین حبیب‌آذر — معمار زیرساخت | HBZ'
-      : 'About Husein Habibazar — Infrastructure Architect | HBZ',
+      ? 'درباره حسین حبیب‌آذر — معمار زیرساخت'
+      : 'About Husein Habibazar — Infrastructure Architect',
     description: isRTL
       ? 'آشنایی با حسین حبیب‌آذر (HBZ): بیش از ۱۰ سال تجربه در زیرساخت سازمانی، معماری شبکه و مشاوره امنیت.'
       : 'Learn about Husein Habibazar (HBZ): 10+ years of enterprise infrastructure, network architecture, and security consulting experience.',
@@ -67,11 +68,13 @@ export default async function AboutPage({ params }: Props) {
     email: contactEmail,
   }
 
+  const brand = await getBrandSettings()
+
   return (
     <>
-      <JsonLd schema={personSchema()} />
+      <JsonLd schema={personSchema(brand.brandNameEn, brand.brandNameFa)} />
       <div className="pt-16">
-        <h1 className="sr-only">{locale === 'fa' ? 'درباره حسین حبیب‌آذر' : 'About Husein Habibazar'}</h1>
+        <h1 className="sr-only">{locale === 'fa' ? `درباره ${brand.brandNameFa}` : `About ${brand.brandNameEn}`}</h1>
         <AboutSection
           locale={locale}
           dbAbout={dbAbout}

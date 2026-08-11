@@ -4,6 +4,7 @@ import { headers, cookies } from 'next/headers'
 import { Hero } from '@/components/sections/Hero'
 import { HeroExperience } from '@/components/sections/HeroExperience'
 import { resolveActiveHero } from '@/lib/hero/heroData'
+import { getBrandSettings } from '@/lib/branding/settings'
 import type { RequestContext } from '@/lib/hero/personalize'
 import { ProofBar } from '@/components/sections/ProofBar'
 import { EnterpriseMetrics } from '@/components/sections/EnterpriseMetrics'
@@ -77,10 +78,11 @@ export default async function HomePage({ params }: Props) {
   ])
 
   const active = await resolvePhase23Hero(locale)
+  const brand = await getBrandSettings()
 
   return (
     <>
-      <JsonLd schema={siteGraphSchema()} />
+      <JsonLd schema={siteGraphSchema(brand.brandNameEn, brand.brandNameFa)} />
       {active
         ? <HeroExperience heroId={active.hero.id} config={active.hero.config} locale={locale as 'fa' | 'en'} experimentKey={active.experimentKey} variantId={active.variantId} />
         : <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} bgVideoId={heroBgVideo || null} orbitStyleId={heroOrbitStyle || null} />}

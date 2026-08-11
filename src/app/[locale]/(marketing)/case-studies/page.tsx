@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isRTL = locale === 'fa'
   return {
     title: isRTL
-      ? 'مطالعات موردی سازمانی | HBZ Technology'
-      : 'Enterprise Case Studies | HBZ Technology',
+      ? 'مطالعات موردی سازمانی'
+      : 'Enterprise Case Studies',
     description: isRTL
       ? 'مطالعات موردی واقعی از تحول زیرساخت سازمانی: شبکه، امنیت، مجازی‌سازی، پایش و خودکارسازی.'
       : 'Real-world enterprise infrastructure case studies: networking, security, virtualization, monitoring, and automation transformations by HBZ.',

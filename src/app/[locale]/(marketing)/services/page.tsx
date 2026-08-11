@@ -9,8 +9,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isRTL = locale === 'fa'
   return {
     title: isRTL
-      ? 'خدمات IT سازمانی — شبکه، امنیت و زیرساخت | HBZ'
-      : 'Enterprise IT Services — Network, Security & Infrastructure | HBZ',
+      ? 'خدمات IT سازمانی — شبکه، امنیت و زیرساخت'
+      : 'Enterprise IT Services — Network, Security & Infrastructure',
     description: isRTL
       ? 'خدمات جامع مشاوره زیرساخت: طراحی شبکه، امنیت، مجازی‌سازی، پایش، پشتیبان‌گیری، لینوکس، مایکروسافت، VoIP و خودکارسازی.'
       : 'Comprehensive infrastructure consulting services: network design, security, virtualization, monitoring, backup & DR, Linux, Microsoft, VoIP, and automation.',

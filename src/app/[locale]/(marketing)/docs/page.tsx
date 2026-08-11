@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const fa = locale === 'fa'
   return {
-    title: fa ? 'مستندات | HBZ Technology' : 'Documentation | HBZ Technology',
+    title: fa ? 'مستندات' : 'Documentation',
     description: fa
       ? 'مستندات فنی، مرجع رابط برنامه‌نویسی، دستورالعمل‌های اجرایی و راهنماهای پلتفرم HBZ.'
       : 'Technical documentation, API references, runbooks, and guides for the HBZ Technology platform.',

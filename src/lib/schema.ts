@@ -1,11 +1,14 @@
 import { SITE } from './site'
 
-export function personSchema() {
+/** `nameOverride`/`alternateNameOverride` — Brand & Identity Settings
+ *  (brandNameEn/brandNameFa). Optional and defaulted to SITE.* so every other
+ *  existing caller (unchanged) still gets the exact prior output. */
+export function personSchema(nameOverride?: string, alternateNameOverride?: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
-    name: SITE.owner,
-    alternateName: SITE.ownerFa,
+    name: nameOverride || SITE.owner,
+    alternateName: alternateNameOverride || SITE.ownerFa,
     jobTitle: 'Infrastructure Architect & Network Security Consultant',
     description: 'Senior Infrastructure Architect with 10+ years of enterprise networking, security, and virtualization experience.',
     url: SITE.url,
@@ -27,7 +30,7 @@ export function personSchema() {
   }
 }
 
-export function organizationSchema() {
+export function organizationSchema(founderNameOverride?: string) {
   return {
     '@context': 'https://schema.org',
     '@type': ['Organization', 'ProfessionalService'],
@@ -36,7 +39,7 @@ export function organizationSchema() {
     url: SITE.url,
     founder: {
       '@type': 'Person',
-      name: SITE.owner,
+      name: founderNameOverride || SITE.owner,
     },
     description: SITE.description.en,
     areaServed: 'IR',
@@ -138,9 +141,9 @@ export function articleSchema(post: ArticleData) {
   }
 }
 
-export function siteGraphSchema() {
+export function siteGraphSchema(nameOverride?: string, alternateNameOverride?: string) {
   return {
     '@context': 'https://schema.org',
-    '@graph': [personSchema(), organizationSchema(), websiteSchema()],
+    '@graph': [personSchema(nameOverride, alternateNameOverride), organizationSchema(nameOverride), websiteSchema()],
   }
 }

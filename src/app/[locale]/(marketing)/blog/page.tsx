@@ -8,8 +8,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isRTL = locale === 'fa'
   return {
     title: isRTL
-      ? 'وبلاگ فنی — زیرساخت، امنیت و شبکه | HBZ'
-      : 'Technical Blog — Infrastructure, Security & Networking | HBZ',
+      ? 'وبلاگ فنی — زیرساخت، امنیت و شبکه'
+      : 'Technical Blog — Infrastructure, Security & Networking',
     description: isRTL
       ? 'مقالات تخصصی درباره میکروتیک، سیسکو، لینوکس، VMware، Proxmox، امنیت شبکه، پایش، خودکارسازی توسط حسین حبیب‌آذر.'
       : 'Expert articles on MikroTik, Cisco, Linux, VMware, Proxmox, network security, monitoring, automation, and DevOps by Husein Habibazar.',

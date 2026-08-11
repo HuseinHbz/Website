@@ -217,6 +217,7 @@ export const WORKSPACES: Workspace[] = [
       { en: 'Platform', fa: 'پلتفرم', items: [
         { labelEn: 'Go-Live Checklist', labelFa: 'چک‌لیست راه‌اندازی', href: '/admin/settings/onboarding', icon: '🚀' },
         { labelEn: 'System Settings', labelFa: 'تنظیمات سیستم', href: '/admin/settings', icon: '⚙' },
+        { labelEn: 'Brand & Identity Settings', labelFa: 'تنظیمات برند و هویت سایت', href: '/admin/settings/branding', icon: '🏷️' },
         { labelEn: 'Integration Credentials', labelFa: 'کلیدهای اتصال', href: '/admin/settings/integrations', icon: '🔌' },
         // 26.29 بند ۲.۵ — one module, one menu item. Removed from here because
         // another workspace is the module's real home:
