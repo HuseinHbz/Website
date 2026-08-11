@@ -4,6 +4,7 @@ import { PUBLIC_ROUTES } from '@/lib/publicRoutes'
 import { getDb } from '@/lib/db/index'
 import { solutions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getPublicBlogPosts, getPublicProjects } from '@/lib/publicData'
 
 type Frequency = 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never'
 
@@ -71,5 +72,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  // Blog posts and case studies — the site's two other dynamic-slug content
+  // types (each already has its own generateMetadata/canonical, per-post
+  // JSON-LD for blog) were missing from the sitemap entirely: search engines
+  // had no authoritative discovery signal for a single published article or
+  // case study, only whatever internal links happened to reach them.
+  addDynamicGroup(entries, '/blog', (await getPublicBlogPosts()).map(p => p.slug), 0.65, 'weekly')
+  addDynamicGroup(entries, '/case-studies', (await getPublicProjects() ?? []).map(p => p.slug), 0.7, 'monthly')
+
   return entries
+}
+
+function addDynamicGroup(entries: SitemapEntry[], basePath: string, slugs: string[], basePriority: number, changeFrequency: Frequency) {
+  for (const slug of slugs) {
+    const path = `${basePath}/${slug}`
+    const languages: Record<string, string> = {}
+    for (const locale of locales) languages[locale] = buildUrl(path, locale)
+
+    for (const locale of locales) {
+      entries.push({
+        url: buildUrl(path, locale),
+        lastModified: new Date(),
+        changeFrequency,
+        priority: locale === SITE.locale.default ? basePriority : basePriority * 0.9,
+        alternates: { languages },
+      })
+    }
+  }
 }
