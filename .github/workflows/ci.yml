@@ -29,6 +29,8 @@ jobs:
         run: npm run test
       - name: Governance audits (9)
         run: npm run audit
+      - name: Security audit — fail on High/Critical
+        run: npm audit --audit-level=high --omit=dev
       - name: Build
         run: npm run build
         env:

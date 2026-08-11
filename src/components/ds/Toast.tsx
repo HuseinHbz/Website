@@ -127,6 +127,17 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: stri
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  // React hydration error #418 — `typeof window !== 'undefined'` renders
+  // NOTHING on the server (window is undefined there) but renders the
+  // portal immediately on the client's FIRST render pass (the hydration
+  // pass itself, where window already exists) — a server/client branch on
+  // `typeof window`, the exact anti-pattern React's own hydration-mismatch
+  // message calls out by name. `mounted` starts false (matches the server:
+  // nothing rendered) and only flips true in an effect, which runs AFTER
+  // hydration completes — so the portal is added in a later commit, never
+  // during the reconciliation React is diffing against the server HTML.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const dismiss = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id))
@@ -145,7 +156,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast, success, error, warning, info, dismiss }}>
       {children}
-      {typeof window !== 'undefined' && createPortal(
+      {mounted && createPortal(
         <div
           aria-live="polite"
           aria-atomic="false"
