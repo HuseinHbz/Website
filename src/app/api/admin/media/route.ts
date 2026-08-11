@@ -142,7 +142,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(inserted ?? { url, filename })
     }
 
-    // ── Legacy path — every other existing upload caller, unchanged.
+    // ── Legacy path — every other existing upload caller (avatars, clients,
+    // blog, certifications, …) keeps its exact prior behavior — EXCEPT a
+    // size ceiling, which never existed here: this path buffered and wrote
+    // whatever size a file was with zero limit, a real disk-exhaustion risk
+    // an admin session (even a lower-privilege one with brand.media write)
+    // could trigger with repeated large uploads. Generous by design — this
+    // path also accepts full documents/ZIPs (see MediaManager's accept
+    // list) — and env-configurable like the Hero category limits.
+    const generalLimitBytes = (() => {
+      const n = parseInt(process.env.MEDIA_MAX_GENERAL_MB || '', 10)
+      return (Number.isFinite(n) && n > 0 ? n : 100) * 1024 * 1024
+    })()
+    if (bytes.length > generalLimitBytes) {
+      return NextResponse.json({ error: `File exceeds the ${Math.round(generalLimitBytes / 1024 / 1024)}MB limit` }, { status: 400 })
+    }
+
     const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const filename = `${nanoid()}.${ext}`
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder)
