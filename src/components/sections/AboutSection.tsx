@@ -138,7 +138,7 @@ function SkillCard({ skill, isRTL, index }: { skill: SkillItem; isRTL: boolean; 
       </div>
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-text-primary truncate">
+        <p className="text-base font-semibold text-text-primary truncate">
           {isRTL ? skill.nameFa : skill.nameEn}
         </p>
         <LevelDots level={skill.level} color={skill.color} />
@@ -195,11 +195,11 @@ function CertCard({ cert, isRTL, index }: { cert: CertItem; isRTL: boolean; inde
           </span>
         </div>
         {/* Cert name */}
-        <p className="text-sm font-bold text-text-primary leading-tight mb-1">
+        <p className="text-base font-bold text-text-primary leading-tight mb-1">
           {isRTL ? cert.nameFa : cert.nameEn}
         </p>
         {/* Issuer */}
-        <p className="text-xs text-text-muted">{cert.issuer}</p>
+        <p className="text-sm text-text-secondary">{cert.issuer}</p>
       </div>
     </motion.div>
   )
@@ -335,17 +335,17 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
               {(contactInfo?.email || contactInfo?.phone || contactInfo?.locationEn) && (
                 <div className="mt-6 pt-5 border-t border-border/50 space-y-2">
                   {contactInfo.email && (
-                    <a href={`mailto:${contactInfo.email}`} className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors">
+                    <a href={`mailto:${contactInfo.email}`} className="flex items-center gap-2 text-base text-text-secondary hover:text-accent transition-colors">
                       <span className="text-accent">✉</span> {contactInfo.email}
                     </a>
                   )}
                   {contactInfo.phone && (
-                    <a href={`tel:${contactInfo.phone}`} className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors">
+                    <a href={`tel:${contactInfo.phone}`} className="flex items-center gap-2 text-base text-text-secondary hover:text-accent transition-colors">
                       <span className="text-accent">📞</span> {contactInfo.phone}
                     </a>
                   )}
                   {(isRTL ? contactInfo.locationFa : contactInfo.locationEn) && (
-                    <p className="flex items-center gap-2 text-sm text-text-secondary">
+                    <p className="flex items-center gap-2 text-base text-text-secondary">
                       <span className="text-accent">📍</span> {isRTL ? contactInfo.locationFa : contactInfo.locationEn}
                     </p>
                   )}
@@ -439,11 +439,11 @@ export function AboutSection({ locale = 'en', dbAbout, dbTimeline, dbSkills, dbC
                       >
                         {item.year}
                       </span>
-                      <h4 className="font-semibold text-text-primary text-sm">
+                      <h4 className="font-semibold text-text-primary text-lg">
                         {isRTL ? item.titleFa : item.titleEn}
                       </h4>
                     </div>
-                    <p className="text-sm text-text-secondary leading-relaxed">
+                    <p className="text-base text-text-secondary leading-relaxed">
                       {isRTL ? item.descFa : item.descEn}
                     </p>
                   </div>

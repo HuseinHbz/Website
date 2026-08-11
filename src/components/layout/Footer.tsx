@@ -103,7 +103,7 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
                 </div>
               </div>
             </Link>
-            <p className="text-sm text-text-muted leading-relaxed mb-4">
+            <p className="text-base text-text-secondary leading-relaxed mb-4">
               {isRTL
                 ? 'طراحی، ایمن‌سازی و خودکارسازی زیرساخت سازمانی مدرن.'
                 : 'Designing, Securing and Automating Modern Enterprise Infrastructure.'}
@@ -119,7 +119,7 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
           {/* Link columns */}
           {Object.entries(LINKS).map(([title, links]) => (
             <div key={title}>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4">{title}</h4>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-text-secondary mb-4">{title}</h4>
               <ul className="space-y-2">
                 {links.map((link) => (
                   <li key={link.label}>
@@ -127,7 +127,7 @@ export function Footer({ locale = 'en', nav }: FooterProps) {
                       href={'external' in link && link.external ? link.href : buildLocalizedPath(link.href)}
                       target={'external' in link && link.external ? '_blank' : undefined}
                       rel={'external' in link && link.external ? 'noopener noreferrer' : undefined}
-                      className="text-sm text-text-secondary hover:text-accent transition-colors duration-150"
+                      className="text-base text-text-secondary hover:text-accent transition-colors duration-150"
                     >
                       {link.label}
                     </Link>

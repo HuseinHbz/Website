@@ -175,12 +175,12 @@ function MetricCard({ metric, index, isRTL }: { metric: Metric; index: number; i
       </div>
 
       {/* Label */}
-      <p className="text-sm font-semibold text-text-primary leading-tight mb-1 relative z-10">
+      <p className="text-base font-semibold text-text-primary leading-tight mb-1 relative z-10">
         {isRTL ? metric.labelFa : metric.label}
       </p>
 
       {/* Sublabel */}
-      <p className="text-xs text-text-muted leading-tight relative z-10">
+      <p className="text-sm text-text-secondary leading-tight relative z-10">
         {isRTL ? metric.sublabelFa : metric.sublabel}
       </p>
 
@@ -221,9 +221,9 @@ export function EnterpriseMetrics({ locale }: EnterpriseMetricsProps) {
             {isRTL ? 'اثر کسب‌وکار' : 'Business Impact'}
           </motion.p>
           <motion.h2 variants={blurReveal} className="section-title mb-4">
-            {isRTL ? 'معیارهای ' : 'Enterprise '}
+            {isRTL ? 'شاخص‌های ' : 'Performance '}
             <span className="gradient-text">
-              {isRTL ? 'سازمانی' : 'Metrics'}
+              {isRTL ? 'عملکرد' : 'Indicators'}
             </span>
           </motion.h2>
           <motion.p variants={blurReveal} className="section-subtitle max-w-2xl mx-auto">

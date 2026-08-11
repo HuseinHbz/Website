@@ -5,7 +5,6 @@ import { Hero } from '@/components/sections/Hero'
 import { HeroExperience } from '@/components/sections/HeroExperience'
 import { resolveActiveHero } from '@/lib/hero/heroData'
 import type { RequestContext } from '@/lib/hero/personalize'
-import { ProofBar } from '@/components/sections/ProofBar'
 import { EnterpriseMetrics } from '@/components/sections/EnterpriseMetrics'
 import { ServicesSection } from '@/components/sections/ServicesSection'
 import { ProjectsSection } from '@/components/sections/ProjectsSection'
@@ -84,7 +83,6 @@ export default async function HomePage({ params }: Props) {
       {active
         ? <HeroExperience heroId={active.hero.id} config={active.hero.config} locale={locale as 'fa' | 'en'} experimentKey={active.experimentKey} variantId={active.variantId} />
         : <Hero locale={locale} dbHero={dbHero} variant={heroVariant || 'split'} bgVideoId={heroBgVideo || null} orbitStyleId={heroOrbitStyle || null} />}
-      <ProofBar locale={locale} />
       <EnterpriseMetrics locale={locale} />
       <ServicesSection locale={locale} dbServices={dbServices} />
       <ProjectsSection locale={locale} dbProjects={dbProjects} />

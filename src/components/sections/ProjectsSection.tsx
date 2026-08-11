@@ -180,7 +180,7 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
                     {p.year && <span className="text-xs text-text-muted ml-auto">{p.year}</span>}
                   </div>
 
-                  <h3 className="font-bold text-text-primary mb-2 leading-tight group-hover:text-accent transition-colors">
+                  <h3 className="text-lg font-bold text-text-primary mb-2 leading-tight group-hover:text-accent transition-colors">
                     {name}
                   </h3>
 
@@ -189,14 +189,14 @@ export function ProjectsSection({ locale = 'en', dbProjects }: ProjectsSectionPr
                   )}
 
                   {summary && (
-                    <p className="text-sm text-text-secondary leading-relaxed mb-3 line-clamp-2">{summary}</p>
+                    <p className="text-base text-text-secondary leading-relaxed mb-3 line-clamp-2">{summary}</p>
                   )}
 
                   {/* Top result */}
                   {results[0] && (
                     <div className="flex items-start gap-1.5 mb-4">
-                      <span className="text-emerald-400 text-xs mt-0.5 shrink-0">✓</span>
-                      <p className="text-xs text-text-muted">{results[0]}</p>
+                      <span className="text-emerald-400 text-sm mt-0.5 shrink-0">✓</span>
+                      <p className="text-sm text-text-secondary">{results[0]}</p>
                     </div>
                   )}
 

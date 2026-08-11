@@ -292,7 +292,7 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
                 <h3 className="text-lg font-bold text-text-primary mb-2">
                   {isRTL ? service.titleFa : service.titleEn}
                 </h3>
-                <p className="text-sm text-text-secondary leading-relaxed mb-4">
+                <p className="text-base text-text-secondary leading-relaxed mb-4">
                   {isRTL ? service.shortDescFa : service.shortDescEn}
                 </p>
 
@@ -312,7 +312,7 @@ export function ServicesSection({ locale = 'en', dbServices }: ServicesSectionPr
                           </p>
                           <ul className="space-y-1">
                             {(isRTL ? service.featuresFa : service.featuresEn).map((f) => (
-                              <li key={f} className="flex items-center gap-2 text-sm text-text-secondary">
+                              <li key={f} className="flex items-center gap-2 text-base text-text-secondary">
                                 <span style={{ color: service.color }}>▸</span>
                                 {f}
                               </li>

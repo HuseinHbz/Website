@@ -106,7 +106,7 @@ export function Header({ locale, nav }: HeaderProps) {
               const label = isRTL ? item.labelFa : item.labelEn
               const active = isBranchActive(item)
               const cls = cn(
-                'nav-link-indicator px-3.5 py-2 text-sm rounded-lg transition-all duration-150',
+                'nav-link-indicator px-3.5 py-2 text-base rounded-lg transition-all duration-150',
                 focusRing,
                 active
                   ? 'text-accent font-medium'
@@ -149,7 +149,7 @@ export function Header({ locale, nav }: HeaderProps) {
                           href={buildLocalizedPath(child.href)}
                           onClick={() => setOpenDrop(null)}
                           className={cn(
-                            'block px-3 py-2 text-sm rounded-lg transition-colors',
+                            'block px-3 py-2 text-base rounded-lg transition-colors',
                             focusRing,
                             isActive(child.href)
                               ? 'text-accent bg-accent/10 font-medium'
@@ -263,7 +263,7 @@ export function Header({ locale, nav }: HeaderProps) {
               {items.map((item) => {
                 const label = isRTL ? item.labelFa : item.labelEn
                 const cls = cn(
-                  'px-4 py-3 text-sm rounded-xl transition-colors duration-150',
+                  'px-4 py-3 text-base rounded-xl transition-colors duration-150',
                   focusRing,
                   isBranchActive(item)
                     ? 'text-accent bg-accent/10 font-medium'
@@ -293,7 +293,7 @@ export function Header({ locale, nav }: HeaderProps) {
                             key={child.key}
                             href={buildLocalizedPath(child.href)}
                             className={cn(
-                              'px-4 py-2.5 text-sm rounded-lg transition-colors',
+                              'px-4 py-2.5 text-base rounded-lg transition-colors',
                               focusRing,
                               isActive(child.href)
                                 ? 'text-accent bg-accent/10 font-medium'

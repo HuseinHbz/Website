@@ -6,6 +6,7 @@ import { CHART_PALETTE } from '@/lib/design/tokens'
 import { heroBgVideoById } from '@/lib/heroBgVideos'
 import { DEFAULT_ORBIT_STYLE } from '@/lib/heroOrbitStyles'
 import { OrbitalNetwork } from './OrbitalNetwork'
+import { HbzWordmark } from './HbzWordmark'
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface DbHero {
@@ -196,26 +197,20 @@ function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: stri
               <span className="text-sm font-semibold tracking-[0.2em] uppercase text-text-muted">
                 {c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
               </span>
-              <h1 className="hbz-shine text-7xl sm:text-8xl lg:text-9xl font-black tracking-tight leading-[1.05]"
-                style={{ background:'linear-gradient(100deg,#7477ff 0%,#a5aec4 25%,#ffffff 42%,#f7f9ff 50%,#a5aec4 58%,#7477ff 75%,#9698ff 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-                HBZ
-              </h1>
+              <HbzWordmark />
             </motion.div>
             <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
-              <p className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight"
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight"
                 style={{ background:'linear-gradient(135deg,#e2e8f0,#7477ff)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
                 {c.headline}
               </p>
-              <p className="text-sm font-medium tracking-wider text-text-muted uppercase mt-2">{c.headlineHi}</p>
+              <p className="text-base font-medium tracking-wider text-text-secondary uppercase mt-2">{c.headlineHi}</p>
             </motion.div>
             <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
-              <p className="text-md sm:text-lg text-text-secondary leading-relaxed">{c.subheadline}</p>
+              <p className="text-lg sm:text-xl text-text-secondary leading-relaxed">{c.subheadline}</p>
             </motion.div>
             <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
               <CtaButtons c={c} />
-            </motion.div>
-            <motion.div variants={{ hidden:{opacity:0,y:12}, visible:{opacity:1,y:0} }} className="mt-2">
-              <StatBar stats={c.stats} />
             </motion.div>
           </motion.div>
 

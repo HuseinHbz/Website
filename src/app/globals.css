@@ -143,8 +143,8 @@
     --color-bg-glass:     rgba(13, 18, 36, 0.72);
 
     --color-text-primary:   #f7f9ff;
-    --color-text-secondary: #a5aec4;
-    --color-text-tertiary:  #737e98;
+    --color-text-secondary: #c3cbe0;
+    --color-text-tertiary:  #9aa3c0;
     --color-text-disabled:  #454e66;
     --color-text-link:      #9698ff;
 
@@ -1250,6 +1250,58 @@
   animation: hbzShine 5s ease-in-out infinite;
 }
 
+/* Persistent rim glow on the HBZ glyphs — the settled state the clip's
+   reveal lands on. Multiple drop-shadow layers (SVG-safe, works through
+   background-clip:text since it targets the rendered glyph shape, not the
+   transparent fill) instead of box-shadow, which text elements ignore. */
+.hbz-glow {
+  filter:
+    drop-shadow(0 0 6px rgba(116,119,255,0.35))
+    drop-shadow(0 0 22px rgba(34,211,238,0.18))
+    drop-shadow(0 0 48px rgba(116,119,255,0.10));
+}
+
+/* One-time comet streak through the letters on mount — a bright bar with a
+   blurred trailing tail, racing diagonally left-to-right once then fading
+   out (animation-fill-mode:forwards holds the final, invisible state so it
+   never replays or leaves a stray line behind). */
+@keyframes hbzComet {
+  0%   { transform: translateX(-60%) translateY(10%) rotate(18deg); opacity: 0; }
+  8%   { opacity: 1; }
+  55%  { opacity: 1; }
+  100% { transform: translateX(160%) translateY(-10%) rotate(18deg); opacity: 0; }
+}
+.hbz-comet {
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 34%;
+  height: 140%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(247,249,255,0.9) 45%, rgba(34,211,238,0.7) 60%, transparent 100%);
+  filter: blur(6px);
+  animation: hbzComet 1.4s cubic-bezier(0.16,1,0.3,1) 1 both;
+}
+
+/* Sparkle burst — small light points that flash on once, timed to the comet
+   passing through their position, then disappear for good (both = holds the
+   post-animation invisible state, no ongoing twinkle/looping distraction). */
+@keyframes hbzSpark {
+  0%   { transform: scale(0); opacity: 0; }
+  35%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.2); opacity: 0; }
+}
+.hbz-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #f7f9ff;
+  box-shadow: 0 0 6px 2px rgba(247,249,255,0.9), 0 0 14px 4px rgba(34,211,238,0.5);
+  pointer-events: none;
+  animation: hbzSpark 0.9s ease-out 1 both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glow-breathe, .glow-breathe-svg, .node-float, .cta-breathe {
     animation: none !important;
@@ -1259,6 +1311,7 @@
   .hero-bg-video { display: none !important; }
   .orbit-ring-a, .orbit-ring-b, .hub-pulse, .hud-bar, .hbz-shine,
   .orbit-nodes-spin, .orbit-node-counter-spin { animation: none !important; }
+  .hbz-comet, .hbz-spark { display: none !important; }
 }
 
 /* Admin preview tiles (Video Background + Templates/orbit-animation tabs) —

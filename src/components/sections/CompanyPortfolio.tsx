@@ -38,20 +38,6 @@ const TECH_PARTNERS = [
   { name: 'Ansible', icon: '⚙️', color: '#e00' },
 ]
 
-const STATS_EN = [
-  { value: '50+', label: 'Projects Delivered', icon: '🏗️' },
-  { value: '10+', label: 'Industries Served', icon: '🌍' },
-  { value: '1000+', label: 'Endpoints Managed', icon: '🖧' },
-  { value: '99.9%', label: 'Average Uptime SLA', icon: '⏱️' },
-]
-
-const STATS_FA = [
-  { value: '+۵۰', label: 'پروژه تحویل‌شده', icon: '🏗️' },
-  { value: '+۱۰', label: 'صنعت خدمت‌گرفته', icon: '🌍' },
-  { value: '+۱۰۰۰', label: 'تجهیزات مدیریتی', icon: '🖧' },
-  { value: '۹۹.۹٪', label: 'میانگین SLA آپتایم', icon: '⏱️' },
-]
-
 function MarqueeRow({ items, reverse = false, speed = 30, isRTL = false }: {
   items: typeof CLIENTS | typeof TECH_PARTNERS
   reverse?: boolean
@@ -104,7 +90,6 @@ function MarqueeRow({ items, reverse = false, speed = 30, isRTL = false }: {
 
 export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioProps) {
   const isRTL = locale === 'fa'
-  const STATS = isRTL ? STATS_FA : STATS_EN
 
   // 26.29 BUG-114: null = never configured → demo logos; [] = all deactivated → empty
   const regularClients = dbClients !== null && dbClients !== undefined
@@ -151,31 +136,10 @@ export function CompanyPortfolio({ locale = 'en', dbClients }: CompanyPortfolioP
         <MarqueeRow items={regularClients} speed={35} isRTL={isRTL} />
         <MarqueeRow items={techPartners} reverse speed={28} isRTL={isRTL} />
       </div>
-
-      {/* Stats */}
-      <div className="container-site relative z-10 mt-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          {STATS.map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="text-center glass-card p-6"
-            >
-              <div className="text-2xl mb-2">{stat.icon}</div>
-              <div className="text-3xl font-bold gradient-text mb-1">{stat.value}</div>
-              <div className="text-xs text-text-muted">{stat.label}</div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
+      {/* Stats grid removed — was a third repetition of the same numbers
+          already shown in Hero and in the dedicated Performance Indicators
+          section (EnterpriseMetrics); see maintainer instruction to
+          de-duplicate stats across the page. */}
     </section>
   )
 }
