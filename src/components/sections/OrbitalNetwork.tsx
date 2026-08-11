@@ -88,49 +88,59 @@ export function OrbitalNetwork({ compact = false, className = '' }: Props) {
           </filter>
         </defs>
 
-        {/* mesh cross-links (behind spokes) */}
-        {MESH.map(([a, b], i) => {
-          const p1 = outer[a], p2 = outer[b]
-          return (
-            <path key={`m${i}`} d={`M${p1.x},${p1.y} Q${CX},${CY} ${p2.x},${p2.y}`}
-              fill="none" stroke={`url(#mesh-${uid})`} strokeWidth="0.6" opacity="0.55" />
-          )
-        })}
+        {/* Everything except the hub revolves as one rigid body around the
+            hub's exact center — spokes stay pinned to the hub (their hub-end
+            sits ON the rotation pivot, so it never moves) while sweeping the
+            node-end around it. Each node gets a counter-rotation of the same
+            duration so its icon/label stays upright while its position
+            still orbits — "HBZ CORE ثابت در وسط، بقیه دورش می‌چرخند". */}
+        <g className="orbit-nodes-spin" style={{ transformOrigin: `${CX}px ${CY}px` }}>
+          {/* mesh cross-links (behind spokes) */}
+          {MESH.map(([a, b], i) => {
+            const p1 = outer[a], p2 = outer[b]
+            return (
+              <path key={`m${i}`} d={`M${p1.x},${p1.y} Q${CX},${CY} ${p2.x},${p2.y}`}
+                fill="none" stroke={`url(#mesh-${uid})`} strokeWidth="0.6" opacity="0.55" />
+            )
+          })}
 
-        {/* spokes: every outer node -> HBZ hub */}
-        {outer.map((n, i) => (
-          <line key={`s${i}`} x1={n.x} y1={n.y} x2={CX} y2={CY}
-            stroke={`url(#spoke-${uid})`} strokeWidth="0.9"
-            strokeDasharray="2.4 1.6" opacity="0.85"
-            style={{ animation: `dashFlow ${2.4 + i * 0.2}s linear infinite` }} />
-        ))}
+          {/* spokes: every outer node -> HBZ hub (hub-end pinned at the pivot) */}
+          {outer.map((n, i) => (
+            <line key={`s${i}`} x1={n.x} y1={n.y} x2={CX} y2={CY}
+              stroke={`url(#spoke-${uid})`} strokeWidth="0.9"
+              strokeDasharray="2.4 1.6" opacity="0.85"
+              style={{ animation: `dashFlow ${2.4 + i * 0.2}s linear infinite` }} />
+          ))}
 
-        {/* traveling light packets along each spoke */}
-        {outer.map((n, i) => (
-          <circle key={`p${i}`} r="1.6" fill={n.color} filter={`url(#glow-${uid})`}>
-            <animateMotion dur={`${2.6 + (i % 3) * 0.5}s`} repeatCount="indefinite" begin={`${i * 0.45}s`}
-              path={`M${n.x},${n.y} L${CX},${CY}`} />
-          </circle>
-        ))}
+          {/* traveling light packets along each spoke */}
+          {outer.map((n, i) => (
+            <circle key={`p${i}`} r="1.6" fill={n.color} filter={`url(#glow-${uid})`}>
+              <animateMotion dur={`${2.6 + (i % 3) * 0.5}s`} repeatCount="indefinite" begin={`${i * 0.45}s`}
+                path={`M${n.x},${n.y} L${CX},${CY}`} />
+            </circle>
+          ))}
 
-        {/* HBZ hub */}
+          {/* outer nodes — counter-rotated so labels/icons never tilt */}
+          {outer.map((n, i) => (
+            <g key={n.label} className="orbit-node-counter-spin" style={{ transformOrigin: `${n.x}px ${n.y}px` }}>
+              <g className="glow-breathe-svg"
+                style={{ '--glow-color': `${n.color}90`, animationDelay: `${i * 0.32}s`, animationDuration: `${3 + (i % 3)}s` } as React.CSSProperties}>
+                <circle cx={n.x} cy={n.y} r={compact ? 9 : 10.5} fill={`${n.color}22`} stroke={n.color} strokeWidth="1" />
+                {!compact && (
+                  <text x={n.x} y={n.y + (n.y > CY ? 17 : -13)} textAnchor="middle" fill={n.color}
+                    fontSize="6.2" fontWeight="700" opacity="0.95">{n.label}</text>
+                )}
+              </g>
+            </g>
+          ))}
+        </g>
+
+        {/* HBZ hub — fixed dead-center, never moves */}
         <circle cx={CX} cy={CY} r={R_HUB + 9} fill={`url(#hub-${uid})`} className="hub-pulse" />
         <circle cx={CX} cy={CY} r={R_HUB} fill="rgba(8,11,24,0.85)" stroke="#f7f9ff" strokeWidth="1.1" />
         <text x={CX} y={CY + (compact ? 4.5 : 5)} textAnchor="middle" fontWeight="900"
           fontSize={compact ? 11 : 12.5} fill="#f7f9ff" letterSpacing="0.5"
           style={{ fontFamily: 'inherit' }}>HBZ</text>
-
-        {/* outer nodes */}
-        {outer.map((n, i) => (
-          <g key={n.label} className="glow-breathe-svg"
-            style={{ '--glow-color': `${n.color}90`, animationDelay: `${i * 0.32}s`, animationDuration: `${3 + (i % 3)}s` } as React.CSSProperties}>
-            <circle cx={n.x} cy={n.y} r={compact ? 9 : 10.5} fill={`${n.color}22`} stroke={n.color} strokeWidth="1" />
-            {!compact && (
-              <text x={n.x} y={n.y + (n.y > CY ? 17 : -13)} textAnchor="middle" fill={n.color}
-                fontSize="6.2" fontWeight="700" opacity="0.95">{n.label}</text>
-            )}
-          </g>
-        ))}
       </svg>
 
       {/* HUD mini-panels — decorative only, live mode only */}

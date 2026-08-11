@@ -1192,6 +1192,30 @@
 .orbit-ring-a { animation: orbitRingSpin 90s linear infinite; }
 .orbit-ring-b { animation: orbitRingSpin 70s linear infinite reverse; }
 
+/* The nodes themselves actually revolve around the fixed HBZ hub (not just
+   the decorative background rings above) — "HBZ CORE ثابت در وسط، بقیه
+   دورش می‌چرخند". .orbit-node-counter-spin runs the exact same duration in
+   reverse so each node's own icon/label stays upright while its position
+   still sweeps the full circle. transform-box:fill-box is required for SVG
+   <g> so percentage-free pixel transform-origin behaves like on HTML. */
+@keyframes orbitNodesSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* Deliberately NOT transform-box:fill-box — an SVG <g>'s default transform
+   box is the viewport, so a pixel transform-origin ("100px 100px") is read
+   directly in the same viewBox coordinate space used to place every node.
+   fill-box was tried first and was wrong: it re-bases transform-origin to
+   the element's own (auto-computed, children-dependent) bounding box, which
+   silently moved the rotation pivot off the hub and swept nodes outside the
+   visible viewBox at some angles — caught by sampling real rotated frames. */
+.orbit-nodes-spin {
+  animation: orbitNodesSpin 48s linear infinite;
+}
+.orbit-node-counter-spin {
+  animation: orbitNodesSpin 48s linear infinite reverse;
+}
+
 @keyframes hubPulse {
   0%, 100% { opacity: 0.55; transform: scale(0.97); }
   50%      { opacity: 0.9;  transform: scale(1.04); }
@@ -1233,7 +1257,8 @@
   .btn-sheen::after { transition: none !important; }
   .nav-link-indicator::after { transition: none !important; }
   .hero-bg-video { display: none !important; }
-  .orbit-ring-a, .orbit-ring-b, .hub-pulse, .hud-bar, .hbz-shine { animation: none !important; }
+  .orbit-ring-a, .orbit-ring-b, .hub-pulse, .hud-bar, .hbz-shine,
+  .orbit-nodes-spin, .orbit-node-counter-spin { animation: none !important; }
 }
 
 /* Admin preview tiles (Video Background + Templates/orbit-animation tabs) —
