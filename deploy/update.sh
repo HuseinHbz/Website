@@ -173,11 +173,25 @@ fi
 cd "$WEB_DIR"
 
 if [[ "$SKIP_BUILD" == "false" ]]; then
+  # ─── ترمیم مالکیت .next پیش از build ─────────────────────────────────────────
+  # build همیشه به‌عنوان $APP_USER اجرا می‌شود (خط پایین‌تر) و Next.js حین build
+  # داخل .next می‌نویسد (.next/trace و غیره) — اگر .next به هر دلیلی (مثلاً یک
+  # rollback قبلی که snapshot را با `cp` روت‌مالکیت کرده بود) مالکیتش عوض شده
+  # باشد، build با «EACCES: permission denied, open '.../.next/trace'» شکست
+  # می‌خورد. مثل heal_ownership برای git، این هم بی‌قید-و-شرط اجراست (نه فقط
+  # وقتی مشکل تشخیص داده شد) — روی یک .next سالم هم بی‌ضرر و ارزان است.
+  if [[ -d "$WEB_DIR/.next" ]]; then
+    chown -R "$APP_USER":"$APP_USER" "$WEB_DIR/.next" 2>/dev/null || true
+  fi
+
   # ─── snapshot برای rollback ──────────────────────────────────────────────────
+  # با خودِ $APP_USER کپی می‌شود (نه root) تا .next.bak از همان ابتدا هم‌مالکیت
+  # .next بماند — یک `cp` روتی اینجا دقیقاً همان درفت مالکیتی را که بالا ترمیم
+  # کردیم، در همان لحظه دوباره تولید می‌کرد.
   if [[ -d "$WEB_DIR/.next" ]]; then
     step "ذخیره snapshot برای rollback..."
     rm -rf "$WEB_DIR/.next.bak"
-    cp -r "$WEB_DIR/.next" "$WEB_DIR/.next.bak"
+    sudo -u "$APP_USER" cp -r "$WEB_DIR/.next" "$WEB_DIR/.next.bak"
   fi
 
   # ─── npm ci ──────────────────────────────────────────────────────────────────

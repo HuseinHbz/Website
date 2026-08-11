@@ -26,6 +26,19 @@ sudo bash deploy/update.sh
 `chown` دستی یا `chmod 777` نیست (و چنین کاری راه‌حل نیست، فقط علامت را
 می‌پوشاند).
 
+### `.next` هم همین قاعده را دارد (حادثهٔ EACCES روی `.next/trace`)
+
+`git`های `heal_ownership` عمداً `.next` را رد می‌کنند (فقط برای بهینه‌بودن
+عملیات git — `.next` بخشی از تاریخچهٔ گیت نیست)، اما خودِ مرحلهٔ **build** (که
+همیشه با `sudo -u hbz` اجرا می‌شود) اگر `.next` مالکیتش هرجور drift کند —
+مثلاً از یک rollback قبلی که snapshot را با `cp` **روتی** (نه `sudo -u hbz`)
+گرفته بود — با
+`EACCES: permission denied, open '.../.next/trace'` شکست می‌خورد. `update.sh`
+حالا این را هم مثل git خودش، **بی‌قید-و-شرط** پیش از هر build ترمیم می‌کند
+(`chown -R hbz:hbz .next`)، و خودِ snapshot هم دیگر با `sudo -u hbz cp` گرفته
+می‌شود تا دیگر هیچ‌وقت این drift دوباره تولید نشود. باز هم: دستی `chown`
+نزنید — همان `sudo bash deploy/update.sh` کافی است.
+
 ## کدام اسکریپت را کِی بزنم؟
 
 | اسکریپت | چه می‌کند | کِی | پیش‌نیاز |
