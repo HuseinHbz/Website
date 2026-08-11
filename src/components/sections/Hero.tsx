@@ -10,6 +10,7 @@ import { HbzWordmark } from './HbzWordmark'
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface DbHero {
+  name?: string | null; wordmark?: string | null
   badge?: string | null; headline?: string | null; headlineHighlight?: string | null
   subheadline?: string | null
   ctaPrimary?: string | null; ctaPrimaryHref?: string | null
@@ -37,6 +38,7 @@ export interface HeroProps {
 }
 
 export interface HeroContent {
+  name: string; wordmark: string
   badge: string; headline: string; headlineHi: string; subheadline: string
   ctaPrimary: string; ctaPrimaryHref: string
   ctaSecondary: string; ctaSecondaryHref: string
@@ -58,6 +60,8 @@ function resolveHref(locale: string, href: string | null | undefined, fallback: 
 function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
   const isRTL = locale === 'fa'
   const D = isRTL ? {
+    name: 'حسین حبیب‌آذر',
+    wordmark: 'HBZ',
     badge: 'آماده همکاری با سازمان‌ها',
     headline: 'معمار زیرساخت',
     headlineHi: 'شبکه · امنیت · خودکارسازی',
@@ -72,6 +76,8 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
       { value: '+۲۰', label: 'استقرار سازمانی', color: CHART_PALETTE[3] },
     ],
   } : {
+    name: 'Husein Habibazar',
+    wordmark: 'HBZ',
     badge: 'Available for enterprise projects',
     headline: 'Infrastructure Architect',
     headlineHi: 'Network · Security · Automation',
@@ -89,6 +95,8 @@ function buildContent(locale: string, dbHero?: DbHero | null): HeroContent {
   const h = dbHero
   return {
     isRTL,
+    name:         h?.name             || D.name,
+    wordmark:     h?.wordmark         || D.wordmark,
     badge:        h?.badge            || D.badge,
     headline:     h?.headline         || D.headline,
     headlineHi:   h?.headlineHighlight|| D.headlineHi,
@@ -167,7 +175,11 @@ function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: stri
   const reduceMotion = useReducedMotion()
   return (
     <div className="relative min-h-[640px] lg:min-h-[820px] flex items-center">
-      <div className="relative z-10 py-14 lg:py-0 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      {/* max-w-[1440px] never grew past a laptop-sized viewport, so on an
+          ultra-wide/4K monitor the content sat in a fixed island with large
+          empty margins on both sides instead of scaling with the screen —
+          matches the site-wide container-wide/container-site breakpoints. */}
+      <div className="relative z-10 py-14 lg:py-0 max-w-[1440px] 3xl:max-w-[110rem] 4k:max-w-[130rem] mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex flex-col lg:flex-row items-center gap-10 lg:gap-16 ${c.isRTL ? 'lg:flex-row-reverse' : ''}`}>
           <motion.div initial="hidden" animate="visible"
             variants={{ hidden:{}, visible:{ transition:{ staggerChildren:0.1 } } }}
@@ -177,9 +189,9 @@ function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: stri
             </motion.div>
             <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }} className="flex flex-col gap-2">
               <span className="text-sm font-semibold tracking-[0.2em] uppercase text-text-muted">
-                {c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
+                {c.name}
               </span>
-              <HbzWordmark />
+              <HbzWordmark text={c.wordmark} />
             </motion.div>
             <motion.div variants={{ hidden:{opacity:0,y:20}, visible:{opacity:1,y:0} }}>
               <p className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight"
@@ -233,7 +245,7 @@ function VariantMinimal({ c }: { c: HeroContent }) {
       </motion.div>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.15 }}>
         <span className="text-xs font-semibold tracking-[0.3em] uppercase text-text-muted">
-          {c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}
+          {`${c.headline} · ${c.wordmark}`}
         </span>
       </motion.div>
       <motion.h1 initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}
@@ -277,7 +289,7 @@ function VariantGlass({ c }: { c: HeroContent }) {
         style={{ background:'rgba(13,13,23,0.8)', border:'1px solid rgba(99,102,241,0.2)', backdropFilter:'blur(20px)', boxShadow:'0 0 80px rgba(99,102,241,0.1)' }}>
         <Badge label={c.badge} />
         <div>
-          <span className="text-xs text-text-muted tracking-widest uppercase">{c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}</span>
+          <span className="text-xs text-text-muted tracking-widest uppercase">{`${c.headline} · ${c.wordmark}`}</span>
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black mt-2 leading-tight"
             style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
             {c.headline}
@@ -311,7 +323,7 @@ function VariantTerminal({ c }: { c: HeroContent }) {
         <div className="p-6 font-mono text-xs sm:text-sm leading-loose">
           <div><span style={{ color:'#4ade80' }}>husein@hbz</span><span style={{ color:'#3a5a3a' }}>:~$ </span>
             <span className="text-slate-300">whoami --verbose</span></div>
-          <div style={{ color:'#4a6a4a', paddingLeft:'1rem' }}>▸ <span style={{ color:'#818cf8' }}>{c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}</span> · {c.headline}</div>
+          <div style={{ color:'#4a6a4a', paddingLeft:'1rem' }}>▸ <span style={{ color:'#818cf8' }}>{c.name}</span> · {c.headline}</div>
           <br/>
           <div><span style={{ color:'#4ade80' }}>husein@hbz</span><span style={{ color:'#3a5a3a' }}>:~$ </span>
             <span className="text-slate-300">skills --top 5</span></div>
@@ -354,7 +366,7 @@ function VariantBento({ c }: { c: HeroContent }) {
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
             style={{ background:'radial-gradient(circle,rgba(99,102,241,0.12) 0%,transparent 70%)', transform:'translate(30%,-30%)' }}/>
           <Badge label={c.badge} />
-          <span className="text-xs text-text-muted tracking-widest uppercase">{c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}</span>
+          <span className="text-xs text-text-muted tracking-widest uppercase">{c.name}</span>
           <h1 className="text-4xl sm:text-5xl font-black leading-tight"
             style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#6366f1 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
             {c.headline}
@@ -390,7 +402,7 @@ function VariantLuxury({ c }: { c: HeroContent }) {
       <motion.div initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.2 }}
         className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-black"
         style={{ background:'linear-gradient(135deg,#1e1e3f,#2d2d5f)', border:'1px solid rgba(99,102,241,0.35)', color:'#818cf8', boxShadow:'0 0 40px rgba(99,102,241,0.22)' }}>
-        HBZ
+        {c.wordmark}
       </motion.div>
       <motion.h1 initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.7 }}
         className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[1.1]">
@@ -423,7 +435,7 @@ function VariantNeon({ c }: { c: HeroContent }) {
         className="flex items-center gap-3">
         <div className="h-px w-8 bg-cyan-400"/>
         <span className="text-3xs tracking-[0.4em] uppercase text-cyan-400">
-          {c.isRTL ? 'معمار زیرساخت · HBZ' : 'Infrastructure Architect · HBZ'}
+          {`${c.headline} · ${c.wordmark}`}
         </span>
         <div className="h-px w-8 bg-indigo-400"/>
       </motion.div>
@@ -495,7 +507,7 @@ function VariantMagazine({ c }: { c: HeroContent }) {
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-[1.15]">
             <span className="block text-text-primary pb-1">{c.isRTL?'حسین':'HUSEIN'}</span>
             <span className="block" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</span>
-            <span className="block text-2xl font-semibold text-accent mt-2">HBZ</span>
+            <span className="block text-2xl font-semibold text-accent mt-2">{c.wordmark}</span>
           </h1>
           <p className="text-xs text-text-muted">
             {c.isRTL?'مهندس ارشد شبکه و امنیت':'Senior Network & Security Engineer'}
@@ -550,10 +562,10 @@ function VariantCentered({ c }: { c: HeroContent }) {
         <Badge label={c.badge} />
       </motion.div>
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="flex flex-col items-center gap-1">
-        <span className="text-xs font-semibold tracking-[0.25em] uppercase text-text-muted">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
+        <span className="text-xs font-semibold tracking-[0.25em] uppercase text-text-muted">{c.name}</span>
         <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight leading-[1.1]"
           style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#94a3b8 35%,#6366f1 65%,#818cf8 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-          HBZ
+          {c.wordmark}
         </h1>
       </motion.div>
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}>
@@ -580,7 +592,7 @@ function VariantGradient({ c }: { c: HeroContent }) {
       </motion.div>
       <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.7 }}>
         <span className="text-3xs tracking-[0.4em] uppercase block mb-3" style={{ color:'rgba(99,102,241,0.7)' }}>
-          {c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}
+          {c.name}
         </span>
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight">
           <span className="block" style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#c7d2fe 50%,#818cf8 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
@@ -619,7 +631,7 @@ function VariantTimeline({ c }: { c: HeroContent }) {
         <div className="flex-1 flex flex-col gap-5">
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
           <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
-            <span className="text-xs tracking-[0.3em] uppercase text-text-muted">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
+            <span className="text-xs tracking-[0.3em] uppercase text-text-muted">{c.name}</span>
             <h1 className="text-4xl sm:text-5xl font-black mt-1" style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.headline}</h1>
             <p className="text-sm text-text-muted mt-1">{c.headlineHi}</p>
           </motion.div>
@@ -675,8 +687,8 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
    VARIANT 13 — CODE BLOCK (monospace source-code aesthetic)
 ══════════════════════════════════════════════════════════════════ */
 function VariantCode({ c }: { c: HeroContent }) {
-  const linesFa = [`// حسین حبیب‌آذر — معمار زیرساخت`,`const profile = {`,`  نام: "حسین",`,`  تخصص: "${c.headline}",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
-  const linesEn = [`// Husein Habibazar — Infrastructure Architect`,`const profile = {`,`  name: "Husein",`,`  role: "${c.headline}",`,`  status: "✓ Open to Work"`,`}`]
+  const linesFa = [`// ${c.name} — معمار زیرساخت`,`const profile = {`,`  نام: "${c.name}",`,`  تخصص: "${c.headline}",`,`  وضعیت: "✓ آماده همکاری"`,`}`]
+  const linesEn = [`// ${c.name} — Infrastructure Architect`,`const profile = {`,`  name: "${c.name}",`,`  role: "${c.headline}",`,`  status: "✓ Open to Work"`,`}`]
   const lines = c.isRTL ? linesFa : linesEn
   const colors = ['#94a3b8','#6366f1','#06b6d4','#f1f5f9','#f59e0b','#6366f1']
   return (
@@ -722,13 +734,13 @@ function VariantPortrait({ c }: { c: HeroContent }) {
           className="flex flex-col items-center gap-4 shrink-0">
           <div className="w-40 h-40 rounded-2xl flex items-center justify-center relative"
             style={{ background:'linear-gradient(135deg,#1e1e3f,#0d0d1a)', border:'1px solid rgba(99,102,241,0.3)', boxShadow:'0 0 50px rgba(99,102,241,0.15)' }}>
-            <span className="text-4xl font-black" style={{ background:'linear-gradient(135deg,#818cf8,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>HBZ</span>
+            <span className="text-4xl font-black" style={{ background:'linear-gradient(135deg,#818cf8,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.wordmark}</span>
             <div className="absolute -bottom-2 -right-2 w-6 h-6 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
               <div className="w-2 h-2 rounded-full bg-white animate-pulse"/>
             </div>
           </div>
           <div className="text-center">
-            <p className="text-sm font-bold text-text-primary">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</p>
+            <p className="text-sm font-bold text-text-primary">{c.name}</p>
             <p className="text-xs text-accent">{c.isRTL?'معمار زیرساخت':'Infrastructure Architect'}</p>
           </div>
         </motion.div>
@@ -756,7 +768,7 @@ function VariantMetric({ c }: { c: HeroContent }) {
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }} className="flex flex-col gap-3 max-w-2xl">
         <Badge label={c.badge} />
         <h1 className="text-4xl sm:text-5xl font-black" style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-          {c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}
+          {c.name}
         </h1>
         <p className="text-lg text-text-muted">{c.headline} · {c.headlineHi}</p>
         <p className="text-base text-text-secondary leading-relaxed">{c.subheadline}</p>
@@ -796,7 +808,7 @@ function VariantWave({ c }: { c: HeroContent }) {
       </div>
       <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
       <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.8 }}>
-        <span className="text-3xs tracking-[0.4em] uppercase text-text-muted block mb-2">{c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}</span>
+        <span className="text-3xs tracking-[0.4em] uppercase text-text-muted block mb-2">{c.name}</span>
         <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[1.1]"
           style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#818cf8 40%,#06b6d4 70%,#10b981 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
           {c.headline}
@@ -816,14 +828,14 @@ function VariantSidebar({ c }: { c: HeroContent }) {
     <div className="min-h-screen flex" dir={c.isRTL?'rtl':'ltr'}>
       {/* Sidebar accent */}
       <div className="hidden lg:flex w-14 flex-col items-center py-24 gap-6 shrink-0 border-r border-border">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black" style={{ background:'linear-gradient(135deg,#6366f1,#818cf8)', color:'white' }}>HBZ</div>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black" style={{ background:'linear-gradient(135deg,#6366f1,#818cf8)', color:'white' }}>{c.wordmark}</div>
         <div className="flex-1 w-px" style={{ background:'linear-gradient(to bottom,#6366f1,#06b6d4,transparent)' }}/>
         {['⬡','⬢','◈','◉'].map((icon,i) => <span key={i} className="text-text-muted text-sm">{icon}</span>)}
       </div>
       <div className="flex-1 container-site py-20 flex flex-col justify-center max-w-4xl gap-6">
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}><Badge label={c.badge} /></motion.div>
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
-          <p className="text-xs tracking-[0.3em] uppercase text-text-muted mb-2">{c.isRTL?'معمار زیرساخت · HBZ':'Infrastructure Architect · HBZ'}</p>
+          <p className="text-xs tracking-[0.3em] uppercase text-text-muted mb-2">{`${c.headline} · ${c.wordmark}`}</p>
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.1] mb-2">
             <span className="block" style={{ background:'linear-gradient(90deg,#f1f5f9,#94a3b8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.isRTL?'حسین':'HUSEIN'}</span>
             <span className="block" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</span>
@@ -848,7 +860,7 @@ function VariantHolo({ c }: { c: HeroContent }) {
         className="w-full rounded-2xl p-10 relative overflow-hidden"
         style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.08) 0%,rgba(6,182,212,0.06) 25%,rgba(16,185,129,0.06) 50%,rgba(245,158,11,0.06) 75%,rgba(99,102,241,0.08) 100%)', border:'1px solid rgba(99,102,241,0.25)', backdropFilter:'blur(20px)' }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.04),rgba(6,182,212,0.04),rgba(16,185,129,0.04))', backgroundSize:'200% 200%' }}/>
-        <p className="text-xs tracking-[0.4em] uppercase mb-4" style={{ color:'rgba(129,140,248,0.8)' }}>{c.isRTL?'حسین حبیب‌آذر · معمار زیرساخت':'Husein Habibazar · Infrastructure Architect'}</p>
+        <p className="text-xs tracking-[0.4em] uppercase mb-4" style={{ color:'rgba(129,140,248,0.8)' }}>{c.name} · {c.headline}</p>
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight mb-4"
           style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#818cf8 20%,#06b6d4 40%,#10b981 60%,#f59e0b 80%,#818cf8 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
           {c.headline}
@@ -868,7 +880,7 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
     <div className="container-site py-20 max-w-5xl mx-auto" dir={c.isRTL?'rtl':'ltr'}>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }} className="border-t-2 border-b border-border py-3 mb-6 flex items-center justify-between">
         <span className="text-3xs tracking-[0.4em] uppercase text-text-muted">{c.isRTL?'معمار زیرساخت · امنیت شبکه':'Infrastructure Architect · Network Security'}</span>
-        <span className="text-3xs tracking-widest text-text-muted font-mono">HBZ — {new Date().getFullYear()}</span>
+        <span className="text-3xs tracking-widest text-text-muted font-mono">{c.wordmark} — {new Date().getFullYear()}</span>
       </motion.div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="lg:col-span-2 border-r border-border pr-8">
@@ -915,7 +927,7 @@ function VariantCyber({ c }: { c: HeroContent }) {
         <motion.div initial={{ opacity:0, y:-15 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
           className="flex items-center gap-3 text-3xs tracking-[0.4em] uppercase" style={{ color:'#06b6d4' }}>
           <div className="w-6 h-px bg-cyan-400"/>
-          {c.isRTL?'سیستم آماده ∥ HBZ-v2.5':'SYSTEM ONLINE ∥ HBZ-v2.5'}
+          {c.isRTL?`سیستم آماده ∥ ${c.wordmark}-v2.5`:`SYSTEM ONLINE ∥ ${c.wordmark}-v2.5`}
           <div className="w-6 h-px bg-cyan-400"/>
         </motion.div>
         <motion.div initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.2, duration:0.8 }}>

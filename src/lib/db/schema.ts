@@ -73,6 +73,11 @@ export const seoSettings = pgTable('seo_settings', {
 export const heroContent = pgTable('hero_content', {
   id: serial('id').primaryKey(),
   locale: text('locale').notNull().default('en'),
+  // The name line above the wordmark ("Husein Habibazar" / "حسین حبیب‌آذر")
+  // and the "HBZ" wordmark text itself — previously hardcoded per-locale
+  // literals in Hero.tsx, now editable like every other hero string.
+  name: text('name'),
+  wordmark: text('wordmark'),
   badge: text('badge'),
   headline: text('headline'),
   headlineHighlight: text('headline_highlight'),

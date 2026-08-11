@@ -20,14 +20,14 @@ const SPARKS = [
   { x: 97, y: 65, d: 0.18 },
 ]
 
-export function HbzWordmark() {
+export function HbzWordmark({ text = 'HBZ' }: { text?: string }) {
   const reduceMotion = useReducedMotion()
 
   return (
     <div className="relative inline-block">
       <h1 className="hbz-shine hbz-glow text-7xl sm:text-8xl lg:text-9xl font-black tracking-tight leading-[1.05]"
         style={{ background:'linear-gradient(100deg,#7477ff 0%,#a5aec4 25%,#ffffff 42%,#f7f9ff 50%,#a5aec4 58%,#7477ff 75%,#9698ff 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-        HBZ
+        {text}
       </h1>
       {!reduceMotion && (
         <>

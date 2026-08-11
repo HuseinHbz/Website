@@ -16,7 +16,7 @@ import { HeroLayoutPreview } from '@/components/sections/HeroLayoutPreview'
 import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
 
-type Tab = 'dashboard' | 'heroes' | 'layout' | 'background' | 'library' | 'experiments' | 'analytics'
+type Tab = 'dashboard' | 'heroes' | 'content' | 'layout' | 'background' | 'library' | 'experiments' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -34,6 +34,7 @@ export function HeroCenter() {
   const TABS: { id: Tab; en: string; fa: string }[] = [
     { id: 'dashboard', en: 'Dashboard', fa: 'داشبورد' },
     { id: 'heroes', en: 'Heroes', fa: 'هیروها' },
+    { id: 'content', en: 'Content', fa: 'محتوا' },
     { id: 'layout', en: 'Layout', fa: 'چیدمان' },
     { id: 'background', en: 'Video Background', fa: 'پس‌زمینه ویدیویی' },
     { id: 'library', en: 'Animation Library', fa: 'کتابخانه انیمیشن' },
@@ -52,6 +53,7 @@ export function HeroCenter() {
       </div>
       {tab === 'dashboard' && <Dashboard rtl={rtl} onOpen={setEditingId} />}
       {tab === 'heroes' && <Heroes rtl={rtl} locale={locale} toast={toast} onOpen={setEditingId} />}
+      {tab === 'content' && <ContentEditor rtl={rtl} toast={toast} />}
       {tab === 'layout' && <LayoutPicker rtl={rtl} toast={toast} />}
       {tab === 'background' && <VideoBackground rtl={rtl} toast={toast} />}
       {tab === 'library' && <AnimationLibrary rtl={rtl} locale={locale} toast={toast} />}
@@ -155,6 +157,149 @@ function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | '
     <Card className="p-4">
       <DataTable tableId="heroes" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={h => String(h.id)} onRowClick={h => onOpen(h.id)} rowActions={rowActions} bulkActions={bulkActions} selectable exportName="heroes" onRefresh={load} emptyLabel={lc(rtl, 'No heroes — create one from a template.', 'هیرویی نیست.')} />
     </Card>
+  )
+}
+
+/**
+ * Content tab — every hero string used by the LEGACY Hero.tsx (the one that
+ * actually renders on the live homepage today, since no Phase-23 hero is
+ * published — see HeroCenter's Heroes tab / CLAUDE.md), including the name
+ * line and the "HBZ" wordmark itself, is DB-backed (hero_content table via
+ * the pre-existing GET/PUT /api/admin/hero route) and editable here, per
+ * language. Previously this API had no admin UI at all — the fields only
+ * ever had their hardcoded fallback values. An empty field always falls
+ * back to the built-in default in Hero.tsx (`h?.field || D.field`), so
+ * clearing a field here is safe — it never renders blank on the site.
+ */
+type HeroContentForm = {
+  name: string; wordmark: string
+  badge: string; headline: string; headlineHighlight: string; subheadline: string
+  ctaPrimary: string; ctaPrimaryHref: string
+  ctaSecondary: string; ctaSecondaryHref: string
+  ctaTertiary: string; ctaTertiaryHref: string
+  stat1Label: string; stat1Value: string
+  stat2Label: string; stat2Value: string
+  stat3Label: string; stat3Value: string
+  stat4Label: string; stat4Value: string
+}
+const EMPTY_HERO_CONTENT: HeroContentForm = {
+  name: '', wordmark: '',
+  badge: '', headline: '', headlineHighlight: '', subheadline: '',
+  ctaPrimary: '', ctaPrimaryHref: '', ctaSecondary: '', ctaSecondaryHref: '', ctaTertiary: '', ctaTertiaryHref: '',
+  stat1Label: '', stat1Value: '', stat2Label: '', stat2Value: '', stat3Label: '', stat3Value: '', stat4Label: '', stat4Value: '',
+}
+
+function ContentEditor({ rtl, toast }: { rtl: boolean; toast: Toast }) {
+  const [lang, setLang] = useState<'fa' | 'en'>(rtl ? 'fa' : 'en')
+  const [form, setForm] = useState<HeroContentForm>(EMPTY_HERO_CONTENT)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async (locale: 'fa' | 'en') => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/hero')
+      const rows = await r.json().catch(() => [])
+      const row = Array.isArray(rows) ? rows.find((x: { locale: string }) => x.locale === locale) : null
+      setForm({
+        name: row?.name || '', wordmark: row?.wordmark || '',
+        badge: row?.badge || '', headline: row?.headline || '', headlineHighlight: row?.headlineHighlight || '', subheadline: row?.subheadline || '',
+        ctaPrimary: row?.ctaPrimary || '', ctaPrimaryHref: row?.ctaPrimaryHref || '',
+        ctaSecondary: row?.ctaSecondary || '', ctaSecondaryHref: row?.ctaSecondaryHref || '',
+        ctaTertiary: row?.ctaTertiary || '', ctaTertiaryHref: row?.ctaTertiaryHref || '',
+        stat1Label: row?.stat1Label || '', stat1Value: row?.stat1Value || '',
+        stat2Label: row?.stat2Label || '', stat2Value: row?.stat2Value || '',
+        stat3Label: row?.stat3Label || '', stat3Value: row?.stat3Value || '',
+        stat4Label: row?.stat4Label || '', stat4Value: row?.stat4Value || '',
+      })
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load(lang) }, [lang, load])
+
+  async function save() {
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/hero', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale: lang, ...form }) })
+      if (r.ok) toast(lc(rtl, 'Hero content saved', 'محتوای هیرو ذخیره شد'), 'success')
+      else { const d = await r.json().catch(() => ({})); toast(d.error || lc(rtl, 'Failed', 'ناموفق'), 'error') }
+    } finally { setSaving(false) }
+  }
+
+  function set<K extends keyof HeroContentForm>(key: K, v: string) {
+    setForm(f => ({ ...f, [key]: v }))
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+        <p className="text-sm text-text-secondary">
+          {lc(rtl,
+            'Every text string on the live homepage hero — including the name line and the "HBZ" wordmark itself — is stored here, per language, and edited from this tab. An empty field falls back to the built-in default automatically.',
+            'همه متن‌های بخش هیروی زندهٔ صفحه اصلی — از جمله خط نام و خود کلمهٔ «HBZ» — اینجا و به تفکیک زبان ذخیره می‌شوند. فیلد خالی به‌صورت خودکار به مقدار پیش‌فرض برمی‌گردد.'
+          )}
+        </p>
+        <div className="flex gap-1 shrink-0 rounded-lg border border-subtle p-0.5">
+          {(['fa', 'en'] as const).map(l => (
+            <button key={l} type="button" onClick={() => setLang(l)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${lang === l ? 'bg-brand text-white' : 'text-text-tertiary hover:text-text-primary'}`}>
+              {l === 'fa' ? 'فارسی' : 'English'}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {loading ? (
+        <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>
+      ) : (
+        <>
+          <Card className="p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Wordmark & name', 'نام و لوگوتایپ')}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input label={lc(rtl, 'Wordmark ("HBZ")', 'لوگوتایپ («HBZ»)')} value={form.wordmark} onChange={v => set('wordmark', v)} placeholder="HBZ" />
+              <Input label={lc(rtl, 'Name line', 'خط نام')} value={form.name} onChange={v => set('name', v)} placeholder={lang === 'fa' ? 'حسین حبیب‌آذر' : 'Husein Habibazar'} />
+            </div>
+          </Card>
+
+          <Card className="p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Headline', 'تیتر')}</h3>
+            <Input label={lc(rtl, 'Badge', 'نشان')} value={form.badge} onChange={v => set('badge', v)} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input label={lc(rtl, 'Headline', 'تیتر اصلی')} value={form.headline} onChange={v => set('headline', v)} />
+              <Input label={lc(rtl, 'Headline highlight', 'زیرتیتر برجسته')} value={form.headlineHighlight} onChange={v => set('headlineHighlight', v)} />
+            </div>
+            <Input label={lc(rtl, 'Subheadline', 'زیرتیتر')} value={form.subheadline} onChange={v => set('subheadline', v)} multiline rows={3} />
+          </Card>
+
+          <Card className="p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Call-to-actions', 'دکمه‌های اقدام')}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Input label={lc(rtl, 'Primary label', 'برچسب اصلی')} value={form.ctaPrimary} onChange={v => set('ctaPrimary', v)} />
+              <Input label={lc(rtl, 'Secondary label', 'برچسب دوم')} value={form.ctaSecondary} onChange={v => set('ctaSecondary', v)} />
+              <Input label={lc(rtl, 'Tertiary label', 'برچسب سوم')} value={form.ctaTertiary} onChange={v => set('ctaTertiary', v)} />
+              <Input label={lc(rtl, 'Primary link', 'لینک اصلی')} value={form.ctaPrimaryHref} onChange={v => set('ctaPrimaryHref', v)} />
+              <Input label={lc(rtl, 'Secondary link', 'لینک دوم')} value={form.ctaSecondaryHref} onChange={v => set('ctaSecondaryHref', v)} />
+              <Input label={lc(rtl, 'Tertiary link', 'لینک سوم')} value={form.ctaTertiaryHref} onChange={v => set('ctaTertiaryHref', v)} />
+            </div>
+          </Card>
+
+          <Card className="p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-text-primary">{lc(rtl, 'Stats row', 'ردیف آمار')}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {([1, 2, 3, 4] as const).map(n => (
+                <div key={n} className="space-y-2 p-3 rounded-lg border border-subtle">
+                  <Input label={lc(rtl, `Stat ${n} value`, `مقدار ${n}`)} value={form[`stat${n}Value` as const]} onChange={v => set(`stat${n}Value` as const, v)} />
+                  <Input label={lc(rtl, `Stat ${n} label`, `برچسب ${n}`)} value={form[`stat${n}Label` as const]} onChange={v => set(`stat${n}Label` as const, v)} />
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <div className="flex justify-end">
+            <Btn onClick={save} disabled={saving}>{saving ? lc(rtl, 'Saving…', 'در حال ذخیره…') : lc(rtl, 'Save', 'ذخیره')}</Btn>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 

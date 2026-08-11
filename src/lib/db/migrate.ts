@@ -62,6 +62,14 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_crm_activities_lead ON crm_activities(lead_id);
     ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS converted_customer_id INTEGER;
 
+    -- The name line ("Husein Habibazar") and the "HBZ" wordmark itself were
+    -- hardcoded per-locale literals in Hero.tsx — not editable from the
+    -- panel like the rest of hero_content. Making them real columns closes
+    -- that gap (maintainer request: every hero string, including "HBZ",
+    -- must be DB-backed and admin-editable).
+    ALTER TABLE hero_content ADD COLUMN IF NOT EXISTS name TEXT;
+    ALTER TABLE hero_content ADD COLUMN IF NOT EXISTS wordmark TEXT;
+
 
 
 
