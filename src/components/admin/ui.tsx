@@ -6,7 +6,7 @@
  * No hardcoded hex colors.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useId } from 'react'
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -87,16 +87,26 @@ export function Input({
   /** Read-only state — e.g. a frozen payroll ruleset that already issued slips. */
   disabled?: boolean
 }) {
+  // The label was never associated with its control (no htmlFor/id, no
+  // aria-label) across every single usage of this shared primitive — real
+  // impact, not just a lint nicety: a screen reader announces the input
+  // with no name at all, clicking the label text doesn't focus the field,
+  // and Playwright's own getByLabel() (the standard, recommended a11y-first
+  // locator) can't find it either — found via a genuine E2E test failure,
+  // not a manual audit. useId() is additive-only: same markup/styling,
+  // just wired up.
+  const id = useId()
   return (
     <div className={className}>
       {label && (
-        <label className="form-label">
+        <label htmlFor={id} className="form-label">
           {label}
           {required && <span className="text-danger ml-1" aria-hidden>*</span>}
         </label>
       )}
       {multiline ? (
         <textarea
+          id={id}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -106,6 +116,7 @@ export function Input({
         />
       ) : (
         <input
+          id={id}
           type={type}
           value={value}
           onChange={e => onChange(e.target.value)}
@@ -129,11 +140,13 @@ export function Select({
   options: { value: string; label: string }[]
   className?: string
 }) {
+  const id = useId()
   return (
     <div className={className}>
-      {label && <label className="form-label">{label}</label>}
+      {label && <label htmlFor={id} className="form-label">{label}</label>}
       <div className="relative">
         <select
+          id={id}
           value={value}
           onChange={e => onChange(e.target.value)}
           className="form-input h-9 pr-9 appearance-none cursor-pointer"
