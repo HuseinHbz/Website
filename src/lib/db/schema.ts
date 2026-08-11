@@ -355,6 +355,14 @@ export const mediaFiles = pgTable('media_files', {
   folder: text('folder').default('general'),
   alt: text('alt'),
   caption: text('caption'),
+  // Media Upload fix — bilingual asset metadata the operator fills in on the
+  // upload form (name → slug → physical filename, never a random id).
+  nameEn: text('name_en'),
+  nameFa: text('name_fa'),
+  altEn: text('alt_en'),
+  altFa: text('alt_fa'),
+  category: text('category'),
+  description: text('description'),
   uploadedAt: text('uploaded_at').notNull().$defaultFn(tsNow),
   uploadedBy: text('uploaded_by').references(() => users.id),
 })

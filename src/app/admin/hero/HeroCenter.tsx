@@ -15,10 +15,10 @@ import { OrbitalNetwork } from '@/components/sections/OrbitalNetwork'
 import { HeroLayoutPreview } from '@/components/sections/HeroLayoutPreview'
 import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
+import { HeroMediaUploadModal } from '@/components/admin/HeroMediaUploadModal'
 
 type Tab = 'dashboard' | 'heroes' | 'content' | 'layout' | 'background' | 'library' | 'experiments' | 'analytics'
 interface MediaRow { id: number; url: string; originalName: string; mimeType: string }
-const HERO_VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.mkv'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -335,7 +335,7 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [customOrbits, setCustomOrbits] = useState<MediaRow[]>([])
-  const [uploadingOrbit, setUploadingOrbit] = useState(false)
+  const [orbitModalOpen, setOrbitModalOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -351,28 +351,6 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
-
-  async function uploadOrbit(file: File) {
-    setUploadingOrbit(true)
-    // A stalled request (slow connection, overloaded server) used to leave
-    // the button on "Uploading…" forever with nothing ever surfacing —
-    // indistinguishable from a broken upload. 60s is generous for a video.
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 60_000)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('folder', 'hero-orbit')
-      const r = await fetch('/api/admin/media', { method: 'POST', body: fd, signal: controller.signal })
-      const d = await r.json().catch(() => ({}))
-      if (r.ok && d.url) { toast(lc(rtl, 'Network animation uploaded', 'انیمیشن شبکه‌ای آپلود شد'), 'success'); await load() }
-      else toast(d.error || lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
-    } catch (e) {
-      toast(e instanceof DOMException && e.name === 'AbortError'
-        ? lc(rtl, 'Upload timed out — check your connection and try again', 'آپلود به دلیل کندی اتصال متوقف شد — دوباره تلاش کنید')
-        : lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
-    } finally { clearTimeout(timeout); setUploadingOrbit(false) }
-  }
 
   async function removeOrbit(row: MediaRow) {
     if (!window.confirm(lc(rtl, `Delete "${row.originalName}"?`, `«${row.originalName}» حذف شود؟`))) return
@@ -439,12 +417,15 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary">{lc(rtl, 'Network animation', 'انیمیشن شبکه‌ای')}</p>
-          <label className={`shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${uploadingOrbit ? 'opacity-60 pointer-events-none' : ''}`}
+          <button type="button" onClick={() => setOrbitModalOpen(true)}
+            className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
             style={{ background: 'var(--color-brand)', color: '#fff' }}>
-            {uploadingOrbit ? lc(rtl, 'Uploading…', 'در حال آپلود…') : `⇧ ${lc(rtl, 'Upload network animation', 'آپلود انیمیشن شبکه‌ای')}`}
-            <input type="file" accept={HERO_VIDEO_ACCEPT} className="hidden" disabled={uploadingOrbit}
-              onChange={e => { const f = e.target.files?.[0]; if (f) uploadOrbit(f); e.target.value = '' }} />
-          </label>
+            {`⇧ ${lc(rtl, 'Upload network animation', 'آپلود انیمیشن شبکه‌ای')}`}
+          </button>
+          <HeroMediaUploadModal open={orbitModalOpen} onClose={() => setOrbitModalOpen(false)} rtl={rtl}
+            folder="hero-orbit" defaultCategory="hero-animation-video"
+            accept="video/mp4,video/webm,image/svg+xml,application/json,.mp4,.webm,.svg,.json"
+            onUploaded={async () => { toast(lc(rtl, 'Network animation uploaded', 'انیمیشن شبکه‌ای آپلود شد'), 'success'); await load() }} />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {HERO_ORBIT_STYLES.map(s => (
@@ -558,7 +539,7 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [custom, setCustom] = useState<MediaRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -582,25 +563,6 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
     } finally { setSaving(null) }
   }
 
-  async function upload(file: File) {
-    setUploading(true)
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 60_000)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('folder', 'hero-videos')
-      const r = await fetch('/api/admin/media', { method: 'POST', body: fd, signal: controller.signal })
-      const d = await r.json().catch(() => ({}))
-      if (r.ok && d.url) { toast(lc(rtl, 'Video uploaded', 'ویدیو آپلود شد'), 'success'); await load() }
-      else toast(d.error || lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
-    } catch (e) {
-      toast(e instanceof DOMException && e.name === 'AbortError'
-        ? lc(rtl, 'Upload timed out — check your connection and try again', 'آپلود به دلیل کندی اتصال متوقف شد — دوباره تلاش کنید')
-        : lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
-    } finally { clearTimeout(timeout); setUploading(false) }
-  }
-
   async function removeCustom(row: MediaRow) {
     if (!window.confirm(lc(rtl, `Delete "${row.originalName}"?`, `«${row.originalName}» حذف شود؟`))) return
     const r = await fetch('/api/admin/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id }) })
@@ -621,12 +583,15 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
             'یک ویدیوی حلقه‌ای برای پس‌زمینه بخش هیروی زنده صفحه اصلی انتخاب کنید. متن، دکمه‌ها، آمار و تب‌ها تغییر نمی‌کنند — فقط لایه پس‌زمینه عوض می‌شود. برای دسترس‌پذیری، حالت کاهش حرکت رعایت می‌شود. ویدیوی خودتان را (MP4/WebM/MOV/MKV) پایین آپلود کنید، یا یکی از ۱۹ ویدیوی آماده را انتخاب کنید.'
           )}
         </p>
-        <label className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
+        <button type="button" onClick={() => setUploadModalOpen(true)}
+          className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-colors"
           style={{ background: 'var(--color-brand)', color: '#fff' }}>
-          {uploading ? lc(rtl, 'Uploading…', 'در حال آپلود…') : `⇧ ${lc(rtl, 'Upload video', 'آپلود ویدیو')}`}
-          <input type="file" accept={HERO_VIDEO_ACCEPT} className="hidden" disabled={uploading}
-            onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }} />
-        </label>
+          {`⇧ ${lc(rtl, 'Upload video', 'آپلود ویدیو')}`}
+        </button>
+        <HeroMediaUploadModal open={uploadModalOpen} onClose={() => setUploadModalOpen(false)} rtl={rtl}
+          folder="hero-videos" defaultCategory="hero-background-video"
+          accept="video/mp4,video/webm,.mp4,.webm"
+          onUploaded={async () => { toast(lc(rtl, 'Video uploaded', 'ویدیو آپلود شد'), 'success'); await load() }} />
       </Card>
 
       {custom.length > 0 && (

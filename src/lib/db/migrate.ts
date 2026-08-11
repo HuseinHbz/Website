@@ -70,6 +70,15 @@ export async function runMigrations() {
     ALTER TABLE hero_content ADD COLUMN IF NOT EXISTS name TEXT;
     ALTER TABLE hero_content ADD COLUMN IF NOT EXISTS wordmark TEXT;
 
+    -- Media Upload fix — bilingual asset metadata + a real duplicate-name
+    -- story for the media library (name → slug → physical filename).
+    ALTER TABLE media_files ADD COLUMN IF NOT EXISTS name_en TEXT;
+    ALTER TABLE media_files ADD COLUMN IF NOT EXISTS name_fa TEXT;
+    ALTER TABLE media_files ADD COLUMN IF NOT EXISTS alt_en TEXT;
+    ALTER TABLE media_files ADD COLUMN IF NOT EXISTS alt_fa TEXT;
+    ALTER TABLE media_files ADD COLUMN IF NOT EXISTS category TEXT;
+    ALTER TABLE media_files ADD COLUMN IF NOT EXISTS description TEXT;
+
 
 
 
