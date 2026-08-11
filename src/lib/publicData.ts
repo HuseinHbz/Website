@@ -176,6 +176,62 @@ export async function getPublicBlogPosts() {
   } catch { return [] }
 }
 
+/**
+ * SEO fix — every blog post used to inherit the homepage's title/
+ * description/canonical/OG image (the [slug] page was 'use client' with no
+ * `generateMetadata`, which only a server component can export). This is
+ * the server-side lookup that makes a real per-post `generateMetadata`
+ * possible, mirroring `getPublicCaseStudyBySlug`'s shape/error handling.
+ */
+export async function getPublicBlogPostBySlug(slug: string) {
+  try {
+    await autoResyncIfNeeded()
+    const db = getDb()
+    const row = (await db.select({
+      id: blogPosts.id,
+      slug: blogPosts.slug,
+      titleEn: blogPosts.titleEn,
+      titleFa: blogPosts.titleFa,
+      excerptEn: blogPosts.excerptEn,
+      excerptFa: blogPosts.excerptFa,
+      contentEn: blogPosts.contentEn,
+      contentFa: blogPosts.contentFa,
+      coverImage: blogPosts.coverImage,
+      readTimeEn: blogPosts.readTimeEn,
+      readTimeFa: blogPosts.readTimeFa,
+      publishedAtEn: blogPosts.publishedAtEn,
+      publishedAtFa: blogPosts.publishedAtFa,
+      categoryId: blogPosts.categoryId,
+      categoryNameEn: blogCategories.nameEn,
+      categoryNameFa: blogCategories.nameFa,
+      categoryColor: blogCategories.color,
+      createdAt: blogPosts.createdAt,
+      updatedAt: blogPosts.updatedAt,
+    }).from(blogPosts)
+      .leftJoin(blogCategories, eq(blogCategories.id, blogPosts.categoryId))
+      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.status, 'published'))))[0]
+    return row ?? null
+  } catch { return null }
+}
+
+/** Prev/next navigation for a published post, ordered by id (matches the
+ *  existing `/api/blog/[slug]` behavior — kept identical so both the page
+ *  and the API agree on adjacency). */
+export async function getPublicBlogPostNav(id: number) {
+  try {
+    const db = getDb()
+    const [prev, next] = await Promise.all([
+      db.select({ slug: blogPosts.slug, titleEn: blogPosts.titleEn, titleFa: blogPosts.titleFa })
+        .from(blogPosts).where(and(eq(blogPosts.status, 'published'), sql`${blogPosts.id} < ${id}`))
+        .orderBy(desc(blogPosts.id)).limit(1),
+      db.select({ slug: blogPosts.slug, titleEn: blogPosts.titleEn, titleFa: blogPosts.titleFa })
+        .from(blogPosts).where(and(eq(blogPosts.status, 'published'), sql`${blogPosts.id} > ${id}`))
+        .orderBy(asc(blogPosts.id)).limit(1),
+    ])
+    return { prev: prev[0] ?? null, next: next[0] ?? null }
+  } catch { return { prev: null, next: null } }
+}
+
 export async function getPublicBlogCategories() {
   try {
     const db = getDb()

@@ -118,6 +118,17 @@ export interface ArticleData {
   image?: string
 }
 
+/** The app stores timestamps as `tsNow()`'s "YYYY-MM-DD HH:MM:SS" (UTC, no
+ *  offset marker) across every table — schema.org/Google's structured-data
+ *  validator requires real ISO 8601 (`...T...Z`) for datePublished/
+ *  dateModified, so this reconstructs it rather than passing the raw DB
+ *  string straight into JSON-LD. Already-ISO input passes through unchanged. */
+function toIso8601(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return value
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) return `${value.replace(' ', 'T')}Z`
+  return value
+}
+
 export function articleSchema(post: ArticleData) {
   return {
     '@context': 'https://schema.org',
@@ -125,8 +136,8 @@ export function articleSchema(post: ArticleData) {
     headline: post.title,
     description: post.description,
     url: post.url,
-    datePublished: post.datePublished,
-    dateModified: post.dateModified || post.datePublished,
+    datePublished: toIso8601(post.datePublished),
+    dateModified: toIso8601(post.dateModified || post.datePublished),
     image: post.image || `${SITE.url}/og-image.png`,
     author: {
       '@type': 'Person',
