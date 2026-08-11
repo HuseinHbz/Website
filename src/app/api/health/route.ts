@@ -17,8 +17,14 @@ async function checkDatabase(): Promise<Check> {
   try {
     await pgQuery('SELECT 1')
     return { name: 'database', status: 'ok', latencyMs: Date.now() - start }
-  } catch (err) {
-    return { name: 'database', status: 'down', detail: String(err) }
+  } catch {
+    // Never the raw driver error — a `pg` connection failure can echo back
+    // internal network detail (host/port, sometimes credentials embedded in
+    // a connection-string parse error) to whoever asked, and this endpoint
+    // is intentionally unauthenticated for infra healthchecks. A fixed,
+    // generic reason is enough for anyone reading the status; the real
+    // error still goes to `logger`/system_logs for an operator to see.
+    return { name: 'database', status: 'down', detail: 'connection failed' }
   }
 }
 
@@ -43,7 +49,7 @@ async function checkMigrations(): Promise<Check> {
     await pgQuery(`SELECT 1 FROM moadian_queue LIMIT 1`)
     return { name: 'migrations', status: 'ok', detail: 'schema current' }
   } catch {
-    return { name: 'migrations', status: 'down', detail: 'schema behind (moadian_queue missing)' }
+    return { name: 'migrations', status: 'down', detail: 'schema behind' }
   }
 }
 
@@ -57,17 +63,42 @@ async function checkDisk(): Promise<Check> {
   } catch { return { name: 'disk', status: 'ok', detail: 'n/a' } }
 }
 
+/** True once the caller proves it's allowed to see verbose operational
+ *  telemetry (per-check detail strings, memory/disk numbers, version,
+ *  NODE_ENV). This endpoint is intentionally unauthenticated — nginx, PM2,
+ *  CI's `wait-on`/`curl -sf`, and the Playwright health spec all hit it with
+ *  no session at all — so the gate is a shared secret header, never the
+ *  admin session. `HEALTH_CHECK_TOKEN` unset ⇒ FAILS CLOSED (minimal
+ *  response always, regardless of `?probe=deep`/`?detail=1`): operator must
+ *  explicitly opt in to verbose output rather than a new deploy silently
+ *  exposing internal telemetry to anyone on the internet by default. */
+function isAuthorizedForDetail(request: Request): boolean {
+  const configured = process.env.HEALTH_CHECK_TOKEN
+  if (!configured) return false
+  const provided = request.headers.get('x-health-token')
+  return provided === configured
+}
+
 /**
  * Phase 26.24 (بند ۲.۲): three probe levels via ?probe=
  *   live  — process is up (no I/O; for liveness restarts)
  *   ready — DB reachable (for load-balancer readiness / traffic gating)
  *   deep  — DB + migrations + disk + memory (default; full picture)
  * `?detail=1` also attaches raw checks + memory (backward compatible).
+ *
+ * Every probe level stays reachable with NO auth (that's the whole point —
+ * infra healthchecks can't hold a session) and `status`/HTTP code are always
+ * accurate. What's gated by `isAuthorizedForDetail` is verbose CONTENT: an
+ * anonymous caller learns ok/degraded/down per subsystem and nothing else —
+ * no version string, no NODE_ENV, no disk-free%/heap numbers, no per-check
+ * detail text. A caller with `HEALTH_CHECK_TOKEN` gets the full picture this
+ * endpoint always used to hand out to anyone.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const probe = searchParams.get('probe') ?? 'deep'
   const detailed = searchParams.get('detail') === '1'
+  const authorized = isAuthorizedForDetail(request)
 
   if (probe === 'live') {
     return NextResponse.json({ status: 'ok', probe: 'live', ts: new Date().toISOString(), uptime: Math.round(process.uptime()) },
@@ -84,16 +115,20 @@ export async function GET(request: Request) {
     ? 'degraded'
     : 'ok'
 
+  const publicChecks = checks.map(c => ({ name: c.name, status: c.status }))
+
   const body: Record<string, unknown> = {
     status: overallStatus,
     probe,
     ts: new Date().toISOString(),
-    version: process.env.APP_VERSION ?? '2.0.0',
     uptime: Math.round(process.uptime()),
-    env: process.env.NODE_ENV,
-    checks,
+    checks: authorized ? checks : publicChecks,
   }
-  if (detailed) body.memory = process.memoryUsage()
+  if (authorized) {
+    body.version = process.env.APP_VERSION ?? '2.0.0'
+    body.env = process.env.NODE_ENV
+    if (detailed) body.memory = process.memoryUsage()
+  }
 
   const httpStatus = overallStatus === 'down' ? 503 : 200
   return NextResponse.json(body, {

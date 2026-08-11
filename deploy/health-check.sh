@@ -15,7 +15,15 @@ TIMEOUT=10
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
 
-response=$(curl -sf --max-time "$TIMEOUT" "$BASE_URL/api/health" 2>/dev/null) || {
+# HEALTH_CHECK_TOKEN (if set in the environment) unlocks the verbose fields
+# (version/env/per-check detail/memory) — the endpoint now fails CLOSED to
+# anonymous callers by default so an internet-facing deploy doesn't leak
+# internal telemetry; this operator-run script still gets full detail when
+# the token is configured, matching /api/health's own X-Health-Token gate.
+TOKEN_HEADER=()
+[[ -n "${HEALTH_CHECK_TOKEN:-}" ]] && TOKEN_HEADER=(-H "X-Health-Token: $HEALTH_CHECK_TOKEN")
+
+response=$(curl -sf --max-time "$TIMEOUT" "${TOKEN_HEADER[@]}" "$BASE_URL/api/health" 2>/dev/null) || {
   echo -e "${RED}[FAIL]${NC} $(date '+%Y-%m-%d %H:%M:%S') — سرویس پاسخ نمی‌دهد: $BASE_URL"
   # اگر PM2 نصب است restart اتوماتیک
   if command -v pm2 &>/dev/null && pm2 list | grep -q habibazar; then
