@@ -171,8 +171,12 @@ function ScrollIndicator({ label }: { label: string }) {
    VARIANT 1 — SPLIT LAYOUT (left text, right network)
 ══════════════════════════════════════════════════════════════════ */
 function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: string | null }) {
-  void orbitStyleId // reserved for when a second orbit style is added (HERO_ORBIT_STYLES)
   const reduceMotion = useReducedMotion()
+  // A custom-uploaded network animation is stored as `custom:<media url>`
+  // (same convention as hero_bg_video's custom uploads) — anything else
+  // (undefined, DEFAULT_ORBIT_STYLE, or a future built-in id) renders the
+  // code-drawn <OrbitalNetwork/>.
+  const customOrbitUrl = orbitStyleId?.startsWith('custom:') ? orbitStyleId.slice('custom:'.length) : null
   return (
     <div className="relative min-h-[640px] lg:min-h-[820px] flex items-center">
       {/* max-w-[1440px] never grew past a laptop-sized viewport, so on an
@@ -226,7 +230,12 @@ function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: stri
               animate={reduceMotion ? { opacity: 0.7 } : { opacity: [0.7, 0.7, 1, 0.7] }}
               transition={reduceMotion ? undefined : { delay: 0.3, duration: 3.2, times: [0, 0.5, 0.72, 1], ease: 'easeInOut' }}
               style={{ background: 'radial-gradient(circle, rgba(116,119,255,0.12) 0%, rgba(34,211,238,0.06) 40%, transparent 70%)' }}/>
-            <OrbitalNetwork />
+            {customOrbitUrl ? (
+              <video src={customOrbitUrl} className="orbit-custom-video w-full h-full rounded-full object-cover relative z-10"
+                autoPlay={!reduceMotion} muted loop playsInline preload="auto" />
+            ) : (
+              <OrbitalNetwork />
+            )}
           </motion.div>
         </div>
       </div>

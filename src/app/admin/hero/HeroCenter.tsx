@@ -17,6 +17,8 @@ import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
 
 type Tab = 'dashboard' | 'heroes' | 'content' | 'layout' | 'background' | 'library' | 'experiments' | 'analytics'
+interface MediaRow { id: number; url: string; originalName: string; mimeType: string }
+const HERO_VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.mkv'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -332,18 +334,46 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [hidden, setHidden] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
+  const [customOrbits, setCustomOrbits] = useState<MediaRow[]>([])
+  const [uploadingOrbit, setUploadingOrbit] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/admin/settings')
-      const d = await r.json().catch(() => ({}))
-      setCurrent(d.hero_variant || DEFAULT_HERO_LAYOUT)
-      setOrbitCurrent(d.hero_orbit_style || DEFAULT_ORBIT_STYLE)
-      try { setHidden(JSON.parse(d.hero_layout_hidden || '[]')) } catch { setHidden([]) }
+      const [s, m] = await Promise.all([
+        fetch('/api/admin/settings').then(r => r.json()).catch(() => ({})),
+        fetch('/api/admin/media?folder=hero-orbit').then(r => r.json()).catch(() => []),
+      ])
+      setCurrent(s.hero_variant || DEFAULT_HERO_LAYOUT)
+      setOrbitCurrent(s.hero_orbit_style || DEFAULT_ORBIT_STYLE)
+      try { setHidden(JSON.parse(s.hero_layout_hidden || '[]')) } catch { setHidden([]) }
+      setCustomOrbits(Array.isArray(m) ? m : [])
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
+
+  async function uploadOrbit(file: File) {
+    setUploadingOrbit(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', 'hero-orbit')
+      const r = await fetch('/api/admin/media', { method: 'POST', body: fd })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.url) { toast(lc(rtl, 'Network animation uploaded', 'انیمیشن شبکه‌ای آپلود شد'), 'success'); await load() }
+      else toast(d.error || lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
+    } finally { setUploadingOrbit(false) }
+  }
+
+  async function removeOrbit(row: MediaRow) {
+    if (!window.confirm(lc(rtl, `Delete "${row.originalName}"?`, `«${row.originalName}» حذف شود؟`))) return
+    const r = await fetch('/api/admin/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id }) })
+    if (r.ok) {
+      if (orbitCurrent === `custom:${row.url}`) await selectOrbit(DEFAULT_ORBIT_STYLE)
+      toast(lc(rtl, 'Deleted', 'حذف شد'), 'success')
+      load()
+    } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+  }
 
   async function select(id: string) {
     setSaving(id)
@@ -391,9 +421,22 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
         </p>
       </Card>
 
-      {/* Network animation — folded in here from the old separate "Templates" tab */}
+      {/* Network animation — folded in here from the old separate "Templates" tab.
+          Alongside the built-in SVG/CSS orbit, an operator can now upload their
+          own looping clip (MP4/WebM/MOV/MKV) to use instead — same upload
+          mechanics as the Video Background tab (generic /api/admin/media,
+          `custom:<url>` selection convention), just scoped to the round orbit
+          slot instead of the full-bleed background layer. */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">{lc(rtl, 'Network animation', 'انیمیشن شبکه‌ای')}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary">{lc(rtl, 'Network animation', 'انیمیشن شبکه‌ای')}</p>
+          <label className={`shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${uploadingOrbit ? 'opacity-60 pointer-events-none' : ''}`}
+            style={{ background: 'var(--color-brand)', color: '#fff' }}>
+            {uploadingOrbit ? lc(rtl, 'Uploading…', 'در حال آپلود…') : `⇧ ${lc(rtl, 'Upload network animation', 'آپلود انیمیشن شبکه‌ای')}`}
+            <input type="file" accept={HERO_VIDEO_ACCEPT} className="hidden" disabled={uploadingOrbit}
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadOrbit(f); e.target.value = '' }} />
+          </label>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {HERO_ORBIT_STYLES.map(s => (
             <button type="button" key={s.id} onClick={() => !saving && selectOrbit(s.id)}
@@ -408,6 +451,30 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
               </div>
           </button>
         ))}
+        {customOrbits.map(row => {
+          const id = `custom:${row.url}`
+          return (
+            <div key={row.id} className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${orbitCurrent === id ? 'border-brand' : 'border-transparent'}`}>
+              <button type="button" onClick={() => !saving && selectOrbit(id)} className="w-full">
+                <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
+                  <video src={row.url} className="w-full h-full object-cover" muted loop playsInline preload="auto"
+                    onLoadedMetadata={e => { try { e.currentTarget.currentTime = 0.1 } catch {} }}
+                    onMouseEnter={e => e.currentTarget.play().catch(() => {})}
+                    onMouseLeave={e => e.currentTarget.pause()} />
+                </div>
+              </button>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-text-primary truncate max-w-[8rem]" title={row.originalName}>{row.originalName}</h4>
+                {orbitCurrent === id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                {saving === `orbit:${id}` && <Badge color="slate">…</Badge>}
+              </div>
+              <button type="button" onClick={() => removeOrbit(row)}
+                className="text-3xs text-red-400 hover:text-red-300 transition-colors">
+                🗑 {lc(rtl, 'Delete', 'حذف')}
+              </button>
+            </div>
+          )
+        })}
         </div>
       </div>
 
@@ -477,10 +544,6 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
  * Persisted as the `hero_bg_video` site_settings key via the existing
  * generic `/api/admin/settings` GET/PUT endpoint (no new API surface).
  */
-interface MediaRow { id: number; url: string; originalName: string; mimeType: string }
-
-const HERO_VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.mkv'
-
 function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [current, setCurrent] = useState<string>('')
   const [custom, setCustom] = useState<MediaRow[]>([])
