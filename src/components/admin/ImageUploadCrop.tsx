@@ -86,26 +86,44 @@ export function ImageUploadCrop({
   async function uploadFile(file: File) {
     setUploading(true)
     setError('')
+    // A hung request (slow/overloaded server, dropped connection) used to
+    // leave the button stuck on "Uploading…" forever with no feedback —
+    // exactly what reads as "upload doesn't work". 30s is generous for a
+    // ≤2MB image; past that, surface a real error instead of spinning.
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('folder', folder)
-      const res = await fetch('/api/admin/media', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('Upload failed')
+      const res = await fetch('/api/admin/media', { method: 'POST', body: fd, signal: controller.signal })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || `Upload failed (${res.status})`)
+      }
       const d = await res.json()
       const url: string = d.url?.startsWith('/') ? d.url : `/${d.url}`
       onChange(url)
       setSrcBlob(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
+      if (e instanceof DOMException && e.name === 'AbortError') setError('Upload timed out — check your connection and try again')
+      else setError(e instanceof Error ? e.message : 'Upload failed')
     } finally {
+      clearTimeout(timeout)
       setUploading(false)
     }
   }
 
   async function applyCrop() {
     const blob = await getCroppedBlob()
-    if (!blob) return
+    if (!blob) {
+      // getCroppedBlob() returns null for a degenerate/zero-size crop
+      // rectangle — this used to fail completely silently (the modal just
+      // sat there with the button doing nothing), which is indistinguishable
+      // from a broken upload. Now it says why.
+      setError('Could not read the selected crop area — try adjusting the crop box and upload again')
+      return
+    }
     const file = new File([blob], `cropped-${Date.now()}.jpg`, { type: 'image/jpeg' })
     await uploadFile(file)
   }

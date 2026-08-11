@@ -151,7 +151,12 @@ export function Footer({ locale = 'en', nav, brand }: FooterProps) {
 
         <div className="py-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-muted">
-            © {currentYear} {b.name} (HBZ).{' '}
+            {/* No hardcoded "(HBZ)" suffix — b.name is now fully admin-
+                edited (Brand & Identity Settings), and appending a fixed
+                "(HBZ)" here doubled it the moment an admin's own name value
+                already included "(HBZ)" (e.g. "... زیرساخت (HBZ)"),
+                producing "(HBZ) (HBZ)." in the copyright line. */}
+            © {currentYear} {b.name}.{' '}
             {t('rights')}.
           </p>
           <p className="text-xs text-text-muted">

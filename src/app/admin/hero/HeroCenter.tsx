@@ -354,15 +354,24 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
 
   async function uploadOrbit(file: File) {
     setUploadingOrbit(true)
+    // A stalled request (slow connection, overloaded server) used to leave
+    // the button on "Uploading…" forever with nothing ever surfacing —
+    // indistinguishable from a broken upload. 60s is generous for a video.
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60_000)
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('folder', 'hero-orbit')
-      const r = await fetch('/api/admin/media', { method: 'POST', body: fd })
+      const r = await fetch('/api/admin/media', { method: 'POST', body: fd, signal: controller.signal })
       const d = await r.json().catch(() => ({}))
       if (r.ok && d.url) { toast(lc(rtl, 'Network animation uploaded', 'انیمیشن شبکه‌ای آپلود شد'), 'success'); await load() }
       else toast(d.error || lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
-    } finally { setUploadingOrbit(false) }
+    } catch (e) {
+      toast(e instanceof DOMException && e.name === 'AbortError'
+        ? lc(rtl, 'Upload timed out — check your connection and try again', 'آپلود به دلیل کندی اتصال متوقف شد — دوباره تلاش کنید')
+        : lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
+    } finally { clearTimeout(timeout); setUploadingOrbit(false) }
   }
 
   async function removeOrbit(row: MediaRow) {
@@ -575,15 +584,21 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
 
   async function upload(file: File) {
     setUploading(true)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60_000)
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('folder', 'hero-videos')
-      const r = await fetch('/api/admin/media', { method: 'POST', body: fd })
+      const r = await fetch('/api/admin/media', { method: 'POST', body: fd, signal: controller.signal })
       const d = await r.json().catch(() => ({}))
       if (r.ok && d.url) { toast(lc(rtl, 'Video uploaded', 'ویدیو آپلود شد'), 'success'); await load() }
       else toast(d.error || lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
-    } finally { setUploading(false) }
+    } catch (e) {
+      toast(e instanceof DOMException && e.name === 'AbortError'
+        ? lc(rtl, 'Upload timed out — check your connection and try again', 'آپلود به دلیل کندی اتصال متوقف شد — دوباره تلاش کنید')
+        : lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
+    } finally { clearTimeout(timeout); setUploading(false) }
   }
 
   async function removeCustom(row: MediaRow) {
