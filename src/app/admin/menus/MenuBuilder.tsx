@@ -85,6 +85,13 @@ export function MenuBuilder() {
   const headerItems = items.filter(i => i.location === 'header' && !i.parentId)
   const topLevel = filteredItems.filter(i => !i.parentId)
   const childOf = (parentId: number) => filteredItems.filter(i => i.parentId === parentId)
+  // A row whose parentId points at an item OUTSIDE this location's set (most
+  // often a footer row still carrying a header parent from before the
+  // location was switched) renders as neither a top-level item nor anyone's
+  // child here — invisible and undeletable from this screen even though the
+  // public site still shows it (buildNavTree promotes it to a phantom
+  // top-level column since its parent isn't in the footer-scoped row set).
+  const orphans = filteredItems.filter(i => i.parentId != null && !topLevel.some(p => p.id === i.parentId))
 
   function openNew(loc?: 'header' | 'footer', parentId?: number) {
     setEditing({ ...EMPTY, location: loc || location, parentId: parentId ?? null, sortOrder: filteredItems.length })
@@ -157,6 +164,32 @@ export function MenuBuilder() {
               </div>
             ))}
           </div>
+
+          {orphans.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs font-semibold text-warning mb-2">
+                ⚠ {locale === 'fa'
+                  ? 'موارد بی‌والد — والدشان در بخش دیگری است و در درخت بالا نمایش داده نمی‌شوند، اما همچنان در سایت زنده دیده می‌شوند'
+                  : "Orphaned items — their parent belongs to another location, so they can't show in the tree above but still render live on the site"}
+              </p>
+              <div className="space-y-1">
+                {orphans.map(item => (
+                  <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-lg"
+                    style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <span className="text-base">{item.icon || '◦'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-primary font-medium">{item.labelEn}</p>
+                      <p className="text-xs text-text-tertiary">{item.labelFa} · <span className="font-mono">{item.href}</span></p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Btn size="sm" variant="ghost" onClick={() => { setEditing({ ...item }); setModal(true) }}>✏</Btn>
+                      <Btn size="sm" variant="danger" onClick={() => del(item.id)}>✕</Btn>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Preview */}

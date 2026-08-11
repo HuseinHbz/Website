@@ -49,8 +49,17 @@ export async function POST(req: NextRequest) {
     const bad = await assertKnownHref(body.href, req.headers.get('accept-language')?.startsWith('fa') ?? true)
     if (bad) return bad
     const db = getDb()
-    const result = await db.insert(navigationItems).values(body).returning()
-    await logAction(auth.user, 'CREATE', 'navigation_items', result[0]?.id, null, body)
+    // The footer builder never offers a parent picker (only header items
+    // nest), so a footer row can only ever get a parentId by hand-editing
+    // the request or by a leftover value surviving a location switch. A
+    // stray parentId pointing at a HEADER item is invisible in BOTH admin
+    // views: buildNavTree() promotes it to a phantom top-level footer
+    // column on the public site (its parent isn't in the footer-scoped
+    // row set), while the admin tree hides it because its parent isn't in
+    // the footer top-level list either. Force it null at write time.
+    const values = body.location === 'footer' ? { ...body, parentId: null } : body
+    const result = await db.insert(navigationItems).values(values).returning()
+    await logAction(auth.user, 'CREATE', 'navigation_items', result[0]?.id, null, values)
     return NextResponse.json(result[0])
   } catch (e: unknown) {
     return apiError(e)
@@ -64,6 +73,10 @@ export async function PUT(req: NextRequest) {
     const { id, ...data } = await guardJson(req)
     { const bad = await assertKnownHref(data.href, req.headers.get('accept-language')?.startsWith('fa') ?? true); if (bad) return bad }
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    // Same orphan guard as POST — also covers the edit path where an item's
+    // location is switched to 'footer' while a header-scoped parentId is
+    // still sitting on the record.
+    if (data.location === 'footer') data.parentId = null
     const db = getDb()
     await db.update(navigationItems).set({ ...data, updatedAt: new Date().toISOString() }).where(eq(navigationItems.id, id))
     await logAction(auth.user, 'UPDATE', 'navigation_items', id, null, data)
