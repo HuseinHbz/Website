@@ -1,9 +1,11 @@
 'use client'
 
 import { useRef } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
 import { CHART_PALETTE } from '@/lib/design/tokens'
 import { heroBgVideoById } from '@/lib/heroBgVideos'
+import { DEFAULT_ORBIT_STYLE } from '@/lib/heroOrbitStyles'
+import { OrbitalNetwork } from './OrbitalNetwork'
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface DbHero {
@@ -26,6 +28,11 @@ export interface HeroProps {
    *  admin `/admin/hero` → Video Background tab. Null/undefined = no video,
    *  identical rendering to before (existing grid/glow background only). */
   bgVideoId?: string | null
+  /** Optional id from HERO_ORBIT_STYLES (src/lib/heroOrbitStyles.ts), set
+   *  from admin `/admin/hero` → Templates tab. Null/undefined falls back to
+   *  DEFAULT_ORBIT_STYLE ('hbz-orbit') — the orbit network is the default
+   *  hero visual, not an opt-in like the background video. */
+  orbitStyleId?: string | null
 }
 
 export interface HeroContent {
@@ -155,59 +162,6 @@ function CtaButtons({ c, row = false }: { c: HeroContent; row?: boolean }) {
   )
 }
 
-function MiniNetworkSVG() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <filter id="ng2"><feGaussianBlur stdDeviation="1.2" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <linearGradient id="ea" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#7477ff" stopOpacity="0.9"/>
-          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.4"/>
-        </linearGradient>
-        <linearGradient id="eb" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#7477ff" stopOpacity="0.3"/>
-          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.1"/>
-        </linearGradient>
-      </defs>
-      {[['50,18','18,42',true],['50,18','80,40',true],['18,42','10,66',true],['80,40','38,62',true],
-        ['38,62','58,78',true],['82,62','58,78',true],
-        ['50,18','82,62',false],['18,42','38,62',false],['10,66','28,82',false],
-        ['38,62','28,82',false],['58,78','28,82',false]
-      ].map(([a,b,act],i) => {
-        const [x1,y1]=String(a).split(','), [x2,y2]=String(b).split(',')
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-          stroke={act ? 'url(#ea)' : 'url(#eb)'}
-          strokeWidth={act ? 0.5 : 0.3}
-          strokeDasharray={act ? '2 1.5' : undefined}
-          opacity={act ? 0.9 : 0.4}
-          style={act ? { animation: `dashFlow ${2+i*0.25}s linear infinite` } : undefined}/>
-      })}
-      {([['50','18','Cisco','#22d3ee',1],['18','42','MikroTik','#f0576b',-1],['80','40','Linux','#f5b84b',1],
-        ['38','62','VMware','#38bdf8',-1],['10','66','Security','#22c997',-1],
-        ['82','62','Cloud','#7477ff',1],['58','78','Monitor','#f5b84b',1],['28','82','Ansible','#8b5cf6',-1]
-      ] as [string,string,string,string,number][]).map(([cx,cy,lbl,col,dir],i) => {
-        const labelY = dir > 0 ? Number(cy) + 8.5 : Number(cy) - 6
-        return (
-          <g key={i} className="glow-breathe-svg" style={{ '--glow-color': `${col}80`, animationDelay: `${i * 0.35}s`, animationDuration: `${3 + (i % 3)}s` } as React.CSSProperties}>
-            <circle cx={cx} cy={cy} r="5" fill={`${col}25`} stroke={col} strokeWidth="0.8"/>
-            <text x={cx} y={labelY} textAnchor="middle" fill={col} fontSize="3.2" fontWeight="700" opacity="0.95">{lbl}</text>
-          </g>
-        )
-      })}
-      {[['50,18','18,42','#8b5cf6',2.2],['50,18','80,40','#22d3ee',2.6],
-        ['18,42','10,66','#22c997',2.0],['80,40','38,62','#7477ff',2.4]
-      ].map(([path, ,col,dur],i) => {
-        const pts=String(path).split(',')
-        return <circle key={`p${i}`} r="0.9" fill={String(col)} opacity="0.9">
-          <animateMotion dur={`${dur}s`} repeatCount="indefinite" begin={`${i*0.5}s`}
-            path={`M${pts[0]},${pts[1]} L${pts[2]},${pts[3]}`}/>
-        </circle>
-      })}
-    </svg>
-  )
-}
-
 function ScrollIndicator({ label }: { label: string }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2, duration: 1 }}
@@ -225,7 +179,9 @@ function ScrollIndicator({ label }: { label: string }) {
 /* ══════════════════════════════════════════════════════════════════
    VARIANT 1 — SPLIT LAYOUT (left text, right network)
 ══════════════════════════════════════════════════════════════════ */
-function VariantSplit({ c }: { c: HeroContent }) {
+function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: string | null }) {
+  void orbitStyleId // reserved for when a second orbit style is added (HERO_ORBIT_STYLES)
+  const reduceMotion = useReducedMotion()
   return (
     <div className="relative min-h-[640px] lg:min-h-[820px] flex items-center">
       <div className="relative z-10 py-14 lg:py-0 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -240,8 +196,8 @@ function VariantSplit({ c }: { c: HeroContent }) {
               <span className="text-sm font-semibold tracking-[0.2em] uppercase text-text-muted">
                 {c.isRTL ? 'حسین حبیب‌آذر' : 'Husein Habibazar'}
               </span>
-              <h1 className="text-7xl sm:text-8xl lg:text-9xl font-black tracking-tight leading-[1.05]"
-                style={{ background:'linear-gradient(135deg,#f7f9ff 0%,#a5aec4 35%,#7477ff 65%,#9698ff 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+              <h1 className="hbz-shine text-7xl sm:text-8xl lg:text-9xl font-black tracking-tight leading-[1.05]"
+                style={{ background:'linear-gradient(100deg,#7477ff 0%,#a5aec4 25%,#ffffff 42%,#f7f9ff 50%,#a5aec4 58%,#7477ff 75%,#9698ff 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
                 HBZ
               </h1>
             </motion.div>
@@ -263,30 +219,25 @@ function VariantSplit({ c }: { c: HeroContent }) {
             </motion.div>
           </motion.div>
 
-          <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
-            transition={{ delay:0.35, duration:0.7, ease:'easeOut' }}
-            className="hidden lg:flex flex-shrink-0 w-[380px] xl:w-[440px] aspect-square items-center justify-center relative">
-            <div className="absolute inset-0 rounded-full"
-              style={{ background: 'radial-gradient(circle, rgba(116,119,255,0.10) 0%, rgba(34,211,238,0.05) 40%, transparent 70%)' }}/>
-            <div className="absolute inset-4 rounded-full border border-border/40"/>
-            <div className="absolute inset-8"><MiniNetworkSVG /></div>
-            {[
-              { label:'Cisco', color:'#22d3ee', cls:'top-6 left-6' },
-              { label:'MikroTik', color:'#f0576b', cls:'top-10 right-4' },
-              { label:'VMware', color:'#38bdf8', cls:'top-1/2 -translate-y-1/2 -right-2' },
-              { label:'Fortinet', color:'#f0576b', cls:'bottom-6 right-6' },
-            ].map((b,i) => (
-              <motion.div key={b.label} initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
-                transition={{ delay:0.75+i*0.15, duration:0.5 }}
-                className={`node-float absolute ${b.cls} flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold`}
-                style={{
-                  background:'rgba(8,11,24,0.85)', border:`1px solid ${b.color}33`, color:b.color, backdropFilter:'blur(8px)',
-                  '--float-delay': `${i * 0.6}s`,
-                } as React.CSSProperties}>
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:b.color }}/>
-                {b.label}
-              </motion.div>
-            ))}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.82 }}
+            animate={reduceMotion
+              ? { opacity: 1, scale: 1 }
+              : { opacity: 1, scale: [0.82, 1, 1, 1.09, 1] }}
+            transition={reduceMotion
+              ? { delay: 0.3, duration: 0.9, ease: [0.16, 1, 0.3, 1] }
+              : { opacity: { delay: 0.3, duration: 0.7 }, scale: { delay: 0.3, duration: 3.2, times: [0, 0.28, 0.5, 0.72, 1], ease: 'easeInOut' } }}
+            className="hidden lg:flex flex-shrink-0 w-[380px] xl:w-[460px] aspect-square items-center justify-center relative">
+            {/* Reconstructs the reference clip's "camera pushes into the graph,
+                light lines flare, then pulls back" beat — a single keyframed
+                scale pass (0.82 → settle → hold → cinematic zoom-in → return),
+                entirely CSS/SVG-driven so it costs nothing beyond a transform. */}
+            <motion.div className="absolute inset-0 rounded-full pointer-events-none"
+              initial={{ opacity: 0.7 }}
+              animate={reduceMotion ? { opacity: 0.7 } : { opacity: [0.7, 0.7, 1, 0.7] }}
+              transition={reduceMotion ? undefined : { delay: 0.3, duration: 3.2, times: [0, 0.5, 0.72, 1], ease: 'easeInOut' }}
+              style={{ background: 'radial-gradient(circle, rgba(116,119,255,0.12) 0%, rgba(34,211,238,0.06) 40%, transparent 70%)' }}/>
+            <OrbitalNetwork />
           </motion.div>
         </div>
       </div>
@@ -1192,7 +1143,7 @@ function HeroBg({ variant, bgVideoId }: { variant: string; bgVideoId?: string | 
 }
 
 /* ── Main export ─────────────────────────────────────────────────── */
-export function Hero({ locale, dbHero, variant = 'split', bgVideoId }: HeroProps) {
+export function Hero({ locale, dbHero, variant = 'split', bgVideoId, orbitStyleId }: HeroProps) {
   const isRTL = locale === 'fa'
   const ref = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
@@ -1201,7 +1152,7 @@ export function Hero({ locale, dbHero, variant = 'split', bgVideoId }: HeroProps
 
   const c = buildContent(locale, dbHero)
 
-  const VARIANTS: Record<string, React.FC<{ c: HeroContent }>> = {
+  const VARIANTS: Record<string, React.FC<{ c: HeroContent; orbitStyleId?: string | null }>> = {
     split:     VariantSplit,
     minimal:   VariantMinimal,
     glass:     VariantGlass,
@@ -1232,7 +1183,7 @@ export function Hero({ locale, dbHero, variant = 'split', bgVideoId }: HeroProps
       dir={isRTL ? 'rtl' : 'ltr'}>
       <HeroBg variant={variant} bgVideoId={bgVideoId} />
       <motion.div style={{ y, opacity }} className="relative z-10 w-full">
-        <VariantComponent c={c} />
+        <VariantComponent c={c} orbitStyleId={orbitStyleId} />
       </motion.div>
       <ScrollIndicator label={isRTL ? 'اسکرول' : 'Scroll'} />
     </section>

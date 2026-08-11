@@ -1,14 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
-import { HERO_TEMPLATES, HERO_CATEGORIES } from '@/lib/hero/templates'
+import { HERO_TEMPLATES } from '@/lib/hero/templates'
 import { validateHero } from '@/lib/hero/rules'
 import type { HeroConfig, HeroRecord, HeroStatus, HeroCta, Locale } from '@/lib/hero/types'
 import { HERO_BG_VIDEOS } from '@/lib/heroBgVideos'
+import { HERO_ORBIT_STYLES, DEFAULT_ORBIT_STYLE } from '@/lib/heroOrbitStyles'
+import { OrbitalNetwork } from '@/components/sections/OrbitalNetwork'
 import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
 
@@ -154,45 +156,66 @@ function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | '
   )
 }
 
-function Templates({ rtl, toast, onOpen }: { rtl: boolean; toast: Toast; onOpen: (id: number) => void }) {
-  const [cat, setCat] = useState('all')
-  const [lib, setLib] = useState<'all' | 'classic' | 'premium'>('all')
-  const shown = useMemo(() => HERO_TEMPLATES
-    .filter(t => lib === 'all' || (lib === 'premium' ? t.premium : !t.premium))
-    .filter(t => cat === 'all' || t.category === cat), [cat, lib])
-  async function create(templateId: string) {
-    const name = window.prompt(lc(rtl, 'Hero name', 'نام هیرو')); if (!name) return
-    const r = await fetch('/api/admin/heroes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', name, template: templateId }) })
-    const d = await r.json().catch(() => ({}))
-    if (r.ok && d.id) { toast(lc(rtl, 'Created', 'ساخته شد'), 'success'); onOpen(d.id) } else toast(d.error || lc(rtl, 'Failed', 'ناموفق'), 'error')
+/**
+ * Templates tab — repurposed per the maintainer's instruction: the old
+ * 50-template "start a new hero draft" gallery was unused in production (no
+ * Phase-23 hero has ever been published — the live homepage always falls
+ * back to the legacy Hero.tsx component) and is gone from this tab. It now
+ * hosts the **orbit network animation** picker instead — the third piece of
+ * the reference-clip breakdown (text / orbit animation / background video),
+ * live-previewed exactly like the Video Background tab (no static
+ * rectangles — a real animated, non-rectangular orb preview per pick).
+ */
+function Templates({ rtl, toast }: { rtl: boolean; toast: Toast; onOpen?: (id: number) => void }) {
+  const [current, setCurrent] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/settings')
+      const d = await r.json().catch(() => ({}))
+      setCurrent(d.hero_orbit_style || DEFAULT_ORBIT_STYLE)
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function select(id: string) {
+    setSaving(id)
+    try {
+      const r = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hero_orbit_style: id }) })
+      if (r.ok) { setCurrent(id); toast(lc(rtl, 'Orbit animation set', 'انیمیشن مداری تنظیم شد'), 'success') }
+      else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+    } finally { setSaving(null) }
   }
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 w-fit rounded-lg bg-white/5 p-1">
-        {(['all', 'classic', 'premium'] as const).map(l => (
-          <button key={l} onClick={() => setLib(l)} className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${lib === l ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-            {l === 'all' ? lc(rtl, 'All', 'همه') : l === 'classic' ? lc(rtl, 'Classic Templates', 'قالب‌های کلاسیک') : lc(rtl, 'Premium Templates', 'قالب‌های ویژه')}
+      <Card className="p-4">
+        <p className="text-sm text-text-secondary">
+          {lc(rtl,
+            'Pick the orbit network animation behind the live homepage hero — independent of its text content and its background video. Every node connects into the HBZ hub at the center. More styles will be added here later.',
+            'انیمیشن شبکهٔ مداری پشت بخش هیروی زندهٔ صفحه اصلی را انتخاب کنید — مستقل از متن و از ویدیوی پس‌زمینه. همهٔ گره‌ها به هاب HBZ در مرکز وصل‌اند. طرح‌های بیشتر بعداً به همین‌جا اضافه می‌شوند.'
+          )}
+        </p>
+      </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+        {HERO_ORBIT_STYLES.map(s => (
+          <button type="button" key={s.id} onClick={() => !saving && select(s.id)}
+            className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === s.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+            <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
+              <OrbitalNetwork compact />
+            </div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-semibold text-text-primary">{rtl ? s.nameFa : s.nameEn}</h4>
+              {current === s.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+              {saving === s.id && <Badge color="slate">…</Badge>}
+            </div>
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {['all', ...HERO_CATEGORIES].map(c => (
-          <button key={c} onClick={() => setCat(c)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cat === c ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary hover:text-text-primary'}`}>{c}</button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {shown.map(t => (
-          <Card key={t.id} className="p-4 flex flex-col gap-2">
-            <div className="h-20 rounded-lg bg-gradient-to-br from-brand/20 to-accent/10 border border-subtle flex items-center justify-center text-2xl">⬡</div>
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-text-primary">{rtl ? t.nameFa : t.nameEn}</h4>
-              {t.premium && <Badge color="yellow">{lc(rtl, 'Premium', 'ویژه')}</Badge>}
-            </div>
-            <p className="text-xs text-text-tertiary">{t.category}</p>
-            <Btn size="sm" onClick={() => create(t.id)}>{lc(rtl, 'Use template', 'استفاده')}</Btn>
-          </Card>
-        ))}
-      </div>
+      {loading && <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>}
     </div>
   )
 }
@@ -241,30 +264,28 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
           )}
         </p>
       </Card>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        <button type="button" className={`text-start rounded-xl border-2 ${!current ? 'border-brand' : 'border-transparent'}`} onClick={() => !saving && select('')}>
-          <Card className="p-3 flex flex-col gap-2 cursor-pointer">
-            <div className="h-28 rounded-lg bg-surface-2 border border-subtle flex items-center justify-center text-2xl text-text-tertiary">✕</div>
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-text-primary">{lc(rtl, 'None (default)', 'هیچکدام (پیش‌فرض)')}</h4>
-              {!current && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
-            </div>
-          </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+        <button type="button" onClick={() => !saving && select('')}
+          className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${!current ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+          <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle flex items-center justify-center text-2xl text-text-tertiary">✕</div>
+          <div className="flex items-center gap-2">
+            <h4 className="text-xs font-semibold text-text-primary">{lc(rtl, 'None (default)', 'هیچکدام (پیش‌فرض)')}</h4>
+            {!current && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+          </div>
         </button>
         {HERO_BG_VIDEOS.map(v => (
-          <button type="button" key={v.id} className={`text-start rounded-xl border-2 ${current === v.id ? 'border-brand' : 'border-transparent'}`} onClick={() => !saving && select(v.id)}>
-            <Card className="p-3 flex flex-col gap-2 cursor-pointer">
-              <div className="h-28 rounded-lg overflow-hidden bg-surface-2 border border-subtle relative">
-                <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline
-                  onMouseEnter={e => e.currentTarget.play().catch(() => {})}
-                  onMouseLeave={e => e.currentTarget.pause()} />
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                <h4 className="text-xs font-semibold text-text-primary">{rtl ? v.labelFa : v.labelEn}</h4>
-                {current === v.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
-                {saving === v.id && <Badge color="slate">…</Badge>}
-              </div>
-            </Card>
+          <button type="button" key={v.id} onClick={() => !saving && select(v.id)}
+            className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === v.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+            <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
+              <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline
+                onMouseEnter={e => e.currentTarget.play().catch(() => {})}
+                onMouseLeave={e => e.currentTarget.pause()} />
+            </div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-semibold text-text-primary">{rtl ? v.labelFa : v.labelEn}</h4>
+              {current === v.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+              {saving === v.id && <Badge color="slate">…</Badge>}
+            </div>
           </button>
         ))}
       </div>

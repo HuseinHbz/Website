@@ -1179,6 +1179,53 @@
   animation: ctaBreathe 6s ease-in-out infinite;
 }
 
+/* ── OrbitalNetwork (HBZ hero network animation) — src/components/sections/OrbitalNetwork.tsx ──
+   Reconstructs the reference clip's camera-zoom/light-line emphasis entirely in
+   CSS/SVG: two concentric rings rotate at different very-slow speeds (depth
+   cue instead of a literal camera dolly), the hub "breathes" opacity/scale
+   (the clip's light-sweep reveal on the central node), and small HUD bar
+   panels pulse like live telemetry — all decorative, none reads real data. */
+@keyframes orbitRingSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.orbit-ring-a { animation: orbitRingSpin 90s linear infinite; }
+.orbit-ring-b { animation: orbitRingSpin 70s linear infinite reverse; }
+
+@keyframes hubPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.97); }
+  50%      { opacity: 0.9;  transform: scale(1.04); }
+}
+.hub-pulse {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: hubPulse 3.6s ease-in-out infinite;
+}
+
+@keyframes hudBarPulse {
+  0%, 100% { transform: scaleY(0.6); opacity: 0.6; }
+  50%      { transform: scaleY(1);   opacity: 1; }
+}
+.hud-panel { transform-origin: bottom; }
+.hud-bar {
+  transform-origin: bottom;
+  animation: hudBarPulse 1.8s ease-in-out infinite;
+}
+
+/* HBZ wordmark — a slow diagonal light sweep, matching the reference clip's
+   glowing logo reveal. Text content is untouched; this is a ::before overlay
+   clipped to the same gradient-text shape via background-clip, so it only
+   ever adds light, never changes the letters. */
+@keyframes hbzShine {
+  0%   { background-position: -140% 0; }
+  60%, 100% { background-position: 140% 0; }
+}
+.hbz-shine {
+  position: relative;
+  background-size: 220% 100%;
+  animation: hbzShine 5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glow-breathe, .glow-breathe-svg, .node-float, .cta-breathe {
     animation: none !important;
@@ -1186,6 +1233,17 @@
   .btn-sheen::after { transition: none !important; }
   .nav-link-indicator::after { transition: none !important; }
   .hero-bg-video { display: none !important; }
+  .orbit-ring-a, .orbit-ring-b, .hub-pulse, .hud-bar, .hbz-shine { animation: none !important; }
+}
+
+/* Admin preview tiles (Video Background + Templates/orbit-animation tabs) —
+   deliberately circular ("orb"), not the plain rectangle these used to be. */
+.orb-preview-tile:hover .orb-preview-frame {
+  box-shadow: 0 0 0 1px rgba(116,119,255,0.25), 0 0 24px rgba(116,119,255,0.18);
+  transform: translateY(-2px);
+}
+.orb-preview-frame {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 /* Hero background video (admin-selectable, `/admin/hero` → Video Background).
