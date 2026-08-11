@@ -10,6 +10,13 @@
 # شاخه: همیشه **default branch مخزن** (زنده از remote خوانده می‌شود). هیچ شاخه‌ای
 # در اسکریپت ثابت نیست؛ با عوض‌کردن default در GitHub، سرور خودکار دنبال می‌کند.
 # فقط برای موارد خاص: --branch <x> یا HBZ_BRANCH=<x>.
+#
+# 🔴🔴🔴 هرگز روی این کلون (/var/www/habibazar) دستی git pull / git fetch /
+# git checkout / npm ci / npm run build نزنید — فقط همیشه همین اسکریپت.
+# هر دستور دستی می‌تواند فایل با مالکیت root بسازد و اجرای بعدی این اسکریپت را
+# با «Permission denied» متوقف کند (رجوع کنید به deploy/README.md و
+# docs/governance/deploy-fix-2-report.md). برای دیباگ مستقیم روی این مسیر:
+# `sudo -u hbz -i` — هرگز به‌عنوان root کار نکنید.
 # =============================================================================
 # -E : تلهٔ ERR در توابع/subshellها هم اجرا شود (جلوگیری از خروج خاموش)
 set -Eeuo pipefail
@@ -70,6 +77,27 @@ if [[ -z "${HBZ_UPDATE_LOGGING:-}" ]]; then
   [[ -n "$LOG_FILE" ]] && echo "[i] لاگ کامل آپدیت: $LOG_FILE"
 fi
 [[ ! -d "$APP_DIR/.git" ]] && error "مخزن یافت نشد: $APP_DIR — ابتدا install.sh اجرا کنید"
+
+# 🔴 اولین چیزی که دیده می‌شود، نه فقط چیزی که در لاگ گم می‌شود (DEPLOY-FIX-2 بند ۲).
+echo -e "${RED}🔴 یادآوری: فقط از همین اسکریپت استفاده کنید — هرگز git/npm/build دستی روی $APP_DIR${NC}"
+
+# ─── حسابرسی drift مالکیت — قبل از هر ترمیمی، شمارش و لاگ می‌شود ─────────────
+# (DEPLOY-FIX-2 بند ۰) — self-heal بی‌قید-و-شرط علامت را رفع می‌کند، ولی بدون
+# ثبت شدنِ «چند بار و چقدر drift داشتیم»، الگوی تکرار قابل ردیابی نیست. این خط
+# فقط می‌شمارد و به یک لاگ دائمی (جدا از لاگ هر اجرا) اضافه می‌کند — چیزی را
+# تغییر نمی‌دهد، فقط شاهد جمع می‌کند.
+DRIFT_LOG="/var/log/habibazar-ownership-drift.log"
+DRIFT_COUNT=$(find "$APP_DIR" -mindepth 1 \
+  \( -path "$APP_DIR/node_modules" -o -path "$APP_DIR/.git" -o -path "$APP_DIR/.next" \) -prune \
+  -o \( ! -user "$APP_USER" -o ! -group "$APP_USER" \) -print 2>/dev/null | wc -l)
+if [[ "$DRIFT_COUNT" -gt 0 ]]; then
+  warn "🔴 $DRIFT_COUNT مسیر با مالکیت غیر از $APP_USER پیدا شد — ترمیم می‌شود (جزئیات: $DRIFT_LOG)"
+  { echo "$(date '+%Y-%m-%d %H:%M:%S')  drift=$DRIFT_COUNT  branch=${BRANCH:-?}"
+    find "$APP_DIR" -mindepth 1 \
+      \( -path "$APP_DIR/node_modules" -o -path "$APP_DIR/.git" -o -path "$APP_DIR/.next" \) -prune \
+      -o \( ! -user "$APP_USER" -o ! -group "$APP_USER" \) -printf '  %u:%g  %p\n' 2>/dev/null
+  } >> "$DRIFT_LOG" 2>/dev/null || true
+fi
 
 # ─── ترمیم خودکار مالکیت کلون (self-heal) ────────────────────────────────────
 # 26.30-fix-ownership: نسخهٔ اول self-heal ابتدا با find تشخیص می‌داد که آیا
@@ -196,6 +224,13 @@ if [[ "$SKIP_BUILD" == "false" ]]; then
 
   # ─── npm ci ──────────────────────────────────────────────────────────────────
   if git -C "$APP_DIR" diff "$PREV_COMMIT" HEAD -- package.json package-lock.json 2>/dev/null | grep -q . || [[ ! -d node_modules/eslint ]]; then
+    # node_modules عمداً از heal_ownership مستثنی است (اسکن سریع سورس/گیت را کند
+    # نکند) — اما همان خانوادهٔ مشکل اینجا هم ممکن است رخ دهد (DEPLOY-FIX-2 بند
+    # ۱/R3). فقط وقتی واقعاً npm ci قرار است اجرا شود ترمیم می‌کنیم — نه در مسیر
+    # «تغییر نکرده»، تا آن مسیر سریع بماند.
+    if [[ -d "$WEB_DIR/node_modules" ]]; then
+      chown -R "$APP_USER":"$APP_USER" "$WEB_DIR/node_modules" 2>/dev/null || true
+    fi
     step "نصب پکیج‌ها (همه + devDeps برای build)..."
     sudo -u "$APP_USER" npm ci
     info "پکیج‌ها آپدیت شدند"
@@ -208,7 +243,21 @@ if [[ "$SKIP_BUILD" == "false" ]]; then
   if ! sudo -u "$APP_USER" bash -c "set -a; source $ENV_FILE; set +a; npm run build"; then
     warn "build ناموفق — rollback به نسخه قبلی..."
     if [[ -d "$WEB_DIR/.next.bak" ]]; then rm -rf "$WEB_DIR/.next"; mv "$WEB_DIR/.next.bak" "$WEB_DIR/.next"; fi
-    sudo -u "$APP_USER" git -C "$APP_DIR" reset --hard "$PREV_COMMIT"
+    # 🔴 DEPLOY-FIX-2 بند ۴ — اگر بین دو اجرا default branch مخزن عوض شده باشد
+    # (مثلاً V3-Codex → claude/bold-lamport-a1d6tg)، $PREV_BRANCH با $BRANCH فرق
+    # دارد؛ یک `reset --hard $PREV_COMMIT` ساده روی برنچِ فعلی ($BRANCH) در این
+    # حالت اشارگر همان برنچ را به کامیتی از یک تاریخچهٔ کاملاً نامرتبط (برنچ قبلی)
+    # می‌برد — دقیقاً همان چیزی که در لاگ‌های واقعی به‌صورت «Your branch and
+    # origin have diverged» ظاهر شد. اگر برنچ عوض شده، به همان نام برنچ قبلی
+    # برمی‌گردیم (نه این‌که برنچ فعلی را به کامیت بیگانه ریست کنیم) تا هیچ
+    # برنچی با تاریخچهٔ اشتباه آلوده نشود.
+    if [[ "$PREV_BRANCH" != "$BRANCH" && "$PREV_BRANCH" != "unknown" && -n "$PREV_BRANCH" ]]; then
+      warn "برنچ قبلی ($PREV_BRANCH) با برنچ فعلی ($BRANCH) فرق دارد — به‌جای reset روی $BRANCH، به خودِ $PREV_BRANCH برمی‌گردیم"
+      sudo -u "$APP_USER" git -C "$APP_DIR" checkout -f "$PREV_BRANCH" 2>/dev/null \
+        || sudo -u "$APP_USER" git -C "$APP_DIR" checkout -f -B "$PREV_BRANCH" "$PREV_COMMIT"
+    else
+      sudo -u "$APP_USER" git -C "$APP_DIR" reset --hard "$PREV_COMMIT"
+    fi
     sudo -u "$APP_USER" pm2 reload habibazar 2>/dev/null || true
     error "آپدیت ناموفق — به $PREV_COMMIT برگشتیم"
   fi

@@ -1855,6 +1855,20 @@ start the app, `wait-on /api/health`, then run.
 - The build artifact upload uses `include-hidden-files: true` (`.next` is a dotfile).
 
 ## Deploy
+- **🔴 Never run git or build commands directly on `/var/www/habibazar` — always
+  go through `update.sh` (DEPLOY-FIX-2).** No `git pull`/`fetch`/`checkout`,
+  no `npm ci`/`npm run build`, whether as `root` or any other user, ever
+  targets that clone by hand. Every ownership-drift incident that broke
+  `update.sh` (source files, then `.next`, then `node_modules`) traced back to
+  something touching that clone outside the script. `update.sh` now
+  self-heals ownership at **every** write point (git fetch, git reset,
+  node_modules before npm ci, `.next` via delete-and-rebuild rather than
+  repair) and logs every drift it finds to
+  `/var/log/habibazar-ownership-drift.log` so recurrence is trackable — but
+  self-healing existing damage is not a substitute for not causing it. Direct
+  debugging on that path (reading files, checking state) must be done as the
+  app user (`sudo -u hbz -i`), never as `root`. Full incident history:
+  `docs/governance/deploy-fix-2-report.md`.
 - **Deploys read ONLY the repo's DEFAULT branch — no branch is hardcoded anywhere.**
   `resolve_default_branch()` in `deploy/branch.env` queries it live
   (`git ls-remote --symref origin HEAD`), so with any number of branches the server
