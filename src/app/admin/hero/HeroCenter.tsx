@@ -10,11 +10,12 @@ import { validateHero } from '@/lib/hero/rules'
 import type { HeroConfig, HeroRecord, HeroStatus, HeroCta, Locale } from '@/lib/hero/types'
 import { HERO_BG_VIDEOS } from '@/lib/heroBgVideos'
 import { HERO_ORBIT_STYLES, DEFAULT_ORBIT_STYLE } from '@/lib/heroOrbitStyles'
+import { HERO_LAYOUTS, DEFAULT_HERO_LAYOUT } from '@/lib/heroLayouts'
 import { OrbitalNetwork } from '@/components/sections/OrbitalNetwork'
 import { HeroBuilder } from './HeroBuilder'
 import { TimelineStudio } from './TimelineStudio'
 
-type Tab = 'dashboard' | 'heroes' | 'templates' | 'background' | 'library' | 'experiments' | 'analytics'
+type Tab = 'dashboard' | 'heroes' | 'layout' | 'templates' | 'background' | 'library' | 'experiments' | 'analytics'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const STATUS_COLOR: Record<HeroStatus, string> = { draft: 'slate', review: 'yellow', approved: 'blue', published: 'green', archived: 'red' }
 
@@ -32,6 +33,7 @@ export function HeroCenter() {
   const TABS: { id: Tab; en: string; fa: string }[] = [
     { id: 'dashboard', en: 'Dashboard', fa: 'داشبورد' },
     { id: 'heroes', en: 'Heroes', fa: 'هیروها' },
+    { id: 'layout', en: 'Layout', fa: 'چیدمان' },
     { id: 'templates', en: 'Templates', fa: 'قالب‌ها' },
     { id: 'background', en: 'Video Background', fa: 'پس‌زمینه ویدیویی' },
     { id: 'library', en: 'Animation Library', fa: 'کتابخانه انیمیشن' },
@@ -50,6 +52,7 @@ export function HeroCenter() {
       </div>
       {tab === 'dashboard' && <Dashboard rtl={rtl} onOpen={setEditingId} />}
       {tab === 'heroes' && <Heroes rtl={rtl} locale={locale} toast={toast} onOpen={setEditingId} />}
+      {tab === 'layout' && <LayoutPicker rtl={rtl} toast={toast} />}
       {tab === 'templates' && <Templates rtl={rtl} toast={toast} onOpen={setEditingId} />}
       {tab === 'background' && <VideoBackground rtl={rtl} toast={toast} />}
       {tab === 'library' && <AnimationLibrary rtl={rtl} locale={locale} toast={toast} />}
@@ -166,6 +169,67 @@ function Heroes({ rtl, locale, toast, onOpen }: { rtl: boolean; locale: 'fa' | '
  * live-previewed exactly like the Video Background tab (no static
  * rectangles — a real animated, non-rectangular orb preview per pick).
  */
+/**
+ * Layout tab — the 20 Hero.tsx layout variants (split/minimal/glass/
+ * terminal/bento/...) already existed in code, selected via the
+ * `hero_variant` site_settings key that page.tsx already reads — there was
+ * just no admin UI to pick one. This is that picker; same generic
+ * settings GET/PUT endpoint as every other Hero admin control.
+ */
+function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
+  const [current, setCurrent] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/settings')
+      const d = await r.json().catch(() => ({}))
+      setCurrent(d.hero_variant || DEFAULT_HERO_LAYOUT)
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function select(id: string) {
+    setSaving(id)
+    try {
+      const r = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hero_variant: id }) })
+      if (r.ok) { setCurrent(id); toast(lc(rtl, 'Hero layout set', 'چیدمان هیرو تنظیم شد'), 'success') }
+      else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+    } finally { setSaving(null) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <p className="text-sm text-text-secondary">
+          {lc(rtl,
+            'Pick which of the 20 built-in layout compositions the live homepage hero uses. Content (text, CTAs) stays exactly the same — only the arrangement changes. The orbit network animation and background video (other tabs) apply on top of whichever layout is active where the layout supports them.',
+            'یکی از ۲۰ چیدمان آماده را برای بخش هیروی زندهٔ صفحه اصلی انتخاب کنید. محتوا (متن، دکمه‌ها) دقیقاً همان می‌ماند — فقط چینش عوض می‌شود. انیمیشن شبکهٔ مداری و ویدیوی پس‌زمینه (تب‌های دیگر) روی هر چیدمانی که پشتیبانی کند اعمال می‌شوند.'
+          )}
+        </p>
+      </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {HERO_LAYOUTS.map(l => (
+          <button type="button" key={l.id} onClick={() => !saving && select(l.id)}
+            className={`text-start rounded-2xl p-4 border-2 transition-colors ${current === l.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+            <Card className="p-4 flex flex-col gap-2">
+              <div className="h-16 rounded-lg bg-gradient-to-br from-brand/15 to-accent/10 border border-subtle flex items-center justify-center text-2xl">⬡</div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-text-primary">{rtl ? l.nameFa : l.nameEn}</h4>
+                {current === l.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                {saving === l.id && <Badge color="slate">…</Badge>}
+              </div>
+            </Card>
+          </button>
+        ))}
+      </div>
+      {loading && <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>}
+    </div>
+  )
+}
+
 function Templates({ rtl, toast }: { rtl: boolean; toast: Toast; onOpen?: (id: number) => void }) {
   const [current, setCurrent] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -230,17 +294,26 @@ function Templates({ rtl, toast }: { rtl: boolean; toast: Toast; onOpen?: (id: n
  * Persisted as the `hero_bg_video` site_settings key via the existing
  * generic `/api/admin/settings` GET/PUT endpoint (no new API surface).
  */
+interface MediaRow { id: number; url: string; originalName: string; mimeType: string }
+
+const HERO_VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.mov,.mkv'
+
 function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
   const [current, setCurrent] = useState<string>('')
+  const [custom, setCustom] = useState<MediaRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/admin/settings')
-      const d = await r.json().catch(() => ({}))
-      setCurrent(d.hero_bg_video || '')
+      const [s, m] = await Promise.all([
+        fetch('/api/admin/settings').then(r => r.json()).catch(() => ({})),
+        fetch('/api/admin/media?folder=hero-videos').then(r => r.json()).catch(() => []),
+      ])
+      setCurrent(s.hero_bg_video || '')
+      setCustom(Array.isArray(m) ? m : [])
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -254,40 +327,105 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
     } finally { setSaving(null) }
   }
 
+  async function upload(file: File) {
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', 'hero-videos')
+      const r = await fetch('/api/admin/media', { method: 'POST', body: fd })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.url) { toast(lc(rtl, 'Video uploaded', 'ویدیو آپلود شد'), 'success'); await load() }
+      else toast(d.error || lc(rtl, 'Upload failed', 'آپلود ناموفق'), 'error')
+    } finally { setUploading(false) }
+  }
+
+  async function removeCustom(row: MediaRow) {
+    if (!window.confirm(lc(rtl, `Delete "${row.originalName}"?`, `«${row.originalName}» حذف شود؟`))) return
+    const r = await fetch('/api/admin/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id }) })
+    if (r.ok) {
+      // If the deleted video was the active one, fall back to none.
+      if (current === `custom:${row.url}`) await select('')
+      toast(lc(rtl, 'Deleted', 'حذف شد'), 'success')
+      load()
+    } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+  }
+
   return (
     <div className="space-y-4">
-      <Card className="p-4">
+      <Card className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <p className="text-sm text-text-secondary">
           {lc(rtl,
-            'Choose a looping background video for the live homepage hero (the currently-active hero section, not a Phase-23 template). Content, CTAs, stats and tabs are untouched — only the background layer changes. Respects reduced-motion for accessibility.',
-            'یک ویدیوی حلقه‌ای برای پس‌زمینه بخش هیروی زنده صفحه اصلی انتخاب کنید. متن، دکمه‌ها، آمار و تب‌ها تغییر نمی‌کنند — فقط لایه پس‌زمینه عوض می‌شود. برای دسترس‌پذیری، حالت کاهش حرکت رعایت می‌شود.'
+            'Choose a looping background video for the live homepage hero. Content, CTAs, stats and tabs are untouched — only the background layer changes. Respects reduced-motion for accessibility. Upload your own (MP4/WebM/MOV/MKV) below, or pick one of the 19 built-in loops.',
+            'یک ویدیوی حلقه‌ای برای پس‌زمینه بخش هیروی زنده صفحه اصلی انتخاب کنید. متن، دکمه‌ها، آمار و تب‌ها تغییر نمی‌کنند — فقط لایه پس‌زمینه عوض می‌شود. برای دسترس‌پذیری، حالت کاهش حرکت رعایت می‌شود. ویدیوی خودتان را (MP4/WebM/MOV/MKV) پایین آپلود کنید، یا یکی از ۱۹ ویدیوی آماده را انتخاب کنید.'
           )}
         </p>
+        <label className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
+          style={{ background: 'var(--color-brand)', color: '#fff' }}>
+          {uploading ? lc(rtl, 'Uploading…', 'در حال آپلود…') : `⇧ ${lc(rtl, 'Upload video', 'آپلود ویدیو')}`}
+          <input type="file" accept={HERO_VIDEO_ACCEPT} className="hidden" disabled={uploading}
+            onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }} />
+        </label>
       </Card>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        <button type="button" onClick={() => !saving && select('')}
-          className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${!current ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
-          <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle flex items-center justify-center text-2xl text-text-tertiary">✕</div>
-          <div className="flex items-center gap-2">
-            <h4 className="text-xs font-semibold text-text-primary">{lc(rtl, 'None (default)', 'هیچکدام (پیش‌فرض)')}</h4>
-            {!current && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+
+      {custom.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">{lc(rtl, 'Your uploads', 'آپلودهای شما')}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+            {custom.map(row => {
+              const id = `custom:${row.url}`
+              return (
+                <div key={row.id} className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === id ? 'border-brand' : 'border-transparent'}`}>
+                  <button type="button" onClick={() => !saving && select(id)} className="w-full">
+                    <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
+                      <video src={row.url} className="w-full h-full object-cover" muted loop playsInline
+                        onMouseEnter={e => e.currentTarget.play().catch(() => {})}
+                        onMouseLeave={e => e.currentTarget.pause()} />
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-semibold text-text-primary truncate max-w-[8rem]" title={row.originalName}>{row.originalName}</h4>
+                    {current === id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                    {saving === id && <Badge color="slate">…</Badge>}
+                  </div>
+                  <button type="button" onClick={() => removeCustom(row)}
+                    className="text-3xs text-red-400 hover:text-red-300 transition-colors">
+                    🗑 {lc(rtl, 'Delete', 'حذف')}
+                  </button>
+                </div>
+              )
+            })}
           </div>
-        </button>
-        {HERO_BG_VIDEOS.map(v => (
-          <button type="button" key={v.id} onClick={() => !saving && select(v.id)}
-            className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === v.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
-            <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
-              <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline
-                onMouseEnter={e => e.currentTarget.play().catch(() => {})}
-                onMouseLeave={e => e.currentTarget.pause()} />
-            </div>
+        </div>
+      )}
+
+      <div>
+        {custom.length > 0 && <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">{lc(rtl, 'Built-in', 'آماده')}</p>}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          <button type="button" onClick={() => !saving && select('')}
+            className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${!current ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+            <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle flex items-center justify-center text-2xl text-text-tertiary">✕</div>
             <div className="flex items-center gap-2">
-              <h4 className="text-xs font-semibold text-text-primary">{rtl ? v.labelFa : v.labelEn}</h4>
-              {current === v.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
-              {saving === v.id && <Badge color="slate">…</Badge>}
+              <h4 className="text-xs font-semibold text-text-primary">{lc(rtl, 'None (default)', 'هیچکدام (پیش‌فرض)')}</h4>
+              {!current && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
             </div>
           </button>
-        ))}
+          {HERO_BG_VIDEOS.map(v => (
+            <button type="button" key={v.id} onClick={() => !saving && select(v.id)}
+              className={`orb-preview-tile flex flex-col items-center gap-2 rounded-2xl p-3 border-2 transition-colors ${current === v.id ? 'border-brand' : 'border-transparent hover:border-subtle'}`}>
+              <div className="orb-preview-frame relative w-full aspect-square rounded-full overflow-hidden bg-surface-2 border border-subtle">
+                <video src={`/videos/hero-bg/${v.file}`} className="w-full h-full object-cover" muted loop playsInline
+                  onMouseEnter={e => e.currentTarget.play().catch(() => {})}
+                  onMouseLeave={e => e.currentTarget.pause()} />
+              </div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-text-primary">{rtl ? v.labelFa : v.labelEn}</h4>
+                {current === v.id && <Badge color="green">{lc(rtl, 'Active', 'فعال')}</Badge>}
+                {saving === v.id && <Badge color="slate">…</Badge>}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
       {loading && <p className="text-xs text-text-tertiary">{lc(rtl, 'Loading…', 'در حال بارگذاری…')}</p>}
     </div>

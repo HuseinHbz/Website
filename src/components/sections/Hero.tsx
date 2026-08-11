@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
 import { CHART_PALETTE } from '@/lib/design/tokens'
-import { heroBgVideoById } from '@/lib/heroBgVideos'
+import { resolveHeroBgVideoUrl } from '@/lib/heroBgVideos'
 import { DEFAULT_ORBIT_STYLE } from '@/lib/heroOrbitStyles'
 import { OrbitalNetwork } from './OrbitalNetwork'
 import { HbzWordmark } from './HbzWordmark'
@@ -302,7 +302,7 @@ function VariantGlass({ c }: { c: HeroContent }) {
           </h1>
           <p className="text-text-muted text-base mt-2">{c.headlineHi}</p>
         </div>
-        <p className="text-sm text-text-secondary leading-relaxed max-w-2xl mx-auto">{c.subheadline}</p>
+        <p className="text-base text-text-secondary leading-relaxed max-w-2xl mx-auto">{c.subheadline}</p>
         <CtaButtons c={c} row />
       </motion.div>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }} className="w-full">
@@ -387,7 +387,7 @@ function VariantBento({ c }: { c: HeroContent }) {
             style={{ background:'linear-gradient(135deg,#f1f5f9 0%,#6366f1 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
             {c.headline}
           </h1>
-          <p className="text-sm text-text-secondary leading-relaxed max-w-md">{c.subheadline}</p>
+          <p className="text-base text-text-secondary leading-relaxed max-w-md">{c.subheadline}</p>
           <CtaButtons c={c} />
         </motion.div>
 
@@ -445,7 +445,7 @@ function VariantLuxury({ c }: { c: HeroContent }) {
         <div className="flex-1 h-px" style={{ background:'linear-gradient(90deg,#2a2a3e,transparent)' }}/>
       </motion.div>
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
-        className="text-sm text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
+        className="text-base text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.7 }}>
         <CtaButtons c={c} row />
       </motion.div>
@@ -498,7 +498,7 @@ function VariantNeon({ c }: { c: HeroContent }) {
         ))}
       </motion.div>
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-        className="text-sm text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
+        className="text-base text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}
         className="flex flex-wrap justify-center gap-3">
         <button onClick={() => { window.location.href = c.ctaPrimaryHref }}
@@ -560,7 +560,7 @@ function VariantMagazine({ c }: { c: HeroContent }) {
             {c.isRTL?'مهندس ارشد شبکه و امنیت':'Senior Network & Security Engineer'}
           </p>
           <div className="border-l-2 border-accent pl-3">
-            <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
+            <p className="text-base text-text-secondary leading-relaxed">{c.subheadline}</p>
           </div>
           <CtaButtons c={c} />
         </motion.div>
@@ -675,7 +675,7 @@ function VariantGradient({ c }: { c: HeroContent }) {
         ))}
       </motion.div>
       <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
-        className="text-sm text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
+        className="text-base text-text-secondary leading-relaxed max-w-xl">{c.subheadline}</motion.p>
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}>
         <CtaButtons c={c} row />
       </motion.div>
@@ -711,7 +711,7 @@ function VariantTimeline({ c }: { c: HeroContent }) {
             <h1 className="text-4xl sm:text-5xl font-black mt-1" style={{ background:'linear-gradient(135deg,#f1f5f9,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{c.headline}</h1>
             <p className="text-sm text-text-muted mt-1">{c.headlineHi}</p>
           </motion.div>
-          <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-sm text-text-secondary leading-relaxed max-w-md">{c.subheadline}</motion.p>
+          <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-base text-text-secondary leading-relaxed max-w-md">{c.subheadline}</motion.p>
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
         </div>
         <motion.div initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.3 }} className="lg:w-72 flex flex-col gap-0">
@@ -756,7 +756,7 @@ function VariantDiagonal({ c }: { c: HeroContent }) {
             <span className="block text-2xl font-semibold text-text-muted mt-2">{c.headline}</span>
           </h1>
           <div className="w-12 h-1 bg-accent rounded-full my-4"/>
-          <p className="text-sm text-text-secondary leading-relaxed mb-6">{c.subheadline}</p>
+          <p className="text-base text-text-secondary leading-relaxed mb-6">{c.subheadline}</p>
           <CtaButtons c={c} />
         </motion.div>
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
@@ -810,7 +810,7 @@ function VariantCode({ c }: { c: HeroContent }) {
         </motion.div>
         <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.4 }} className="lg:w-64 flex flex-col gap-5">
           <Badge label={c.badge} />
-          <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
+          <p className="text-base text-text-secondary leading-relaxed">{c.subheadline}</p>
           <CtaButtons c={c} />
           <div className="grid grid-cols-2 gap-2 mt-2">
             {c.stats.filter(s=>s.value).map((s,i) => (
@@ -862,7 +862,7 @@ function VariantPortrait({ c }: { c: HeroContent }) {
             {c.headline}
           </h1>
           <p className="text-sm text-text-muted tracking-wider">{c.headlineHi}</p>
-          <p className="text-sm text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</p>
+          <p className="text-base text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</p>
           <CtaButtons c={c} />
         </motion.div>
       </div>
@@ -882,7 +882,7 @@ function VariantMetric({ c }: { c: HeroContent }) {
           {c.isRTL?'حسین حبیب‌آذر':'Husein Habibazar'}
         </h1>
         <p className="text-lg text-text-muted">{c.headline} · {c.headlineHi}</p>
-        <p className="text-sm text-text-secondary leading-relaxed">{c.subheadline}</p>
+        <p className="text-base text-text-secondary leading-relaxed">{c.subheadline}</p>
         <div className="mt-2"><CtaButtons c={c} row /></div>
       </motion.div>
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}
@@ -957,7 +957,7 @@ function VariantSidebar({ c }: { c: HeroContent }) {
           </h1>
           <p className="text-base text-text-muted">{c.headline}</p>
         </motion.div>
-        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-sm text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</motion.p>
+        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }} className="text-base text-text-secondary leading-relaxed max-w-lg">{c.subheadline}</motion.p>
         <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}><CtaButtons c={c} /></motion.div>
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
           className="flex gap-6 pt-4 border-t border-border">
@@ -1018,7 +1018,7 @@ function VariantNewspaper({ c }: { c: HeroContent }) {
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-tight mt-4 text-text-primary">{c.isRTL?'حسین':'HUSEIN'}</h1>
           <h2 className="text-3xl font-bold tracking-tight" style={{ color:'#6366f1' }}>{c.isRTL?'حبیب‌آذر':'HABIBAZAR'}</h2>
           <p className="text-xs text-text-muted uppercase tracking-widest mt-3 mb-4">{c.headline}</p>
-          <p className="text-sm text-text-secondary leading-relaxed border-l-2 border-accent pl-4 max-w-lg">{c.subheadline}</p>
+          <p className="text-base text-text-secondary leading-relaxed border-l-2 border-accent pl-4 max-w-lg">{c.subheadline}</p>
           <div className="mt-6"><CtaButtons c={c} /></div>
         </motion.div>
         <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.35 }} className="flex flex-col gap-5">
@@ -1094,14 +1094,14 @@ function VariantCyber({ c }: { c: HeroContent }) {
  *  applies on top of the footage when one is. Muted/looped/inline so autoplay
  *  is allowed; hidden entirely under prefers-reduced-motion (CSS, globals.css). */
 function HeroVideoBg({ bgVideoId }: { bgVideoId?: string | null }) {
-  const video = heroBgVideoById(bgVideoId)
-  if (!video) return null
+  const src = resolveHeroBgVideoUrl(bgVideoId)
+  if (!src) return null
   return (
     <>
       <video
-        key={video.id}
+        key={src}
         className="hero-bg-video absolute inset-0 w-full h-full object-cover pointer-events-none"
-        src={`/videos/hero-bg/${video.file}`}
+        src={src}
         autoPlay muted loop playsInline preload="auto"
         aria-hidden="true"
       />

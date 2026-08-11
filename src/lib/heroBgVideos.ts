@@ -40,3 +40,17 @@ export function heroBgVideoById(id: string | null | undefined): HeroBgVideo | nu
   if (!id) return null
   return HERO_BG_VIDEOS.find(v => v.id === id) ?? null
 }
+
+/**
+ * Resolves a `hero_bg_video` setting value to a playable URL — either one
+ * of the 19 built-in catalog ids above, or an admin-uploaded video (stored
+ * under public/uploads/hero-videos/ via the existing generic
+ * /api/admin/media endpoint, referenced here as `custom:<url>`). Returns
+ * null for an empty/unset value (no background video).
+ */
+export function resolveHeroBgVideoUrl(value: string | null | undefined): string | null {
+  if (!value) return null
+  if (value.startsWith('custom:')) return value.slice('custom:'.length) || null
+  const builtin = heroBgVideoById(value)
+  return builtin ? `/videos/hero-bg/${builtin.file}` : null
+}
