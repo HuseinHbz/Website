@@ -127,7 +127,10 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
   const Media = hasMedia ? (
     <div className={`relative z-10 flex-1 flex items-center justify-center${anim('media').className}`} style={anim('media').style}>
       {/\.(mp4|webm)$/i.test(c.mediaUrl!)
-        ? <video src={c.mediaUrl} autoPlay={!reduce} muted loop playsInline aria-label={c.mediaAlt} className="w-full max-w-lg rounded-2xl shadow-2xl" style={{ opacity: s.imageOpacity ?? 1 }} />
+        // preload="metadata": same reasoning as the legacy Hero.tsx fix —
+        // a decorative autoplay-loop video shouldn't be scheduled for a full
+        // eager download on the homepage's critical load path.
+        ? <video src={c.mediaUrl} autoPlay={!reduce} muted loop playsInline preload="metadata" aria-label={c.mediaAlt} className="w-full max-w-lg rounded-2xl shadow-2xl" style={{ opacity: s.imageOpacity ?? 1 }} />
         // eslint-disable-next-line @next/next/no-img-element
         : <img src={c.mediaUrl} alt={c.mediaAlt ?? ''} className="w-full max-w-lg rounded-2xl shadow-2xl" style={{ opacity: s.imageOpacity ?? 1, filter: s.blur ? `blur(${s.blur}px) brightness(${s.brightness ?? 1})` : undefined }} />}
     </div>
@@ -150,7 +153,7 @@ export function HeroExperience({ heroId, config, locale, experimentKey, variantI
       )}
       {/* Video background */}
       {bg === 'video' && s.background?.value && (
-        <video aria-hidden src={s.background.value} autoPlay={!reduce} muted loop playsInline className="absolute inset-0 w-full h-full object-cover -z-10" />
+        <video aria-hidden src={s.background.value} autoPlay={!reduce} muted loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover -z-10" />
       )}
       {/* Overlay */}
       {s.overlay ? <div aria-hidden className="absolute inset-0 -z-10 bg-black" style={{ opacity: s.overlay }} /> : null}

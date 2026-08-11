@@ -16,6 +16,14 @@ const MIME: Record<string, string> = {
   '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml',
   '.avif': 'image/avif', '.bmp': 'image/bmp', '.ico': 'image/x-icon',
   '.pdf': 'application/pdf',
+  // Missing until now — every video uploaded through the Hero media
+  // categories (background/animation videos, `public/uploads/hero-videos`
+  // and `hero-orbit`) is served through THIS route, not nginx (see the file
+  // banner above), so it fell through to 'application/octet-stream'. Some
+  // browsers refuse to `<video autoplay>` a source with a non-video
+  // Content-Type — a real, live playback bug, not just a header nicety.
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+  '.mkv': 'video/x-matroska', '.json': 'application/json',
 }
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {

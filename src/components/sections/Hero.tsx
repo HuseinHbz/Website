@@ -231,8 +231,14 @@ function VariantSplit({ c, orbitStyleId }: { c: HeroContent; orbitStyleId?: stri
               transition={reduceMotion ? undefined : { delay: 0.3, duration: 3.2, times: [0, 0.5, 0.72, 1], ease: 'easeInOut' }}
               style={{ background: 'radial-gradient(circle, rgba(116,119,255,0.12) 0%, rgba(34,211,238,0.06) 40%, transparent 70%)' }}/>
             {customOrbitUrl ? (
+              // preload="metadata" (not "auto") — a decorative autoplay-loop
+              // video does not need the WHOLE file scheduled at high
+              // priority the instant this parses; that competes with
+              // critical CSS/JS/fonts for bandwidth on first load and hurts
+              // real page-load performance for zero visible benefit
+              // (autoplay still starts fine once enough has buffered).
               <video src={customOrbitUrl} className="orbit-custom-video w-full h-full rounded-full object-cover relative z-10"
-                autoPlay={!reduceMotion} muted loop playsInline preload="auto" />
+                autoPlay={!reduceMotion} muted loop playsInline preload="metadata" />
             ) : (
               <OrbitalNetwork />
             )}
@@ -974,7 +980,16 @@ function HeroVideoBg({ bgVideoId }: { bgVideoId?: string | null }) {
         key={src}
         className="hero-bg-video absolute inset-0 w-full h-full object-cover pointer-events-none"
         src={src}
-        autoPlay muted loop playsInline preload="auto"
+        // preload="metadata" (not "auto") — this is the FIRST thing a visitor
+        // requests on the homepage's LCP path; forcing the browser to
+        // schedule the whole 2-3MB video file at high priority the instant
+        // this parses competes directly with the hero's critical CSS/JS/
+        // fonts for bandwidth, which is a real, measurable perf regression
+        // for a purely decorative (aria-hidden) background layer. Autoplay
+        // still starts smoothly once enough has buffered — this only
+        // changes when the browser is TOLD to start fetching, not whether
+        // it plays.
+        autoPlay muted loop playsInline preload="metadata"
         aria-hidden="true"
       />
       <div className="hero-bg-video-scrim absolute inset-0 pointer-events-none" aria-hidden="true" />
