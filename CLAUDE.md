@@ -1945,3 +1945,14 @@ start the app, `wait-on /api/health`, then run.
 - Hook returns used as effect deps must be stable: `useToast()`'s `toast` is
   `useCallback`-memoized. An unstable `toast` in `useEffect(…, [toast])` re-ran
   load effects every render, refetching in a loop and wiping form input.
+- `next build`'s SSG (441 pages) can transiently exhaust Postgres connections
+  on a production server with a live PM2 instance also querying the SAME DB
+  during the build (PG error 53300 "too many clients already") — confirmed in
+  production: `/industries`, `/technologies`, `/solutions` built with an EMPTY
+  state (26.30's "never 500, degrade to empty" guard did its job, but a purely
+  transient contention spike still shipped empty content). `src/lib/db/
+  retry.ts`'s `withDbRetry` now retries a connection-class error twice
+  (300ms/800ms backoff) before falling back — wired into those 3 pages. If
+  this recurs, raise Postgres `max_connections` or lower `PG_POOL_MAX` during
+  the build; a same-server rebuild (`sudo bash deploy/update.sh`) after the
+  spike passes is also a reasonable immediate fix.

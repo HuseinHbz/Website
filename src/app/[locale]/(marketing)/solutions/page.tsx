@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db'
+import { withDbRetry } from '@/lib/db/retry'
 import { solutions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { SITE } from '@/lib/site'
@@ -53,8 +54,11 @@ export default async function SolutionsPage({ params }: Props) {
   // while this one threw and returned 500 for the whole route. A public page
   // must not take itself down because one query failed — render empty, log the
   // cause. (Same guard the events/docs/products pages already had.)
-  const allSolutions = await db.select().from(solutions).where(eq(solutions.active, true)).orderBy(solutions.sortOrder)
-    .catch((e: unknown) => { console.error('[solutions] query failed — rendering empty state', e); return [] as (typeof solutions.$inferSelect)[] })
+  const allSolutions = await withDbRetry(
+    () => db.select().from(solutions).where(eq(solutions.active, true)).orderBy(solutions.sortOrder),
+    [] as (typeof solutions.$inferSelect)[],
+    'solutions',
+  )
 
   const grouped = allSolutions.reduce<Record<string, typeof allSolutions>>((acc, s) => {
     const cat = SOLUTION_CATEGORIES[s.slug] || 'consulting'

@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db'
+import { withDbRetry } from '@/lib/db/retry'
 import { industries } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { SITE } from '@/lib/site'
@@ -28,8 +29,11 @@ export default async function IndustriesPage({ params }: Props) {
   // while this one threw and returned 500 for the whole route. A public page
   // must not take itself down because one query failed — render empty, log the
   // cause. (Same guard the events/docs/products pages already had.)
-  const allIndustries = await db.select().from(industries).where(eq(industries.active, true)).orderBy(industries.sortOrder)
-    .catch((e: unknown) => { console.error('[industries] query failed — rendering empty state', e); return [] as (typeof industries.$inferSelect)[] })
+  const allIndustries = await withDbRetry(
+    () => db.select().from(industries).where(eq(industries.active, true)).orderBy(industries.sortOrder),
+    [] as (typeof industries.$inferSelect)[],
+    'industries',
+  )
 
   return (
     <div className="min-h-screen bg-background" dir={fa ? 'rtl' : 'ltr'}>
