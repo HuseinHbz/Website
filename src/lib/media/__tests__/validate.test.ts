@@ -28,6 +28,11 @@ describe('validateMediaUpload — real content detection', () => {
     expect(r.ok).toBe(true)
     expect(r.kind).toBe('webm-alpha')
   })
+  it('accepts a real WebM for hero-background-video (26.34 — the UI advertises WebM here; a real bug rejected it)', () => {
+    const r = validateMediaUpload(webmBuffer(), 'hero-background-video', 'video/webm')
+    expect(r.ok).toBe(true)
+    expect(r.kind).toBe('webm-alpha')
+  })
   it('rejects a PNG renamed to look like a video (content, not extension, decides)', () => {
     const r = validateMediaUpload(pngBuffer(), 'hero-background-video', 'video/mp4')
     expect(r.ok).toBe(false)

@@ -68,8 +68,16 @@ export interface MediaValidationResult {
   kind?: MediaKind
 }
 
+// Real production bug (26.34): the Video Background tab's own upload
+// button text and file picker advertise "MP4/WebM/MOV/MKV" — but this
+// table only accepted 'video' (MP4) for hero-background-video, so ANY
+// real WebM upload there was rejected with a 415 no matter how valid the
+// file was. Reproduced live before fixing (a genuine EBML-header WebM
+// buffer → 415 MEDIA_UNSUPPORTED_FORMAT). Frontend and backend must
+// accept the exact same set — 'webm-alpha' added here to match what the
+// UI already told the operator was acceptable.
 const ACCEPT_BY_CATEGORY: Record<MediaCategory, MediaKind[]> = {
-  'hero-background-video': ['video'],
+  'hero-background-video': ['video', 'webm-alpha'],
   'hero-animation-video': ['video', 'webm-alpha'],
   'hero-poster': ['image'],
   'hero-animation-vector': ['svg'],

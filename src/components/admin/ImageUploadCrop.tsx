@@ -33,6 +33,15 @@ export function ImageUploadCrop({
   const [error, setError] = useState('')
   const imgRef = useRef<HTMLImageElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // A ref, not the `uploading` state, guards against a double-submit: two
+  // handler invocations from the same render both close over `uploading`
+  // as it was AT RENDER TIME (false), and setUploading(true)'s effect on
+  // the DOM (disabling the button) only lands on the NEXT render — so two
+  // fast clicks/taps in that window both got past a state-only check
+  // (confirmed live: Playwright firing two rapid clicks produced 2 network
+  // requests despite the button's disabled={uploading}). A ref mutates
+  // synchronously and is shared by both closures immediately.
+  const uploadingRef = useRef(false)
 
   const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/tiff,image/svg+xml'
 
@@ -84,7 +93,6 @@ export function ImageUploadCrop({
   }
 
   async function uploadFile(file: File) {
-    if (uploading) return // a double-click while a request is already in flight must not fire a second upload
     setUploading(true)
     setError('')
     // A hung request (slow/overloaded server, dropped connection) used to
@@ -117,10 +125,20 @@ export function ImageUploadCrop({
     } finally {
       clearTimeout(timeout)
       setUploading(false)
+      uploadingRef.current = false
     }
   }
 
   async function applyCrop() {
+    // Checked+set synchronously, before the first `await` — a second
+    // invocation from a near-simultaneous click sees `current === true`
+    // immediately, closing the race window a `useState`-only guard left
+    // open (see uploadingRef's comment above; confirmed live with
+    // Playwright firing two rapid clicks — this was a real, reproducible
+    // double-submit, not a hypothetical one).
+    if (uploadingRef.current) return
+    uploadingRef.current = true
+    setUploading(true)
     const blob = await getCroppedBlob()
     if (!blob) {
       // getCroppedBlob() returns null for a degenerate/zero-size crop
@@ -129,6 +147,8 @@ export function ImageUploadCrop({
       // doing nothing), which is indistinguishable from a broken upload.
       // Now it says why.
       setError('ناحیهٔ برش‌خورده قابل خواندن نبود — محدودهٔ برش را تنظیم و دوباره تلاش کنید.')
+      setUploading(false)
+      uploadingRef.current = false
       return
     }
     const file = new File([blob], `cropped-${Date.now()}.jpg`, { type: 'image/jpeg' })

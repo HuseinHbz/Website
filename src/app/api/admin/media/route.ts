@@ -12,6 +12,7 @@ import { toKebabSlug, uniqueFilename, validateAssetName } from '@/lib/media/slug
 import { validateMediaUpload, validateLottieSchema, type MediaCategory } from '@/lib/media/validate'
 import { apiErrorFa, logFa, newRequestId } from '@/lib/api/errorContract'
 import { faDigits } from '@/lib/admin/chartRtl'
+import { resolveUploadDir } from '@/lib/media/uploadPath'
 
 const HERO_CATEGORIES = new Set<MediaCategory>([
   'hero-background-video', 'hero-animation-video', 'hero-poster', 'hero-animation-vector', 'hero-animation-lottie',
@@ -70,6 +71,20 @@ export async function POST(req: NextRequest) {
     const description = (formData.get('description') as string) || ''
 
     if (!file) return apiErrorFa(400, 'MEDIA_NO_FILE', 'فایلی برای آپلود ارسال نشده است.', { requestId, stage: 'validation' })
+
+    // Path Traversal guard — `folder` is client-supplied form data and used
+    // to build a filesystem path; it must be an EXACT allowlist match
+    // (never a "doesn't contain .." denylist check, which real payloads
+    // like `%2e%2e/`, a bare `/etc/`, or a backslash trivially bypass).
+    // Resolved once here so BOTH the Hero-category and legacy paths below
+    // share the exact same guard — see src/lib/media/uploadPath.ts.
+    const uploadRoot = path.join(process.cwd(), 'public', 'uploads')
+    const resolvedDir = resolveUploadDir(uploadRoot, folder)
+    if (!resolvedDir.ok) {
+      logFa('آپلود رسانه', 'MEDIA_INVALID_FOLDER', 'مسیر انتخاب‌شده برای ذخیره فایل مجاز نیست.', requestId, { folder, reason: resolvedDir.reason })
+      return apiErrorFa(400, 'MEDIA_INVALID_FOLDER', 'مسیر انتخاب‌شده برای ذخیره فایل مجاز نیست.', { requestId, stage: 'validation', retryable: false })
+    }
+
     const bytes = Buffer.from(await file.arrayBuffer())
     const isHeroCategory = HERO_CATEGORIES.has(category as MediaCategory)
 
@@ -116,7 +131,7 @@ export async function POST(req: NextRequest) {
       const ext = extensionForUpload(file.name, check.kind!)
 
       const db = getDb()
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder)
+      const uploadDir = resolvedDir.dir
       await mkdir(uploadDir, { recursive: true })
 
       const existingRows = await db.select({ filename: mediaFiles.filename }).from(mediaFiles).where(eq(mediaFiles.folder, folder))
@@ -203,7 +218,7 @@ export async function POST(req: NextRequest) {
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const filename = `${nanoid()}.${ext}`
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder)
+    const uploadDir = resolvedDir.dir
     await mkdir(uploadDir, { recursive: true })
     writtenPath = path.join(uploadDir, filename)
     try {

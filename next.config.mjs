@@ -62,6 +62,26 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    // 26.34 — the REAL root cause behind "upload progress reaches 100% then
+    // fails with no clear reason": every request to an App Router Route
+    // Handler passes through middleware.ts first (for the admin-auth check),
+    // and Next.js's middleware layer silently caps the body it will hand to
+    // the route at 10MB by default — completely independent of, and hit
+    // BEFORE, any of this app's own size-limit logic
+    // (MEDIA_MAX_BACKGROUND_VIDEO_MB etc). Confirmed live: a 24MB video
+    // (well under the app's own 25MB cap) failed with a generic 500 and
+    // server log line "Request body exceeded 10MB for /api/admin/media …
+    // Failed to parse body as FormData" — the browser's XHR progress bar
+    // legitimately reaches 100% (all bytes really were sent), then the
+    // server can't even parse what it received. Set to 100mb to match this
+    // app's own highest upload ceiling (the legacy path's
+    // MEDIA_MAX_GENERAL_MB default) — the app-level per-category limits
+    // (25MB video/8MB animation/5MB image/100MB general) still do the real
+    // enforcement and return a proper Persian 413; this just stops the
+    // framework from truncating the request before that logic ever runs.
+    middlewareClientMaxBodySize: '100mb',
+  },
 }
 
 // Admin routes bypass next-intl — only apply intl plugin for non-admin routes
