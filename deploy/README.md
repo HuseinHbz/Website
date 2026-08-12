@@ -79,7 +79,7 @@ origin/…` دوباره درستش می‌کرد، ولی گمراه‌کنند
 | اسکریپت | چه می‌کند | کِی | پیش‌نیاز |
 |---|---|---|---|
 | `install.sh` | نصب اولیهٔ کامل (Node، PM2، کلون، `.env.local`، build، nginx، فایروال) | فقط سرور تازه | روت، اوبونتو/دبیان |
-| `update.sh` | `git pull` + build + reload بدون داون‌تایم (با rollback خودکار `.next` اگر build شکست) | هر آپدیت روتین | نصب قبلی سالم |
+| `update.sh` | `git pull` + build + **بازتولید+reload nginx** (سقف آپلود از منبع واحد، 26.34) + reload بدون داون‌تایم (با rollback خودکار `.next` اگر build شکست) | هر آپدیت روتین | نصب قبلی سالم |
 | `restart.sh` | ری‌استارت امن: `pm2 delete` + `start` از کانفیگ + health-gate — **بعد از تغییر cwd یا env، reload کافی نیست** | بعد از تغییر `.env.local`، مهاجرت مسیر، یا وقتی reload جواب نمی‌دهد | `pm2.config.js` موجود (از fix-pm2) |
 | `fix-pm2.sh` | بازسازی `start.sh` + `pm2.config.js` از صفر و restart تمیز | وقتی کانفیگ PM2 خراب/کهنه است (مثلاً cwd قدیمی) | build موجود |
 | `health-check.sh` | بررسی سلامت سرویس/DB/دیسک | هر وقت، بی‌ضرر | — |
@@ -124,3 +124,9 @@ origin/…` دوباره درستش می‌کرد، ولی گمراه‌کنند
 - **اجرا روی سرور:** `nginx -t` و certbot فقط روی سرور واقعی معنا دارند:
   `sudo bash deploy/nginx/render-nginx.sh --install` سپس
   `certbot --nginx -d <primary> -d <redirects>` (تمدید خودکار با systemd timer).
+- **`client_max_body_size` (26.34):** دیگر در قالب هاردکد نیست — از همان منبع
+  واحد سقف آپلود (`src/lib/media/limits.ts` ⇄ `render-nginx.sh` با env varهای
+  یکسان) محاسبه می‌شود. **`update.sh` این را در هر آپدیت خودکار بازتولید و
+  reload می‌کند** (اگر nginx نصب باشد و `.install.conf` موجود باشد) — دیگر
+  لازم نیست بعد از یک آپدیت که سقف آپلود را عوض کرده، `render-nginx.sh` را
+  دستی اجرا کنید.

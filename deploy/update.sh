@@ -276,6 +276,25 @@ chown -R "$APP_USER":"$APP_USER" "/home/$APP_USER/logs" 2>/dev/null || true
 # Backups are now handled by the in-app BackupEngine — remove any legacy OS cron.
 rm -f /etc/cron.d/habibazar-backup 2>/dev/null || true
 
+# ─── nginx: بازتولید پیکربندی از قالب (26.34 бند۱-۲) ────────────────────────
+# client_max_body_size دیگر در قالب هاردکد نیست — از همان منبع واحد سقف آپلود
+# (src/lib/media/limits.ts) محاسبه می‌شود. اگر این را این‌جا بازتولید نکنیم،
+# یک نصب قدیمی برای همیشه با client_max_body_size قدیمی/هاردکد گیر می‌کند حتی
+# بعد از آپدیت کامل اپ — دقیقاً همان چیزی که کاربر واقعی را با «۱۰۰٪ و بعد
+# خطا» مواجه می‌کند وقتی نگینکس زودتر از حد مجاز اپ رد می‌کند. ناموفق بودن این
+# مرحله کل آپدیت را متوقف نمی‌کند (nginx می‌تواند عمداً خارج از این اسکریپت
+# مدیریت شود) — فقط هشدار می‌دهد.
+if command -v nginx &>/dev/null && [[ -f "$APP_DIR/deploy/.install.conf" ]]; then
+  step "بازتولید پیکربندی nginx (client_max_body_size از منبع واحد)..."
+  if bash "$APP_DIR/deploy/nginx/render-nginx.sh" --install; then
+    info "پیکربندی nginx به‌روزرسانی و reload شد"
+  else
+    warn "بازتولید nginx شکست خورد — سقف آپلود nginx ممکن است هنوز قدیمی باشد. دستی اجرا کنید: sudo bash deploy/nginx/render-nginx.sh --install"
+  fi
+else
+  warn "nginx یا deploy/.install.conf یافت نشد — بازتولید پیکربندی nginx رد شد (اگر nginx را دستی مدیریت می‌کنید، client_max_body_size را خودتان هماهنگ نگه دارید)"
+fi
+
 # ─── reload zero-downtime ────────────────────────────────────────────────────
 # reload پروسه را restart می‌کند → instrumentation.register() اجرا و DB
 # به‌صورت خودکار مقداردهی می‌شود. موتور بکاپ داخلی هم با همین پروسه استارت می‌خورد.
