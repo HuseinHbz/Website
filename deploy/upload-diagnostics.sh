@@ -94,6 +94,22 @@ say ""
 say "  زیرپوشه‌ها (حداکثر ۲ سطح):"
 find "$UPLOAD_DIR" -maxdepth 2 -type d -printf '  %M %u:%g %p\n' 2>/dev/null || say "  (قابل خواندن نیست)"
 
+# 26.34 real bug found on a real server: this section used to print the
+# raw ownership listing above and stop — a per-folder EACCES drift (e.g.
+# hero-videos/hero-orbit created root:root by an earlier ad-hoc/manual run,
+# while the app itself runs as $APP_USER) was easy to miss by eye in a long
+# listing. Now explicitly diffed against the PM2 user and named by path —
+# this is the exact class of bug that silently broke the background-video
+# and orbit-animation uploads while every OTHER upload folder kept working.
+DRIFTED="$(find "$UPLOAD_DIR" -maxdepth 2 -mindepth 1 -type d ! -user "${PM2_USER:-$APP_USER}" -printf '  %u:%g  %p\n' 2>/dev/null)"
+if [[ -n "$DRIFTED" ]]; then
+  kv "⚠️ پوشه(های) با مالکیت نادرست" "❌ زیر را ببینید — هر پوشه‌ای که مالکش با کاربر PM2 (${PM2_USER:-$APP_USER}) یکی نیست، آپلود در آن EACCES می‌دهد"
+  say "$DRIFTED"
+  say "  رفع: sudo chown -R ${PM2_USER:-$APP_USER}:${PM2_USER:-$APP_USER} $UPLOAD_DIR"
+else
+  kv "مالکیت زیرپوشه‌های Upload" "✔ همه با کاربر PM2 (${PM2_USER:-$APP_USER}) هماهنگ"
+fi
+
 # ── ۲) نوشتن آزمایشی واقعی (نه فقط خواندن مجوز) ─────────────────────────────
 sect "تست نوشتن واقعی در public/uploads"
 TESTFILE="$UPLOAD_DIR/.diagnostics-write-test-$$"
