@@ -57,4 +57,19 @@ describe('cross-language consistency (26.34 бند۲) — next.config.ts and ngi
     expect(src).toContain('client_max_body_size {{MAX_UPLOAD_MB}}m;')
     expect(src).not.toMatch(/client_max_body_size\s+\d+M;/)
   })
+
+  it('upload-diagnostics.sh reads the exact same env var names/defaults for its expected-value check', () => {
+    const src = readFileSync(`${projectRoot}/deploy/upload-diagnostics.sh`, 'utf8')
+    const expected: [string, number][] = [
+      ['MEDIA_MAX_BACKGROUND_VIDEO_MB', 25],
+      ['MEDIA_MAX_ANIMATION_VIDEO_MB', 8],
+      ['MEDIA_MAX_IMAGE_MB', 5],
+      ['MEDIA_MAX_VECTOR_MB', 1],
+      ['MEDIA_MAX_GENERAL_MB', 100],
+    ]
+    for (const [envName, fallback] of expected) {
+      expect(src).toContain(`diag_readenv ${envName} ${fallback}`)
+    }
+    expect(src).toContain('echo $((m + 10))')
+  })
 })

@@ -37,10 +37,11 @@ export const MEDIA_LIMITS_MB = {
  *  be checked against — the largest configured category limit plus a
  *  fixed 10MB margin for multipart/form-data framing overhead (field
  *  boundaries, headers, the bilingual name/alt/description text fields
- *  sent alongside the file). Never hand-typed elsewhere; every consumer
- *  either imports this (TypeScript code) or is verified against it by a
- *  test (next.config.mjs and the nginx template, which run outside the
- *  TS module graph and can't literally `import` this file). */
+ *  sent alongside the file). Never hand-typed elsewhere: `next.config.ts`
+ *  imports this constant directly; the nginx template (pure bash, outside
+ *  the TS module graph, can't literally `import` this file) computes the
+ *  same formula from the identical env var names/defaults instead, cross-
+ *  checked by a unit test that inspects both files' source. */
 export const OVERALL_MAX_UPLOAD_MB = Math.max(...Object.values(MEDIA_LIMITS_MB)) + 10
 
 export type MediaLimitCategory = keyof typeof MEDIA_LIMITS_MB

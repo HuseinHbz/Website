@@ -48,6 +48,26 @@ kv()   { say "  ${1}: ${2}"; ROWS+=("$1|$2"); }
 
 say "${CYAN}HBZ — عیب‌یابی Upload  ($(date '+%Y-%m-%d %H:%M'))${NC}"
 
+# همان محاسبهٔ render-nginx.sh / src/lib/media/limits.ts — یک منبع واحد،
+# سه زبان اجرا (TS، bash در render-nginx.sh، bash این‌جا)، همیشه هم‌فرمول.
+diag_readenv() {
+  local name="$1" fallback="$2"
+  if [[ -f "$ENV_FILE" ]]; then
+    local v; v="$(grep -E "^${name}=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-)"
+    [[ -n "$v" && "$v" =~ ^[0-9]+$ ]] && { echo "$v"; return; }
+  fi
+  echo "$fallback"
+}
+expected_max_upload_mb() {
+  local m; m="$(diag_readenv MEDIA_MAX_GENERAL_MB 100)"
+  local v
+  for v in "$(diag_readenv MEDIA_MAX_BACKGROUND_VIDEO_MB 25)" "$(diag_readenv MEDIA_MAX_ANIMATION_VIDEO_MB 8)" \
+           "$(diag_readenv MEDIA_MAX_IMAGE_MB 5)" "$(diag_readenv MEDIA_MAX_VECTOR_MB 1)"; do
+    (( v > m )) && m=$v
+  done
+  echo $((m + 10))
+}
+
 # ── ۱) کاربر اجرای PM2 و مالکیت پوشهٔ Upload ────────────────────────────────
 # اگر PM2 با کاربری غیر از مالک public/uploads اجرا شود، هر نوشتن با
 # EACCES شکست می‌خورد — این دقیقاً همان «مالکیت متفاوت PM2 و پوشه Upload»ی
@@ -84,6 +104,13 @@ say ""
 say "$(df -i "$APP_DIR" 2>/dev/null | sed 's/^/  /')"
 
 # ── ۴) Nginx — client_max_body_size و Timeout ───────────────────────────────
+# 26.34 бнд۱-۲: client_max_body_size دیگر هاردکد نیست — از همان منبع واحد
+# (src/lib/media/limits.ts ⇄ render-nginx.sh) محاسبه می‌شود و update.sh آن را
+# در هر آپدیت بازتولید می‌کند. اما اگر یک نصب قدیمی هرگز update.sh (نسخهٔ جدید)
+# را اجرا نکرده باشد، nginx می‌تواند هنوز روی سقف قدیمی/پیش‌فرض گیر کرده
+# باشد — این دقیقاً همان علتِ واقعیِ «۱۰۰٪ می‌شود و بعد خطا می‌دهد» بود که این
+# بخش پیدا کرد. این‌جا آن را با همان فرمول اپ مقایسه می‌کنیم تا mismatch
+# به‌جای حدس، عدد صریح باشد.
 sect "Nginx"
 if command -v nginx &>/dev/null; then
   if nginx -t &>/dev/null; then kv "nginx -t" "✔ سالم"; else kv "nginx -t" "❌ خطای پیکربندی — nginx -t را دستی اجرا کنید"; fi
@@ -91,9 +118,15 @@ if command -v nginx &>/dev/null; then
   MAXBODY="$(echo "$CONF" | grep -oP 'client_max_body_size\s+\K\S+' | head -1)"
   READ_TO="$(echo "$CONF" | grep -oP 'proxy_read_timeout\s+\K\S+' | head -1)"
   SEND_TO="$(echo "$CONF" | grep -oP 'proxy_send_timeout\s+\K\S+' | head -1)"
-  kv "client_max_body_size" "${MAXBODY:-(پیش‌فرض nginx — معمولاً 1m، احتمالاً کمتر از سقف آپلود اپ)}"
+  kv "client_max_body_size (nginx واقعی)" "${MAXBODY:-(پیش‌فرض nginx، معمولاً 1m — یعنی render-nginx.sh هرگز روی این سرور اجرا نشده)}"
   kv "proxy_read_timeout" "${READ_TO:-(پیش‌فرض nginx)}"
   kv "proxy_send_timeout" "${SEND_TO:-(پیش‌فرض nginx)}"
+  # همان محاسبه‌ای که render-nginx.sh انجام می‌دهد، برای مقایسه:
+  EXPECTED_MB="$(expected_max_upload_mb)"
+  kv "client_max_body_size (مقدار مورد انتظار طبق limits.ts)" "${EXPECTED_MB}m"
+  if [[ -n "$MAXBODY" && "$MAXBODY" != "${EXPECTED_MB}m" ]]; then
+    kv "⚠️ عدم تطابق nginx/اپ" "❌ nginx=$MAXBODY ولی اپ انتظار ${EXPECTED_MB}m دارد — sudo bash deploy/update.sh یا sudo bash deploy/nginx/render-nginx.sh --install را اجرا کنید"
+  fi
 else
   kv "nginx" "نصب یافت نشد — اگر Reverse Proxy دیگری دارید همان را بررسی کنید"
 fi

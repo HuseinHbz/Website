@@ -1610,6 +1610,51 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   with **deterministic, monotonic** percentage rollout (stable sha1 bucket).
   `GET/POST/PUT/DELETE /api/admin/flags`: zod-validated, RBAC-gated, audit-logged;
   GET previews each flag's evaluation for the current admin.
+- **Phase 26.34 — Upload/Crop production hardening.** Closed a real "100%
+  then fails" production bug end-to-end, at both layers that can cause it.
+  **Single source of truth for upload size limits** (`src/lib/media/
+  limits.ts`, `OVERALL_MAX_UPLOAD_MB` = largest category + 10MB margin,
+  currently 110MB — never a hand-typed literal): `next.config.ts` (native
+  TS config, replaces the old `next.config.mjs`) imports it directly for
+  `experimental.middlewareClientMaxBodySize`; `deploy/nginx/render-nginx.sh`
+  and `deploy/upload-diagnostics.sh` compute the identical formula from the
+  identical env var names/defaults in bash (cross-checked by
+  `src/lib/media/__tests__/limits.test.ts`, which inspects all three files'
+  source so they can never silently drift apart). **`deploy/update.sh` now
+  re-renders + `nginx -t` + reloads nginx on every routine deploy** — before
+  this fix, `update.sh` only ever shipped the app-level limit; nginx's
+  `client_max_body_size` stayed frozen at whatever `install.sh` rendered
+  once, so an app-level fix could ship and still never reach production
+  (exactly the failure mode a real report surfaced). Diagnostics now prints
+  both the live nginx value AND the value the app expects, flagging a
+  mismatch by name instead of a guess. **Path Traversal**: `folder` is
+  validated via an exact allowlist + independent `path.resolve` re-check
+  (`src/lib/media/uploadPath.ts`) before any `mkdir`/write — proven for real
+  against the running `/api/admin/media` endpoint across all 4 surfaces it
+  exposes (create/rename/replace/legacy), not just the pure helper
+  (`scripts/verify-upload-path-traversal.ts`). **Replace-mode rollback
+  safety**: a real bug where a failed DB write during `mode=replace` could
+  destroy the OLD healthy file (new bytes were written directly over its
+  path before the DB commit was known) is fixed with a stage-then-atomic-
+  rename pattern (`.staging-*` temp name → `fs.rename` only after the DB
+  write commits) — proven with a REAL Postgres fault (`CHECK(1=0) NOT
+  VALID`, enforced regardless of table ownership so `REVOKE` can't be used
+  to fake it) injected against a real `next start` build
+  (`scripts/verify-upload-rollback.ts`). **Rate limit + concurrency**:
+  `limiters.media` (20 req/min/IP) + `src/lib/media/concurrency.ts` (in-
+  process counting semaphore, default 6 simultaneous uploads,
+  `MEDIA_MAX_CONCURRENT_UPLOADS`-configurable) bound both request rate and
+  actual RAM/disk held at once; the path-traversal proof above runs against
+  this limiter live, not with it disabled. **Diagnostics redaction**:
+  `deploy/lib/redact.sh` (sourced by `upload-diagnostics.sh`, global
+  `exec > >(redact)` safety net) strips DB DSN credentials/JWTs/Cookie
+  &Authorization header values/`*_TOKEN`/`*_KEY`/`*_SECRET`/`PASSWORD`/
+  `DATABASE_URL` values before anything reaches stdout — proven with
+  synthetic secrets (`deploy/lib/__tests__/test-redact.sh`, `npm run
+  test:redact`). MOV/MKV were never actually supported (no magic-byte
+  detector exists for either container) — decided NOT to build detection;
+  removed from the UI/accept-list/MIME-map instead, leaving MP4/WebM as the
+  only real options.
 
 ## Admin navigation (Phase 22 — Enterprise Workspace Platform)
 - The admin is organized into **12 workspaces** (Executive/Brand/Content/CRM/ERP/
@@ -1900,8 +1945,10 @@ start the app, `wait-on /api/health`, then run.
 - Scripts:
   - `install.sh` — fresh install (deps, Node, PM2, clone, `.env.local`, build,
     nginx, firewall). `npm ci` → build → `npm prune --omit=dev`.
-  - `update.sh` — pull + rebuild + zero-downtime `pm2 reload` (with `.next`
-    rollback on build failure).
+  - `update.sh` — pull + rebuild + **re-render/reload nginx from the template**
+    (26.34 — `client_max_body_size` synced from the single upload-limits source
+    on every run, not just fresh install) + zero-downtime `pm2 reload` (with
+    `.next` rollback on build failure).
   - `fix-pm2.sh` — regenerate `start.sh` + `pm2.config.js` and clean-restart PM2
     (use this to migrate an existing server to the `/home/hbz/logs` config).
   - `uninstall.sh` — full removal (PM2, nginx, app dir, logs, user) with a safety

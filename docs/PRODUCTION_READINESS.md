@@ -85,7 +85,7 @@ Minimum required: 294/300 · No category below 9.8 · **ALL CRITERIA MET**
 | CSRF protection | ✓ | `SameSite=Strict` + `form-action 'self'` CSP |
 | XSS protection | ✓ | React escaping + strict CSP |
 | SQL injection | ✓ | Drizzle ORM parameterised queries only |
-| Content Security Policy | ✓ | `next.config.mjs` + middleware headers |
+| Content Security Policy | ✓ | `next.config.ts` + middleware headers |
 | HSTS | ✓ | `max-age=63072000; includeSubDomains; preload` |
 | `X-Frame-Options: DENY` | ✓ | |
 | `X-Content-Type-Options: nosniff` | ✓ | |
