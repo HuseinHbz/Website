@@ -10,6 +10,8 @@ import path from 'path'
 import { nanoid } from 'nanoid'
 import { toKebabSlug, uniqueFilename, validateAssetName } from '@/lib/media/slug'
 import { validateMediaUpload, validateLottieSchema, type MediaCategory } from '@/lib/media/validate'
+import { apiErrorFa, logFa, newRequestId } from '@/lib/api/errorContract'
+import { faDigits } from '@/lib/admin/chartRtl'
 
 const HERO_CATEGORIES = new Set<MediaCategory>([
   'hero-background-video', 'hero-animation-video', 'hero-poster', 'hero-animation-vector', 'hero-animation-lottie',
@@ -40,7 +42,15 @@ function extensionForUpload(originalName: string, kind: string): string {
   return ext && /^(png|jpe?g|webp)$/.test(ext) ? (ext === 'jpeg' ? 'jpg' : ext) : 'png'
 }
 
+/** ENOSPC (disk full) is the one filesystem error that gets its own status
+ *  code (507) and message per the Persian error contract — every other
+ *  write failure (permission denied, read-only fs, …) is a generic 500. */
+function isDiskFullError(e: unknown): boolean {
+  return (e as { code?: string } | null)?.code === 'ENOSPC'
+}
+
 export async function POST(req: NextRequest) {
+  const requestId = newRequestId()
   const user = await getAdminUser()
   if (!user) return unauthorized()
   { const deny = await checkTreePermission(user, 'brand.media', 'write'); if (deny) return deny }
@@ -53,14 +63,13 @@ export async function POST(req: NextRequest) {
     const alt = (formData.get('alt') as string) || ''
     const category = (formData.get('category') as string) || ''
     const mode = (formData.get('mode') as string) || 'create' // 'create' | 'replace' | 'rename'
-    const replaceId = formData.get('replaceId') ? Number(formData.get('replaceId')) : null
     const nameEn = (formData.get('nameEn') as string) || ''
     const nameFa = (formData.get('nameFa') as string) || ''
     const altEn = (formData.get('altEn') as string) || ''
     const altFa = (formData.get('altFa') as string) || ''
     const description = (formData.get('description') as string) || ''
 
-    if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    if (!file) return apiErrorFa(400, 'MEDIA_NO_FILE', 'فایلی برای آپلود ارسال نشده است.', { requestId, stage: 'validation' })
     const bytes = Buffer.from(await file.arrayBuffer())
     const isHeroCategory = HERO_CATEGORIES.has(category as MediaCategory)
 
@@ -71,29 +80,39 @@ export async function POST(req: NextRequest) {
     //    nothing else in the admin breaks.
     if (isHeroCategory) {
       const enCheck = validateAssetName(nameEn, 'English name')
-      if (!enCheck.ok) return NextResponse.json({ error: enCheck.error }, { status: 400 })
+      if (!enCheck.ok) return apiErrorFa(422, 'MEDIA_INVALID_NAME', 'نام انگلیسی باید بین ۲ تا ۸۰ کاراکتر باشد.', { requestId, stage: 'validation', fieldErrors: { nameEn: enCheck.error ?? '' } })
       const faCheck = validateAssetName(nameFa, 'Persian name')
-      if (!faCheck.ok) return NextResponse.json({ error: faCheck.error }, { status: 400 })
+      if (!faCheck.ok) return apiErrorFa(422, 'MEDIA_INVALID_NAME', 'نام فارسی باید بین ۲ تا ۸۰ کاراکتر باشد.', { requestId, stage: 'validation', fieldErrors: { nameFa: faCheck.error ?? '' } })
 
       const check = validateMediaUpload(bytes, category as MediaCategory, file.type)
-      if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 })
+      if (!check.ok) {
+        // "اعتبارسنجی فایل" stage: either the format is wrong (415) or the
+        // size is over this category's limit (413) — validateMediaUpload's
+        // own message already says which, distinguished here only by code.
+        const isSizeError = /MB limit/i.test(check.error ?? '')
+        if (isSizeError) {
+          const mb = check.error?.match(/(\d+)MB/)?.[1] ?? '?'
+          return apiErrorFa(413, 'MEDIA_SIZE_EXCEEDED', `حجم فایل بیشتر از حد مجاز ${faDigits(mb)} مگابایت است.`, { requestId, stage: 'validation', retryable: false })
+        }
+        return apiErrorFa(415, 'MEDIA_UNSUPPORTED_FORMAT', 'فرمت واقعی فایل با پسوند یا دستهٔ انتخاب‌شده مطابقت ندارد.', { requestId, stage: 'validation', retryable: false })
+      }
 
       let toWrite = bytes
       if (check.kind === 'svg') {
         const { sanitizeSvg } = await import('@/lib/branding/fileValidation')
         const clean = sanitizeSvg(bytes.toString('utf8'))
-        if (!clean) return NextResponse.json({ error: 'SVG failed sanitization' }, { status: 400 })
+        if (!clean) return apiErrorFa(422, 'MEDIA_SVG_UNSAFE', 'فایل SVG رد شد؛ ممکن است حاوی کد یا محتوای ناامن باشد.', { requestId, stage: 'validation', retryable: false })
         toWrite = Buffer.from(clean, 'utf8')
       }
       if (check.kind === 'lottie') {
         let parsed: unknown
-        try { parsed = JSON.parse(bytes.toString('utf8')) } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+        try { parsed = JSON.parse(bytes.toString('utf8')) } catch { return apiErrorFa(422, 'MEDIA_INVALID_JSON', 'فایل Lottie یک JSON معتبر نیست.', { requestId, stage: 'validation', retryable: false }) }
         const lottieCheck = validateLottieSchema(parsed)
-        if (!lottieCheck.ok) return NextResponse.json({ error: `Lottie validation failed: ${lottieCheck.error}` }, { status: 400 })
+        if (!lottieCheck.ok) return apiErrorFa(422, 'MEDIA_INVALID_LOTTIE', `اعتبارسنجی Lottie ناموفق بود: ${lottieCheck.error}`, { requestId, stage: 'validation', retryable: false })
       }
 
       const slug = toKebabSlug(nameEn)
-      if (!slug) return NextResponse.json({ error: 'English name must contain at least one letter or digit' }, { status: 400 })
+      if (!slug) return apiErrorFa(422, 'MEDIA_INVALID_NAME', 'نام انگلیسی باید حداقل شامل یک حرف یا عدد باشد.', { requestId, stage: 'validation', fieldErrors: { nameEn: 'invalid' } })
       const ext = extensionForUpload(file.name, check.kind!)
 
       const db = getDb()
@@ -112,6 +131,9 @@ export async function POST(req: NextRequest) {
         // conflict so the operator explicitly picks Rename/Replace/Cancel.
         return NextResponse.json({
           conflict: true,
+          errorCode: 'MEDIA_DUPLICATE',
+          messageFa: 'این نام قبلاً در کتابخانه رسانه ثبت شده است.',
+          requestId,
           existing: { id: conflictRow.id, filename: conflictRow.filename, url: conflictRow.url, nameEn: conflictRow.nameEn, nameFa: conflictRow.nameFa },
           suggestedFilename: uniqueFilename(slug, ext, existingSet),
         }, { status: 409 })
@@ -119,27 +141,47 @@ export async function POST(req: NextRequest) {
 
       const filename = mode === 'replace' && conflictRow ? conflictRow.filename : uniqueFilename(slug, ext, existingSet)
       writtenPath = path.join(uploadDir, filename)
-      await writeFile(writtenPath, toWrite)
+      try {
+        await writeFile(writtenPath, toWrite)
+      } catch (e) {
+        writtenPath = null // nothing was actually written — the catch block below must not try to unlink it
+        if (isDiskFullError(e)) {
+          logFa('آپلود رسانه', 'MEDIA_DISK_FULL', 'فضای ذخیره‌سازی سرور کافی نیست.', requestId, e)
+          return apiErrorFa(507, 'MEDIA_DISK_FULL', 'فضای ذخیره‌سازی سرور کافی نیست.', { requestId, stage: 'storage', retryable: false })
+        }
+        logFa('آپلود رسانه', 'MEDIA_WRITE_FAILED', 'امکان ذخیره فایل در فضای سرور وجود ندارد.', requestId, e)
+        return apiErrorFa(500, 'MEDIA_WRITE_FAILED', 'امکان ذخیره فایل در فضای سرور وجود ندارد.', { requestId, stage: 'storage', retryable: true })
+      }
 
       const url = `/uploads/${folder}/${filename}`
       let inserted
-      if (mode === 'replace' && conflictRow) {
-        await db.update(mediaFiles).set({
-          originalName: file.name, mimeType: file.type, size: toWrite.length, url, alt: alt || altEn,
-          nameEn, nameFa, altEn, altFa, category, description, uploadedBy: user.id, uploadedAt: new Date().toISOString(),
-        }).where(eq(mediaFiles.id, conflictRow.id))
-        inserted = (await db.select().from(mediaFiles).where(eq(mediaFiles.id, conflictRow.id)))[0]
-        await logAction(user, 'REPLACE', 'media_files', conflictRow.id,
-          { url: conflictRow.url, nameEn: conflictRow.nameEn }, { url, nameEn })
-      } else {
-        await db.insert(mediaFiles).values({
-          filename, originalName: file.name, mimeType: file.type, size: toWrite.length, url, folder,
-          alt: alt || altEn, nameEn, nameFa, altEn, altFa, category, description, uploadedBy: user.id,
-        })
-        inserted = (await db.select().from(mediaFiles).where(and(eq(mediaFiles.folder, folder), eq(mediaFiles.filename, filename))))[0]
-        await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder, nameEn, category })
+      try {
+        if (mode === 'replace' && conflictRow) {
+          await db.update(mediaFiles).set({
+            originalName: file.name, mimeType: file.type, size: toWrite.length, url, alt: alt || altEn,
+            nameEn, nameFa, altEn, altFa, category, description, uploadedBy: user.id, uploadedAt: new Date().toISOString(),
+          }).where(eq(mediaFiles.id, conflictRow.id))
+          inserted = (await db.select().from(mediaFiles).where(eq(mediaFiles.id, conflictRow.id)))[0]
+          await logAction(user, 'REPLACE', 'media_files', conflictRow.id,
+            { url: conflictRow.url, nameEn: conflictRow.nameEn }, { url, nameEn })
+        } else {
+          await db.insert(mediaFiles).values({
+            filename, originalName: file.name, mimeType: file.type, size: toWrite.length, url, folder,
+            alt: alt || altEn, nameEn, nameFa, altEn, altFa, category, description, uploadedBy: user.id,
+          })
+          inserted = (await db.select().from(mediaFiles).where(and(eq(mediaFiles.folder, folder), eq(mediaFiles.filename, filename))))[0]
+          await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder, nameEn, category })
+        }
+      } catch (e) {
+        // The file IS on disk and playable — only the DB record failed.
+        // Distinguished from a storage failure per the mission's error
+        // contract: this is recoverable (retry re-registers the same file
+        // path), unlike a disk-full write failure.
+        logFa('آپلود رسانه', 'MEDIA_DATABASE_WRITE_FAILED', 'فایل ذخیره شد اما ثبت اطلاعات آن در پایگاه داده ناموفق بود.', requestId, e)
+        try { await unlink(writtenPath) } catch { /* best-effort — the DB row never existed, so leaving an orphan file is the safer failure mode over throwing again here */ }
+        return apiErrorFa(500, 'MEDIA_DATABASE_WRITE_FAILED', 'فایل ذخیره شد اما ثبت اطلاعات آن در پایگاه داده ناموفق بود.', { requestId, stage: 'database', retryable: true })
       }
-      return NextResponse.json(inserted ?? { url, filename })
+      return NextResponse.json(inserted ? { ...inserted, requestId } : { url, filename, requestId })
     }
 
     // ── Legacy path — every other existing upload caller (avatars, clients,
@@ -155,7 +197,8 @@ export async function POST(req: NextRequest) {
       return (Number.isFinite(n) && n > 0 ? n : 100) * 1024 * 1024
     })()
     if (bytes.length > generalLimitBytes) {
-      return NextResponse.json({ error: `File exceeds the ${Math.round(generalLimitBytes / 1024 / 1024)}MB limit` }, { status: 400 })
+      const mb = Math.round(generalLimitBytes / 1024 / 1024)
+      return apiErrorFa(413, 'MEDIA_SIZE_EXCEEDED', `حجم فایل بیشتر از حد مجاز ${faDigits(mb)} مگابایت است.`, { requestId, stage: 'validation', retryable: false })
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
@@ -163,25 +206,40 @@ export async function POST(req: NextRequest) {
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder)
     await mkdir(uploadDir, { recursive: true })
     writtenPath = path.join(uploadDir, filename)
-    await writeFile(writtenPath, bytes)
+    try {
+      await writeFile(writtenPath, bytes)
+    } catch (e) {
+      writtenPath = null
+      if (isDiskFullError(e)) {
+        logFa('آپلود رسانه', 'MEDIA_DISK_FULL', 'فضای ذخیره‌سازی سرور کافی نیست.', requestId, e)
+        return apiErrorFa(507, 'MEDIA_DISK_FULL', 'فضای ذخیره‌سازی سرور کافی نیست.', { requestId, stage: 'storage', retryable: false })
+      }
+      logFa('آپلود رسانه', 'MEDIA_WRITE_FAILED', 'امکان ذخیره فایل در فضای سرور وجود ندارد.', requestId, e)
+      return apiErrorFa(500, 'MEDIA_WRITE_FAILED', 'امکان ذخیره فایل در فضای سرور وجود ندارد.', { requestId, stage: 'storage', retryable: true })
+    }
 
     const url = `/uploads/${folder}/${filename}`
     const db = getDb()
-    await db.insert(mediaFiles).values({
-      filename, originalName: file.name, mimeType: file.type, size: file.size, url, folder, alt, uploadedBy: user.id,
-    })
-    const inserted = (await db.select().from(mediaFiles).where(eq(mediaFiles.filename, filename)))[0]
-    await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder })
-    return NextResponse.json(inserted ?? { url, filename, originalName: file.name, mimeType: file.type, size: file.size, folder, alt })
+    let inserted
+    try {
+      await db.insert(mediaFiles).values({
+        filename, originalName: file.name, mimeType: file.type, size: file.size, url, folder, alt, uploadedBy: user.id,
+      })
+      inserted = (await db.select().from(mediaFiles).where(eq(mediaFiles.filename, filename)))[0]
+      await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder })
+    } catch (e) {
+      logFa('آپلود رسانه', 'MEDIA_DATABASE_WRITE_FAILED', 'فایل ذخیره شد اما ثبت اطلاعات آن در پایگاه داده ناموفق بود.', requestId, e)
+      try { await unlink(writtenPath) } catch { /* best-effort cleanup */ }
+      return apiErrorFa(500, 'MEDIA_DATABASE_WRITE_FAILED', 'فایل ذخیره شد اما ثبت اطلاعات آن در پایگاه داده ناموفق بود.', { requestId, stage: 'database', retryable: true })
+    }
+    return NextResponse.json({ ...(inserted ?? { url, filename, originalName: file.name, mimeType: file.type, size: file.size, folder, alt }), requestId })
   } catch (e: unknown) {
-    // A write failure used to surface as a bare, undiagnosable 500 ("Upload
-    // Failed" with no reason) — the exact symptom reported. Clean up any
-    // partially-written file and return the real (message-only, no stack)
-    // cause so a permission/disk-space issue on the actual server is
-    // immediately actionable instead of a dead end.
+    // Anything not already handled above (malformed FormData, an unexpected
+    // exception mid-request, …) — never the raw error to the client, always
+    // logged server-side with the requestId that ties the two together.
     if (writtenPath) { try { await unlink(writtenPath) } catch { /* nothing to clean up */ } }
-    const message = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 })
+    logFa('آپلود رسانه', 'MEDIA_UNEXPECTED', 'خطای غیرمنتظره‌ای هنگام آپلود رخ داد.', requestId, e)
+    return apiErrorFa(500, 'MEDIA_UNEXPECTED', 'خطای غیرمنتظره‌ای هنگام آپلود رخ داد. لطفاً دوباره تلاش کنید.', { requestId, retryable: true })
   }
 }
 

@@ -10,6 +10,7 @@
  */
 import { useRef, useState } from 'react'
 import { Modal, Input, Select, Btn } from '@/components/admin/ui'
+import { faDigits } from '@/lib/admin/chartRtl'
 
 export interface HeroMediaCategory {
   value: string
@@ -41,6 +42,39 @@ interface Props {
 
 type Phase = 'form' | 'uploading' | 'conflict' | 'error'
 
+/**
+ * The 7 upload stages from the mission spec, mapped onto a progress range
+ * each — the bar must NEVER show 100% before the server has actually
+ * confirmed success (reaching 100% on the browser's raw byte-transfer
+ * event only means "the browser finished sending", not "the file is
+ * saved and registered" — that gap is exactly what read as a false
+ * "آپلود ناموفق" after a full-looking progress bar).
+ */
+const STAGE_LABELS: { key: string; en: string; fa: string; upTo: number }[] = [
+  { key: 'prepare', en: 'Preparing file', fa: 'آماده‌سازی فایل', upTo: 2 },
+  { key: 'upload', en: 'Uploading file', fa: 'ارسال فایل به سرور', upTo: 85 },
+  { key: 'validate', en: 'Validating file', fa: 'اعتبارسنجی فایل', upTo: 92 },
+  { key: 'store', en: 'Saving to storage', fa: 'ذخیره در فضای رسانه', upTo: 95 },
+  { key: 'database', en: 'Recording in database', fa: 'ثبت در پایگاه داده', upTo: 98 },
+  { key: 'finalize', en: 'Finalizing', fa: 'پردازش نهایی', upTo: 99 },
+  { key: 'done', en: 'Upload succeeded', fa: 'آپلود موفق', upTo: 100 },
+]
+function stageLabelFor(progress: number, rtl: boolean): string {
+  const stage = STAGE_LABELS.find(s => progress <= s.upTo) ?? STAGE_LABELS[STAGE_LABELS.length - 1]
+  return rtl ? stage.fa : stage.en
+}
+
+interface UploadFailure {
+  messageFa?: string
+  errorCode?: string
+  requestId?: string
+  stage?: string
+  retryable?: boolean
+  /** Legacy shape from call sites/older responses that predate the Persian
+   *  error contract — still handled so nothing regresses to a blank error. */
+  error?: string
+}
+
 export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCategory, accept, onUploaded }: Props) {
   const t = (en: string, fa: string) => (rtl ? fa : en)
   const [nameEn, setNameEn] = useState('')
@@ -52,25 +86,29 @@ export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCatego
   const [file, setFile] = useState<File | null>(null)
   const [phase, setPhase] = useState<Phase>('form')
   const [progress, setProgress] = useState(0)
-  const [errorMsg, setErrorMsg] = useState('')
+  const [failure, setFailure] = useState<UploadFailure | null>(null)
   const [conflict, setConflict] = useState<{ suggestedFilename: string; existing: { nameEn?: string } } | null>(null)
   const xhrRef = useRef<XMLHttpRequest | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const lastSubmit = useRef<{ mode: 'create' | 'replace' | 'rename'; filenameOverride?: string } | null>(null)
 
   function reset() {
     setNameEn(''); setNameFa(''); setAltEn(''); setAltFa(''); setDescription('')
-    setFile(null); setPhase('form'); setProgress(0); setErrorMsg(''); setConflict(null)
+    setFile(null); setPhase('form'); setProgress(0); setFailure(null); setConflict(null)
     setCategory(defaultCategory)
   }
   function close() { if (xhrRef.current) xhrRef.current.abort(); reset(); onClose() }
 
+  function fail(f: UploadFailure) { setFailure(f); setPhase('error') }
+
   function submit(mode: 'create' | 'replace' | 'rename', filenameOverride?: string) {
     if (!file) return
-    if (nameEn.trim().length < 2 || nameEn.trim().length > 80) { setErrorMsg(t('English name must be 2–80 characters', 'نام انگلیسی باید ۲ تا ۸۰ کاراکتر باشد')); setPhase('error'); return }
-    if (nameFa.trim().length < 2 || nameFa.trim().length > 80) { setErrorMsg(t('Persian name must be 2–80 characters', 'نام فارسی باید ۲ تا ۸۰ کاراکتر باشد')); setPhase('error'); return }
+    lastSubmit.current = { mode, filenameOverride }
+    if (nameEn.trim().length < 2 || nameEn.trim().length > 80) { fail({ messageFa: 'نام انگلیسی باید بین ۲ تا ۸۰ کاراکتر باشد.', errorCode: 'MEDIA_INVALID_NAME', retryable: false }); return }
+    if (nameFa.trim().length < 2 || nameFa.trim().length > 80) { fail({ messageFa: 'نام فارسی باید بین ۲ تا ۸۰ کاراکتر باشد.', errorCode: 'MEDIA_INVALID_NAME', retryable: false }); return }
 
     setPhase('uploading')
-    setProgress(0)
+    setProgress(1) // "آماده‌سازی فایل"
     const fd = new FormData()
     fd.append('file', file)
     fd.append('folder', folder)
@@ -85,26 +123,47 @@ export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCatego
     const xhr = new XMLHttpRequest()
     xhrRef.current = xhr
     xhr.open('POST', '/api/admin/media')
-    xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100)) }
+    // 0–85%: real byte-transfer progress. The browser reaching 100% here
+    // only means "sent", not "saved" — see STAGE_LABELS above.
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(1 + Math.round((e.loaded / e.total) * 84)) }
+    // The transfer itself finished; the server is now validating/writing/
+    // committing to the DB — genuinely unknown how far along that is from
+    // the client's side, so this advances through the remaining stages on
+    // a timer rather than freezing at 85% or jumping straight to 100%.
+    xhr.upload.onload = () => {
+      setProgress(86)
+      const ticks = [90, 94, 97, 99]
+      ticks.forEach((p, i) => setTimeout(() => { if (xhrRef.current === xhr) setProgress(prev => Math.max(prev, p)) }, (i + 1) * 220))
+    }
     xhr.onload = () => {
-      let data: Record<string, unknown> = {}
+      let data: UploadFailure & { conflict?: boolean; suggestedFilename?: string; existing?: { nameEn?: string }; url?: string } = {}
       try { data = JSON.parse(xhr.responseText) } catch { /* non-JSON error body */ }
       if (xhr.status === 409 && data.conflict) {
-        setConflict({ suggestedFilename: String(data.suggestedFilename ?? ''), existing: (data.existing as { nameEn?: string }) ?? {} })
+        setConflict({ suggestedFilename: String(data.suggestedFilename ?? ''), existing: data.existing ?? {} })
         setPhase('conflict')
         return
       }
       if (xhr.status >= 200 && xhr.status < 300 && typeof data.url === 'string') {
+        setProgress(100)
         onUploaded(data.url)
         close()
         return
       }
-      setErrorMsg(typeof data.error === 'string' ? data.error : t('Upload failed', 'آپلود ناموفق بود'))
-      setPhase('error')
+      fail({
+        messageFa: data.messageFa ?? (typeof data.error === 'string' ? data.error : undefined),
+        errorCode: data.errorCode,
+        requestId: data.requestId,
+        stage: data.stage,
+        retryable: data.retryable,
+      })
     }
-    xhr.onerror = () => { setErrorMsg(t('Network error during upload', 'خطای شبکه هنگام آپلود')); setPhase('error') }
+    xhr.onerror = () => fail({ messageFa: 'ارتباط با سرور هنگام آپلود قطع شد.', errorCode: 'MEDIA_NETWORK_ERROR', retryable: true })
     xhr.onabort = () => { setPhase('form') }
     xhr.send(fd)
+  }
+
+  function retry() {
+    if (lastSubmit.current) submit(lastSubmit.current.mode, lastSubmit.current.filenameOverride)
   }
 
   const slugPreview = nameEn ? toKebab(nameEn) : ''
@@ -144,7 +203,7 @@ export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCatego
             <div className="w-full h-2 rounded-full bg-surface-2 overflow-hidden">
               <div className="h-full bg-brand transition-all" style={{ width: `${progress}%` }} />
             </div>
-            <p className="text-sm text-text-secondary text-center">{progress}%</p>
+            <p className="text-sm text-text-secondary text-center">{stageLabelFor(progress, rtl)} · {rtl ? faDigits(progress) : progress}%</p>
             <div className="flex justify-center">
               <Btn variant="secondary" onClick={() => xhrRef.current?.abort()}>{t('Cancel Upload', 'لغو آپلود')}</Btn>
             </div>
@@ -169,12 +228,25 @@ export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCatego
           </div>
         )}
 
-        {phase === 'error' && (
-          <div className="space-y-4">
-            <p className="text-sm text-danger-text bg-danger-muted rounded-lg px-3 py-2">{errorMsg}</p>
+        {phase === 'error' && failure && (
+          <div className="space-y-3">
+            <p className="text-sm text-danger-text bg-danger-muted rounded-lg px-3 py-2">
+              {rtl ? (failure.messageFa || 'آپلود ناموفق بود.') : (failure.messageFa || t('Upload failed', 'آپلود ناموفق بود'))}
+            </p>
+            {(failure.errorCode || failure.requestId || failure.stage) && (
+              <details className="text-3xs text-text-tertiary">
+                <summary className="cursor-pointer select-none">{t('Details', 'جزئیات')}</summary>
+                <div className="mt-1 space-y-0.5 font-mono">
+                  {failure.stage && <p>{t('Stage', 'مرحله')}: {failure.stage}</p>}
+                  {failure.errorCode && <p>{t('Error code', 'کد خطا')}: {failure.errorCode}</p>}
+                  {failure.requestId && <p>{t('Request ID', 'شناسه پیگیری')}: {failure.requestId}</p>}
+                </div>
+              </details>
+            )}
             <div className="flex gap-3">
-              <Btn onClick={() => submit('create')}>{t('Retry', 'تلاش دوباره')}</Btn>
+              {failure.retryable !== false && <Btn onClick={retry}>{t('Retry', 'تلاش مجدد')}</Btn>}
               <Btn variant="secondary" onClick={() => setPhase('form')}>{t('Back', 'بازگشت')}</Btn>
+              <Btn variant="secondary" onClick={close}>{t('Cancel', 'لغو')}</Btn>
             </div>
           </div>
         )}

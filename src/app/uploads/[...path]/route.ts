@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server'
-import { readFile } from 'fs/promises'
+import { stat } from 'fs/promises'
+import { createReadStream } from 'fs'
+import { Readable } from 'stream'
 import path from 'path'
+import { parseRange } from '@/lib/media/range'
 
 // Serve user-uploaded files from public/uploads at runtime. Next.js only serves
 // public/ files that existed at build time, so freshly uploaded images would 404
@@ -26,7 +29,7 @@ const MIME: Record<string, string> = {
   '.mkv': 'video/x-matroska', '.json': 'application/json',
 }
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path: parts } = await ctx.params
   // Reject anything that isn't a plain filename segment (blocks path traversal).
   if (!parts?.length || parts.some((p) => !/^[a-zA-Z0-9._-]+$/.test(p) || p === '..')) {
@@ -36,16 +39,45 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ path: stri
   if (!file.startsWith(UPLOADS_DIR + path.sep)) {
     return new Response('Forbidden', { status: 403 })
   }
+
+  let size: number
   try {
-    const buf = await readFile(file)
-    const ext = path.extname(file).toLowerCase()
-    return new Response(new Uint8Array(buf), {
-      headers: {
-        'Content-Type': MIME[ext] || 'application/octet-stream',
-        'Cache-Control': 'public, max-age=604800',
-      },
-    })
+    size = (await stat(file)).size
   } catch {
     return new Response('Not found', { status: 404 })
   }
+
+  const ext = path.extname(file).toLowerCase()
+  const contentType = MIME[ext] || 'application/octet-stream'
+  const baseHeaders = {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=604800',
+    'Accept-Ranges': 'bytes',
+  }
+
+  // HTTP Range support — required for video scrubbing/seeking (the browser
+  // sends Range requests to jump to a timestamp without downloading
+  // everything before it) and is a hard requirement for Safari/iOS video
+  // playback in general, not just a nicety. A plain 200-with-the-whole-file
+  // response (the previous behavior) works for playback-from-the-start but
+  // breaks seeking on any video large enough for the browser to bother
+  // range-requesting.
+  const range = parseRange(req.headers.get('range'), size)
+  if (range) {
+    const { start, end } = range
+    const stream = Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream
+    return new Response(stream, {
+      status: 206,
+      headers: {
+        ...baseHeaders,
+        'Content-Range': `bytes ${start}-${end}/${size}`,
+        'Content-Length': String(end - start + 1),
+      },
+    })
+  }
+
+  const stream = Readable.toWeb(createReadStream(file)) as ReadableStream
+  return new Response(stream, {
+    headers: { ...baseHeaders, 'Content-Length': String(size) },
+  })
 }

@@ -84,6 +84,7 @@ export function ImageUploadCrop({
   }
 
   async function uploadFile(file: File) {
+    if (uploading) return // a double-click while a request is already in flight must not fire a second upload
     setUploading(true)
     setError('')
     // A hung request (slow/overloaded server, dropped connection) used to
@@ -98,16 +99,21 @@ export function ImageUploadCrop({
       fd.append('folder', folder)
       const res = await fetch('/api/admin/media', { method: 'POST', body: fd, signal: controller.signal })
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d.error || `Upload failed (${res.status})`)
+        const d = await res.json().catch(() => ({} as Record<string, unknown>))
+        throw new Error(typeof d.messageFa === 'string' ? d.messageFa : (typeof d.error === 'string' ? d.error : `آپلود ناموفق بود (${res.status})`))
       }
       const d = await res.json()
-      const url: string = d.url?.startsWith('/') ? d.url : `/${d.url}`
+      // Cache-bust: without a query string, the browser (and any CDN in
+      // front of /uploads/) can keep serving the OLD photo bytes at the
+      // exact same URL after a Replace, so the panel silently shows a
+      // stale image until a hard refresh.
+      const base: string = d.url?.startsWith('/') ? d.url : `/${d.url}`
+      const url = `${base}?v=${Date.now()}`
       onChange(url)
       setSrcBlob(null)
     } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') setError('Upload timed out — check your connection and try again')
-      else setError(e instanceof Error ? e.message : 'Upload failed')
+      if (e instanceof DOMException && e.name === 'AbortError') setError('ارتباط با سرور هنگام آپلود قطع شد — اتصال خود را بررسی و دوباره تلاش کنید.')
+      else setError(e instanceof Error ? e.message : 'آپلود ناموفق بود.')
     } finally {
       clearTimeout(timeout)
       setUploading(false)
@@ -118,10 +124,11 @@ export function ImageUploadCrop({
     const blob = await getCroppedBlob()
     if (!blob) {
       // getCroppedBlob() returns null for a degenerate/zero-size crop
-      // rectangle — this used to fail completely silently (the modal just
-      // sat there with the button doing nothing), which is indistinguishable
-      // from a broken upload. Now it says why.
-      setError('Could not read the selected crop area — try adjusting the crop box and upload again')
+      // rectangle, or if canvas.toBlob() itself failed — this used to fail
+      // completely silently (the modal just sat there with the button
+      // doing nothing), which is indistinguishable from a broken upload.
+      // Now it says why.
+      setError('ناحیهٔ برش‌خورده قابل خواندن نبود — محدودهٔ برش را تنظیم و دوباره تلاش کنید.')
       return
     }
     const file = new File([blob], `cropped-${Date.now()}.jpg`, { type: 'image/jpeg' })
