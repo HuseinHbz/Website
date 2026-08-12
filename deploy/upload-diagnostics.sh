@@ -35,6 +35,7 @@ if [[ -z "${HBZ_DIAG_REDACTED:-}" ]]; then
 fi
 
 APP_DIR="/var/www/habibazar"
+APP_USER="hbz"
 UPLOAD_DIR="$APP_DIR/public/uploads"
 ENV_FILE="$APP_DIR/.env.local"
 JSON=false
@@ -73,7 +74,13 @@ expected_max_upload_mb() {
 # EACCES شکست می‌خورد — این دقیقاً همان «مالکیت متفاوت PM2 و پوشه Upload»ی
 # است که در پرامپت پرسیده شده.
 sect "کاربر PM2 و مالکیت Upload"
-PM2_USER="$(pm2 jlist 2>/dev/null | grep -o '"username":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "نامشخص")"
+# 26.34 real bug: this script runs `sudo bash …` (as root), and PM2 keeps a
+# SEPARATE daemon per OS user — a bare `pm2 …` here was querying ROOT's own
+# (empty) PM2 daemon, never the one actually running the app under `hbz`
+# (per CLAUDE.md: "App runs under PM2 as user hbz"). That's exactly why the
+# PM2 section used to print "نامشخص" and an empty process table even with
+# the app healthy and serving traffic — always run pm2 as $APP_USER.
+PM2_USER="$(sudo -u "$APP_USER" pm2 jlist 2>/dev/null | grep -o '"username":"[^"]*"' | head -1 | cut -d'"' -f4 || true)"
 kv "کاربر PM2" "${PM2_USER:-نامشخص}"
 if [[ -d "$UPLOAD_DIR" ]]; then
   OWNER="$(stat -c '%U:%G' "$UPLOAD_DIR" 2>/dev/null || echo "نامشخص")"
@@ -115,9 +122,14 @@ sect "Nginx"
 if command -v nginx &>/dev/null; then
   if nginx -t &>/dev/null; then kv "nginx -t" "✔ سالم"; else kv "nginx -t" "❌ خطای پیکربندی — nginx -t را دستی اجرا کنید"; fi
   CONF="$(nginx -T 2>/dev/null | redact || true)"
-  MAXBODY="$(echo "$CONF" | grep -oP 'client_max_body_size\s+\K\S+' | head -1)"
-  READ_TO="$(echo "$CONF" | grep -oP 'proxy_read_timeout\s+\K\S+' | head -1)"
-  SEND_TO="$(echo "$CONF" | grep -oP 'proxy_send_timeout\s+\K\S+' | head -1)"
+  # nginx -T prints the raw directive line including its trailing `;`
+  # (e.g. "client_max_body_size 110m;") — a real bug here compared the raw
+  # captured value (with the semicolon) against the computed "${EXPECTED_MB}m"
+  # (without one), so 110m vs 110m always reported as a false mismatch.
+  # \K\S+ still grabs the semicolon as part of \S; strip it explicitly.
+  MAXBODY="$(echo "$CONF" | grep -oP 'client_max_body_size\s+\K\S+' | head -1 | tr -d ';')"
+  READ_TO="$(echo "$CONF" | grep -oP 'proxy_read_timeout\s+\K\S+' | head -1 | tr -d ';')"
+  SEND_TO="$(echo "$CONF" | grep -oP 'proxy_send_timeout\s+\K\S+' | head -1 | tr -d ';')"
   kv "client_max_body_size (nginx واقعی)" "${MAXBODY:-(پیش‌فرض nginx، معمولاً 1m — یعنی render-nginx.sh هرگز روی این سرور اجرا نشده)}"
   kv "proxy_read_timeout" "${READ_TO:-(پیش‌فرض nginx)}"
   kv "proxy_send_timeout" "${SEND_TO:-(پیش‌فرض nginx)}"
@@ -126,6 +138,8 @@ if command -v nginx &>/dev/null; then
   kv "client_max_body_size (مقدار مورد انتظار طبق limits.ts)" "${EXPECTED_MB}m"
   if [[ -n "$MAXBODY" && "$MAXBODY" != "${EXPECTED_MB}m" ]]; then
     kv "⚠️ عدم تطابق nginx/اپ" "❌ nginx=$MAXBODY ولی اپ انتظار ${EXPECTED_MB}m دارد — sudo bash deploy/update.sh یا sudo bash deploy/nginx/render-nginx.sh --install را اجرا کنید"
+  else
+    kv "تطابق nginx/اپ" "✔ هماهنگ"
   fi
 else
   kv "nginx" "نصب یافت نشد — اگر Reverse Proxy دیگری دارید همان را بررسی کنید"
@@ -133,10 +147,10 @@ fi
 
 # ── ۵) PM2 — Timeout، Memory، وضعیت زنده ────────────────────────────────────
 sect "PM2"
-pm2 status 2>/dev/null | sed 's/^/  /' || kv "pm2 status" "در دسترس نیست"
+sudo -u "$APP_USER" pm2 status 2>/dev/null | sed 's/^/  /' || kv "pm2 status" "در دسترس نیست"
 say ""
 say "  آخرین ۲۰۰ خط لاگ (برای یافتن requestId خطای اخیر، این را در لاگ جست‌وجو کنید — Cookie/JWT/DSN/رمز به‌صورت خودکار حذف می‌شود):"
-pm2 logs habibazar --lines 200 --nostream 2>/dev/null | tail -50 | redact | sed 's/^/  /' || kv "pm2 logs" "در دسترس نیست"
+sudo -u "$APP_USER" pm2 logs habibazar --lines 200 --nostream 2>/dev/null | tail -50 | redact | sed 's/^/  /' || kv "pm2 logs" "در دسترس نیست"
 
 # ── ۶) دیتابیس و Migration ───────────────────────────────────────────────────
 sect "دیتابیس"
