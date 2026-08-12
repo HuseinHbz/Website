@@ -55,9 +55,35 @@ CLEAN_REDIRECTS="${CLEAN_REDIRECTS# }"
 { echo "PRIMARY_DOMAIN=\"$PRIMARY_DOMAIN\""; echo "REDIRECT_DOMAINS=\"$CLEAN_REDIRECTS\""; } > "$CONF_STORE"
 info "دامنه‌ها ذخیره شد: $CONF_STORE (اصلی: $PRIMARY_DOMAIN | ریدایرکت: ${CLEAN_REDIRECTS:-—})"
 
+# ── سقف Upload — از همان env varهایی که src/lib/media/limits.ts می‌خواند
+# (26.34 بند۲): یک منبع واحد، دو زبان اجرا (TS برای next.config.ts، bash
+# اینجا) — ولی هر دو دقیقاً همان نام env var و همان مقدار پیش‌فرض را
+# می‌خوانند، پس هرگز نمی‌توانند مقدار متفاوتی محاسبه کنند. اگر هیچ‌کدام از
+# env varها ست نشده باشند، خروجی این محاسبه دقیقاً همان عددی است که
+# next.config.ts (بدون هیچ env var) محاسبه می‌کند — یک تست این تطابق را
+# تضمین می‌کند (src/lib/media/__tests__/limits.test.ts).
+ENV_FILE_FOR_LIMITS="$APP_DIR/.env.local"
+readenv() {
+  local name="$1" fallback="$2"
+  if [[ -f "$ENV_FILE_FOR_LIMITS" ]]; then
+    local v; v="$(grep -E "^${name}=" "$ENV_FILE_FOR_LIMITS" 2>/dev/null | head -1 | cut -d= -f2-)"
+    [[ -n "$v" && "$v" =~ ^[0-9]+$ ]] && { echo "$v"; return; }
+  fi
+  echo "$fallback"
+}
+BG_VIDEO="$(readenv MEDIA_MAX_BACKGROUND_VIDEO_MB 25)"
+ANIM_VIDEO="$(readenv MEDIA_MAX_ANIMATION_VIDEO_MB 8)"
+IMG="$(readenv MEDIA_MAX_IMAGE_MB 5)"
+VEC="$(readenv MEDIA_MAX_VECTOR_MB 1)"
+GENERAL="$(readenv MEDIA_MAX_GENERAL_MB 100)"
+MAX_UPLOAD_MB=$GENERAL
+for v in $BG_VIDEO $ANIM_VIDEO $IMG $VEC; do (( v > MAX_UPLOAD_MB )) && MAX_UPLOAD_MB=$v; done
+MAX_UPLOAD_MB=$((MAX_UPLOAD_MB + 10))
+info "سقف Upload محاسبه‌شده برای nginx: ${MAX_UPLOAD_MB}MB (از env vars — پیش‌فرض اگر ست نشده)"
+
 # ── تولید conf ───────────────────────────────────────────────────────────────
 OUT="${OUT:-$HERE/habibazar.conf}"
-RENDERED="$(sed -e "s|{{PRIMARY_DOMAIN}}|$PRIMARY_DOMAIN|g" -e "s|{{APP_PORT}}|$APP_PORT|g" -e "s|{{APP_DIR}}|$APP_DIR|g" "$TEMPLATE")"
+RENDERED="$(sed -e "s|{{PRIMARY_DOMAIN}}|$PRIMARY_DOMAIN|g" -e "s|{{APP_PORT}}|$APP_PORT|g" -e "s|{{APP_DIR}}|$APP_DIR|g" -e "s|{{MAX_UPLOAD_MB}}|$MAX_UPLOAD_MB|g" "$TEMPLATE")"
 if [[ -n "$CLEAN_REDIRECTS" ]]; then
   RENDERED="${RENDERED//\{\{REDIRECT_DOMAINS\}\}/$CLEAN_REDIRECTS}"
 else

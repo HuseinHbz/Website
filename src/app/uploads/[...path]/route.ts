@@ -25,8 +25,13 @@ const MIME: Record<string, string> = {
   // banner above), so it fell through to 'application/octet-stream'. Some
   // browsers refuse to `<video autoplay>` a source with a non-video
   // Content-Type — a real, live playback bug, not just a header nicety.
-  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
-  '.mkv': 'video/x-matroska', '.json': 'application/json',
+  // MP4/WebM only (26.34 бند۳) — MOV/MKV were never actually decodable by
+  // validateMediaUpload's magic-byte check (no QuickTime/Matroska
+  // detector exists), so a .mov/.mkv upload was always rejected as
+  // MEDIA_UNSUPPORTED_FORMAT before it could ever reach this serving
+  // route; keeping their MIME entries here was dead, misleading code
+  // implying a format the app has never actually supported.
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.json': 'application/json',
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {

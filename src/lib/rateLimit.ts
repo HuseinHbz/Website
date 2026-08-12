@@ -92,4 +92,11 @@ export const limiters = {
   /** Employee-portal OTP request/verify (28.4) — same shape, separate bucket. */
   hrPortalOtp: (ip: string) => rateLimit(`hpotp:${ip}`, { limit: 5, windowSec: 900 }),
   hrPortalVerify: (ip: string) => rateLimit(`hpver:${ip}`, { limit: 10, windowSec: 900 }),
+
+  /** Media upload (26.34 бند۷): 20 uploads / min per IP — bounds request
+   *  RATE; src/lib/media/concurrency.ts separately bounds simultaneous
+   *  in-flight uploads (the two are complementary, not redundant — a slow
+   *  drip of large uploads could stay under this rate limit while still
+   *  piling up concurrently). */
+  media: (ip: string) => rateLimit(`media:${ip}`, { limit: 20, windowSec: 60 }),
 }

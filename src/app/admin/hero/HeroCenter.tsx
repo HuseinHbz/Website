@@ -466,7 +466,7 @@ function LayoutPicker({ rtl, toast }: { rtl: boolean; toast: Toast }) {
 
       {/* Network animation — folded in here from the old separate "Templates" tab.
           Alongside the built-in SVG/CSS orbit, an operator can now upload their
-          own looping clip (MP4/WebM/MOV/MKV) to use instead — same upload
+          own looping clip (MP4/WebM) to use instead — same upload
           mechanics as the Video Background tab (generic /api/admin/media,
           `custom:<url>` selection convention), just scoped to the round orbit
           slot instead of the full-bleed background layer. */}
@@ -635,8 +635,8 @@ function VideoBackground({ rtl, toast }: { rtl: boolean; toast: Toast }) {
       <Card className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <p className="text-sm text-text-secondary">
           {lc(rtl,
-            'Choose a looping background video for the live homepage hero. Content, CTAs, stats and tabs are untouched — only the background layer changes. Respects reduced-motion for accessibility. Upload your own (MP4/WebM/MOV/MKV) below, or pick one of the 19 built-in loops.',
-            'یک ویدیوی حلقه‌ای برای پس‌زمینه بخش هیروی زنده صفحه اصلی انتخاب کنید. متن، دکمه‌ها، آمار و تب‌ها تغییر نمی‌کنند — فقط لایه پس‌زمینه عوض می‌شود. برای دسترس‌پذیری، حالت کاهش حرکت رعایت می‌شود. ویدیوی خودتان را (MP4/WebM/MOV/MKV) پایین آپلود کنید، یا یکی از ۱۹ ویدیوی آماده را انتخاب کنید.'
+            'Choose a looping background video for the live homepage hero. Content, CTAs, stats and tabs are untouched — only the background layer changes. Respects reduced-motion for accessibility. Upload your own (MP4/WebM) below, or pick one of the 19 built-in loops.',
+            'یک ویدیوی حلقه‌ای برای پس‌زمینه بخش هیروی زنده صفحه اصلی انتخاب کنید. متن، دکمه‌ها، آمار و تب‌ها تغییر نمی‌کنند — فقط لایه پس‌زمینه عوض می‌شود. برای دسترس‌پذیری، حالت کاهش حرکت رعایت می‌شود. ویدیوی خودتان را (MP4/WebM) پایین آپلود کنید، یا یکی از ۱۹ ویدیوی آماده را انتخاب کنید.'
           )}
         </p>
         <button type="button" onClick={() => setUploadModalOpen(true)}

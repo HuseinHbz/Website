@@ -31,7 +31,10 @@
     "audit:shell": "node scripts/shell-audit.mjs",
     "audit:rbac": "tsx scripts/rbac-audit.ts",
     "audit:modules": "tsx scripts/module-audit.ts",
-    "audit:modules:classes": "tsx scripts/module-audit-classes.ts"
+    "audit:modules:classes": "tsx scripts/module-audit-classes.ts",
+    "test:redact": "bash deploy/lib/__tests__/test-redact.sh",
+    "verify:upload-rollback": "tsx scripts/verify-upload-rollback.ts",
+    "verify:upload-traversal": "tsx scripts/verify-upload-path-traversal.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

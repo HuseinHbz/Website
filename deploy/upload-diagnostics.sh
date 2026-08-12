@@ -17,6 +17,23 @@
 # =============================================================================
 set -Eeuo pipefail
 
+# 26.34 бند۸ — never print a secret. Shared filter (also unit-tested on its
+# own — deploy/lib/__tests__/redact.bats): DB connection-string credentials,
+# JWTs, Cookie/Authorization headers, and *_TOKEN/*_KEY/*_SECRET/PASSWORD/
+# DATABASE_URL values are all masked before anything reaches stdout.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/redact.sh
+source "$SCRIPT_DIR/lib/redact.sh"
+# Global safety net (in addition to the two call sites that pipe through
+# `redact` explicitly): every byte this script writes to stdout from here
+# on is filtered, so a FUTURE line added anywhere in this file that prints
+# raw command output can't reintroduce a leak just because someone forgot
+# to pipe it through `redact` by hand.
+if [[ -z "${HBZ_DIAG_REDACTED:-}" ]]; then
+  export HBZ_DIAG_REDACTED=1
+  exec > >(redact)
+fi
+
 APP_DIR="/var/www/habibazar"
 UPLOAD_DIR="$APP_DIR/public/uploads"
 ENV_FILE="$APP_DIR/.env.local"
@@ -70,7 +87,7 @@ say "$(df -i "$APP_DIR" 2>/dev/null | sed 's/^/  /')"
 sect "Nginx"
 if command -v nginx &>/dev/null; then
   if nginx -t &>/dev/null; then kv "nginx -t" "✔ سالم"; else kv "nginx -t" "❌ خطای پیکربندی — nginx -t را دستی اجرا کنید"; fi
-  CONF="$(nginx -T 2>/dev/null || true)"
+  CONF="$(nginx -T 2>/dev/null | redact || true)"
   MAXBODY="$(echo "$CONF" | grep -oP 'client_max_body_size\s+\K\S+' | head -1)"
   READ_TO="$(echo "$CONF" | grep -oP 'proxy_read_timeout\s+\K\S+' | head -1)"
   SEND_TO="$(echo "$CONF" | grep -oP 'proxy_send_timeout\s+\K\S+' | head -1)"
@@ -85,8 +102,8 @@ fi
 sect "PM2"
 pm2 status 2>/dev/null | sed 's/^/  /' || kv "pm2 status" "در دسترس نیست"
 say ""
-say "  آخرین ۲۰۰ خط لاگ (برای یافتن requestId خطای اخیر، این را در لاگ جست‌وجو کنید):"
-pm2 logs habibazar --lines 200 --nostream 2>/dev/null | tail -50 | sed 's/^/  /' || kv "pm2 logs" "در دسترس نیست"
+say "  آخرین ۲۰۰ خط لاگ (برای یافتن requestId خطای اخیر، این را در لاگ جست‌وجو کنید — Cookie/JWT/DSN/رمز به‌صورت خودکار حذف می‌شود):"
+pm2 logs habibazar --lines 200 --nostream 2>/dev/null | tail -50 | redact | sed 's/^/  /' || kv "pm2 logs" "در دسترس نیست"
 
 # ── ۶) دیتابیس و Migration ───────────────────────────────────────────────────
 sect "دیتابیس"

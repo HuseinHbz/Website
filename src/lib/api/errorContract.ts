@@ -28,7 +28,7 @@ export function apiErrorFa(
   status: number,
   errorCode: string,
   messageFa: string,
-  opts: { stage?: string; fieldErrors?: Record<string, string>; retryable?: boolean; requestId?: string } = {},
+  opts: { stage?: string; fieldErrors?: Record<string, string>; retryable?: boolean; requestId?: string; headers?: Record<string, string> } = {},
 ): NextResponse<ApiErrorResponse> {
   const requestId = opts.requestId ?? newRequestId()
   return NextResponse.json<ApiErrorResponse>({
@@ -39,7 +39,7 @@ export function apiErrorFa(
     stage: opts.stage,
     fieldErrors: opts.fieldErrors,
     retryable: opts.retryable,
-  }, { status })
+  }, { status, headers: opts.headers })
 }
 
 /** Structured server-side log line — Persian event/status text for a human

@@ -30,8 +30,12 @@ server {
     listen 80;
     server_name {{PRIMARY_DOMAIN}};
 
-    # آپلود فایل (تیکت/رسانه/پیوست) — پیش‌فرض 1M nginx خیلی کم است
-    client_max_body_size 50M;
+    # آپلود فایل (تیکت/رسانه/پیوست) — پیش‌فرض 1M nginx خیلی کم است.
+    # این مقدار از همان منبع واحد src/lib/media/limits.ts (بزرگ‌ترین سقف
+    # واقعی + حاشیه) توسط render-nginx.sh محاسبه و اینجا جایگزین می‌شود —
+    # هرگز دستی عددش را عوض نکنید، env var مربوطه (MEDIA_MAX_GENERAL_MB و
+    # بقیه) را عوض کنید و render-nginx.sh را دوباره اجرا کنید.
+    client_max_body_size {{MAX_UPLOAD_MB}}m;
 
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;

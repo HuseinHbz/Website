@@ -1,9 +1,10 @@
+import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
+import { OVERALL_MAX_UPLOAD_MB } from './src/lib/media/limits'
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   poweredByHeader: false,
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
   async headers() {
@@ -63,24 +64,23 @@ const nextConfig = {
     ],
   },
   experimental: {
-    // 26.34 — the REAL root cause behind "upload progress reaches 100% then
-    // fails with no clear reason": every request to an App Router Route
-    // Handler passes through middleware.ts first (for the admin-auth check),
-    // and Next.js's middleware layer silently caps the body it will hand to
-    // the route at 10MB by default — completely independent of, and hit
-    // BEFORE, any of this app's own size-limit logic
-    // (MEDIA_MAX_BACKGROUND_VIDEO_MB etc). Confirmed live: a 24MB video
-    // (well under the app's own 25MB cap) failed with a generic 500 and
-    // server log line "Request body exceeded 10MB for /api/admin/media …
-    // Failed to parse body as FormData" — the browser's XHR progress bar
-    // legitimately reaches 100% (all bytes really were sent), then the
-    // server can't even parse what it received. Set to 100mb to match this
-    // app's own highest upload ceiling (the legacy path's
-    // MEDIA_MAX_GENERAL_MB default) — the app-level per-category limits
-    // (25MB video/8MB animation/5MB image/100MB general) still do the real
-    // enforcement and return a proper Persian 413; this just stops the
-    // framework from truncating the request before that logic ever runs.
-    middlewareClientMaxBodySize: '100mb',
+    // 26.34 бند۱-۲ — was a flat, unjustified '100mb'. Now a real single
+    // source of truth: OVERALL_MAX_UPLOAD_MB is computed FROM the actual
+    // per-category limits in src/lib/media/limits.ts (imported directly —
+    // Next.js 15 compiles next.config.ts, so this is a genuine TypeScript
+    // import, not a hand-copied number that can drift). It equals the
+    // largest configured category (today: the legacy path's 100MB
+    // document/ZIP allowance — NOT just Hero video's 25MB, because that
+    // legacy path is a real, already-shipped part of this app, not
+    // something invented for this fix) plus a 10MB multipart-framing
+    // margin. Lowering any MEDIA_MAX_*_MB env var lowers this
+    // automatically — nothing to keep in sync by hand.
+    //
+    // This is what stops Next's own middleware body-parser from silently
+    // truncating a request BEFORE this app's real per-category validation
+    // (which still does the actual enforcement and returns a proper
+    // Persian 413) ever runs — see src/app/api/admin/media/route.ts.
+    middlewareClientMaxBodySize: `${OVERALL_MAX_UPLOAD_MB}mb`,
   },
 }
 

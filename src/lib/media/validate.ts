@@ -6,24 +6,21 @@
  * Settings (`lib/branding/fileValidation.ts`) rather than duplicating it.
  */
 import { sanitizeSvg } from '@/lib/branding/fileValidation'
+import { MEDIA_LIMITS_MB as SHARED_LIMITS_MB } from '@/lib/media/limits'
 
 export type MediaKind = 'video' | 'webm-alpha' | 'image' | 'svg' | 'lottie'
 export type MediaCategory = 'hero-background-video' | 'hero-animation-video' | 'hero-poster' | 'hero-animation-vector' | 'hero-animation-lottie'
 
-function envInt(name: string, fallback: number): number {
-  const v = process.env[name]
-  const n = v ? parseInt(v, 10) : NaN
-  return Number.isFinite(n) && n > 0 ? n : fallback
-}
-
-/** All limits are MB, overridable via env vars — spec section "محدودیت‌های
- *  پیشنهادی و قابل تنظیم با Environment Variable". */
+/** Category → limit, re-keyed from the single shared source
+ *  (src/lib/media/limits.ts) so this table can never drift from the
+ *  numbers everything else (the legacy upload path, the middleware body
+ *  cap, the diagnostics script) is checked against. */
 export const MEDIA_LIMITS_MB = {
-  'hero-background-video': envInt('MEDIA_MAX_BACKGROUND_VIDEO_MB', 25),
-  'hero-animation-video': envInt('MEDIA_MAX_ANIMATION_VIDEO_MB', 8),
-  'hero-poster': envInt('MEDIA_MAX_IMAGE_MB', 5),
-  'hero-animation-vector': envInt('MEDIA_MAX_VECTOR_MB', 1),
-  'hero-animation-lottie': envInt('MEDIA_MAX_VECTOR_MB', 1),
+  'hero-background-video': SHARED_LIMITS_MB.backgroundVideo,
+  'hero-animation-video': SHARED_LIMITS_MB.animationVideo,
+  'hero-poster': SHARED_LIMITS_MB.image,
+  'hero-animation-vector': SHARED_LIMITS_MB.vector,
+  'hero-animation-lottie': SHARED_LIMITS_MB.vector,
 } as const satisfies Record<MediaCategory, number>
 
 const MP4_BOX_TYPES = ['ftyp', 'moov', 'mdat', 'free', 'skip', 'wide']
@@ -69,13 +66,17 @@ export interface MediaValidationResult {
 }
 
 // Real production bug (26.34): the Video Background tab's own upload
-// button text and file picker advertise "MP4/WebM/MOV/MKV" — but this
+// button text and file picker advertised "MP4/WebM/MOV/MKV" — but this
 // table only accepted 'video' (MP4) for hero-background-video, so ANY
 // real WebM upload there was rejected with a 415 no matter how valid the
 // file was. Reproduced live before fixing (a genuine EBML-header WebM
 // buffer → 415 MEDIA_UNSUPPORTED_FORMAT). Frontend and backend must
-// accept the exact same set — 'webm-alpha' added here to match what the
-// UI already told the operator was acceptable.
+// accept the exact same set — 'webm-alpha' added here. MOV/MKV support
+// was never real (no QuickTime/Matroska magic-byte detector exists in
+// this file — a .mov/.mkv always fell through to `kind === null` →
+// rejected), so instead of building that detection, the UI copy/accept
+// attribute were corrected to just MP4/WebM (26.34 бند۳) — decisively
+// NOT supported, not silently broken.
 const ACCEPT_BY_CATEGORY: Record<MediaCategory, MediaKind[]> = {
   'hero-background-video': ['video', 'webm-alpha'],
   'hero-animation-video': ['video', 'webm-alpha'],

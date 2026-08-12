@@ -5,7 +5,7 @@ import { mediaFiles } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { getAdminUser, canDo } from '@/lib/admin/auth'
 import { logAction } from '@/lib/admin/audit'
-import { writeFile, mkdir, unlink } from 'fs/promises'
+import { writeFile, mkdir, unlink, rename } from 'fs/promises'
 import path from 'path'
 import { nanoid } from 'nanoid'
 import { toKebabSlug, uniqueFilename, validateAssetName } from '@/lib/media/slug'
@@ -13,6 +13,10 @@ import { validateMediaUpload, validateLottieSchema, type MediaCategory } from '@
 import { apiErrorFa, logFa, newRequestId } from '@/lib/api/errorContract'
 import { faDigits } from '@/lib/admin/chartRtl'
 import { resolveUploadDir } from '@/lib/media/uploadPath'
+import { MEDIA_LIMITS_MB } from '@/lib/media/limits'
+import { tryAcquireUploadSlot, releaseUploadSlot } from '@/lib/media/concurrency'
+import { limiters } from '@/lib/rateLimit'
+import { clientIp } from '@/lib/api/clientIp'
 
 const HERO_CATEGORIES = new Set<MediaCategory>([
   'hero-background-video', 'hero-animation-video', 'hero-poster', 'hero-animation-vector', 'hero-animation-lottie',
@@ -56,8 +60,42 @@ export async function POST(req: NextRequest) {
   if (!user) return unauthorized()
   { const deny = await checkTreePermission(user, 'brand.media', 'write'); if (deny) return deny }
 
+  // 26.34 бند۷ — rate limit (requests/min) checked first: cheap, no memory
+  // reserved yet. Then a concurrency slot (bounds simultaneous in-flight
+  // uploads, i.e. RAM/disk actually held at once — see
+  // src/lib/media/concurrency.ts for why the two are complementary, not
+  // redundant). The slot is released in the `finally` below no matter how
+  // the request ends (success, validation 4xx, disk error, thrown exception).
+  const ip = clientIp(req) ?? 'unknown'
+  const rl = limiters.media(ip)
+  if (!rl.allowed) {
+    return apiErrorFa(429, 'MEDIA_RATE_LIMITED', 'تعداد درخواست‌های آپلود بیش از حد مجاز است. کمی صبر کنید و دوباره تلاش کنید.', {
+      requestId, stage: 'validation', retryable: true, headers: { 'Retry-After': String(rl.retryAfter ?? 60) },
+    })
+  }
+  if (!tryAcquireUploadSlot()) {
+    return apiErrorFa(429, 'MEDIA_TOO_MANY_CONCURRENT', 'تعداد آپلودهای هم‌زمان از حد مجاز سرور گذشته است. چند لحظه دیگر دوباره تلاش کنید.', {
+      requestId, stage: 'storage', retryable: true, headers: { 'Retry-After': '5' },
+    })
+  }
+
   let writtenPath: string | null = null
   try {
+    // 26.34 بند۶ — ordering guarantee: `folder` is validated (below, right
+    // after the file-presence check) BEFORE any `mkdir`/`writeFile` call —
+    // no directory is ever created and no byte is ever written for a
+    // request whose `folder` isn't an exact allowlist match, full stop.
+    // What this canNOT do: validate `folder` before parsing the request
+    // body at all. `formData()` is the Web Fetch API's multipart parser —
+    // it has no "read this one field first" mode, and multipart fields can
+    // legally appear in any order, so there is no way to see `folder`
+    // without parsing the whole body (this would need a hand-rolled
+    // streaming multipart parser instead of the platform API, a much
+    // larger architectural change than a bug-fix pass justifies). The
+    // practical exposure this leaves is bounded and non-destructive: the
+    // request body is buffered in memory (capped by Next's own body-size
+    // limit — see next.config.ts) and then discarded on an invalid
+    // `folder`; no disk write, no DB write, nothing persisted.
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     const folder = (formData.get('folder') as string) || 'general'
@@ -155,9 +193,21 @@ export async function POST(req: NextRequest) {
       }
 
       const filename = mode === 'replace' && conflictRow ? conflictRow.filename : uniqueFilename(slug, ext, existingSet)
-      writtenPath = path.join(uploadDir, filename)
+      const finalPath = path.join(uploadDir, filename)
+      const isReplace = mode === 'replace' && !!conflictRow
+      // 26.34 бند۴ — real bug fixed here: a 'replace' used to write the new
+      // bytes DIRECTLY onto the old file's path, so a DB-update failure
+      // AFTER a successful write meant the catch block's cleanup unlinked
+      // that same path — destroying the previously-healthy file and leaving
+      // NEITHER old nor new content behind. A replace now stages the new
+      // file under a throwaway temp name; only after the DB write commits
+      // does an atomic fs.rename() swap it onto the real filename. If the
+      // DB write fails, only the temp file is removed — the old file on
+      // disk (and its DB row) are never touched.
+      const stagingPath = isReplace ? path.join(uploadDir, `.staging-${nanoid()}-${filename}`) : finalPath
+      writtenPath = stagingPath
       try {
-        await writeFile(writtenPath, toWrite)
+        await writeFile(stagingPath, toWrite)
       } catch (e) {
         writtenPath = null // nothing was actually written — the catch block below must not try to unlink it
         if (isDiskFullError(e)) {
@@ -171,30 +221,61 @@ export async function POST(req: NextRequest) {
       const url = `/uploads/${folder}/${filename}`
       let inserted
       try {
-        if (mode === 'replace' && conflictRow) {
+        if (isReplace && conflictRow) {
           await db.update(mediaFiles).set({
             originalName: file.name, mimeType: file.type, size: toWrite.length, url, alt: alt || altEn,
             nameEn, nameFa, altEn, altFa, category, description, uploadedBy: user.id, uploadedAt: new Date().toISOString(),
           }).where(eq(mediaFiles.id, conflictRow.id))
-          inserted = (await db.select().from(mediaFiles).where(eq(mediaFiles.id, conflictRow.id)))[0]
-          await logAction(user, 'REPLACE', 'media_files', conflictRow.id,
-            { url: conflictRow.url, nameEn: conflictRow.nameEn }, { url, nameEn })
         } else {
           await db.insert(mediaFiles).values({
             filename, originalName: file.name, mimeType: file.type, size: toWrite.length, url, folder,
             alt: alt || altEn, nameEn, nameFa, altEn, altFa, category, description, uploadedBy: user.id,
           })
-          inserted = (await db.select().from(mediaFiles).where(and(eq(mediaFiles.folder, folder), eq(mediaFiles.filename, filename))))[0]
-          await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder, nameEn, category })
         }
       } catch (e) {
-        // The file IS on disk and playable — only the DB record failed.
-        // Distinguished from a storage failure per the mission's error
-        // contract: this is recoverable (retry re-registers the same file
-        // path), unlike a disk-full write failure.
+        // The file IS on disk and playable (still staged, not yet swapped
+        // in for a replace) — only the DB record failed. Distinguished from
+        // a storage failure per the mission's error contract: this is
+        // recoverable (retry re-registers the same file path), unlike a
+        // disk-full write failure. The OLD file (replace) or nothing
+        // (create) is untouched — only the staged temp write is cleaned up.
         logFa('آپلود رسانه', 'MEDIA_DATABASE_WRITE_FAILED', 'فایل ذخیره شد اما ثبت اطلاعات آن در پایگاه داده ناموفق بود.', requestId, e)
         try { await unlink(writtenPath) } catch { /* best-effort — the DB row never existed, so leaving an orphan file is the safer failure mode over throwing again here */ }
         return apiErrorFa(500, 'MEDIA_DATABASE_WRITE_FAILED', 'فایل ذخیره شد اما ثبت اطلاعات آن در پایگاه داده ناموفق بود.', { requestId, stage: 'database', retryable: true })
+      }
+
+      if (isReplace && conflictRow) {
+        try {
+          // DB write committed — now, and only now, atomically swap the
+          // staged file onto the real path. rename() on the same filesystem
+          // (both paths share uploadDir) is atomic: readers/servers see
+          // either the fully-old or fully-new file, never a partial write.
+          await rename(stagingPath, finalPath)
+        } catch (e) {
+          // Extremely rare (same-directory rename failing — e.g. a
+          // permissions change mid-request): the DB row now describes the
+          // new file but the swap didn't happen. The old file on disk is
+          // STILL untouched (we never wrote over it), so it stays servable
+          // — just stale relative to the DB row until a retry. Clean up the
+          // orphaned staging file and report distinctly from a plain DB
+          // failure so this rare case is diagnosable in logs.
+          logFa('آپلود رسانه', 'MEDIA_SWAP_FAILED', 'فایل جدید ذخیره و ثبت شد اما جایگزینی نهایی فایل قدیمی ناموفق بود.', requestId, e)
+          try { await unlink(stagingPath) } catch { /* best-effort */ }
+          writtenPath = null
+          return apiErrorFa(500, 'MEDIA_SWAP_FAILED', 'فایل جدید ثبت شد اما جایگزینی نهایی روی دیسک ناموفق بود. لطفاً دوباره تلاش کنید.', { requestId, stage: 'storage', retryable: true })
+        }
+        writtenPath = null // swap succeeded — nothing left to roll back
+      } else {
+        writtenPath = null // insert committed — this is the final on-disk file, not staging; nothing to clean up
+      }
+
+      inserted = isReplace && conflictRow
+        ? (await db.select().from(mediaFiles).where(eq(mediaFiles.id, conflictRow.id)))[0]
+        : (await db.select().from(mediaFiles).where(and(eq(mediaFiles.folder, folder), eq(mediaFiles.filename, filename))))[0]
+      if (isReplace && conflictRow) {
+        await logAction(user, 'REPLACE', 'media_files', conflictRow.id, { url: conflictRow.url, nameEn: conflictRow.nameEn }, { url, nameEn })
+      } else {
+        await logAction(user, 'UPLOAD', 'media_files', inserted?.id, null, { filename, folder, nameEn, category })
       }
       return NextResponse.json(inserted ? { ...inserted, requestId } : { url, filename, requestId })
     }
@@ -206,11 +287,9 @@ export async function POST(req: NextRequest) {
     // an admin session (even a lower-privilege one with brand.media write)
     // could trigger with repeated large uploads. Generous by design — this
     // path also accepts full documents/ZIPs (see MediaManager's accept
-    // list) — and env-configurable like the Hero category limits.
-    const generalLimitBytes = (() => {
-      const n = parseInt(process.env.MEDIA_MAX_GENERAL_MB || '', 10)
-      return (Number.isFinite(n) && n > 0 ? n : 100) * 1024 * 1024
-    })()
+    // list) — from the single shared limits source (src/lib/media/limits.ts),
+    // same as every other category.
+    const generalLimitBytes = MEDIA_LIMITS_MB.general * 1024 * 1024
     if (bytes.length > generalLimitBytes) {
       const mb = Math.round(generalLimitBytes / 1024 / 1024)
       return apiErrorFa(413, 'MEDIA_SIZE_EXCEEDED', `حجم فایل بیشتر از حد مجاز ${faDigits(mb)} مگابایت است.`, { requestId, stage: 'validation', retryable: false })
@@ -255,6 +334,11 @@ export async function POST(req: NextRequest) {
     if (writtenPath) { try { await unlink(writtenPath) } catch { /* nothing to clean up */ } }
     logFa('آپلود رسانه', 'MEDIA_UNEXPECTED', 'خطای غیرمنتظره‌ای هنگام آپلود رخ داد.', requestId, e)
     return apiErrorFa(500, 'MEDIA_UNEXPECTED', 'خطای غیرمنتظره‌ای هنگام آپلود رخ داد. لطفاً دوباره تلاش کنید.', { requestId, retryable: true })
+  } finally {
+    // Slot was only ever acquired if we got past the rate-limit/concurrency
+    // gate above — always release it here so a thrown exception, an early
+    // validation return, or a normal success all free the slot exactly once.
+    releaseUploadSlot()
   }
 }
 
