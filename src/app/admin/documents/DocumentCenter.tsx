@@ -33,7 +33,16 @@ export function DocumentCenter() {
   const [mode, setMode] = useState<'sales' | 'manual'>('sales')
   const [salesDocs, setSalesDocs] = useState<SalesDoc[]>([])
   const [sourceId, setSourceId] = useState(0)
-  const [manual, setManual] = useState({ title: '', partyName: '', partyInfo: '', body: '', bodyHtml: '', date: new Date().toISOString().slice(0, 10) })
+  const [manual, setManual] = useState({ title: '', partyName: '', partyInfo: '', body: '', bodyHtml: '', date: new Date().toISOString().slice(0, 10), dueDate: '' })
+  // DOC-BRAND follow-up: a manually-composed document had no way to say
+  // whether the buyer is حقیقی (individual, national ID only) or حقوقی
+  // (legal entity, full registration/economic/tax IDs) — the choice a
+  // sales-sourced document already makes automatically from
+  // sales_customers.kind. 'none' = don't attach any legal-ID lines (free-
+  // text partyInfo only, today's exact behavior — the default, so nothing
+  // changes for an operator who ignores this).
+  const [partyKind, setPartyKind] = useState<'none' | 'individual' | 'company'>('none')
+  const [partyIds, setPartyIds] = useState({ nationalId: '', regNo: '', economicCode: '', taxId: '' })
   const [editorReset, setEditorReset] = useState(0)
   const [lines, setLines] = useState<ManualLine[]>([{ description: '', qty: 1, unitPrice: 0 }])
   const [saving, setSaving] = useState(false)
@@ -65,9 +74,14 @@ export function DocumentCenter() {
     setSaving(true)
     try {
       const tpl = templateKey ? { templateKey } : {}
+      const partyIdsPayload = partyKind === 'none' ? undefined : {
+        kind: partyKind,
+        nationalId: partyIds.nationalId || undefined,
+        ...(partyKind === 'company' ? { regNo: partyIds.regNo || undefined, economicCode: partyIds.economicCode || undefined, taxId: partyIds.taxId || undefined } : {}),
+      }
       const body = supportsSales && mode === 'sales'
         ? { type, sourceType: 'sales' as const, sourceId, ...tpl }
-        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, body: manual.body || undefined, bodyHtml: manual.bodyHtml || undefined, date: manual.date, lines: lines.filter(l => l.description.trim()), ...tpl }
+        : { type, title: manual.title || undefined, partyName: manual.partyName, partyInfo: manual.partyInfo, partyIds: partyIdsPayload, body: manual.body || undefined, bodyHtml: manual.bodyHtml || undefined, date: manual.date, dueDate: manual.dueDate || undefined, lines: lines.filter(l => l.description.trim()), ...tpl }
       const r = await fetch('/api/admin/erp/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'failed')
@@ -83,7 +97,8 @@ export function DocumentCenter() {
 
   function openNew() {
     setType('invoice'); setMode('sales'); setSalesDocs([]); setSourceId(0)
-    setManual({ title: '', partyName: '', partyInfo: '', body: '', bodyHtml: '', date: new Date().toISOString().slice(0, 10) })
+    setManual({ title: '', partyName: '', partyInfo: '', body: '', bodyHtml: '', date: new Date().toISOString().slice(0, 10), dueDate: '' })
+    setPartyKind('none'); setPartyIds({ nationalId: '', regNo: '', economicCode: '', taxId: '' })
     setEditorReset(n => n + 1)
     setLines([{ description: '', qty: 1, unitPrice: 0 }]); setModal(true)
   }
@@ -157,7 +172,26 @@ export function DocumentCenter() {
           ) : (
             <>
               <div className="grid grid-cols-2 gap-4"><Input label={t('doc_fTitle')} value={manual.title} onChange={v => setManual(m => ({ ...m, title: v }))} placeholder={t(`doc_t_${type}` as 'doc_t_invoice')} /><Input label={t('doc_fDate')} type="date" value={manual.date} onChange={v => setManual(m => ({ ...m, date: v }))} /></div>
+              <div className="grid grid-cols-2 gap-4"><Input label={L2(rtl, 'Due date (optional)', 'تاریخ سررسید (اختیاری)')} type="date" value={manual.dueDate} onChange={v => setManual(m => ({ ...m, dueDate: v }))} /></div>
               <div className="grid grid-cols-2 gap-4"><Input label={t('doc_fParty')} value={manual.partyName} onChange={v => setManual(m => ({ ...m, partyName: v }))} /><Input label={t('doc_fPartyInfo')} value={manual.partyInfo} onChange={v => setManual(m => ({ ...m, partyInfo: v }))} /></div>
+              <div className="rounded-lg border border-border-primary p-3 space-y-3">
+                <Select label={L2(rtl, 'Buyer identity (optional)', 'هویت خریدار (اختیاری)')} value={partyKind} onChange={v => setPartyKind(v as 'none' | 'individual' | 'company')}
+                  options={[
+                    { value: 'none', label: L2(rtl, 'None — free-text info only', 'هیچ‌کدام — فقط اطلاعات آزاد') },
+                    { value: 'individual', label: L2(rtl, 'Individual (حقیقی)', 'حقیقی') },
+                    { value: 'company', label: L2(rtl, 'Company / legal entity (حقوقی)', 'حقوقی') },
+                  ]} />
+                {partyKind !== 'none' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label={L2(rtl, 'National ID', 'شناسه/کد ملی')} value={partyIds.nationalId} onChange={v => setPartyIds(p => ({ ...p, nationalId: v }))} />
+                    {partyKind === 'company' && <>
+                      <Input label={L2(rtl, 'Registration no.', 'شماره ثبت')} value={partyIds.regNo} onChange={v => setPartyIds(p => ({ ...p, regNo: v }))} />
+                      <Input label={L2(rtl, 'Economic code', 'کد اقتصادی')} value={partyIds.economicCode} onChange={v => setPartyIds(p => ({ ...p, economicCode: v }))} />
+                      <Input label={L2(rtl, 'Tax no.', 'شماره مالیاتی')} value={partyIds.taxId} onChange={v => setPartyIds(p => ({ ...p, taxId: v }))} />
+                    </>}
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="block text-xs text-text-tertiary mb-1">{t('doc_fBody')}</label>
                 <RichTextEditor rtl={rtl} resetKey={editorReset} onChange={(html, text) => setManual(m => ({ ...m, bodyHtml: html, body: text }))} />

@@ -140,3 +140,67 @@ describe('DOC-BRAND бнд۴ — Persian locale: fa-IR digits, Jalali dates, tit
     expect(defaultTitle('completion_certificate', true)).toBe('گواهی اتمام کار')
   })
 })
+
+import { buildLegalIdentityLines } from '../documents'
+
+describe('DOC-BRAND follow-up — second-card label, payment/terms split, due date, legal-ID kind', () => {
+  const rtlBase: DM2 = {
+    type: 'invoice', number: 'INV-1', date: '2026-08-22', title: 'INVOICE',
+    partyName: 'شرکت آزمایشی', issuerName: 'HBZ Technology',
+    payload: { lines: [], subtotal: 0, discountTotal: 0, taxTotal: 0, total: 0, currency: 'IRR', meta: [] },
+    verifyCode: 'ABC123', verifyUrl: 'https://x/verify/ABC123',
+    template: { rtl: true },
+  }
+
+  it('labels the second card SELLER info for a commercial doc type, PROJECT info for a contract', () => {
+    const invoiceHtml = render2(rtlBase, 'x')
+    expect(invoiceHtml).toContain('اطلاعات فروشنده')
+    expect(invoiceHtml).not.toContain('اطلاعات پروژه')
+
+    const contractHtml = render2({ ...rtlBase, type: 'contract' }, 'x')
+    expect(contractHtml).toContain('اطلاعات پروژه')
+    expect(contractHtml).not.toContain('اطلاعات فروشنده')
+  })
+
+  it('labels the second card SELLER INFORMATION (en) vs PROJECT DETAILS (en)', () => {
+    const invoiceHtml = render2({ ...rtlBase, template: { rtl: false } }, 'x')
+    expect(invoiceHtml).toContain('SELLER INFORMATION')
+    const contractHtml = render2({ ...rtlBase, type: 'contract', template: { rtl: false } }, 'x')
+    expect(contractHtml).toContain('PROJECT DETAILS')
+  })
+
+  it('gives payment instructions and terms&conditions their own separate headings, not one merged block', () => {
+    const html = render2({ ...rtlBase, template: { rtl: true, paymentInstructions: 'واریز طی ۱۰ روز', terms: 'کالا ضمانت ندارد' } }, 'x')
+    expect(html).toContain('دستور پرداخت')
+    expect(html).toContain('شرایط و ضوابط')
+    expect(html).toContain('واریز طی ۱۰ روز')
+    expect(html).toContain('کالا ضمانت ندارد')
+    // two distinct labeled sections, not "شرایط و ضوابط" wrapping both texts
+    expect(html.indexOf('دستور پرداخت')).toBeLessThan(html.indexOf('واریز طی ۱۰ روز'))
+  })
+
+  it('prints a due-date row only when dueDate is set, converted to Jalali + fa-IR when rtl', () => {
+    const withDue = render2({ ...rtlBase, dueDate: '2026-09-05' }, 'x')
+    expect(withDue).toContain('تاریخ سررسید')
+    expect(withDue).not.toContain('2026-09-05')
+    const withoutDue = render2(rtlBase, 'x')
+    expect(withoutDue).not.toContain('تاریخ سررسید')
+  })
+
+  it('places an uploaded logo in a white card instead of forcing a white-silhouette filter (the "logo not showing" bug — an opaque-background logo used to collapse to a plain white block)', () => {
+    const html = render2({ ...rtlBase, branding: { logoUrl: '/uploads/logo.png' } }, 'x')
+    expect(html).toContain('header-logo-chip')
+    expect(html).toContain('<img class="header-logo" src="/uploads/logo.png" alt="logo">')
+    expect(html).not.toMatch(/\.header-logo\s*\{[^}]*filter:/)
+  })
+
+  it('buildLegalIdentityLines: individual → national ID only; company → full identifiers', () => {
+    expect(buildLegalIdentityLines({ kind: 'individual', nationalId: '0012345678', regNo: '999' }, true))
+      .toEqual(['شناسه ملی: 0012345678']) // regNo ignored for an individual
+    expect(buildLegalIdentityLines({ kind: 'company', regNo: '111', nationalId: '222', economicCode: '333', taxId: '444' }, true))
+      .toEqual(['شماره ثبت: 111', 'شناسه ملی: 222', 'کد اقتصادی: 333', 'شماره مالیاتی: 444'])
+    expect(buildLegalIdentityLines({ kind: 'company', regNo: '111' }, false))
+      .toEqual(['Reg. no: 111'])
+    expect(buildLegalIdentityLines({ kind: 'individual' }, true)).toEqual([]) // no ID → no lines, not empty-labeled
+  })
+})

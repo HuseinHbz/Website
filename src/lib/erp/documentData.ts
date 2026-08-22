@@ -11,8 +11,8 @@ import { defaultCurrency } from './settings'
 import { SITE } from '@/lib/site'
 import { nextNumber } from '@/lib/numbering/integrate'
 import {
-  buildSalesPayload, renderDocumentHtml, defaultTitle,
-  type DocPayload, type DocModel, type GenDocType, type DocMeta, type DocBranding, type DocTemplateConfig,
+  buildSalesPayload, renderDocumentHtml, defaultTitle, buildLegalIdentityLines,
+  type DocPayload, type DocModel, type GenDocType, type DocMeta, type DocBranding, type DocTemplateConfig, type PartyLegalIds,
 } from './documents'
 
 /** The unified HBZ letterhead's Persian variant — the system default when a
@@ -80,6 +80,13 @@ export interface CreateInput {
   meta?: DocMeta[]
   /** Designer template applied at render time. */
   templateKey?: string
+  dueDate?: string
+  /** Manual-composition only: lets the operator choose whether the buyer is
+   *  presented as حقیقی (individual, national ID only) or حقوقی (legal
+   *  entity, full registration/economic/tax IDs) — mirrors the automatic
+   *  choice already made from `sales_customers.kind` for a sourced document.
+   *  Ignored when absent (free-text `partyInfo` used as-is, unchanged). */
+  partyIds?: PartyLegalIds
 }
 
 /** Create a document, pulling from a sales source when given, else manual. */
@@ -101,10 +108,6 @@ export async function createDocument(input: CreateInput, userId: string): Promis
   const tplConfig = await loadTemplateConfig(input.templateKey ?? DEFAULT_TEMPLATE_KEY)
   const rtl = tplConfig?.rtl === true
   const REF_LABEL = rtl ? 'شماره پیگیری' : 'Reference'
-  const REG_LABEL = rtl ? 'شماره ثبت' : 'Reg. no'
-  const NID_LABEL = rtl ? 'شناسه ملی' : 'National ID'
-  const ECO_LABEL = rtl ? 'کد اقتصادی' : 'Economic code'
-  const TAX_LABEL = rtl ? 'شماره مالیاتی' : 'Tax no'
 
   if (input.sourceType === 'sales' && input.sourceId) {
     const doc = (await pgQuery(
@@ -121,15 +124,24 @@ export async function createDocument(input: CreateInput, userId: string): Promis
     partyName = doc.customerName
     // Legal identity (Phase 26.2): حقیقی (individual) → national ID; حقوقی
     // (company) → registration/national-ID/economic code, as Iranian tax
-    // invoices require the buyer's identifiers on the document.
-    const legal = doc.kind === 'individual'
-      ? [doc.nationalId ? `${NID_LABEL}: ${doc.nationalId}` : '']
-      : [doc.regNo ? `${REG_LABEL}: ${doc.regNo}` : '', doc.nationalId ? `${NID_LABEL}: ${doc.nationalId}` : '',
-         doc.economicCode ? `${ECO_LABEL}: ${doc.economicCode}` : '', doc.taxId ? `${TAX_LABEL}: ${doc.taxId}` : '']
+    // invoices require the buyer's identifiers on the document. Shared
+    // helper (documents.ts) so this stays byte-identical to the manual-
+    // composition path below.
+    const legal = buildLegalIdentityLines({
+      kind: doc.kind === 'individual' ? 'individual' : 'company',
+      nationalId: doc.nationalId ?? undefined, regNo: doc.regNo ?? undefined,
+      economicCode: doc.economicCode ?? undefined, taxId: doc.taxId ?? undefined,
+    }, rtl)
     partyInfo = [...legal, doc.address, doc.email, doc.phone].filter(Boolean).join('\n')
     payload = buildSalesPayload(lines, fallbackCurrency, [{ label: REF_LABEL, value: doc.docNo }])
   } else {
-    // Manual composition.
+    // Manual composition. If the operator picked a legal-identity kind
+    // (بند۴ of the DOC-BRAND follow-up), prepend the same formatted lines
+    // the sales-sourced path uses — never invented separately.
+    if (input.partyIds) {
+      const legal = buildLegalIdentityLines(input.partyIds, rtl)
+      partyInfo = [...legal, partyInfo].filter(Boolean).join('\n')
+    }
     const lines = (input.lines ?? []).map(l => ({ description: l.description, qty: l.qty, unitPrice: l.unitPrice, lineTotal: Math.round(l.qty * l.unitPrice * 100) / 100 }))
     const total = Math.round(lines.reduce((s, l) => s + l.lineTotal, 0) * 100) / 100
     payload = { lines, subtotal: total, discountTotal: 0, taxTotal: 0, total, currency: fallbackCurrency, meta: input.meta ?? [], body: input.body, bodyHtml: input.bodyHtml }
@@ -140,19 +152,20 @@ export async function createDocument(input: CreateInput, userId: string): Promis
   const verifyCode = randomBytes(6).toString('hex').toUpperCase()
   const title = input.title || defaultTitle(input.type, rtl)
   const date = input.date || new Date().toISOString().slice(0, 10)
+  const dueDate = input.dueDate || null
 
   const row = (await pgQuery(
-    `INSERT INTO gen_documents (type, number, title, party_name, party_info, date, payload, source_type, source_id, verify_code, created_by, template_key)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
-    [input.type, number, title, partyName, partyInfo, date, JSON.stringify(payload), sourceType, sourceId, verifyCode, userId, input.templateKey ?? null]))[0] as { id: number }
+    `INSERT INTO gen_documents (type, number, title, party_name, party_info, date, due_date, payload, source_type, source_id, verify_code, created_by, template_key)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+    [input.type, number, title, partyName, partyInfo, date, dueDate, JSON.stringify(payload), sourceType, sourceId, verifyCode, userId, input.templateKey ?? null]))[0] as { id: number }
   return { id: row.id, number }
 }
 
-interface DocRow { id: number; type: GenDocType; number: string; title: string; partyName: string | null; partyInfo: string | null; date: string; payload: string; verifyCode: string; status: string; templateKey: string | null }
+interface DocRow { id: number; type: GenDocType; number: string; title: string; partyName: string | null; partyInfo: string | null; date: string; dueDate: string | null; payload: string; verifyCode: string; status: string; templateKey: string | null }
 
 export async function loadDocumentRow(id: number): Promise<DocRow | null> {
   const r = (await pgQuery(
-    `SELECT id, type, number, title, party_name AS "partyName", party_info AS "partyInfo", date, payload, verify_code AS "verifyCode", status, template_key AS "templateKey"
+    `SELECT id, type, number, title, party_name AS "partyName", party_info AS "partyInfo", date, due_date AS "dueDate", payload, verify_code AS "verifyCode", status, template_key AS "templateKey"
      FROM gen_documents WHERE id=$1`, [id]))[0] as unknown as DocRow | undefined
   return r ?? null
 }
@@ -170,7 +183,7 @@ export async function renderDocument(id: number, templateKey?: string): Promise<
   const tplKey = templateKey ?? row.templateKey ?? null
   const template = tplKey ? await loadTemplateConfig(tplKey) : null
   const model: DocModel = {
-    type: row.type, number: row.number, date: row.date, title: row.title,
+    type: row.type, number: row.number, date: row.date, dueDate: row.dueDate ?? undefined, title: row.title,
     partyName: row.partyName ?? '', partyInfo: row.partyInfo ?? undefined,
     issuerName: companyName ?? SITE.name ?? 'HBZ Technology', issuerInfo: SITE.url,
     payload, verifyCode: row.verifyCode, verifyUrl,

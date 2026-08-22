@@ -82,6 +82,10 @@ export interface DocModel {
   type: GenDocType
   number: string
   date: string
+  /** Optional payment/validity due date (ISO or pre-formatted) — printed next
+   *  to the issue date when present. Every document type may carry one
+   *  (an invoice's payment due date, a quotation's validity deadline, …). */
+  dueDate?: string
   title: string
   partyName: string
   partyInfo?: string
@@ -92,6 +96,27 @@ export interface DocModel {
   verifyUrl: string
   branding?: DocBranding
   template?: DocTemplateConfig
+}
+
+/** Legal identity kind (Phase 26.2 concept, reused here) — حقیقی (individual,
+ *  only a national ID) vs حقوقی (legal entity: registration/national/
+ *  economic/tax IDs). One function builds the printed lines either way, so
+ *  a sales-sourced document (documentData.ts) and a manually-composed one
+ *  (DocumentCenter's Document tab) never diverge in format. */
+export interface PartyLegalIds { kind: 'individual' | 'company'; nationalId?: string; regNo?: string; economicCode?: string; taxId?: string }
+export function buildLegalIdentityLines(ids: PartyLegalIds, rtl: boolean): string[] {
+  const L = rtl
+    ? { nid: 'شناسه ملی', reg: 'شماره ثبت', eco: 'کد اقتصادی', tax: 'شماره مالیاتی' }
+    : { nid: 'National ID', reg: 'Reg. no', eco: 'Economic code', tax: 'Tax no' }
+  if (ids.kind === 'individual') {
+    return ids.nationalId ? [`${L.nid}: ${ids.nationalId}`] : []
+  }
+  return [
+    ids.regNo ? `${L.reg}: ${ids.regNo}` : '',
+    ids.nationalId ? `${L.nid}: ${ids.nationalId}` : '',
+    ids.economicCode ? `${L.eco}: ${ids.economicCode}` : '',
+    ids.taxId ? `${L.tax}: ${ids.taxId}` : '',
+  ].filter(Boolean)
 }
 
 /** Only accept a safe hex accent (guards inline CSS injection). */
@@ -219,8 +244,15 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
     return rtl ? faDigits(display) : display
   }
   const L = rtl
-    ? { to: 'مشتری', subtotal: 'جمع کل (بدون مالیات)', discount: 'تخفیف', tax: 'مالیات بر ارزش افزوده', total: 'مبلغ قابل پرداخت', desc: 'شرح خدمات', row: 'ردیف', qty: 'تعداد', unit: 'قیمت واحد (ریال)', amount: 'مبلغ کل (ریال)', payment: 'اطلاعات پرداخت', terms: 'شرایط و توضیحات', verify: 'برای استعلام فاکتور اسکن کنید', print: 'چاپ / ذخیره PDF', reg: 'شماره ثبت', nid: 'شناسه ملی', eco: 'کد اقتصادی', taxno: 'شماره مالیاتی', vat: 'شماره ارزش افزوده', bill: 'اطلاعات مشتری', project: 'اطلاعات پروژه', company: 'نام شرکت / سازمان', bank: 'نام بانک', acc: 'شماره حساب', iban: 'شماره شبا', swift: 'کد سوییفت', signer: 'مهندس ارشد زیرساخت و شبکه' }
-    : { to: 'BILL TO', subtotal: 'SUBTOTAL', discount: 'DISCOUNT', tax: 'TAX', total: 'TOTAL AMOUNT', desc: 'DESCRIPTION', row: '#', qty: 'QTY', unit: 'UNIT PRICE', amount: 'AMOUNT', payment: 'PAYMENT INFORMATION', terms: 'TERMS &amp; CONDITIONS', verify: 'Scan to verify this invoice', print: 'Print / Save PDF', reg: 'Reg. no', nid: 'National ID', eco: 'Economic code', taxno: 'Tax no', vat: 'VAT no', bill: 'BILL TO', project: 'PROJECT DETAILS', company: 'Company Name', bank: 'Bank Name', acc: 'Account Number', iban: 'IBAN', swift: 'SWIFT', signer: 'Senior Infrastructure &amp; Network Engineer' }
+    ? { to: 'مشتری', subtotal: 'جمع کل (بدون مالیات)', discount: 'تخفیف', tax: 'مالیات بر ارزش افزوده', total: 'مبلغ قابل پرداخت', desc: 'شرح خدمات', row: 'ردیف', qty: 'تعداد', unit: 'قیمت واحد (ریال)', amount: 'مبلغ کل (ریال)', payment: 'اطلاعات پرداخت', terms: 'شرایط و ضوابط', paymentNote: 'دستور پرداخت', verify: 'برای استعلام فاکتور اسکن کنید', print: 'چاپ / ذخیره PDF', reg: 'شماره ثبت', nid: 'شناسه ملی', eco: 'کد اقتصادی', taxno: 'شماره مالیاتی', vat: 'شماره ارزش افزوده', bill: 'اطلاعات مشتری', project: 'اطلاعات پروژه', seller: 'اطلاعات فروشنده', company: 'نام شرکت / سازمان', bank: 'نام بانک', acc: 'شماره حساب', iban: 'شماره شبا', swift: 'کد سوییفت', signer: 'مهندس ارشد زیرساخت و شبکه', dueDate: 'تاریخ سررسید' }
+    : { to: 'BILL TO', subtotal: 'SUBTOTAL', discount: 'DISCOUNT', tax: 'TAX', total: 'TOTAL AMOUNT', desc: 'DESCRIPTION', row: '#', qty: 'QTY', unit: 'UNIT PRICE', amount: 'AMOUNT', payment: 'PAYMENT INFORMATION', terms: 'TERMS &amp; CONDITIONS', paymentNote: 'PAYMENT INSTRUCTIONS', verify: 'Scan to verify this invoice', print: 'Print / Save PDF', reg: 'Reg. no', nid: 'National ID', eco: 'Economic code', taxno: 'Tax no', vat: 'VAT no', bill: 'BILL TO', project: 'PROJECT DETAILS', seller: 'SELLER INFORMATION', company: 'Company Name', bank: 'Bank Name', acc: 'Account Number', iban: 'IBAN', swift: 'SWIFT', signer: 'Senior Infrastructure &amp; Network Engineer', dueDate: 'Due Date' }
+  // DOC-BRAND follow-up: the second card was ALWAYS titled "Project Details"
+  // even though its actual content (the issuer's own legal identity — Reg.
+  // no/National ID/Economic code — plus the doc's reference meta) is SELLER
+  // information for every commercial document type. A buy/sell invoice has
+  // no "project" — only contracts/proposals genuinely are project-scoped.
+  const PROJECT_TYPED = new Set<GenDocType>(['contract', 'proposal'])
+  const secondCardLabel = PROJECT_TYPED.has(m.type) ? L.project : L.seller
   const idLine = (label: string, v?: string) => (v ? `<div>${escapeHtml(label)}: ${escapeHtml(v)}</div>` : '')
   const identity = [
     idLine(L.reg, b.regNo), idLine(L.nid, b.nationalId), idLine(L.eco, b.economicCode),
@@ -273,7 +305,15 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   .header-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #060d1f 0%, ${accent} 100%); clip-path: polygon(0 0, 55% 0, 40% 100%, 0 100%); }
   .header-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(56,189,248,.35), transparent 55%); }
   .header-inner { position: relative; display: flex; direction: ltr; justify-content: space-between; align-items: flex-start; padding: 30px 40px; z-index: 1; }
-  .header-logo { max-height: 54px; max-width: 210px; display: block; filter: brightness(0) invert(1); }
+  /* An uploaded logo can be any real-world file — an opaque-background PNG/
+     JPG, or a transparent-background PNG — not only a pure white silhouette.
+     The old filter: brightness(0) invert(1) rule assumed the latter and forced
+     EVERY logo into a flat white shape, which for anything with visible
+     background pixels renders as a plain white block (the reported "logo
+     isn't placed" bug). A small white card behind the image instead
+     guarantees legibility against the dark header for any logo file. */
+  .header-logo-chip { display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 10px; padding: 8px 14px; max-width: 210px; }
+  .header-logo { max-height: 40px; max-width: 182px; display: block; }
   .header-brand { color: #cbd5e1; font-size: 11px; letter-spacing: 2px; margin-top: 8px; text-transform: uppercase; }
   .header-right { text-align: right; }
   .header-title { font-size: 34px; font-weight: 800; color: #0f172a; letter-spacing: 1px; margin: 0; }
@@ -315,9 +355,10 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   table.totals { border-collapse: collapse; min-width: 260px; background: #f8fafc; border-radius: 12px; overflow: hidden; }
   table.totals td { padding: 8px 16px; font-size: 13px; }
   table.totals tr.grand td { font-size: 17px; font-weight: 800; color: #fff; background: ${accent}; padding: 12px 16px; }
-  .terms-box { flex: 1; min-width: 220px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; font-size: 12px; color: #475569; line-height: 1.8; }
-  .terms-box strong { display: block; color: #0f172a; font-size: 12px; margin-bottom: 6px; }
+  .terms-box { flex: 1; min-width: 220px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; font-size: 12px; color: #475569; line-height: 1.8; display: flex; flex-direction: column; gap: 12px; }
+  .terms-box strong { display: block; color: #0f172a; font-size: 12px; margin-bottom: 4px; }
   .terms-box ul { margin: 0; padding-inline-start: 18px; }
+  .terms-section + .terms-section { padding-top: 12px; border-top: 1px dashed #e2e8f0; }
 
   .pay-foot { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; border-top: 1px solid #e2e8f0; padding-top: 20px; }
   .pay-box { flex: 1; min-width: 220px; }
@@ -348,7 +389,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
       <div class="header-bg"></div>
       <div class="header-inner">
         <div>
-          ${show(t.showLogo) && b.logoUrl ? `<img class="header-logo" src="${escapeHtml(b.logoUrl)}" alt="logo">` : `<div class="header-logo" style="color:#fff;font-weight:800;font-size:22px">${escapeHtml(m.issuerName)}</div>`}
+          ${show(t.showLogo) && b.logoUrl ? `<div class="header-logo-chip"><img class="header-logo" src="${escapeHtml(b.logoUrl)}" alt="logo"></div>` : `<div class="header-logo" style="color:#fff;font-weight:800;font-size:22px">${escapeHtml(m.issuerName)}</div>`}
           <div class="header-brand">${escapeHtml(m.issuerInfo || b.website || '')}</div>
         </div>
         <div class="header-right">
@@ -357,6 +398,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
           <div class="header-meta">
             <div class="info-row"><span>${rtl ? 'شماره فاکتور' : 'Invoice No.'}</span><strong>${escapeHtml(m.number)}</strong></div>
             <div class="info-row"><span>${rtl ? 'تاریخ صدور' : 'Issue Date'}</span><strong>${escapeHtml(fmtDate(m.date))}</strong></div>
+            ${m.dueDate ? `<div class="info-row"><span>${L.dueDate}</span><strong>${escapeHtml(fmtDate(m.dueDate))}</strong></div>` : ''}
             <div class="info-row"><span>${rtl ? 'ارز' : 'Currency'}</span><strong>${escapeHtml(p.currency)}</strong></div>
           </div>
         </div>
@@ -373,7 +415,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
           ${m.partyInfo ? `<div class="identity" style="margin-top:2px;white-space:pre-line">${escapeHtml(m.partyInfo)}</div>` : ''}
         </div>
         <div class="card">
-          <div class="card-title">${svgIcon('server')} ${L.project}</div>
+          <div class="card-title">${svgIcon('server')} ${secondCardLabel}</div>
           ${metaRows}${customRows}
           ${identity ? `<div class="identity">${identity}</div>` : ''}
         </div>
@@ -384,7 +426,10 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
       ${hasLines ? `<table class="items"><thead><tr><th class="num">${L.row}</th><th>${L.desc}</th><th class="num">${L.qty}</th><th class="num">${L.unit}</th><th class="num">${L.amount}</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
 
       <div class="totals-wrap">
-        ${(t.terms || t.paymentInstructions) ? `<div class="terms-box"><strong>${L.terms}</strong>${t.paymentInstructions ? `<div>${escapeHtml(t.paymentInstructions)}</div>` : ''}${t.terms ? `<div>${escapeHtml(t.terms)}</div>` : ''}</div>` : `<div></div>`}
+        ${(t.terms || t.paymentInstructions) ? `<div class="terms-box">
+          ${t.paymentInstructions ? `<div class="terms-section"><strong>${L.paymentNote}</strong><div>${escapeHtml(t.paymentInstructions)}</div></div>` : ''}
+          ${t.terms ? `<div class="terms-section"><strong>${L.terms}</strong><div>${escapeHtml(t.terms)}</div></div>` : ''}
+        </div>` : `<div></div>`}
         ${totals}
       </div>
 

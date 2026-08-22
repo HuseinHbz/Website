@@ -652,6 +652,11 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW})
     );
     ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS template_key TEXT;
+    -- DOC-BRAND follow-up: an invoice's payment due date (or a quotation's
+    -- validity deadline, …) was never a first-class field anywhere in the
+    -- Document Engine — only the header's issue date printed. Optional;
+    -- absent for every existing row (never populated retroactively).
+    ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS due_date TEXT;
 
     -- Presentation config per template (applied at render time by
     -- renderDocumentHtml). ONE unified HBZ letterhead design as of 2026-08

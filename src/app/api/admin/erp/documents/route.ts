@@ -36,6 +36,17 @@ const schema = z.object({
   lines: z.array(z.object({ description: z.string().min(1).max(300), qty: z.number(), unitPrice: z.number() })).max(200).optional(),
   meta: z.array(z.object({ label: z.string().max(80), value: z.string().max(200) })).max(20).optional(),
   templateKey: z.string().max(60).optional(),
+  dueDate: z.string().max(30).optional(),
+  // DOC-BRAND follow-up بند۴: was silently missing from this schema, so
+  // readJson stripped it before createDocument ever saw it — the manual
+  // party-identity (حقیقی/حقوقی) picker never actually reached the document.
+  partyIds: z.object({
+    kind: z.enum(['individual', 'company']),
+    nationalId: z.string().max(60).optional(),
+    regNo: z.string().max(60).optional(),
+    economicCode: z.string().max(60).optional(),
+    taxId: z.string().max(60).optional(),
+  }).optional(),
 })
 
 // POST — generate a document (from a sales source or a manual composition).
