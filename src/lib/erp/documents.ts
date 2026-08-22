@@ -9,6 +9,8 @@
  */
 import { code39Svg } from './barcode'
 import { sanitizeRichHtml } from './richtext'
+import { toJalaliStr } from './jalali'
+import { faDigits } from '@/lib/admin/chartRtl'
 
 export const DOC_TYPES = [
   'invoice', 'quotation', 'purchase_order', 'contract', 'proposal', 'warranty',
@@ -157,7 +159,25 @@ const TITLES: Record<GenDocType, string> = {
   service_report: 'SERVICE REPORT', completion_certificate: 'CERTIFICATE OF COMPLETION', financial_report: 'FINANCIAL REPORT',
   receipt: 'RECEIPT', payment_voucher: 'PAYMENT VOUCHER', journal_voucher: 'JOURNAL VOUCHER',
 }
-export function defaultTitle(type: GenDocType): string { return TITLES[type] ?? 'DOCUMENT' }
+// DOC-BRAND: a document generated against a Persian (rtl) template must not
+// print an English title ("INVOICE") at the top of an otherwise-Persian
+// page — the exact leak a real screenshot caught. Both maps are kept next
+// to each other on purpose so a new GenDocType can't be added to one and
+// forgotten in the other (TITLES_FA keyed off the same GenDocType union).
+const TITLES_FA: Record<GenDocType, string> = {
+  invoice: 'فاکتور', quotation: 'پیش‌فاکتور', purchase_order: 'سفارش خرید', contract: 'قرارداد',
+  proposal: 'پیشنهاد', warranty: 'گواهی گارانتی', delivery_note: 'برگهٔ تحویل کالا',
+  service_report: 'گزارش خدمات', completion_certificate: 'گواهی اتمام کار', financial_report: 'گزارش مالی',
+  receipt: 'رسید', payment_voucher: 'سند پرداخت', journal_voucher: 'سند حسابداری',
+}
+export function defaultTitle(type: GenDocType, rtl = false): string {
+  return (rtl ? TITLES_FA[type] : TITLES[type]) ?? (rtl ? 'سند' : 'DOCUMENT')
+}
+// Reverse lookup so a document stored BEFORE this fix (title="INVOICE",
+// saved verbatim into gen_documents.title) still prints correctly the next
+// time it's rendered against an rtl template — defense in depth alongside
+// fixing the write path in documentData.ts.
+const EN_TO_FA_TITLE = new Map(Object.entries(TITLES).map(([type, en]) => [en, TITLES_FA[type as GenDocType]]))
 
 /**
  * Render a document model to a complete, self-contained, print-ready HTML page.
@@ -178,6 +198,26 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   const accent = safeAccent(t.accentColor, '#0f2a52')
   const show = (v: boolean | undefined) => v !== false
   const rtl = t.rtl === true
+  // 26.33 (fa-IR digits) + 26.24 (Jalali dates): centralized here so EVERY
+  // caller of renderDocumentHtml gets a correctly localized Persian document
+  // for free — a single fix here propagates everywhere instead of each call
+  // site having to remember to convert. `money()` and any other numeral
+  // text stays digit-for-digit correct in the money-formatting logic
+  // itself; only the DIGITS are swapped to fa-IR for display when rtl.
+  // The system-generated document NUMBER (e.g. INV-2026-0001) is
+  // deliberately NOT touched — same convention as every other ERP document
+  // number in this codebase (Latin/ASCII, never localized).
+  const fmtNum = (s: string | number) => (rtl ? faDigits(s) : String(s))
+  const fmtMoney = (n: number, currency: string) => fmtNum(money(n, currency))
+  // A document stored before this fix (or one whose caller still passes the
+  // English default) shows the Persian equivalent when rendered against an
+  // rtl template — the title is display-only here, never mutates storage.
+  const displayTitle = rtl ? (EN_TO_FA_TITLE.get(m.title) ?? m.title) : m.title
+  const fmtDate = (iso: string) => {
+    const looksIso = /^\d{4}-\d{2}-\d{2}/.test(iso)
+    const display = rtl && looksIso ? toJalaliStr(iso) : iso
+    return rtl ? faDigits(display) : display
+  }
   const L = rtl
     ? { to: 'مشتری', subtotal: 'جمع کل (بدون مالیات)', discount: 'تخفیف', tax: 'مالیات بر ارزش افزوده', total: 'مبلغ قابل پرداخت', desc: 'شرح خدمات', row: 'ردیف', qty: 'تعداد', unit: 'قیمت واحد (ریال)', amount: 'مبلغ کل (ریال)', payment: 'اطلاعات پرداخت', terms: 'شرایط و توضیحات', verify: 'برای استعلام فاکتور اسکن کنید', print: 'چاپ / ذخیره PDF', reg: 'شماره ثبت', nid: 'شناسه ملی', eco: 'کد اقتصادی', taxno: 'شماره مالیاتی', vat: 'شماره ارزش افزوده', bill: 'اطلاعات مشتری', project: 'اطلاعات پروژه', company: 'نام شرکت / سازمان', bank: 'نام بانک', acc: 'شماره حساب', iban: 'شماره شبا', swift: 'کد سوییفت', signer: 'مهندس ارشد زیرساخت و شبکه' }
     : { to: 'BILL TO', subtotal: 'SUBTOTAL', discount: 'DISCOUNT', tax: 'TAX', total: 'TOTAL AMOUNT', desc: 'DESCRIPTION', row: '#', qty: 'QTY', unit: 'UNIT PRICE', amount: 'AMOUNT', payment: 'PAYMENT INFORMATION', terms: 'TERMS &amp; CONDITIONS', verify: 'Scan to verify this invoice', print: 'Print / Save PDF', reg: 'Reg. no', nid: 'National ID', eco: 'Economic code', taxno: 'Tax no', vat: 'VAT no', bill: 'BILL TO', project: 'PROJECT DETAILS', company: 'Company Name', bank: 'Bank Name', acc: 'Account Number', iban: 'IBAN', swift: 'SWIFT', signer: 'Senior Infrastructure &amp; Network Engineer' }
@@ -198,24 +238,24 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   const hasLines = p.lines.length > 0
   const rows = p.lines.map((l, i) => `
       <tr>
-        <td class="num rownum">${i + 1}</td>
+        <td class="num rownum">${fmtNum(i + 1)}</td>
         <td>${escapeHtml(l.description)}</td>
-        <td class="num">${l.qty}</td>
-        <td class="num">${money(l.unitPrice, p.currency)}</td>
-        <td class="num">${money(l.lineTotal, p.currency)}</td>
+        <td class="num">${fmtNum(l.qty)}</td>
+        <td class="num">${fmtMoney(l.unitPrice, p.currency)}</td>
+        <td class="num">${fmtMoney(l.lineTotal, p.currency)}</td>
       </tr>`).join('')
   const metaRows = p.meta.map(x => `<div class="info-row"><span>${escapeHtml(x.label)}</span><strong>${escapeHtml(x.value)}</strong></div>`).join('')
   const totals = hasLines ? `
     <table class="totals">
-      <tr><td>${L.subtotal}</td><td class="num">${money(p.subtotal, p.currency)}</td></tr>
-      ${p.discountTotal ? `<tr><td>${L.discount}</td><td class="num">-${money(p.discountTotal, p.currency)}</td></tr>` : ''}
-      ${p.taxTotal ? `<tr><td>${L.tax}</td><td class="num">${money(p.taxTotal, p.currency)}</td></tr>` : ''}
-      <tr class="grand"><td>${L.total}</td><td class="num">${money(p.total, p.currency)}</td></tr>
+      <tr><td>${L.subtotal}</td><td class="num">${fmtMoney(p.subtotal, p.currency)}</td></tr>
+      ${p.discountTotal ? `<tr><td>${L.discount}</td><td class="num">-${fmtMoney(p.discountTotal, p.currency)}</td></tr>` : ''}
+      ${p.taxTotal ? `<tr><td>${L.tax}</td><td class="num">${fmtMoney(p.taxTotal, p.currency)}</td></tr>` : ''}
+      <tr class="grand"><td>${L.total}</td><td class="num">${fmtMoney(p.total, p.currency)}</td></tr>
     </table>` : ''
 
   return `<!doctype html>
 <html lang="${rtl ? 'fa' : 'en'}" dir="${rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(m.title)} ${escapeHtml(m.number)}</title>
+<title>${escapeHtml(displayTitle)} ${escapeHtml(m.number)}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", Roboto, Tahoma, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #f1f5f9; }
@@ -312,11 +352,11 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
           <div class="header-brand">${escapeHtml(m.issuerInfo || b.website || '')}</div>
         </div>
         <div class="header-right">
-          <h1 class="header-title">${escapeHtml(m.title)}</h1>
+          <h1 class="header-title">${escapeHtml(displayTitle)}</h1>
           ${t.variant ? `<div class="header-subtitle">${escapeHtml(t.variant)}</div>` : ''}
           <div class="header-meta">
             <div class="info-row"><span>${rtl ? 'شماره فاکتور' : 'Invoice No.'}</span><strong>${escapeHtml(m.number)}</strong></div>
-            <div class="info-row"><span>${rtl ? 'تاریخ صدور' : 'Issue Date'}</span><strong>${escapeHtml(m.date)}</strong></div>
+            <div class="info-row"><span>${rtl ? 'تاریخ صدور' : 'Issue Date'}</span><strong>${escapeHtml(fmtDate(m.date))}</strong></div>
             <div class="info-row"><span>${rtl ? 'ارز' : 'Currency'}</span><strong>${escapeHtml(p.currency)}</strong></div>
           </div>
         </div>

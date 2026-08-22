@@ -3,7 +3,7 @@ import { readJson, requirePermission } from '@/lib/api/respond'
 import { z } from 'zod'
 import QRCode from 'qrcode'
 import { renderDocument, loadCompanyProfile } from '@/lib/erp/documentData'
-import { renderDocumentHtml, buildSalesPayload, type DocModel, type DocTemplateConfig } from '@/lib/erp/documents'
+import { renderDocumentHtml, buildSalesPayload, defaultTitle, type DocModel, type DocTemplateConfig } from '@/lib/erp/documents'
 import { SITE } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
@@ -36,18 +36,33 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   try {
     const { branding, companyName } = await loadCompanyProfile()
-    const payload = buildSalesPayload([
-      { description: 'Enterprise infrastructure service', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 9 },
-      { description: 'Managed security (monthly)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 9 },
-    ], 'IRR', [{ label: 'Reference', value: 'DESIGN-PREVIEW' }])
+    const template = parsed.data.config as DocTemplateConfig
+    // DOC-BRAND бнд۴: the preview's demo data was hardcoded English no
+    // matter which template was being previewed — so previewing a Persian
+    // (rtl) template still showed "INVOICE"/"Enterprise infrastructure
+    // service"/"Reference"/"DESIGN-PREVIEW" in Latin script. Locale-matched
+    // demo content now, driven by the SAME `template.rtl` flag the renderer
+    // itself uses — one flag, everything downstream agrees.
+    const rtl = template.rtl === true
+    const payload = rtl
+      ? buildSalesPayload([
+          { description: 'خدمات زیرساخت سازمانی', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 9 },
+          { description: 'امنیت مدیریت‌شده (ماهانه)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 9 },
+        ], 'IRR', [{ label: 'شماره پیگیری', value: 'پیش‌نمایش-طراحی' }])
+      : buildSalesPayload([
+          { description: 'Enterprise infrastructure service', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 9 },
+          { description: 'Managed security (monthly)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 9 },
+        ], 'IRR', [{ label: 'Reference', value: 'DESIGN-PREVIEW' }])
     const verifyUrl = `${SITE.url}/verify/PREVIEW`
     const qr = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 168 })
     const model: DocModel = {
       type: 'invoice', number: 'INV-PREVIEW-0001', date: new Date().toISOString().slice(0, 10),
-      title: 'INVOICE', partyName: 'Demo Customer LLC', partyInfo: 'No. 1, Demo St.',
+      title: defaultTitle('invoice', rtl),
+      partyName: rtl ? 'شرکت نمونه (مشتری آزمایشی)' : 'Demo Customer LLC',
+      partyInfo: rtl ? 'پلاک ۱، خیابان نمونه' : 'No. 1, Demo St.',
       issuerName: companyName ?? SITE.name ?? 'HBZ Technology', issuerInfo: SITE.url,
       payload, verifyCode: 'PREVIEW', verifyUrl,
-      branding, template: parsed.data.config as DocTemplateConfig,
+      branding, template,
     }
     return new NextResponse(renderDocumentHtml(model, qr), { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
   } catch {

@@ -14,6 +14,12 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mon
 export const metadata: Metadata = {
   title: 'Admin Panel | HBZ',
   robots: { index: false, follow: false },
+  // DOC-BRAND бنд۷: with no `icons` declared, the browser falls back to an
+  // implicit request for /favicon.ico (which doesn't exist) — the 404 seen
+  // in the browser console on /admin pages, unrelated to a browser
+  // extension. public/favicon.svg already exists and is used by the public
+  // site; the admin layout just never referenced it.
+  icons: { icon: '/favicon.svg' },
 }
 
 let _initialized = false

@@ -41,8 +41,10 @@ export async function portalInvoices(customerId: number) {
 export async function portalInvoice(customerId: number, invoiceId: number) {
   const doc = (await pgQuery<Record<string, unknown>>(
     `SELECT d.id, d.doc_no AS "docNo", d.date, d.due_date AS "dueDate", d.status, d.subtotal::float AS subtotal,
-            d.discount_total::float AS "discountTotal", d.tax_total::float AS "taxTotal", d.total::float AS total, d.currency
-     FROM sales_documents d WHERE d.id=$1 AND d.customer_id=$2 AND d.doc_type='invoice' AND d.deleted_at IS NULL`, [invoiceId, customerId]))[0]
+            d.discount_total::float AS "discountTotal", d.tax_total::float AS "taxTotal", d.total::float AS total, d.currency,
+            c.name AS "customerName", c.address AS "customerAddress"
+     FROM sales_documents d JOIN sales_customers c ON c.id=d.customer_id
+     WHERE d.id=$1 AND d.customer_id=$2 AND d.doc_type='invoice' AND d.deleted_at IS NULL`, [invoiceId, customerId]))[0]
   if (!doc) return null
   const lines = await pgQuery(`SELECT description, qty::float AS qty, unit_price::float AS "unitPrice", line_total::float AS "lineTotal" FROM sales_document_lines WHERE document_id=$1 ORDER BY line_no, id`, [invoiceId])
   const paid = num((await pgQuery<{ p: number }>(`SELECT COALESCE(SUM(amount),0)::float AS p FROM sales_payments WHERE document_id=$1`, [invoiceId]))[0]?.p)

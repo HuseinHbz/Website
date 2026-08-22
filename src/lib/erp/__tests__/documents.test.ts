@@ -86,3 +86,57 @@ describe('branding + designer template render (Phase 26)', () => {
     expect(safeAccent(undefined)).toBe('#4f46e5')
   })
 })
+
+describe('DOC-BRAND бнд۴ — Persian locale: fa-IR digits, Jalali dates, title fallback', () => {
+  const rtlBase: DM2 = {
+    type: 'invoice', number: 'INV-2026-0007', date: '2026-08-22', title: 'INVOICE',
+    partyName: 'شرکت آزمایشی', issuerName: 'HBZ Technology',
+    payload: {
+      lines: [{ description: 'نصب سرور', qty: 3, unitPrice: 1234, lineTotal: 3702 }],
+      subtotal: 3702, discountTotal: 0, taxTotal: 333, total: 4035, currency: 'IRR', meta: [],
+    },
+    verifyCode: 'ABC123', verifyUrl: 'https://x/verify/ABC123',
+    template: { rtl: true },
+  }
+
+  it('renders all money/qty/row-number digits as fa-IR — never Latin — when rtl', () => {
+    const html = render2(rtlBase, 'data:image/png;base64,x')
+    // Latin digits must not appear anywhere the RENDERED numbers are shown
+    // (money/qty/row index) — fa-IR equivalents instead.
+    expect(html).toContain('۳,۷۰۲') // subtotal, fa-IR grouped
+    expect(html).toContain('۳') // qty=3, fa-IR
+    expect(html).toContain('۱') // row #1, fa-IR
+    expect(html).not.toMatch(/>[^<۰-۹]*3,702[^<]*</) // the OLD Latin-digit form never appears as rendered text
+  })
+
+  it('converts an ISO date to a Jalali date + fa-IR digits when rtl', () => {
+    const html = render2(rtlBase, 'data:image/png;base64,x')
+    expect(html).not.toContain('2026-08-22') // Gregorian ISO string gone
+    // 2026-08-22 Gregorian → 1405/05/31 Jalali (fa-IR digits)
+    expect(html).toContain('۱۴۰۵/۰۵/۳۱')
+  })
+
+  it('leaves Latin digits and the Gregorian date untouched for a non-rtl (English) document', () => {
+    const html = render2({ ...rtlBase, template: { rtl: false } }, 'data:image/png;base64,x')
+    expect(html).toContain('2026-08-22')
+    expect(html).toContain('3,702')
+  })
+
+  it('the system document NUMBER is never localized, even when rtl', () => {
+    const html = render2(rtlBase, 'data:image/png;base64,x')
+    expect(html).toContain('INV-2026-0007')
+  })
+
+  it('shows the Persian title even when the stored/passed title is the English default (legacy-document defense)', () => {
+    const html = render2({ ...rtlBase, title: 'INVOICE' }, 'data:image/png;base64,x')
+    expect(html).toContain('فاکتور')
+    expect(html).not.toMatch(/<h1[^>]*>INVOICE<\/h1>/)
+  })
+
+  it('defaultTitle returns the Persian title for rtl and English otherwise, per doc type', () => {
+    expect(defaultTitle('invoice', true)).toBe('فاکتور')
+    expect(defaultTitle('invoice', false)).toBe('INVOICE')
+    expect(defaultTitle('contract', true)).toBe('قرارداد')
+    expect(defaultTitle('completion_certificate', true)).toBe('گواهی اتمام کار')
+  })
+})

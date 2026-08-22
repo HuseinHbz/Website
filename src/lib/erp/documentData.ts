@@ -15,6 +15,11 @@ import {
   type DocPayload, type DocModel, type GenDocType, type DocMeta, type DocBranding, type DocTemplateConfig,
 } from './documents'
 
+/** The unified HBZ letterhead's Persian variant — the system default when a
+ *  document is created without an explicit template (Persian-primary per
+ *  26.33). Must match the key seeded in migrate.ts. */
+const DEFAULT_TEMPLATE_KEY = 'hbz-letterhead-fa'
+
 /** site_settings key → DocBranding field (Phase 26 Company Profile). */
 const COMPANY_KEYS: Record<string, keyof DocBranding> = {
   company_logo_url: 'logoUrl', company_letterhead_url: 'letterheadUrl', company_seal_url: 'sealUrl', company_signature_url: 'signatureUrl',
@@ -86,6 +91,21 @@ export async function createDocument(input: CreateInput, userId: string): Promis
   let sourceType: string | null = input.sourceType ?? null
   let sourceId: number | null = input.sourceId ?? null
 
+  // DOC-BRAND бنд۴: the buyer's legal-identity labels ("Reg. no", "National
+  // ID", …) and the "Reference" meta label used to be hardcoded English —
+  // baked directly into stored data, so a Persian-template document showed
+  // English labels no matter what. Resolved from the CHOSEN template
+  // (falling back to the default unified template, Persian-primary per
+  // 26.33) once, here — the one place a document's language is decided —
+  // rather than re-deciding it at every render.
+  const tplConfig = await loadTemplateConfig(input.templateKey ?? DEFAULT_TEMPLATE_KEY)
+  const rtl = tplConfig?.rtl === true
+  const REF_LABEL = rtl ? 'شماره پیگیری' : 'Reference'
+  const REG_LABEL = rtl ? 'شماره ثبت' : 'Reg. no'
+  const NID_LABEL = rtl ? 'شناسه ملی' : 'National ID'
+  const ECO_LABEL = rtl ? 'کد اقتصادی' : 'Economic code'
+  const TAX_LABEL = rtl ? 'شماره مالیاتی' : 'Tax no'
+
   if (input.sourceType === 'sales' && input.sourceId) {
     const doc = (await pgQuery(
       `SELECT d.doc_no AS "docNo", d.date, c.name AS "customerName", c.address, c.email, c.phone,
@@ -103,11 +123,11 @@ export async function createDocument(input: CreateInput, userId: string): Promis
     // (company) → registration/national-ID/economic code, as Iranian tax
     // invoices require the buyer's identifiers on the document.
     const legal = doc.kind === 'individual'
-      ? [doc.nationalId ? `National ID: ${doc.nationalId}` : '']
-      : [doc.regNo ? `Reg. no: ${doc.regNo}` : '', doc.nationalId ? `National ID: ${doc.nationalId}` : '',
-         doc.economicCode ? `Economic code: ${doc.economicCode}` : '', doc.taxId ? `Tax no: ${doc.taxId}` : '']
+      ? [doc.nationalId ? `${NID_LABEL}: ${doc.nationalId}` : '']
+      : [doc.regNo ? `${REG_LABEL}: ${doc.regNo}` : '', doc.nationalId ? `${NID_LABEL}: ${doc.nationalId}` : '',
+         doc.economicCode ? `${ECO_LABEL}: ${doc.economicCode}` : '', doc.taxId ? `${TAX_LABEL}: ${doc.taxId}` : '']
     partyInfo = [...legal, doc.address, doc.email, doc.phone].filter(Boolean).join('\n')
-    payload = buildSalesPayload(lines, fallbackCurrency, [{ label: 'Reference', value: doc.docNo }])
+    payload = buildSalesPayload(lines, fallbackCurrency, [{ label: REF_LABEL, value: doc.docNo }])
   } else {
     // Manual composition.
     const lines = (input.lines ?? []).map(l => ({ description: l.description, qty: l.qty, unitPrice: l.unitPrice, lineTotal: Math.round(l.qty * l.unitPrice * 100) / 100 }))
@@ -118,7 +138,7 @@ export async function createDocument(input: CreateInput, userId: string): Promis
 
   const number = await nextNumber(`doc_${input.type}`, { module: 'documents', userId, legacyPrefix: PREFIX[input.type] })
   const verifyCode = randomBytes(6).toString('hex').toUpperCase()
-  const title = input.title || defaultTitle(input.type)
+  const title = input.title || defaultTitle(input.type, rtl)
   const date = input.date || new Date().toISOString().slice(0, 10)
 
   const row = (await pgQuery(

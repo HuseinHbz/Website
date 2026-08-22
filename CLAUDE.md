@@ -1655,6 +1655,34 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   detector exists for either container) — decided NOT to build detection;
   removed from the UI/accept-list/MIME-map instead, leaving MP4/WebM as the
   only real options.
+- **Phase DOC-BRAND — Persian-locale document fixes + logo management.**
+  Traced a reported "English words + Latin digits + Gregorian date on a
+  Persian invoice preview" screenshot to its shared root: the Invoice
+  Designer live-preview endpoint (`/api/admin/erp/documents/render` POST)
+  built its demo data hardcoded English regardless of the template being
+  previewed, `createDocument` (`documentData.ts`) hardcoded the buyer's
+  legal-identity/"Reference" labels in English for every real generated
+  document, and `renderDocumentHtml` itself never converted digits/dates by
+  locale. **The invoice logo is read from `company_logo_url` in
+  `site_settings` (`loadCompanyProfile`) — never a hardcoded file** — every
+  new upload-management UI for a printed document's branding must write to
+  a `site_settings`/`erp_settings` key and be read live at render time, the
+  same pattern (`CompanyProfile.tsx` → `MediaPicker`, reusing `/api/admin/
+  media`, no parallel upload path). **Every document/invoice render or print
+  path must call the shared `renderDocumentHtml` engine — never a second
+  hand-rolled HTML template** (found and fixed one real violation: the
+  customer-portal invoice print route had its own independent template with
+  its own copy of the same Latin-digit bug). Persian-locale digits and
+  dates are the render engine's job, not each call site's: `renderDocumentHtml`
+  centrally converts money/qty/row-number digits to fa-IR (reusing
+  `faDigits` from `chartRtl.ts`) and ISO dates to Jalali (reusing
+  `toJalaliStr` from `jalali.ts`) whenever `template.rtl` is true — a
+  document's system-generated NUMBER is deliberately never localized, same
+  convention as every other ERP document number. Verified against a real
+  running production build + real Postgres (not just unit tests): the exact
+  reported preview screen re-rendered with zero English leaks, zero Latin
+  digits, and a correct Jalali date. Report:
+  `docs/governance/doc-brand-report.md`.
 
 ## Admin navigation (Phase 22 — Enterprise Workspace Platform)
 - The admin is organized into **12 workspaces** (Executive/Brand/Content/CRM/ERP/
