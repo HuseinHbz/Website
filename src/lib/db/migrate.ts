@@ -653,8 +653,11 @@ export async function runMigrations() {
     );
     ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS template_key TEXT;
 
-    -- Phase 26: Invoice Designer templates (presentation config per variant —
-    -- official/unofficial/tax/retail/service/... — applied at render time).
+    -- Presentation config per template (applied at render time by
+    -- renderDocumentHtml). ONE unified HBZ letterhead design as of 2026-08
+    -- (maintainer's explicit request — "one background/layout for every
+    -- invoice, only the name/type changes") replaced the prior 40-variant
+    -- Invoice Designer library below.
     CREATE TABLE IF NOT EXISTS doc_templates (
       id SERIAL PRIMARY KEY,
       key TEXT UNIQUE NOT NULL,
@@ -667,59 +670,40 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW}),
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
-    INSERT INTO doc_templates (key, name_en, name_fa, doc_type, config) VALUES
-      ('official-invoice','Official Invoice','فاکتور رسمی','invoice','{"variant":"Official","showLogo":true,"showSeal":true,"showSignature":true,"showQr":true}'),
-      ('unofficial-invoice','Unofficial Invoice','فاکتور غیررسمی','invoice','{"variant":"Unofficial","watermarkText":"UNOFFICIAL","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}'),
-      ('tax-invoice','Tax Invoice','فاکتور مالیاتی','invoice','{"variant":"Tax Invoice","showLogo":true,"showSeal":true,"showSignature":true,"showQr":true}'),
-      ('service-invoice','Service Invoice','فاکتور خدمات','invoice','{"variant":"Service","showLogo":true,"showSeal":false,"showSignature":true,"showQr":true}'),
-      -- Phase 26.7: Enterprise Invoice Template Center — 20 curated templates
-      -- across Professional / Corporate / Minimal / Retail / International /
-      -- Iranian-Accounting categories (idempotent seed; designer-editable).
-      ('pro-classic','Professional Classic','حرفه‌ای کلاسیک','invoice','{"variant": "Professional", "accentColor": "#1e3a8a", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true}'),
-      ('pro-modern','Professional Modern','حرفه‌ای مدرن','invoice','{"variant": "Professional", "accentColor": "#0f766e", "showLogo": true, "showSignature": true, "showQr": true, "showBarcode": true}'),
-      ('pro-detailed','Professional Detailed','حرفه‌ای تفصیلی','invoice','{"variant": "Professional", "accentColor": "#334155", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "Payment due within 30 days of the invoice date."}'),
-      ('pro-service','Professional Service','حرفه‌ای خدمات','invoice','{"variant": "Service", "accentColor": "#4f46e5", "showLogo": true, "showSignature": true, "showQr": true}'),
-      ('corp-executive','Corporate Executive','سازمانی مدیریتی','invoice','{"variant": "Corporate", "accentColor": "#111827", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "footerNote": "This document is issued electronically and is valid without a handwritten signature."}'),
-      ('corp-blue','Corporate Blue','سازمانی آبی','invoice','{"variant": "Corporate", "accentColor": "#1d4ed8", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true}'),
-      ('corp-contract','Corporate Contract Billing','سازمانی قراردادی','invoice','{"variant": "Contract Billing", "accentColor": "#155e75", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "paymentInstructions": "Bank transfer to the account below; quote the invoice number as the payment reference."}'),
-      ('corp-proforma','Corporate Pro-forma','سازمانی پیش‌فاکتور','invoice','{"variant": "Pro-forma", "accentColor": "#7c3aed", "watermarkText": "PRO-FORMA", "showLogo": true, "showSignature": true, "showQr": true}'),
-      ('min-clean','Minimal Clean','مینیمال ساده','invoice','{"variant": "Minimal", "accentColor": "#404040", "showLogo": false, "showSeal": false, "showSignature": true, "showQr": true}'),
-      ('min-mono','Minimal Mono','مینیمال تک‌رنگ','invoice','{"variant": "Minimal", "accentColor": "#171717", "showLogo": false, "showSeal": false, "showSignature": false, "showQr": true}'),
-      ('min-compact','Minimal Compact','مینیمال فشرده','invoice','{"variant": "Compact", "accentColor": "#525252", "showLogo": true, "showSeal": false, "showSignature": false, "showQr": false, "showBarcode": true}'),
-      ('retail-pos','Retail POS','خرده‌فروشی صندوق','invoice','{"variant": "Retail", "accentColor": "#dc2626", "showLogo": true, "showSeal": false, "showSignature": false, "showQr": true, "showBarcode": true}'),
-      ('retail-store','Retail Store','خرده‌فروشی فروشگاهی','invoice','{"variant": "Retail", "accentColor": "#ea580c", "showLogo": true, "showSignature": false, "showQr": true, "showBarcode": true, "footerNote": "Goods may be exchanged within 7 days with this receipt."}'),
-      ('retail-online','Retail Online Order','خرده‌فروشی آنلاین','invoice','{"variant": "Online Order", "accentColor": "#db2777", "showLogo": true, "showSignature": false, "showQr": true, "showBarcode": true}'),
-      ('intl-export','International Export','بین‌المللی صادراتی','invoice','{"variant": "Export Invoice", "accentColor": "#0369a1", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "Incoterms and governing law as agreed in the underlying contract."}'),
-      ('intl-usd','International (USD)','بین‌المللی دلاری','invoice','{"variant": "Commercial Invoice", "accentColor": "#047857", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "paymentInstructions": "SWIFT transfer to the account below. All bank charges are on the buyer."}'),
-      ('intl-eur','International (EUR)','بین‌المللی یورویی','invoice','{"variant": "Commercial Invoice", "accentColor": "#4338ca", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true}'),
-      ('ir-official','Iranian Official (رسمی)','رسمی ایرانی','invoice','{"variant": "فاکتور رسمی", "accentColor": "#166534", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "این صورتحساب مطابق نمونه سازمان امور مالیاتی صادر شده است."}'),
-      ('ir-tax','Iranian VAT (مالیاتی)','مالیاتی ایرانی','invoice','{"variant": "صورتحساب مالیاتی", "accentColor": "#0d9488", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "showBarcode": true}'),
-      ('ir-unofficial','Iranian Unofficial (غیررسمی)','غیررسمی ایرانی','invoice','{"variant": "غیررسمی", "accentColor": "#57534e", "watermarkText": "غیر رسمی", "showLogo": true, "showSeal": false, "showSignature": true, "showQr": true}')
-    ON CONFLICT (key) DO NOTHING;
 
-    -- Phase 26.10: 20 Persian (RTL) invoice templates.
+    -- Deactivate every template from the old 40-variant library BY EXACT
+    -- KEY (never a hard DELETE: a document already generated with one of
+    -- these keys must still re-render — renderDocument() falls back to an
+    -- empty DocTemplateConfig when the key is missing/inactive, never a
+    -- 500). Runs on every boot like the rest of this file, so it must
+    -- name the OLD keys explicitly — a blanket "deactivate everything not
+    -- in my keep-list" would also silently deactivate any NEW custom
+    -- template an admin creates through the Designer UI on next restart.
+    UPDATE doc_templates SET active = false WHERE active = true AND key IN (
+      'official-invoice','unofficial-invoice','tax-invoice','service-invoice',
+      'pro-classic','pro-modern','pro-detailed','pro-service',
+      'corp-executive','corp-blue','corp-contract','corp-proforma',
+      'min-clean','min-mono','min-compact',
+      'retail-pos','retail-store','retail-online',
+      'intl-export','intl-usd','intl-eur',
+      'ir-official','ir-tax','ir-unofficial',
+      'fa-official','fa-tax','fa-unofficial','fa-proforma','fa-service','fa-retail',
+      'fa-corporate','fa-blue','fa-green','fa-minimal','fa-classic','fa-modern','fa-gold',
+      'fa-contract','fa-letterhead','fa-vat','fa-export','fa-compact','fa-elegant',
+      'fa-industrial','fa-clinic'
+    );
+
+    -- The single unified HBZ letterhead design — Persian (RTL) and English
+    -- (LTR) variants of the SAME background/layout (diagonal navy header,
+    -- bilingual card layout, item table, payment/signature/QR footer bar).
+    -- "variant" is the only per-document text that changes the printed
+    -- subtitle (e.g. "خدمات زیرساخت" / "Network Services") — never a
+    -- separate stored template.
     INSERT INTO doc_templates (key, name_en, name_fa, doc_type, config) VALUES
-      ('fa-official','Iranian Official','فاکتور رسمی','invoice','{"variant": "فاکتور رسمی", "accentColor": "#166534", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "این صورتحساب مطابق ماده ۱۹ قانون مالیات بر ارزش افزوده صادر شده است.", "rtl": true}'),
-      ('fa-tax','Iranian Tax','فاکتور مالیاتی','invoice','{"variant": "صورتحساب مالیاتی", "accentColor": "#0d9488", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "showBarcode": true, "rtl": true}'),
-      ('fa-unofficial','Iranian Unofficial','فاکتور غیررسمی','invoice','{"variant": "غیررسمی", "accentColor": "#57534e", "watermarkText": "غیر رسمی", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-proforma','Iranian Pro-forma','پیش‌فاکتور','invoice','{"variant": "پیش‌فاکتور", "accentColor": "#7c3aed", "watermarkText": "پیش‌فاکتور", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-service','Iranian Service','فاکتور خدمات','invoice','{"variant": "خدمات", "accentColor": "#4f46e5", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-retail','Iranian Retail','فاکتور فروشگاهی','invoice','{"variant": "خرده‌فروشی", "accentColor": "#dc2626", "showLogo": true, "showQr": true, "showBarcode": true, "footerNote": "کالای فروخته‌شده تا ۷ روز با ارائه فاکتور قابل تعویض است.", "rtl": true}'),
-      ('fa-corporate','Iranian Corporate','فاکتور سازمانی','invoice','{"variant": "سازمانی", "accentColor": "#111827", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-blue','Iranian Blue','فاکتور آبی','invoice','{"variant": "رسمی", "accentColor": "#1d4ed8", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-green','Iranian Green','فاکتور سبز','invoice','{"variant": "رسمی", "accentColor": "#15803d", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-minimal','Iranian Minimal','فاکتور مینیمال','invoice','{"variant": "ساده", "accentColor": "#404040", "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-classic','Iranian Classic','فاکتور کلاسیک','invoice','{"variant": "کلاسیک", "accentColor": "#7c2d12", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-modern','Iranian Modern','فاکتور مدرن','invoice','{"variant": "مدرن", "accentColor": "#0f766e", "showLogo": true, "showSignature": true, "showQr": true, "showBarcode": true, "rtl": true}'),
-      ('fa-gold','Iranian Gold','فاکتور طلایی','invoice','{"variant": "ویژه", "accentColor": "#b45309", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-contract','Iranian Contract','قرارداد رسمی','contract','{"variant": "قرارداد", "accentColor": "#155e75", "headerNote": "بسمه تعالی", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "terms": "این قرارداد در تاریخ درج‌شده میان طرفین منعقد و مفاد آن برای هر دو طرف لازم‌الاجراست. هرگونه تغییر تنها با توافق کتبی طرفین معتبر است.", "paymentInstructions": "واریز به شماره شبای زیر با درج شماره قرارداد در توضیحات.", "rtl": true}'),
-      ('fa-letterhead','Iranian Letterhead','سربرگ رسمی شرکت','contract','{"variant": "سربرگ رسمی", "accentColor": "#0f766e", "headerNote": "بسمه تعالی", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": false, "footerNote": "این سند روی سربرگ رسمی شرکت صادر شده است.", "rtl": true}'),
-      ('fa-vat','Iranian VAT','فاکتور ارزش افزوده','invoice','{"variant": "ارزش افزوده ۹٪", "accentColor": "#065f46", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-export','Iranian Export','فاکتور صادراتی','invoice','{"variant": "صادراتی", "accentColor": "#0369a1", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-compact','Iranian Compact','فاکتور فشرده','invoice','{"variant": "فشرده", "accentColor": "#525252", "showLogo": true, "showBarcode": true, "rtl": true}'),
-      ('fa-elegant','Iranian Elegant','فاکتور شیک','invoice','{"variant": "ویژه", "accentColor": "#9d174d", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
-      ('fa-industrial','Iranian Industrial','فاکتور صنعتی','invoice','{"variant": "صنعتی", "accentColor": "#374151", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "showBarcode": true, "rtl": true}'),
-      ('fa-clinic','Iranian Clinic','فاکتور مطب/کلینیک','invoice','{"variant": "خدمات درمانی", "accentColor": "#0e7490", "showLogo": true, "showSignature": true, "showQr": true, "rtl": true}')
+      ('hbz-letterhead-fa', 'HBZ Letterhead (Persian)', 'سربرگ HBZ (فارسی)', NULL,
+        '{"variant": "خدمات زیرساخت", "accentColor": "#0f2a52", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": true}'),
+      ('hbz-letterhead-en', 'HBZ Letterhead (English)', 'سربرگ HBZ (انگلیسی)', NULL,
+        '{"variant": "Infrastructure Services", "accentColor": "#0f2a52", "showLogo": true, "showSeal": true, "showSignature": true, "showQr": true, "rtl": false}')
     ON CONFLICT (key) DO NOTHING;
 
     -- Enterprise Project Management (Phase 21 ERP, Module 6). Projects with
