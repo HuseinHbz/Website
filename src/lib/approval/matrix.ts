@@ -75,6 +75,29 @@ export function resolveApprovalPlan(rules: MatrixRule[], input: ResolveInput): A
   return [...rule.levels].sort((a, b) => a.level - b.level)
 }
 
+/**
+ * Full-remediation Phase 2 / RULE-004: "Approval rule missing != approval
+ * granted." `resolveApprovalPlan`'s `[]` return is ambiguous — it means
+ * EITHER "no matrix rule covers this doc type/amount at all" (a
+ * configuration gap: an admin narrowed/deleted a range, or a doc type has
+ * no matrix rule yet) OR "a rule matched and explicitly requires zero
+ * levels" (a deliberate business decision — e.g. "no approval needed under
+ * X"). A caller that treats `[]` as always meaning "nothing to approve"
+ * silently APPROVES a document whose routing was simply never configured.
+ * This resolves the SAME plan but tells the caller which case it is.
+ */
+export interface PlanResolution {
+  plan: ApprovalLevelPlan[]
+  /** true only when an actual matrix rule matched (whether or not it has levels). */
+  ruleMatched: boolean
+}
+
+export function resolveApprovalPlanExplicit(rules: MatrixRule[], input: ResolveInput): PlanResolution {
+  const rule = matchRule(rules, input)
+  if (!rule) return { plan: [], ruleMatched: false }
+  return { plan: [...rule.levels].sort((a, b) => a.level - b.level), ruleMatched: true }
+}
+
 /** Total distinct levels a plan requires. */
 export function requiredLevels(plan: ApprovalLevelPlan[]): number {
   return new Set(plan.map(l => l.level)).size

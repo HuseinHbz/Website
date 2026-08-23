@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveApprovalPlan, matchRule, routeMatches, requiredLevels, levelSatisfied, defaultPurchaseMatrix, type MatrixRule } from '@/lib/approval/matrix'
+import { resolveApprovalPlan, resolveApprovalPlanExplicit, matchRule, routeMatches, requiredLevels, levelSatisfied, defaultPurchaseMatrix, type MatrixRule } from '@/lib/approval/matrix'
 import { approvalState, canActFor, delegationActive, effectiveApprovers, type ApprovalActionRec, type Delegation } from '@/lib/approval/engine'
 import { dueEscalations, slaBreached, slaStatus, hoursBetween } from '@/lib/approval/escalation'
 import { approvalKpis } from '@/lib/approval/analytics'
@@ -23,6 +23,25 @@ describe('approval matrix + routing (26.12 M1/M2)', () => {
     ]
     expect(requiredLevels(resolveApprovalPlan(rules, { docType: 'purchase_order', amount: 10, context: { department: 'IT' } }))).toBe(2)
     expect(requiredLevels(resolveApprovalPlan(rules, { docType: 'purchase_order', amount: 10, context: { department: 'HR' } }))).toBe(1)
+  })
+  it('resolveApprovalPlanExplicit distinguishes "no rule matched" (config gap) from "rule matched, zero levels" (RULE-004: missing rule != approved)', () => {
+    // No rule at all covers this doc type — a real configuration gap.
+    const noRule = resolveApprovalPlanExplicit([], { docType: 'purchase_order', amount: 100 })
+    expect(noRule.ruleMatched).toBe(false)
+    expect(noRule.plan).toEqual([])
+
+    // A rule DOES match but is explicitly configured with zero levels — a
+    // deliberate business decision (e.g. "no approval needed under X"),
+    // NOT a config gap.
+    const explicitZero: MatrixRule[] = [{ docType: 'purchase_order', minAmount: 0, maxAmount: null, levels: [] }]
+    const zeroLevels = resolveApprovalPlanExplicit(explicitZero, { docType: 'purchase_order', amount: 100 })
+    expect(zeroLevels.ruleMatched).toBe(true)
+    expect(zeroLevels.plan).toEqual([])
+
+    // Amount falls outside every seeded range (e.g. an admin narrowed a
+    // tier) — also a config gap, not an approval.
+    const gap = resolveApprovalPlanExplicit(matrix, { docType: 'purchase_order', amount: -1 })
+    expect(gap.ruleMatched).toBe(false)
   })
   it('routeMatches all/any + no-condition passes', () => {
     expect(routeMatches(null, {})).toBe(true)

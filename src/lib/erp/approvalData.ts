@@ -9,7 +9,7 @@ import { pgQuery } from '@/lib/db'
 import type { AdminUser } from '@/lib/admin/auth'
 import { financeRole } from './financeRbac'
 import {
-  resolveApprovalPlan, type MatrixRule, type ApprovalLevelPlan, type ApprovalDocType,
+  resolveApprovalPlanExplicit, type MatrixRule, type ApprovalLevelPlan, type ApprovalDocType,
 } from '@/lib/approval/matrix'
 import { approvalState, canActFor, isSeparationViolation, wouldCreateDelegationCycle, type ApprovalActionRec, type Delegation, type Decision } from '@/lib/approval/engine'
 import { dueEscalations, slaBreached } from '@/lib/approval/escalation'
@@ -50,11 +50,35 @@ export interface RequestInput {
   department?: string; costCenterId?: number; projectId?: number; context?: Record<string, unknown>
 }
 
+/**
+ * Full-remediation Phase 2 / RULE-004: an approval-matrix "no rule matched"
+ * fallback — a single mandatory administrator level. Distinct from a
+ * matched rule that explicitly has zero levels (a real business decision,
+ * still auto-approved below); this only fires on an actual configuration
+ * gap, and a business_alert is raised so the gap is visible and fixable
+ * from /admin/approvals rather than silently repeating on every document.
+ */
+const NO_RULE_FALLBACK_LEVEL: ApprovalLevelPlan = { level: 1, mode: 'all', approvers: [{ type: 'role', ref: 'administrator' }] }
+
+async function flagMissingMatrixRule(docType: string, amount: number, requestId: number): Promise<void> {
+  const fp = `approval_matrix_gap:${docType}`
+  await pgQuery(
+    `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, metric_value, ref_type, ref_id, channels, fingerprint, updated_at)
+     VALUES ('approval_matrix_gap','security','warning','No approval rule configured for this document type','قانون تاییدی برای این نوع سند تنظیم نشده',$1,$2,'approval_requests',$3,'["inapp"]',$4,${NOW})
+     ON CONFLICT (fingerprint) DO UPDATE SET updated_at=${NOW}, metric_value=$2`,
+    [`docType=${docType}, amount=${amount} — no approval_matrix rule covers this range. Routed to administrator approval as a fail-safe; configure a matrix rule in /admin/approvals to route it correctly.`, amount, requestId, fp])
+}
+
 /** Create an approval request: resolves + snapshots the plan from the matrix. */
 export async function createApprovalRequest(input: RequestInput, userId: string | null): Promise<{ id: number; levels: number; autoApproved: boolean }> {
   const matrix = await loadMatrix(input.docType)
-  const plan = resolveApprovalPlan(matrix, { docType: input.docType, amount: input.amount, context: { department: input.department, cost_center: input.costCenterId, project: input.projectId, ...(input.context ?? {}) } })
-  const autoApproved = plan.length === 0   // no rule → nothing to approve
+  const resolved = resolveApprovalPlanExplicit(matrix, { docType: input.docType, amount: input.amount, context: { department: input.department, cost_center: input.costCenterId, project: input.projectId, ...(input.context ?? {}) } })
+  // A rule matched and explicitly requires zero levels → a real business
+  // decision, auto-approve. NO rule matched at all → a configuration gap,
+  // NEVER auto-approve (RULE-004) — fall back to a mandatory administrator
+  // level instead.
+  const plan = resolved.ruleMatched ? resolved.plan : (resolved.plan.length === 0 ? [NO_RULE_FALLBACK_LEVEL] : resolved.plan)
+  const autoApproved = resolved.ruleMatched && plan.length === 0
   const r = (await pgQuery<{ id: number }>(
     `INSERT INTO approval_requests (doc_type, ref_type, ref_id, title, amount, currency, department, cost_center_id, project_id, context, plan, status, current_level, created_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
@@ -63,6 +87,7 @@ export async function createApprovalRequest(input: RequestInput, userId: string 
      JSON.stringify(plan), autoApproved ? 'approved' : 'pending', plan[0]?.level ?? 1, userId]))[0]
   if (autoApproved) await pgQuery(`UPDATE approval_requests SET decided_at=${NOW} WHERE id=$1`, [r.id])
   else await queueNotification(r.id, 'request', input.title)
+  if (!resolved.ruleMatched) await flagMissingMatrixRule(input.docType, input.amount, r.id)
   return { id: r.id, levels: new Set(plan.map(l => l.level)).size, autoApproved }
 }
 
