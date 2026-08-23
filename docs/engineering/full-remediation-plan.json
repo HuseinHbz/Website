@@ -82,12 +82,19 @@
       "id": "phase7",
       "title": "Bilingual error catalog (src/lib/errors/) wired into apiError()",
       "priority": "P0",
-      "status": "pending"
+      "status": "completed-scoped",
+      "evidence": "src/lib/errors/ built (codes.ts, catalog.ts, factory.ts, formatter.ts, index.ts) — bilingual code/httpStatus/severity/module/recoverable/recommendedAction per code. Wired into the real ERP-SALES-CREDIT-LIMIT-EXCEEDED path (sales/documents route, confirm op) replacing the English-only badRequest() call — the exact worked example from the master prompt. toApiResponse() keeps the existing {error} field for backward compat with every current admin manager, additive error_fa/code/severity/recoverable fields for new callers. 4 unit tests + live-PostgreSQL proof: created a 100,000-limit customer, a 5,000,000 invoice, confirmed it -> real HTTP 400 with correct bilingual interpolated message + code=ERP-SALES-CREDIT-LIMIT-EXCEEDED, invoice correctly stayed draft (never confirmed). Scoped: infrastructure + ONE real call site, not a repo-wide migration of every existing apiError/badRequest call — that migration is tracked as phase7b in the queue below."
     },
     {
       "id": "phase-remaining",
       "title": "Remaining master-prompt phases, each audited against existing CLAUDE.md phase history before new code is written",
       "priority": "P1+",
+      "status": "pending"
+    },
+    {
+      "id": "phase7b",
+      "title": "Migrate remaining high-value apiError/badRequest call sites onto the error catalog (module by module, starting with other financial-blocking checks)",
+      "priority": "P1",
       "status": "pending"
     }
   ],

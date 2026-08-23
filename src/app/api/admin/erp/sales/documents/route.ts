@@ -11,6 +11,7 @@ import { rialRateFor } from '@/lib/erp/currencyData'
 import { clientIp } from '@/lib/api/clientIp'
 import { defaultCurrency } from '@/lib/erp/settings'
 import { evaluateCredit } from '@/lib/crm/customer360Data'
+import { businessError, toApiResponse } from '@/lib/errors'
 
 /** Idempotent credit-limit breach alert (26.25 بند ۱.۳), fingerprinted per invoice. */
 async function raiseCreditAlert(customerId: number, invoiceId: number, limit: number, projected: number) {
@@ -189,7 +190,9 @@ export async function PUT(req: NextRequest) {
       { const deny = await requireOp(auth.user, 'erp.sales:confirm', 'edit'); if (deny) return deny }
       const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
       if (decision.exceeded) {
-        if (decision.mode === 'block') return badRequest(`Credit limit exceeded: limit ${decision.limit.toLocaleString()}, projected balance ${decision.projected.toLocaleString()}`)
+        if (decision.mode === 'block') return toApiResponse(businessError('ERP-SALES-CREDIT-LIMIT-EXCEEDED', {
+          limit: decision.limit.toLocaleString(), projected: decision.projected.toLocaleString(),
+        }))
         await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
       }
     }
