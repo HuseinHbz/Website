@@ -75,7 +75,8 @@
       "id": "phase1b",
       "title": "Sweep remaining multi-statement financial/inventory writes for the same anti-pattern",
       "priority": "P0",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Repo-wide grep confirms zero remaining pgQuery('BEGIN'/'COMMIT'/'ROLLBACK') call sites outside comments/tests — phase1a fixed the only two broken instances. The other three multi-statement transaction sites (masterdata/masterDataData.ts, import/importData.ts, numbering/service.ts) already correctly hold a single dedicated pool.connect() client for their whole transaction and were never broken; migrating them onto withTransaction() is a same-behavior refactor-for-consistency, deferred as low-priority/no-regression-risk rather than done opportunistically now, per the master prompt's own no-unnecessary-rewrite rule."
     },
     {
       "id": "phase7",
