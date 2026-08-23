@@ -45,6 +45,24 @@ export function canHold(state: StockState, qty: number): { ok: boolean; reason?:
   return { ok: true }
 }
 
+/**
+ * Full-remediation RULE-012: negative-inventory policy for a DIRECT
+ * outbound move (issue / transfer-out) that bypasses the hold system
+ * entirely — the manual /api/admin/erp/inventory/moves route wrote a
+ * negative-signed `inv_moves` row straight from user input with NO
+ * available-quantity check at all. Default policy is BLOCK (the master
+ * remediation program's own default when no explicit config says
+ * otherwise — this repo has no negative-inventory policy setting today).
+ * `onHand` must be the CURRENT on-hand for that exact product×warehouse,
+ * read inside the same transaction/advisory-lock as the write to avoid a
+ * concurrent-request race.
+ */
+export function canIssueDirect(onHand: number, qty: number): { ok: boolean; reason?: string } {
+  if (qty <= 0) return { ok: false, reason: 'Quantity must be positive' }
+  if (qty > onHand) return { ok: false, reason: `Only ${onHand} on hand — issuing ${qty} would take stock negative` }
+  return { ok: true }
+}
+
 // ── Shipment lifecycle (PART 6) ──────────────────────────────────────────────
 export const SHIPMENT_STATUSES = ['draft', 'picking', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'] as const
 export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number]

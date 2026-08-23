@@ -3,7 +3,7 @@ import { deflateRawSync } from 'zlib'
 import { parseXlsx, xlsxToMatrix, isXlsx, colIndex, decodeXmlEntities } from '@/lib/import/xlsx'
 import { latinDigits, normalizePhone, normalizeEmail, normalizeNationalCode, normalizeNumberText, cleanseRecord } from '@/lib/import/cleanse'
 import {
-  stockState, canHold, canTransitionShipment, shipmentIssuesStock, shipmentReturnsStock,
+  stockState, canHold, canIssueDirect, canTransitionShipment, shipmentIssuesStock, shipmentReturnsStock,
   canTransitionCount, countVariances, economicOrderQty, inventoryAdjustmentPostingLines,
 } from '../stockOps'
 import {
@@ -172,6 +172,12 @@ describe('stock states + holds', () => {
     expect(canHold(s, 83).ok).toBe(true)
     expect(canHold(s, 84).ok).toBe(false)
     expect(canHold(s, 0).ok).toBe(false)
+  })
+  it('canIssueDirect (RULE-012) blocks a direct issue/transfer-out that would take on-hand negative', () => {
+    expect(canIssueDirect(10, 10).ok).toBe(true)   // exact remaining stock
+    expect(canIssueDirect(10, 11).ok).toBe(false)  // would go negative
+    expect(canIssueDirect(0, 1).ok).toBe(false)    // nothing on hand
+    expect(canIssueDirect(10, 0).ok).toBe(false)   // zero qty is never a legal move
   })
 })
 
