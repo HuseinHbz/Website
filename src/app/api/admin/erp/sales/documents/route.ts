@@ -12,6 +12,7 @@ import { clientIp } from '@/lib/api/clientIp'
 import { defaultCurrency } from '@/lib/erp/settings'
 import { evaluateCredit } from '@/lib/crm/customer360Data'
 import { businessError, toApiResponse } from '@/lib/errors'
+import { runOnce } from '@/lib/api/idempotency'
 
 /** Idempotent credit-limit breach alert (26.25 بند ۱.۳), fingerprinted per invoice. */
 async function raiseCreditAlert(customerId: number, invoiceId: number, limit: number, projected: number) {
@@ -106,12 +107,23 @@ export async function POST(req: NextRequest) {
       if (!cur) return badRequest('Not found')
       if (cur.status !== 'draft') return badRequest('Only draft documents can be edited')
     }
-    const docNo = d.id ? null : await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
+    // Full-remediation RULE-025 (26.32-class double-submit guard): a CREATE
+    // (no d.id) is wrapped in runOnce — two genuinely concurrent identical
+    // POSTs (double-click, network retry) used to create two invoices with
+    // two different doc numbers; the second now replays the first's result
+    // instead of reaching the database. An update targets a specific row by
+    // id, so it doesn't need this (a repeat is naturally idempotent).
+    // NOTE: nextNumber() must run INSIDE the runOnce-guarded closure — minting
+    // it outside (as an earlier version of this fix did) burns one numbering-
+    // sequence value per concurrent request even though only one document is
+    // actually written (caught by a live-concurrency test on the journal
+    // route's identical pattern).
+    const createOnce = <T>(fn: () => Promise<T>) => d.id ? fn() : runOnce(auth.user.id, 'erp/sales/documents', d, fn)
     // Full-remediation RULE-002: header write + line replacement now commit
     // as one transaction — the old bare-pgQuery sequence (UPDATE/INSERT
     // header, DELETE old lines, loop-INSERT new lines) could leave a
     // document with missing/mismatched lines on a mid-sequence failure.
-    const docId = await withTransaction(async query => {
+    const docId = await createOnce(() => withTransaction(async query => {
       let id = d.id
       if (id) {
         await query(
@@ -119,6 +131,7 @@ export async function POST(req: NextRequest) {
           [id, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, currency, rate, baseTotal])
         await query(`DELETE FROM sales_document_lines WHERE document_id=$1`, [id])
       } else {
+        const docNo = await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
         const row = (await query(
           `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
            VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW}) RETURNING id`,
@@ -131,7 +144,7 @@ export async function POST(req: NextRequest) {
           [id, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, lineTotals(l).total, i, l.productId ?? null])
       }
       return id!
-    })
+    }))
     await logAction(auth.user, d.id ? 'sales.doc.update' : 'sales.doc.create', 'sales_document', docId, null, { docType: d.docType, total: totals.total })
     return NextResponse.json({ id: docId, total: totals.total })
   } catch (e) { return apiError(e, 'Failed to save document') }

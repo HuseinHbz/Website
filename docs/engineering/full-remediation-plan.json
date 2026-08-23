@@ -132,6 +132,13 @@
       "priority": "P1",
       "status": "completed",
       "evidence": "Both gaps fixed with the same withTransaction pattern: finance/journal/route.ts POST (create) and the update op each now wrap header+lines(+template) as one transaction; erp/sales/documents/route.ts POST (create-or-update) wraps header write + DELETE-old-lines + loop-insert-new-lines as one transaction. Verified: zero regressions across all 22 committed regression suites on real PostgreSQL; direct live proof -- created a real invoice with 2 lines (confirmed 2 rows), then updated it with 3 different lines through the real HTTP update path (confirmed exactly 3 new rows, old 2 fully replaced, no orphans). tsc/lint/vitest(1304)/build/9 audits all clean."
+    },
+    {
+      "id": "phase-idempotency",
+      "title": "Double-submit guard (RULE-025 / 26.32-class): wire runOnce into sales-document and journal-entry create",
+      "priority": "P0",
+      "status": "completed",
+      "evidence": "REAL gap found: the 26.32 double-submit fix (runOnce) was NEVER applied to any ERP module -- only its original 3 targets (skills/timeline/crm-leads). Two genuinely concurrent identical POSTs could create two duplicate invoices or two duplicate journal entries. Fixed: wired runOnce into erp/sales/documents POST (create branch only -- update targets a specific row, naturally idempotent) and erp/finance/journal POST (always a create). SECOND real bug caught by the live-concurrency test itself: nextNumber() was called BEFORE runOnce/withTransaction, so even though only one row was actually written, every concurrent request still minted its own document/entry number (numbering-sequence gaps) and -- worse -- reported ITS OWN locally-minted number back to the caller instead of the one really stored on the row (4 of 5 concurrent callers were told a WRONG entryNo for the one real entry). Fixed by moving nextNumber() inside the runOnce-guarded transaction closure. Verified live against real PostgreSQL: fired 5 genuinely concurrent identical invoice-create POSTs -> all 5 responses returned the same id, exactly 1 row in sales_documents; fired 5 genuinely concurrent identical journal-entry-create POSTs -> before the numbering fix, all 5 shared the same id but reported 5 DIFFERENT entryNo values (only 1 matched the DB); after the fix, all 5 responses report the identical, correct entryNo matching the single stored row. tsc/lint/vitest(1304)/build/9 audits all clean."
     }
   ],
   "rule": "Every subsequent phase entry here will be updated to status=completed only after: real code change + tsc/lint/vitest/build/9 governance audits green + live-PostgreSQL verification + commit + push. No phase is marked completed on a claim alone."

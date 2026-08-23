@@ -5,6 +5,7 @@ import { pgQuery, withTransaction } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { businessError, toApiResponse } from '@/lib/errors'
+import { runOnce } from '@/lib/api/idempotency'
 import { assertPostable } from '@/lib/erp/accountingData'
 import { clientIp } from '@/lib/api/clientIp'
 import { entryBalanced, isJournalEntryDeletable } from '@/lib/erp/ledger'
@@ -103,11 +104,23 @@ export async function POST(req: NextRequest) {
     // 26.27: create-and-post is the same sensitive op as posting — same gate
     if (d.post) { const deny = await requireOp(auth.user, 'erp.finance:post', 'edit'); if (deny) return deny }
     if (d.post) { const gate = await assertPostable(d.date); if (!gate.ok) return badRequest(gate.error!) }
-    const entryNo = await nextNumber('journal', { legacyPrefix: 'JE', userId: auth.user.id })
+    // Full-remediation RULE-025 (26.32-class double-submit guard): this
+    // route only ever CREATEs (edits go through PUT), so every call is
+    // wrapped — two genuinely concurrent identical POSTs used to create two
+    // journal entries with two different entry numbers; the second now
+    // replays the first's result instead of reaching the database.
+    // NOTE (fixed after a live-concurrency test caught it): nextNumber()
+    // must run INSIDE the runOnce-guarded callback, not before it — minting
+    // it outside meant every concurrent request burned its own number
+    // (numbering-sequence gaps) and, worse, each response reported the
+    // caller's OWN locally-minted number instead of the one actually
+    // written to the row, so 4 of 5 concurrent callers were told a WRONG
+    // entry_no for the single row that really got created.
     // Full-remediation RULE-002: header + every line + the optional template
     // save now commit as one transaction — the old bare-pgQuery loop could
     // leave a draft entry with missing/wrong lines on a mid-loop failure.
-    const entry = await withTransaction(async query => {
+    const entry = await runOnce(auth.user.id, 'erp/finance/journal', d, () => withTransaction(async query => {
+      const entryNo = await nextNumber('journal', { legacyPrefix: 'JE', userId: auth.user.id })
       const e = (await query(
         `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, currency, exchange_rate, posted_at)
          VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,NULL) RETURNING id`,
@@ -121,8 +134,8 @@ export async function POST(req: NextRequest) {
         await query(`INSERT INTO gl_entry_templates (name, memo, lines, created_by) VALUES ($1,$2,$3,$4)`,
           [d.saveTemplate, d.memo ?? null, JSON.stringify(d.lines), auth.user.id])
       }
-      return e
-    })
+      return { id: e.id, entryNo }
+    }))
     let pendingApproval: number | null = null
     if (d.post) {
       pendingApproval = await makerCheckerGate(entry.id, check.totalDebit, auth.user.id)
@@ -131,8 +144,8 @@ export async function POST(req: NextRequest) {
         if (!res.ok) return badRequest(res.error!)
       }
     }
-    await logAction(auth.user, d.post ? 'gl.entry.post' : 'gl.entry.create', 'gl_journal_entry', entry.id, null, { entryNo, total: check.totalDebit, pendingApproval }, clientIp(req))
-    return NextResponse.json({ id: entry.id, entryNo, pendingApproval })
+    await logAction(auth.user, d.post ? 'gl.entry.post' : 'gl.entry.create', 'gl_journal_entry', entry.id, null, { entryNo: entry.entryNo, total: check.totalDebit, pendingApproval }, clientIp(req))
+    return NextResponse.json({ id: entry.id, entryNo: entry.entryNo, pendingApproval })
   } catch (e) { return apiError(e, 'Failed to create entry') }
 }
 
