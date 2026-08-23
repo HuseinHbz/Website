@@ -18,7 +18,10 @@
       {
         "id": "P0-1",
         "title": "pgQuery('BEGIN') is not a real transaction",
-        "files": ["src/lib/hr/payrollData.ts", "src/lib/hr/employeeData.ts"],
+        "files": [
+          "src/lib/hr/payrollData.ts",
+          "src/lib/hr/employeeData.ts"
+        ],
         "evidence": "pgQuery() calls pool.query() which acquires+releases a connection per call; BEGIN and the following statements are not guaranteed to run on the same connection under concurrency.",
         "correctPatternExample": "src/lib/masterdata/masterDataData.ts, src/lib/import/importData.ts, src/lib/numbering/service.ts (pool.connect() -> client.query('BEGIN') -> ... -> COMMIT -> release())",
         "recommendedFix": "Extract withTransaction(fn) helper in src/lib/db/index.ts using pool.connect(); migrate the two broken call sites; add a rollback regression test."
@@ -26,7 +29,9 @@
       {
         "id": "P0-2",
         "title": "No centralized bilingual error catalog",
-        "files": ["src/lib/api/respond.ts"],
+        "files": [
+          "src/lib/api/respond.ts"
+        ],
         "evidence": "src/lib/errors/ does not exist; apiError() maps exceptions to an English-only message + HTTP status with no code/fa/en/severity/module shape.",
         "recommendedFix": "Build src/lib/errors/ (catalog, factory, formatter, codes) per Phase 7 of the master prompt; wire into apiError() without breaking existing callers."
       }
@@ -35,7 +40,10 @@
       {
         "id": "P1-1",
         "title": "Non-financial empty catch blocks",
-        "files": ["src/components/ds/ThemeProvider.tsx", "src/app/admin/hero/HeroCenter.tsx"],
+        "files": [
+          "src/components/ds/ThemeProvider.tsx",
+          "src/app/admin/hero/HeroCenter.tsx"
+        ],
         "severity": "low",
         "note": "5 real empty catches, all localStorage/video best-effort, none touch money/inventory/audit. Not P0."
       }
@@ -56,10 +64,31 @@
     ]
   },
   "phaseQueue": [
-    { "id": "phase1a", "title": "withTransaction() helper + migrate payroll/employee writes off pgQuery('BEGIN')", "priority": "P0", "status": "pending" },
-    { "id": "phase1b", "title": "Sweep remaining multi-statement financial/inventory writes for the same anti-pattern", "priority": "P0", "status": "pending" },
-    { "id": "phase7", "title": "Bilingual error catalog (src/lib/errors/) wired into apiError()", "priority": "P0", "status": "pending" },
-    { "id": "phase-remaining", "title": "Remaining master-prompt phases, each audited against existing CLAUDE.md phase history before new code is written", "priority": "P1+", "status": "pending" }
+    {
+      "id": "phase1a",
+      "title": "withTransaction() helper + migrate payroll/employee writes off pgQuery('BEGIN')",
+      "priority": "P0",
+      "status": "completed",
+      "evidence": "src/lib/db/index.ts withTransaction() added (injectable pool for tests); payrollData.saveBrackets + employeeData.addEmploymentRecord migrated off pgQuery(BEGIN); 3 unit tests (rollback/commit/release-on-rollback-failure) + live-PostgreSQL proof (scratch-table forced-failure rollback = 0 rows, success commit = 2 rows; real addEmploymentRecord raise via HTTP API correctly closed record 1 the day before record 2 opened). tsc/lint/vitest(1295)/build/9 audits all clean."
+    },
+    {
+      "id": "phase1b",
+      "title": "Sweep remaining multi-statement financial/inventory writes for the same anti-pattern",
+      "priority": "P0",
+      "status": "pending"
+    },
+    {
+      "id": "phase7",
+      "title": "Bilingual error catalog (src/lib/errors/) wired into apiError()",
+      "priority": "P0",
+      "status": "pending"
+    },
+    {
+      "id": "phase-remaining",
+      "title": "Remaining master-prompt phases, each audited against existing CLAUDE.md phase history before new code is written",
+      "priority": "P1+",
+      "status": "pending"
+    }
   ],
   "rule": "Every subsequent phase entry here will be updated to status=completed only after: real code change + tsc/lint/vitest/build/9 governance audits green + live-PostgreSQL verification + commit + push. No phase is marked completed on a claim alone."
 }

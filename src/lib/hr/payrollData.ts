@@ -12,7 +12,7 @@
  *  · an approved period is never recalculated — a correction is a reversal plus
  *    a new slip, exactly like a reversing journal entry
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { toGregorian } from '@/lib/erp/jalali'
 import { employmentOn } from './employees'
 import {
@@ -214,19 +214,14 @@ export async function saveBrackets(
   if (issues.length) return { ok: false, error: issues[0].fa }
 
   const before = await bracketsOf(rulesetId)
-  await pgQuery('BEGIN')
-  try {
-    await pgQuery(`DELETE FROM payroll_tax_brackets WHERE ruleset_id=$1`, [rulesetId])
+  await withTransaction(async query => {
+    await query(`DELETE FROM payroll_tax_brackets WHERE ruleset_id=$1`, [rulesetId])
     for (const r of rows) {
-      await pgQuery(
+      await query(
         `INSERT INTO payroll_tax_brackets (ruleset_id, seq, from_amount, to_amount, rate_percent)
          VALUES ($1,$2,$3,$4,$5)`, [rulesetId, r.seq, r.fromAmount, r.toAmount, r.ratePercent])
     }
-    await pgQuery('COMMIT')
-  } catch (e) {
-    await pgQuery('ROLLBACK')
-    throw e
-  }
+  })
   await recordPolicyChange(rulesetId, 'brackets', 'table',
     `${before.length} rows`, `${rows.length} rows`, userId)
   return { ok: true }

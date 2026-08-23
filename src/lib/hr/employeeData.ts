@@ -9,7 +9,7 @@
  *  · sensitive columns are stripped from the returned rows unless the caller
  *    holds `hr.employees:sensitive_view`
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { stripFields } from '@/lib/rbac/data'
 import {
   supersede, currentEmployment, serviceDays, serviceYears, fullName,
@@ -208,13 +208,12 @@ export async function addEmploymentRecord(
   const history = await employmentHistory(employeeId)
   const plan = supersede(history as EmploymentRecord[], next)
 
-  await pgQuery('BEGIN')
-  try {
+  return withTransaction(async query => {
     if (plan.closeId && plan.closeDate) {
-      await pgQuery(`UPDATE hr_employment SET end_date=$2 WHERE id=$1 AND end_date IS NULL`,
+      await query(`UPDATE hr_employment SET end_date=$2 WHERE id=$1 AND end_date IS NULL`,
         [plan.closeId, plan.closeDate])
     }
-    const row = (await pgQuery<{ id: number }>(
+    const row = (await query<{ id: number }>(
       `INSERT INTO hr_employment
          (employee_id, position_id, contract_type, start_date, base_salary,
           work_location, manager_id, change_reason, created_by)
@@ -222,12 +221,8 @@ export async function addEmploymentRecord(
       [employeeId, next.positionId ?? null, next.contractType, next.startDate, next.baseSalary,
         next.workLocation ?? null, next.managerId ?? null, next.changeReason ?? null, userId],
     ))[0]
-    await pgQuery('COMMIT')
     return { id: row.id, closedId: plan.closeId }
-  } catch (e) {
-    await pgQuery('ROLLBACK')
-    throw e
-  }
+  })
 }
 
 // ── dependents, documents, positions ────────────────────────────────────────
