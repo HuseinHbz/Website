@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
 import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid } from '@/lib/erp/salesData'
@@ -101,29 +101,38 @@ export async function POST(req: NextRequest) {
     const rate = await rialRateFor(currency)
     if (rate == null) return badRequest(`No exchange rate configured for ${currency} — set one in Finance → Currency`)
     const baseTotal = Math.round(totals.total * rate * 100) / 100
-    let docId = d.id
-    if (docId) {
-      const cur = (await pgQuery(`SELECT status FROM sales_documents WHERE id=$1`, [docId]))[0] as { status: string } | undefined
+    if (d.id) {
+      const cur = (await pgQuery(`SELECT status FROM sales_documents WHERE id=$1`, [d.id]))[0] as { status: string } | undefined
       if (!cur) return badRequest('Not found')
       if (cur.status !== 'draft') return badRequest('Only draft documents can be edited')
-      await pgQuery(
-        `UPDATE sales_documents SET customer_id=$2, date=$3, due_date=$4, notes=$5, subtotal=$6, discount_total=$7, tax_total=$8, total=$9, currency=$10, exchange_rate=$11, base_total=$12, updated_at=${NOW} WHERE id=$1`,
-        [docId, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, currency, rate, baseTotal])
-      await pgQuery(`DELETE FROM sales_document_lines WHERE document_id=$1`, [docId])
-    } else {
-      const docNo = await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
-      const row = (await pgQuery(
-        `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
-         VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW}) RETURNING id`,
-        [d.docType, docNo, d.customerId, d.date, d.dueDate ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, d.sourceId ?? null, d.notes ?? null, auth.user.id, currency, rate, baseTotal]))[0] as { id: number }
-      docId = row.id
     }
-    for (let i = 0; i < d.lines.length; i++) {
-      const l = d.lines[i]
-      await pgQuery(`INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-        [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, lineTotals(l).total, i, l.productId ?? null])
-    }
-    await logAction(auth.user, d.id ? 'sales.doc.update' : 'sales.doc.create', 'sales_document', docId!, null, { docType: d.docType, total: totals.total })
+    const docNo = d.id ? null : await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
+    // Full-remediation RULE-002: header write + line replacement now commit
+    // as one transaction — the old bare-pgQuery sequence (UPDATE/INSERT
+    // header, DELETE old lines, loop-INSERT new lines) could leave a
+    // document with missing/mismatched lines on a mid-sequence failure.
+    const docId = await withTransaction(async query => {
+      let id = d.id
+      if (id) {
+        await query(
+          `UPDATE sales_documents SET customer_id=$2, date=$3, due_date=$4, notes=$5, subtotal=$6, discount_total=$7, tax_total=$8, total=$9, currency=$10, exchange_rate=$11, base_total=$12, updated_at=${NOW} WHERE id=$1`,
+          [id, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, currency, rate, baseTotal])
+        await query(`DELETE FROM sales_document_lines WHERE document_id=$1`, [id])
+      } else {
+        const row = (await query(
+          `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
+           VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW}) RETURNING id`,
+          [d.docType, docNo, d.customerId, d.date, d.dueDate ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, d.sourceId ?? null, d.notes ?? null, auth.user.id, currency, rate, baseTotal]))[0] as { id: number }
+        id = row.id
+      }
+      for (let i = 0; i < d.lines.length; i++) {
+        const l = d.lines[i]
+        await query(`INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [id, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, lineTotals(l).total, i, l.productId ?? null])
+      }
+      return id!
+    })
+    await logAction(auth.user, d.id ? 'sales.doc.update' : 'sales.doc.create', 'sales_document', docId, null, { docType: d.docType, total: totals.total })
     return NextResponse.json({ id: docId, total: totals.total })
   } catch (e) { return apiError(e, 'Failed to save document') }
 }

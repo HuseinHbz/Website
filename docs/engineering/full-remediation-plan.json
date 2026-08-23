@@ -130,8 +130,8 @@
       "id": "phase1e-backlog",
       "title": "BACKLOG (not yet fixed): draft-creation atomicity gaps found during phase7b",
       "priority": "P1",
-      "status": "pending",
-      "note": "Two more bare-pgQuery header+loop-insert-lines sequences found while reading code for phase7b, same defect class as phase1c/1d but creating a DRAFT record (not a posted financial entry), so lower immediate severity: (1) finance/journal/route.ts POST (create a draft journal entry: header insert + loop line inserts + optional template insert, no transaction); (2) erp/sales/documents/route.ts POST (create/update a sales document: header insert-or-update + DELETE old lines + loop line inserts, no transaction). A failure mid-sequence leaves a draft record with missing/wrong lines rather than a POSTED financial record with wrong balances -- still a real data-integrity bug, not yet fixed. Left explicitly on the backlog rather than fixed opportunistically mid-phase7b to keep phase7b focused and independently verifiable."
+      "status": "completed",
+      "evidence": "Both gaps fixed with the same withTransaction pattern: finance/journal/route.ts POST (create) and the update op each now wrap header+lines(+template) as one transaction; erp/sales/documents/route.ts POST (create-or-update) wraps header write + DELETE-old-lines + loop-insert-new-lines as one transaction. Verified: zero regressions across all 22 committed regression suites on real PostgreSQL; direct live proof -- created a real invoice with 2 lines (confirmed 2 rows), then updated it with 3 different lines through the real HTTP update path (confirmed exactly 3 new rows, old 2 fully replaced, no orphans). tsc/lint/vitest(1304)/build/9 audits all clean."
     }
   ],
   "rule": "Every subsequent phase entry here will be updated to status=completed only after: real code change + tsc/lint/vitest/build/9 governance audits green + live-PostgreSQL verification + commit + push. No phase is marked completed on a claim alone."

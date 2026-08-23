@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { businessError, toApiResponse } from '@/lib/errors'
@@ -104,19 +104,25 @@ export async function POST(req: NextRequest) {
     if (d.post) { const deny = await requireOp(auth.user, 'erp.finance:post', 'edit'); if (deny) return deny }
     if (d.post) { const gate = await assertPostable(d.date); if (!gate.ok) return badRequest(gate.error!) }
     const entryNo = await nextNumber('journal', { legacyPrefix: 'JE', userId: auth.user.id })
-    const entry = (await pgQuery(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, currency, exchange_rate, posted_at)
-       VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,NULL) RETURNING id`,
-      [entryNo, d.date, d.memo ?? null, d.reference ?? null, check.totalDebit, auth.user.id, d.companyId ?? null, d.currency, rate]))[0] as { id: number }
-    for (let i = 0; i < d.lines.length; i++) {
-      const l = d.lines[i]
-      await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [entry.id, l.accountId, l.debit || 0, l.credit || 0, l.memo ?? null, i])
-    }
-    if (d.saveTemplate) {
-      await pgQuery(`INSERT INTO gl_entry_templates (name, memo, lines, created_by) VALUES ($1,$2,$3,$4)`,
-        [d.saveTemplate, d.memo ?? null, JSON.stringify(d.lines), auth.user.id])
-    }
+    // Full-remediation RULE-002: header + every line + the optional template
+    // save now commit as one transaction — the old bare-pgQuery loop could
+    // leave a draft entry with missing/wrong lines on a mid-loop failure.
+    const entry = await withTransaction(async query => {
+      const e = (await query(
+        `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, currency, exchange_rate, posted_at)
+         VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,NULL) RETURNING id`,
+        [entryNo, d.date, d.memo ?? null, d.reference ?? null, check.totalDebit, auth.user.id, d.companyId ?? null, d.currency, rate]))[0] as { id: number }
+      for (let i = 0; i < d.lines.length; i++) {
+        const l = d.lines[i]
+        await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [e.id, l.accountId, l.debit || 0, l.credit || 0, l.memo ?? null, i])
+      }
+      if (d.saveTemplate) {
+        await query(`INSERT INTO gl_entry_templates (name, memo, lines, created_by) VALUES ($1,$2,$3,$4)`,
+          [d.saveTemplate, d.memo ?? null, JSON.stringify(d.lines), auth.user.id])
+      }
+      return e
+    })
     let pendingApproval: number | null = null
     if (d.post) {
       pendingApproval = await makerCheckerGate(entry.id, check.totalDebit, auth.user.id)
@@ -158,14 +164,19 @@ export async function PUT(req: NextRequest) {
       const check = entryBalanced(d.lines)
       if (!check.ok) return toApiResponse(businessError('ERP-FINANCE-JOURNAL-UNBALANCED', { reason: check.reason ?? '' }))
       const before = await pgQuery(`SELECT account_id, debit::float AS debit, credit::float AS credit FROM gl_journal_lines WHERE entry_id=$1 ORDER BY line_no`, [d.id])
-      await pgQuery(`UPDATE gl_journal_entries SET date=$2, memo=$3, reference=$4, total=$5 WHERE id=$1`,
-        [d.id, d.date, d.memo ?? null, d.reference ?? null, check.totalDebit])
-      await pgQuery(`DELETE FROM gl_journal_lines WHERE entry_id=$1`, [d.id])
-      for (let i = 0; i < d.lines.length; i++) {
-        const l = d.lines[i]
-        await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-          [d.id, l.accountId, l.debit || 0, l.credit || 0, l.memo ?? null, i])
-      }
+      // Same RULE-002 fix as create: header update + line replacement now
+      // commit as one transaction — a mid-loop failure used to leave the
+      // entry with its OLD lines deleted and only some new ones written.
+      await withTransaction(async query => {
+        await query(`UPDATE gl_journal_entries SET date=$2, memo=$3, reference=$4, total=$5 WHERE id=$1`,
+          [d.id, d.date, d.memo ?? null, d.reference ?? null, check.totalDebit])
+        await query(`DELETE FROM gl_journal_lines WHERE entry_id=$1`, [d.id])
+        for (let i = 0; i < d.lines.length; i++) {
+          const l = d.lines[i]
+          await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+            [d.id, l.accountId, l.debit || 0, l.credit || 0, l.memo ?? null, i])
+        }
+      })
       await logAction(auth.user, 'gl.entry.update', 'gl_journal_entry', d.id, { lines: before }, { lines: d.lines, total: check.totalDebit }, ip)
       return NextResponse.json({ ok: true })
     }
