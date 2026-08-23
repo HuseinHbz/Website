@@ -187,11 +187,12 @@ describe('DOC-BRAND follow-up — second-card label, payment/terms split, due da
     expect(withoutDue).not.toContain('تاریخ سررسید')
   })
 
-  it('places an uploaded logo in a white card instead of forcing a white-silhouette filter (the "logo not showing" bug — an opaque-background logo used to collapse to a plain white block)', () => {
+  it('places an uploaded logo directly on the navy header at full size — no white card/border, no forced silhouette filter', () => {
     const html = render2({ ...rtlBase, branding: { logoUrl: '/uploads/logo.png' } }, 'x')
-    expect(html).toContain('header-logo-chip')
     expect(html).toContain('<img class="header-logo" src="/uploads/logo.png" alt="logo">')
+    expect(html).not.toContain('header-logo-chip')
     expect(html).not.toMatch(/\.header-logo\s*\{[^}]*filter:/)
+    expect(html).not.toMatch(/\.header-logo\s*\{[^}]*background:\s*#fff/)
   })
 
   it('buildLegalIdentityLines: individual → national ID only; company → full identifiers', () => {

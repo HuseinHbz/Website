@@ -305,15 +305,12 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
   .header-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #060d1f 0%, ${accent} 100%); clip-path: polygon(0 0, 55% 0, 40% 100%, 0 100%); }
   .header-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(56,189,248,.35), transparent 55%); }
   .header-inner { position: relative; display: flex; direction: ltr; justify-content: space-between; align-items: flex-start; padding: 30px 40px; z-index: 1; }
-  /* An uploaded logo can be any real-world file — an opaque-background PNG/
-     JPG, or a transparent-background PNG — not only a pure white silhouette.
-     The old filter: brightness(0) invert(1) rule assumed the latter and forced
-     EVERY logo into a flat white shape, which for anything with visible
-     background pixels renders as a plain white block (the reported "logo
-     isn't placed" bug). A small white card behind the image instead
-     guarantees legibility against the dark header for any logo file. */
-  .header-logo-chip { display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 10px; padding: 8px 14px; max-width: 210px; }
-  .header-logo { max-height: 40px; max-width: 182px; display: block; }
+  /* The company's real logo file is a transparent-background mark (matching
+     the approved letterhead mockup) and sits directly on the navy gradient,
+     at full size — no card, no border, no background box behind it. Sized
+     to fill the available header-left area (the same footprint the mockup's
+     logo occupies), not shrunk into a small chip. */
+  .header-logo { display: block; max-height: 120px; max-width: 230px; width: auto; height: auto; object-fit: contain; }
   .header-brand { color: #cbd5e1; font-size: 11px; letter-spacing: 2px; margin-top: 8px; text-transform: uppercase; }
   .header-right { text-align: right; }
   .header-title { font-size: 34px; font-weight: 800; color: #0f172a; letter-spacing: 1px; margin: 0; }
@@ -389,7 +386,7 @@ export function renderDocumentHtml(m: DocModel, qrDataUrl: string): string {
       <div class="header-bg"></div>
       <div class="header-inner">
         <div>
-          ${show(t.showLogo) && b.logoUrl ? `<div class="header-logo-chip"><img class="header-logo" src="${escapeHtml(b.logoUrl)}" alt="logo"></div>` : `<div class="header-logo" style="color:#fff;font-weight:800;font-size:22px">${escapeHtml(m.issuerName)}</div>`}
+          ${show(t.showLogo) && b.logoUrl ? `<img class="header-logo" src="${escapeHtml(b.logoUrl)}" alt="logo">` : `<div class="header-logo" style="color:#fff;font-weight:800;font-size:22px">${escapeHtml(m.issuerName)}</div>`}
           <div class="header-brand">${escapeHtml(m.issuerInfo || b.website || '')}</div>
         </div>
         <div class="header-right">
