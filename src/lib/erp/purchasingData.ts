@@ -2,7 +2,7 @@
  * Purchasing data layer (Phase 26.1) — PostgreSQL access for procure-to-pay.
  * Pure logic lives in `purchasing.ts`; totals/approval/scoring come from there.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
 import { assertPostable } from './accountingData'
@@ -298,20 +298,27 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   const gate = await assertPostable(glDate)
   if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this document date')
   const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
-  // Carry the document's company + currency onto the entry (tenancy + multi-currency).
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, company_id, currency, exchange_rate, created_at, posted_at)
-     VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, $10, ${NOW}, ${NOW}) RETURNING id`,
-    [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null, gate.periodId ?? null,
-     d.company_id ?? null, d.currency ?? 'IRR', num(d.exchange_rate) || 1]))[0]
-  let ln = 0
-  for (const l of lines) {
-    // Cost-center from the document flows onto every posting line (26.11 analytics).
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, d.cost_center_id ?? null])
-  }
-  await pgQuery(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
-  return { entryId: entry.id, alreadyPosted: false }
+  // Full-remediation RULE-001/RULE-006: header insert, every line insert and
+  // the source-document gl_entry_id link now commit as ONE transaction — the
+  // old bare-pgQuery loop could leave a POSTED, UNBALANCED entry on the
+  // books if any line insert failed mid-loop (mirrors the sales-invoice fix).
+  const entryId = await withTransaction(async query => {
+    // Carry the document's company + currency onto the entry (tenancy + multi-currency).
+    const entry = (await query<{ id: number }>(
+      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, company_id, currency, exchange_rate, created_at, posted_at)
+       VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, $10, ${NOW}, ${NOW}) RETURNING id`,
+      [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null, gate.periodId ?? null,
+       d.company_id ?? null, d.currency ?? 'IRR', num(d.exchange_rate) || 1]))[0]
+    let ln = 0
+    for (const l of lines) {
+      // Cost-center from the document flows onto every posting line (26.11 analytics).
+      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, d.cost_center_id ?? null])
+    }
+    await query(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
+    return entry.id
+  })
+  return { entryId, alreadyPosted: false }
 }
 
 /**

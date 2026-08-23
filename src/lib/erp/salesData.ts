@@ -4,7 +4,7 @@
  * the pure engine (lib/erp/sales.ts): one source of truth shared by the customer
  * list, the credit check and the dashboard.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
@@ -165,17 +165,25 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
   if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this document date')
   const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
   const memo = `${kind === 'credit_note' ? 'Sales credit note' : 'Sales invoice'} ${d.doc_no ?? docId}`
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, ${NOW_SQL}, ${NOW_SQL}) RETURNING id`,
-    [entryNo, glDate, memo, `SAL-${docId}`, num(d.total), d.currency ?? 'IRR', num(d.exchange_rate) || 1, userId ?? null, gate.periodId ?? null]))[0]
-  let ln = 0
-  for (const l of lines) {
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
-  }
-  await pgQuery(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
-  return { entryId: entry.id, alreadyPosted: false }
+  // Full-remediation RULE-001/RULE-006: header insert, every line insert and
+  // the source-document gl_entry_id link now commit as ONE transaction — the
+  // old bare-pgQuery loop could leave a POSTED, UNBALANCED entry on the
+  // books if any line insert failed mid-loop (this is the highest-volume
+  // real GL-posting path: every sales invoice confirm goes through it).
+  const entryId = await withTransaction(async query => {
+    const entry = (await query<{ id: number }>(
+      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
+       VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, ${NOW_SQL}, ${NOW_SQL}) RETURNING id`,
+      [entryNo, glDate, memo, `SAL-${docId}`, num(d.total), d.currency ?? 'IRR', num(d.exchange_rate) || 1, userId ?? null, gate.periodId ?? null]))[0]
+    let ln = 0
+    for (const l of lines) {
+      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
+    }
+    await query(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
+    return entry.id
+  })
+  return { entryId, alreadyPosted: false }
 }
 
 // ── Sales return + settlement (Phase 26.26, BUG-013) ──────────────────────────
