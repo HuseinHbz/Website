@@ -4,7 +4,7 @@
  * POSTED GL lines matched by account × cost-center within the fiscal year). All
  * variance math is the pure `budget.ts` engine.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import {
   budgetVariance, budgetSummary, budgetTotal, forecastRemaining, canTransition, isEditable,
   type BudgetLine, type ActualEntry, type BudgetType, type BudgetStatus,
@@ -62,15 +62,23 @@ export async function createBudget(input: BudgetInput, userId: string): Promise<
   return r
 }
 
+/**
+ * Full-remediation RULE-002: DELETE-then-loop-INSERT used to run as bare
+ * pgQuery calls with no transaction — a failure mid-loop left the budget
+ * with its OLD lines deleted and only some of the NEW ones written, a
+ * silent partial data loss. Now atomic: all-or-nothing.
+ */
 async function replaceLines(budgetId: number, lines: NonNullable<BudgetInput['lines']>): Promise<void> {
-  await pgQuery(`DELETE FROM erp_budget_lines WHERE budget_id=$1`, [budgetId])
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]
-    await pgQuery(
-      `INSERT INTO erp_budget_lines (budget_id, cost_center_id, account_id, category, period, amount, notes, line_no)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [budgetId, l.costCenterId ?? null, l.accountId ?? null, l.category, l.period ?? null, l.amount, l.notes ?? null, i])
-  }
+  await withTransaction(async query => {
+    await query(`DELETE FROM erp_budget_lines WHERE budget_id=$1`, [budgetId])
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i]
+      await query(
+        `INSERT INTO erp_budget_lines (budget_id, cost_center_id, account_id, category, period, amount, notes, line_no)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [budgetId, l.costCenterId ?? null, l.accountId ?? null, l.category, l.period ?? null, l.amount, l.notes ?? null, i])
+    }
+  })
 }
 
 /** Edit header + lines — rejected once the budget is approved/locked. */

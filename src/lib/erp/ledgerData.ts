@@ -5,7 +5,7 @@
  * the books; drafts and voided entries are excluded. One computation path,
  * shared by the reports API and the finance dashboard.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import {
   trialBalance, incomeStatement, balanceSheet, financialKpis,
   type AccountTally,
@@ -89,21 +89,31 @@ export async function bookIntercompany(input: IcTransferInput & { date: string }
   if (companies.length !== 2) throw new Error('Both companies must exist')
 
   const NOW_SQL = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
-  const entryIds: number[] = []
-  const entryNos: string[] = []
-  for (const e of pair) {
-    const total = e.lines.reduce((s, l) => s + l.debit, 0)
-    const entryNo = `IC-${input.date.slice(0, 4)}-${Date.now().toString().slice(-6)}${e.companyId}`
-    const row = (await pgQuery<{ id: number }>(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, posted_at)
-       VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,${NOW_SQL}) RETURNING id`,
-      [entryNo, input.date, e.memo, `intercompany:${input.kind}`, total, userId ?? null, e.companyId]))[0]
-    for (let i = 0; i < e.lines.length; i++) {
-      const l = e.lines[i]
-      await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [row.id, byCode.get(l.accountCode), l.debit, l.credit, l.memo, i])
+  // Full-remediation RULE-001/RULE-006: BOTH companies' entries (and every
+  // line of each) now commit as ONE transaction. This function's own
+  // contract is "both books stay balanced" — the old bare-pgQuery loop
+  // could post company A's complete entry, then fail on company B's header
+  // or lines, leaving one side of the intercompany transfer posted and the
+  // other missing (an unbalanced pair spanning two separate companies'
+  // books, the worst version of this defect class).
+  const { entryIds, entryNos } = await withTransaction(async query => {
+    const ids: number[] = []
+    const nos: string[] = []
+    for (const e of pair) {
+      const total = e.lines.reduce((s, l) => s + l.debit, 0)
+      const entryNo = `IC-${input.date.slice(0, 4)}-${Date.now().toString().slice(-6)}${e.companyId}`
+      const row = (await query<{ id: number }>(
+        `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, posted_at)
+         VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,${NOW_SQL}) RETURNING id`,
+        [entryNo, input.date, e.memo, `intercompany:${input.kind}`, total, userId ?? null, e.companyId]))[0]
+      for (let i = 0; i < e.lines.length; i++) {
+        const l = e.lines[i]
+        await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [row.id, byCode.get(l.accountCode), l.debit, l.credit, l.memo, i])
+      }
+      ids.push(row.id); nos.push(entryNo)
     }
-    entryIds.push(row.id); entryNos.push(entryNo)
-  }
+    return { entryIds: ids, entryNos: nos }
+  })
   return { entryIds, entryNos }
 }

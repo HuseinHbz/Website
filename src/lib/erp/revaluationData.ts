@@ -4,7 +4,7 @@
  * entry. Original documents are never mutated; repeated runs only book the
  * change since the last revaluation (cumulative recognition).
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { latestRates } from './currencyData'
 import { revaluate, revaluationEntryLines, exposureByCurrency, REVAL_ACCOUNTS, type FxPosition } from './revaluation'
 
@@ -69,16 +69,22 @@ export async function bookRevaluation(userId?: string): Promise<{ booked: boolea
   for (const c of codes) if (!byCode.has(c)) throw new Error(`GL account ${c} is missing — run migrations`)
   const total = lines.reduce((s, l) => s + l.debit, 0)
   const entryNo = `FXR-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, currency, exchange_rate, posted_at)
-     VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, 'IRR', 1, ${NOW}) RETURNING id`,
-    [entryNo, `Currency revaluation (${preview.deltaToBook > 0 ? 'gain' : 'loss'})`, `fx-reval:${new Date().toISOString().slice(0, 10)}`, total, userId ?? null]))[0]
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, byCode.get(l.accountCode), l.debit, l.credit, l.memo, i])
-  }
-  return { booked: true, entryId: entry.id, entryNo, delta: preview.deltaToBook }
+  // Full-remediation RULE-001/RULE-006 (same class as sales/purchase invoice
+  // GL posting): header + every line now commit as one transaction — a
+  // failure mid-loop used to leave a posted, unbalanced revaluation entry.
+  const entryId = await withTransaction(async query => {
+    const entry = (await query<{ id: number }>(
+      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, currency, exchange_rate, posted_at)
+       VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, 'IRR', 1, ${NOW}) RETURNING id`,
+      [entryNo, `Currency revaluation (${preview.deltaToBook > 0 ? 'gain' : 'loss'})`, `fx-reval:${new Date().toISOString().slice(0, 10)}`, total, userId ?? null]))[0]
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i]
+      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [entry.id, byCode.get(l.accountCode), l.debit, l.credit, l.memo, i])
+    }
+    return entry.id
+  })
+  return { booked: true, entryId, entryNo, delta: preview.deltaToBook }
 }
 
 /** History of booked revaluation entries (gain/loss report feed). */
