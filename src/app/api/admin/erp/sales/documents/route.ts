@@ -201,7 +201,7 @@ export async function PUT(req: NextRequest) {
     if (op === 'void' && String(src.doc_type) === 'invoice') {
       { const deny = await requireOp(auth.user, 'erp.sales:void', 'edit'); if (deny) return deny }
       const paid = Number(((await pgQuery(`SELECT COALESCE(SUM(amount),0)::float s FROM sales_payments WHERE document_id=$1 AND method<>'refund'`, [id]))[0] as { s: number }).s)
-      if (paid > 0) return badRequest('Cannot void a paid invoice — issue a return/refund first')
+      if (paid > 0) return toApiResponse(businessError('ERP-SALES-VOID-PAID-INVOICE-BLOCKED', undefined))
     }
     if (op === 'confirm') { const deny = await requireOp(auth.user, 'erp.sales:confirm', 'edit'); if (deny) return deny }
     if (op === 'void') { const deny = await requireOp(auth.user, 'erp.sales:void', 'edit'); if (deny) return deny }

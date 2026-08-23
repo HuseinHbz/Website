@@ -93,9 +93,10 @@
     },
     {
       "id": "phase7b",
-      "title": "Migrate remaining high-value apiError/badRequest call sites onto the error catalog (module by module, starting with other financial-blocking checks)",
+      "title": "Migrate remaining high-value apiError/badRequest call sites onto the error catalog (module by module, starting with other financial-blocking checks) (module-by-module, ongoing)",
       "priority": "P1",
-      "status": "pending"
+      "status": "completed-partial",
+      "evidence": "Migrated 3 more real financial-blocking messages onto the error catalog: ERP-SALES-VOID-PAID-INVOICE-BLOCKED (the BUG-013/CLAUDE.md rule 10 paid-invoice-void guard), ERP-FINANCE-JOURNAL-UNBALANCED (both create and update paths), ERP-FINANCE-POSTED-ENTRY-IMMUTABLE (journal DELETE). 3 new unit tests (7 total in errors.test.ts). Live-PostgreSQL: a real unbalanced 2-line journal POST returned HTTP 400 with the correct bilingual+coded response; a real invoice was created, confirmed, paid in full, then a void attempt correctly returned HTTP 400 with the BUG-013 bilingual message + code -- invoice stayed confirmed, not voided. Marked partial (not fully closed): ~700 other apiError/badRequest call sites remain unmigrated repo-wide -- this phase migrates high-value real call sites incrementally, module by module, not all at once (an unbounded mechanical migration was explicitly out of scope per the master prompt itself). tsc/lint/vitest(1304)/build/9 audits all clean."
     },
     {
       "id": "phase2",
@@ -124,6 +125,13 @@
       "priority": "P0",
       "status": "completed",
       "evidence": "Continued the Phase 1c sweep (same defect class) into the remaining candidates found by grepping for files with 2+ INSERT statements and no withTransaction: erp/revaluationData.ts bookRevaluation (FX revaluation GL post -- header+loop-lines, same unbalanced-entry risk), erp/ledgerData.ts bookIntercompany (WORSE: posts TWO full journal entries across two companies in a bare loop -- a mid-loop failure could post company As entry and silently drop company Bs, breaking the intercompany balance across two separate companies books), and erp/budgetData.ts replaceLines (DELETE-then-loop-INSERT with no transaction -- a failure mid-loop silently lost budget lines, old ones deleted, new ones only partially written). All three now wrap their full sequence in withTransaction. Verified: zero regressions across all 22 committed regression suites on real PostgreSQL; bookIntercompany directly exercised live against real Postgres (2 companies, 2 posted entries, 2 balanced lines each, correctly stamped to each companys company_id) -- the identical withTransaction mechanism was already directly rollback-proven with a forced mid-transaction failure in Phase 1c. tsc/lint/vitest(1301)/build/9 audits all clean."
+    },
+    {
+      "id": "phase1e-backlog",
+      "title": "BACKLOG (not yet fixed): draft-creation atomicity gaps found during phase7b",
+      "priority": "P1",
+      "status": "pending",
+      "note": "Two more bare-pgQuery header+loop-insert-lines sequences found while reading code for phase7b, same defect class as phase1c/1d but creating a DRAFT record (not a posted financial entry), so lower immediate severity: (1) finance/journal/route.ts POST (create a draft journal entry: header insert + loop line inserts + optional template insert, no transaction); (2) erp/sales/documents/route.ts POST (create/update a sales document: header insert-or-update + DELETE old lines + loop line inserts, no transaction). A failure mid-sequence leaves a draft record with missing/wrong lines rather than a POSTED financial record with wrong balances -- still a real data-integrity bug, not yet fixed. Left explicitly on the backlog rather than fixed opportunistically mid-phase7b to keep phase7b focused and independently verifiable."
     }
   ],
   "rule": "Every subsequent phase entry here will be updated to status=completed only after: real code change + tsc/lint/vitest/build/9 governance audits green + live-PostgreSQL verification + commit + push. No phase is marked completed on a claim alone."

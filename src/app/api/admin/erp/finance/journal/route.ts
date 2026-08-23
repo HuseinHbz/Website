@@ -4,6 +4,7 @@ import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/
 import { pgQuery } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { rialRateFor } from '@/lib/erp/currencyData'
+import { businessError, toApiResponse } from '@/lib/errors'
 import { assertPostable } from '@/lib/erp/accountingData'
 import { clientIp } from '@/lib/api/clientIp'
 import { entryBalanced, isJournalEntryDeletable } from '@/lib/erp/ledger'
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   const check = entryBalanced(d.lines)
-  if (!check.ok) return badRequest(`Unbalanced entry: ${check.reason}`)
+  if (!check.ok) return toApiResponse(businessError('ERP-FINANCE-JOURNAL-UNBALANCED', { reason: check.reason ?? '' }))
   try {
     const rate = await rialRateFor(d.currency)
     if (rate == null) return badRequest(`No exchange rate configured for ${d.currency} — set one in Finance → Currency`)
@@ -155,7 +156,7 @@ export async function PUT(req: NextRequest) {
     if (d.op === 'update') {
       if (e.status !== 'draft') return badRequest('Only draft entries can be edited')
       const check = entryBalanced(d.lines)
-      if (!check.ok) return badRequest(`Unbalanced entry: ${check.reason}`)
+      if (!check.ok) return toApiResponse(businessError('ERP-FINANCE-JOURNAL-UNBALANCED', { reason: check.reason ?? '' }))
       const before = await pgQuery(`SELECT account_id, debit::float AS debit, credit::float AS credit FROM gl_journal_lines WHERE entry_id=$1 ORDER BY line_no`, [d.id])
       await pgQuery(`UPDATE gl_journal_entries SET date=$2, memo=$3, reference=$4, total=$5 WHERE id=$1`,
         [d.id, d.date, d.memo ?? null, d.reference ?? null, check.totalDebit])
@@ -212,7 +213,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const e = (await pgQuery(`SELECT status, entry_no AS "entryNo" FROM gl_journal_entries WHERE id=$1`, [parsed.data.id]))[0] as { status: string; entryNo: string } | undefined
     if (!e) return badRequest('Not found')
-    if (!isJournalEntryDeletable(e.status)) return badRequest('Only draft entries can be deleted — posted/voided entries are permanent audit records')
+    if (!isJournalEntryDeletable(e.status)) return toApiResponse(businessError('ERP-FINANCE-POSTED-ENTRY-IMMUTABLE', undefined))
     await pgQuery(`DELETE FROM gl_journal_entries WHERE id=$1`, [parsed.data.id])
     await logAction(auth.user, 'gl.entry.delete', 'gl_journal_entry', parsed.data.id, e, null, clientIp(req))
     return NextResponse.json({ ok: true })

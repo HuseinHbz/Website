@@ -27,6 +27,27 @@ describe('businessError', () => {
     expect(err.recoverable).toBe(true)
   })
 
+  it('ERP-SALES-VOID-PAID-INVOICE-BLOCKED (BUG-013 rule): a paid invoice must never be voided directly', () => {
+    const err = businessError('ERP-SALES-VOID-PAID-INVOICE-BLOCKED', {})
+    expect(err.httpStatus).toBe(400)
+    expect(err.en).toContain('cannot be voided directly')
+    expect(err.fa).toContain('قابل ابطال نیست')
+    expect(err.recoverable).toBe(true)
+  })
+
+  it('ERP-FINANCE-JOURNAL-UNBALANCED interpolates the pure engine\'s reason string in both languages', () => {
+    const err = businessError('ERP-FINANCE-JOURNAL-UNBALANCED', { reason: 'debit 100 != credit 90' })
+    expect(err.httpStatus).toBe(400)
+    expect(err.en).toContain('debit 100 != credit 90')
+    expect(err.fa).toContain('debit 100 != credit 90')
+  })
+
+  it('ERP-FINANCE-POSTED-ENTRY-IMMUTABLE: only a draft is deletable, both languages say so', () => {
+    const err = businessError('ERP-FINANCE-POSTED-ENTRY-IMMUTABLE', {})
+    expect(err.en).toContain('draft')
+    expect(err.fa).toContain('پیش‌نویس')
+  })
+
   it('a parameterless code (not-found) renders both languages with no interpolation needed', () => {
     const err = businessError('ERP-GENERIC-NOT-FOUND', {})
     expect(err.httpStatus).toBe(404)
