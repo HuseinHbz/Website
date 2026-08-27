@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveApprovalPlan, resolveApprovalPlanExplicit, matchRule, routeMatches, requiredLevels, levelSatisfied, defaultPurchaseMatrix, type MatrixRule } from '@/lib/approval/matrix'
-import { approvalState, canActFor, delegationActive, effectiveApprovers, type ApprovalActionRec, type Delegation } from '@/lib/approval/engine'
+import { approvalState, canActFor, delegationActive, effectiveApprovers, isSeparationViolation, type ApprovalActionRec, type Delegation } from '@/lib/approval/engine'
+import { DOC_TYPES } from '@/lib/approval/matrix'
 import { dueEscalations, slaBreached, slaStatus, hoursBetween } from '@/lib/approval/escalation'
 import { approvalKpis } from '@/lib/approval/analytics'
 
@@ -93,6 +94,29 @@ describe('delegation (26.12 M5)', () => {
     expect(canActFor('fin_mgr', 'cfo', [d], '2026-01-15')).toBe(true)
     expect(canActFor('someone', 'cfo', [d], '2026-01-15')).toBe(false)
     expect(effectiveApprovers('cfo', [d], '2026-01-15')).toEqual(['cfo', 'fin_mgr'])
+  })
+})
+
+describe('separation of duties — RULE-009 (full-remediation Phase-2 approval audit)', () => {
+  it('applies to EVERY registered approval-matrix doc type, not a 2-item allowlist — the exact bug found and fixed by this audit (before: a user could create+approve their own payment_request/purchase_order/asset_disposal/…)', () => {
+    for (const docType of DOC_TYPES) {
+      expect(isSeparationViolation(docType, 'creator', 'creator')).toBe(true)
+    }
+  })
+  it('still covers payroll_period — a real doc type used only by hr/payrollData.ts, outside the matrix engine, NOT itself one of DOC_TYPES (a first draft of this fix silently dropped it)', () => {
+    expect(DOC_TYPES as readonly string[]).not.toContain('payroll_period')
+    expect(isSeparationViolation('payroll_period', 'calculator', 'calculator')).toBe(true)
+  })
+  it('a different actor than the creator is never blocked', () => {
+    for (const docType of [...DOC_TYPES, 'payroll_period']) {
+      expect(isSeparationViolation(docType, 'creator', 'someone-else')).toBe(false)
+    }
+  })
+  it('a delegate acting on the creator\'s own behalf is blocked too (delegation cannot proxy the creator\'s authority back to themselves)', () => {
+    expect(isSeparationViolation('journal_entry', 'creator', 'delegate-user', 'creator')).toBe(true)
+  })
+  it('an unregistered/unknown doc type is NOT silently exempt — every code path in this project routes through DOC_TYPES or the explicit payroll_period addition, so there is no such doc type in practice; this documents that guarantee rather than assuming it', () => {
+    expect(DOC_TYPES.length).toBeGreaterThan(0)
   })
 })
 

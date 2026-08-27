@@ -6,7 +6,7 @@
  * honouring parallel completion rules (all / any / min) and the "any rejection
  * stops" rule, plus delegation resolution.
  */
-import { levelSatisfied, type ApprovalLevelPlan, type Approver } from './matrix'
+import { levelSatisfied, DOC_TYPES, type ApprovalLevelPlan, type Approver } from './matrix'
 
 export type Decision = 'approved' | 'rejected' | 'changes_requested'
 export interface ApprovalActionRec {
@@ -84,11 +84,30 @@ export function effectiveApprovers(principal: string, delegations: Delegation[],
  * creator either way). `onBehalfOf` is the principal a delegate is representing.
  */
 /**
- * Document types under maker/checker. 28.3-الف adds payroll: the person who
- * calculates a run must not be the one who approves it. The list is additive —
- * `journal_entry` behaves exactly as before (R5).
+ * Document types under maker/checker.
+ *
+ * Full-remediation Phase-2 Approval Engine audit (section 5/RULE-009): this
+ * was a 2-item allowlist (journal_entry, payroll_period) — every OTHER
+ * approval-matrix doc type (payment_request, purchase_order, asset_disposal,
+ * budget_change, …: 16 of 18 registered types) had ZERO separation-of-duty
+ * enforcement. A user could create AND approve their own payment or
+ * purchase, confirmed live against real PostgreSQL. This project has no
+ * configurable per-doc-type SoD policy to defer to, so — matching the
+ * approval-matrix's own "missing config never means approved" fail-safe
+ * (RULE-004) — SoD now applies to every registered doc type by default.
+ * Carve out a genuine, documented exception here if a real business need
+ * ever requires one; an unlisted doc type must never silently mean "no
+ * separation of duty" again.
+ *
+ * 'payroll_period' is added explicitly — it's a real, separately-used
+ * docType string (src/lib/hr/payrollData.ts calls isSeparationViolation
+ * directly, outside the approval-matrix engine entirely) and is NOT one of
+ * matrix.ts's registered ApprovalDocType values. A first version of this
+ * fix used DOC_TYPES alone and silently dropped payroll_period's existing
+ * protection — caught by the full regression suite (28.3-الف/ب) before
+ * this was pushed, not assumed safe.
  */
-const SEPARATION_DOC_TYPES = new Set(['journal_entry', 'payroll_period'])
+const SEPARATION_DOC_TYPES = new Set<string>([...DOC_TYPES, 'payroll_period'])
 
 export function isSeparationViolation(docType: string, createdBy: string, actorId: string, onBehalfOf?: string | null): boolean {
   if (!SEPARATION_DOC_TYPES.has(docType)) return false

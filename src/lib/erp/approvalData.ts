@@ -5,7 +5,7 @@
  * `notifications`. NOT a second workflow executor: the graph engine stays for
  * graph flows; this is the centralized approval store every ERP module calls.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import type { AdminUser } from '@/lib/admin/auth'
 import { financeRole } from './financeRbac'
 import {
@@ -96,16 +96,16 @@ interface RequestRow {
   department: string | null; status: string; currentLevel: number; plan: string; pendingSince: string; decidedAt: string | null
   escalationStages: string; slaBreached: number; createdBy: string; createdAt: string
 }
-async function getRow(id: number): Promise<RequestRow | null> {
-  const r = (await pgQuery(
+async function getRow(id: number, query: TxQuery = pgQuery): Promise<RequestRow | null> {
+  const r = (await query(
     `SELECT id, doc_type AS "docType", ref_type AS "refType", ref_id AS "refId", title, amount::float AS amount, currency,
             department, status, current_level AS "currentLevel", plan, pending_since AS "pendingSince", decided_at AS "decidedAt",
             escalation_stages AS "escalationStages", sla_breached AS "slaBreached", created_by AS "createdBy", created_at AS "createdAt"
      FROM approval_requests WHERE id=$1`, [id]))[0] as unknown as RequestRow | undefined
   return r ?? null
 }
-async function actionsFor(id: number): Promise<ApprovalActionRec[]> {
-  const rows = await pgQuery<{ level: number; approver_id: string; decision: string; on_behalf_of: string | null; created_at: string }>(
+async function actionsFor(id: number, query: TxQuery = pgQuery): Promise<ApprovalActionRec[]> {
+  const rows = await query<{ level: number; approver_id: string; decision: string; on_behalf_of: string | null; created_at: string }>(
     `SELECT level, approver_id, decision, on_behalf_of, created_at FROM approval_actions WHERE request_id=$1 ORDER BY id`, [id])
   return rows.map(a => ({ level: a.level, approverId: a.approver_id, decision: a.decision as Decision, onBehalfOf: a.on_behalf_of, at: a.created_at }))
 }
@@ -152,36 +152,79 @@ async function resolveActor(user: AdminUser, row: RequestRow, level: ApprovalLev
 }
 
 /** Approve / reject / request-change at the current level (RBAC + delegation + audit). */
+/**
+ * Full-remediation Phase-2 Approval Engine audit (RULE-003/section 4/14/15):
+ *
+ * This used to read the request, INSERT the decision, re-read actions,
+ * UPDATE the request status, and (conditionally) touch a linked HR request
+ * — all as separate bare pgQuery calls, no transaction. Two real defects:
+ *
+ *  1. NOT ATOMIC: a failure between the action INSERT and the status
+ *     UPDATE left an orphan decision — an approval_actions row recorded
+ *     with no matching change to approval_requests.status, an inconsistent
+ *     audit trail (section 4/RULE-003).
+ *  2. NOT CONCURRENCY-SAFE: nothing serialized two decisions racing on the
+ *     SAME request. Two concurrent calls (a double-click, or two approvers
+ *     hitting "approve" on a 1-of-N level at the same instant) could both
+ *     pass the `status==='pending'` check before either wrote anything,
+ *     both insert an action row, and both then independently recompute and
+ *     write approval_requests — a lost update, and for the SAME approver a
+ *     literal duplicate decision (section 14/15).
+ *
+ * Fixed: the whole read-check-act-write sequence now runs inside ONE
+ * transaction, opened with a `pg_advisory_xact_lock` keyed on the request
+ * id — every decision on a given request is fully serialized. A second
+ * concurrent decision blocks until the first commits, then re-evaluates
+ * the (now-updated) state fresh, so it either legitimately targets the
+ * NEXT level or is rejected as already-decided — never a race. An
+ * approver who has already recorded a decision at the current level is
+ * refused outright (idempotency).
+ */
 export async function actOnRequest(id: number, user: AdminUser, decision: Decision, comment: string | undefined, ip: string | undefined): Promise<{ status: string }> {
-  const row = await getRow(id)
-  if (!row) throw new Error('Request not found')
-  if (row.status !== 'pending' && row.status !== 'changes_requested') throw new Error(`Request is already ${row.status}`)
-  const plan = JSON.parse(row.plan) as ApprovalLevelPlan[]
-  const level = plan.find(l => l.level === row.currentLevel)
-  if (!level) throw new Error('No current level to act on')
-  const actor = await resolveActor(user, row, level)
-  if (!actor.allowed) throw new Error('You are not an authorized approver for this level')
-  // 26.23 + 26.24b (بند ۳): server-side separation of duties on the EFFECTIVE
-  // decision owner — the creator of a journal-entry posting request may never
-  // approve their own entry, whether acting directly OR as the delegate of the
-  // creator (delegation could otherwise proxy the creator's authority back).
-  if (isSeparationViolation(row.docType, row.createdBy ?? '', user.id, actor.onBehalfOf))
-    throw new Error('Separation of duties: the entry creator cannot approve their own posting')
+  const { row, state } = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`approval_request:${id}`])
+    const row = await getRow(id, query)
+    if (!row) throw new Error('Request not found')
+    if (row.status !== 'pending' && row.status !== 'changes_requested') throw new Error(`Request is already ${row.status}`)
+    const plan = JSON.parse(row.plan) as ApprovalLevelPlan[]
+    const level = plan.find(l => l.level === row.currentLevel)
+    if (!level) throw new Error('No current level to act on')
+    const actor = await resolveActor(user, row, level)
+    if (!actor.allowed) throw new Error('You are not an authorized approver for this level')
+    // 26.23 + 26.24b (بند ۳): server-side separation of duties on the EFFECTIVE
+    // decision owner — the creator of a journal-entry posting request may never
+    // approve their own entry, whether acting directly OR as the delegate of the
+    // creator (delegation could otherwise proxy the creator's authority back).
+    if (isSeparationViolation(row.docType, row.createdBy ?? '', user.id, actor.onBehalfOf))
+      throw new Error('Separation of duties: the entry creator cannot approve their own posting')
 
-  await pgQuery(`INSERT INTO approval_actions (request_id, level, approver_id, on_behalf_of, decision, comment, ip_address) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, row.currentLevel, user.id, actor.onBehalfOf, decision, comment ?? null, ip ?? null])
+    // Idempotency (section 15): this exact approver already decided at the
+    // CURRENT level (a duplicate/retried submission) — refuse rather than
+    // record a second action for the same person at the same level.
+    const dup = (await query<{ c: number }>(
+      `SELECT count(*)::int AS c FROM approval_actions WHERE request_id=$1 AND level=$2 AND approver_id=$3`,
+      [id, row.currentLevel, user.id]))[0]
+    if (dup.c > 0) throw new Error('You have already recorded a decision for this level')
 
-  const actions = await actionsFor(id)
-  const state = approvalState(plan, actions)
-  const decidedAt = (state.status === 'approved' || state.status === 'rejected') ? `${NOW}` : 'decided_at'
-  await pgQuery(
-    `UPDATE approval_requests SET status=$2, current_level=$3, decided_at=${decidedAt}, pending_since=CASE WHEN $3 <> current_level THEN ${NOW} ELSE pending_since END, updated_at=${NOW} WHERE id=$1`,
-    [id, state.status, state.currentLevel ?? row.currentLevel])
+    await query(`INSERT INTO approval_actions (request_id, level, approver_id, on_behalf_of, decision, comment, ip_address) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, row.currentLevel, user.id, actor.onBehalfOf, decision, comment ?? null, ip ?? null])
 
+    const actions = await actionsFor(id, query)
+    const state = approvalState(plan, actions)
+    const decidedAt = (state.status === 'approved' || state.status === 'rejected') ? `${NOW}` : 'decided_at'
+    await query(
+      `UPDATE approval_requests SET status=$2, current_level=$3, decided_at=${decidedAt}, pending_since=CASE WHEN $3 <> current_level THEN ${NOW} ELSE pending_since END, updated_at=${NOW} WHERE id=$1`,
+      [id, state.status, state.currentLevel ?? row.currentLevel])
+
+    if (state.status === 'rejected' && row.refType === 'hr_portal_requests' && row.refId) {
+      await query(`UPDATE hr_portal_requests SET status='rejected' WHERE id=$1 AND status='pending'`, [row.refId])
+    }
+    return { row, state }
+  })
+
+  // Notifications/document-advancement run AFTER commit (section 13: never
+  // notify before the transaction that makes the change is durable).
   if (state.status === 'approved') { await advanceDocument(row); await queueNotification(id, 'completion', row.title) }
-  else if (state.status === 'rejected' && row.refType === 'hr_portal_requests' && row.refId) {
-    await pgQuery(`UPDATE hr_portal_requests SET status='rejected' WHERE id=$1 AND status='pending'`, [row.refId])
-  }
   return { status: state.status }
 }
 
