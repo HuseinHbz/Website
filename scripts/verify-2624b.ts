@@ -36,14 +36,19 @@ async function main() {
   console.log('— بند ۱: BUG-008 — purchase invoice auto-post to GL —')
   const vendorId = await createVendor({ name: 'تأمین‌کننده آزمون', kind: 'company' }, ADMIN)
 
-  // Scenario A (the OLD bug): pay a purchase invoice that was NEVER posted → AP
-  // is debited by the payment but was never credited by the invoice → NEGATIVE.
+  // Scenario A (the OLD bug, CC-007): pay a purchase invoice that was NEVER
+  // posted → AP was debited by the payment but never credited by the invoice
+  // → NEGATIVE. Phase-4 procurement hardening closed this a layer earlier:
+  // recordPayment now reuses sales.ts's validatePayment, which refuses a
+  // payment against a draft/unconfirmed invoice outright — so the negative-AP
+  // path is no longer reachable at all, not merely corrected after the fact.
   const apBefore = await apBalance()
   const badInv = await saveDocument({ docType: 'invoice', vendorId, date: today, currency: 'IRR',
     lines: [{ description: 'کالای الف', qty: 1, unitPrice: 10_000_000, discountPct: 0, taxPct: 9 }] }, ADMIN)
-  await recordPayment(badInv, vendorId, 10_900_000, 'bank', today, 'PMT-BAD', ADMIN)
+  const badPay = await recordPayment(badInv, vendorId, 10_900_000, 'bank', today, 'PMT-BAD', ADMIN)
+  ok(badPay.ok === false, `WITHOUT invoice posting: a payment against a draft invoice is REFUSED, not recorded — error: ${badPay.error}`)
   const apAfterUnposted = await apBalance()
-  ok(apAfterUnposted < apBefore, `WITHOUT invoice posting: paying drives AP negative — AP ${apBefore} → ${apAfterUnposted} (Δ ${apAfterUnposted - apBefore})`)
+  ok(apAfterUnposted === apBefore, `AP is UNCHANGED — the negative-AP path is unreachable, not merely corrected — AP ${apBefore} → ${apAfterUnposted}`)
 
   // Scenario B (the FIX): confirm auto-posts the invoice (Cr AP), then pay (Dr AP)
   // → AP nets back to a NON-NEGATIVE settled position.
@@ -64,11 +69,14 @@ async function main() {
   const apSettled = await apBalance()
   ok(apSettled - apPreB === 0, `after full payment this invoice's AP delta is exactly 0 — AP ${apAfterPost} → ${apSettled} (Δ vs pre ${apSettled - apPreB})`)
 
-  // Definitive proof: self-heal scenario A by posting its (previously unposted)
-  // invoice → global AP returns to EXACTLY ZERO and non-negative.
+  // Definitive proof: confirm the previously-unpayable invoice (posts it, Cr
+  // AP), THEN pay it now that it is no longer a draft — global AP returns to
+  // EXACTLY ZERO and never went negative at any point in the sequence.
   await confirmPurchaseInvoice(badInv, ADMIN)
+  const badPay2 = await recordPayment(badInv, vendorId, 10_900_000, 'bank', today, 'PMT-BAD-2', ADMIN)
+  ok(badPay2.ok === true, 'the same invoice, once confirmed, now accepts the payment')
   const apGlobal = await apBalance()
-  ok(apGlobal === 0, `after posting the stranded invoice, GLOBAL AP = ${apGlobal} (zero and non-negative) ✔`)
+  ok(apGlobal === 0, `after posting AND paying the previously-blocked invoice, GLOBAL AP = ${apGlobal} (zero and non-negative) ✔`)
 
   console.log('— بند ۱: void → balanced reversal (two-way link) —')
   const inv2 = await saveDocument({ docType: 'invoice', vendorId, date: today, currency: 'IRR',

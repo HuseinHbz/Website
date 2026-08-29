@@ -2,7 +2,7 @@
  * Purchasing data layer (Phase 26.1) — PostgreSQL access for procure-to-pay.
  * Pure logic lives in `purchasing.ts`; totals/approval/scoring come from there.
  */
-import { pgQuery, withTransaction } from '@/lib/db'
+import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
 import { assertPostable } from './accountingData'
@@ -11,6 +11,7 @@ import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
 } from './purchasing'
+import { validatePayment } from './sales'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 const num = (v: unknown) => Number(v ?? 0)
@@ -95,6 +96,14 @@ export async function getDocument(id: number) {
   return { ...d, lines, approvals }
 }
 
+/**
+ * Phase-4 procurement audit finding: header write (UPDATE or INSERT) +
+ * DELETE-old-lines + loop-INSERT-new-lines ran as separate bare pgQuery
+ * calls, no transaction — a mid-sequence failure could leave a document
+ * with missing/mismatched lines, the identical class already fixed on
+ * the sales-document and journal-entry create/update paths. Fixed: the
+ * whole header+lines sequence now commits as one transaction.
+ */
 export async function saveDocument(input: {
   id?: number; docType: PurchaseDocType; vendorId?: number; date: string; currency?: string
   department?: string; budget?: number; sourceId?: number; note?: string; priority?: string; lines: LineRow[]
@@ -102,29 +111,31 @@ export async function saveDocument(input: {
   const totals = documentTotals(input.lines)
   const rate = (await rialRateFor(input.currency ?? 'IRR')) ?? 1
   const baseTotal = Math.round(totals.total * rate * 100) / 100
-  if (input.id) {
-    await pgQuery(
-      `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
-        note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), exchange_rate=$13, base_total=$14, updated_at=${NOW} WHERE id=$1`,
-      [input.id, input.vendorId ?? null, input.date, input.currency ?? null, input.department ?? null, input.budget ?? 0,
-       input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null, rate, baseTotal])
-    await pgQuery(`DELETE FROM purchase_document_lines WHERE document_id=$1`, [input.id])
-    await insertLines(input.id, input.lines)
-    return input.id
-  }
-  const docNo = await nextNumber(`purchase_${input.docType}`, { legacyPrefix: input.docType.toUpperCase().slice(0, 3) })
-  const row = (await pgQuery<{ id: number }>(
-    `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,exchange_rate,base_total,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,${NOW},${NOW}) RETURNING id`,
-    [docNo, input.docType, input.vendorId ?? null, input.date, input.currency ?? 'IRR', input.department ?? null, input.budget ?? 0,
-     input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null, rate, baseTotal]))[0]
-  await insertLines(row.id, input.lines)
-  return row.id
+  return withTransaction(async query => {
+    if (input.id) {
+      await query(
+        `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
+          note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), exchange_rate=$13, base_total=$14, updated_at=${NOW} WHERE id=$1`,
+        [input.id, input.vendorId ?? null, input.date, input.currency ?? null, input.department ?? null, input.budget ?? 0,
+         input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null, rate, baseTotal])
+      await query(`DELETE FROM purchase_document_lines WHERE document_id=$1`, [input.id])
+      await insertLines(query, input.id, input.lines)
+      return input.id
+    }
+    const docNo = await nextNumber(`purchase_${input.docType}`, { legacyPrefix: input.docType.toUpperCase().slice(0, 3) })
+    const row = (await query<{ id: number }>(
+      `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,exchange_rate,base_total,created_at,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,${NOW},${NOW}) RETURNING id`,
+      [docNo, input.docType, input.vendorId ?? null, input.date, input.currency ?? 'IRR', input.department ?? null, input.budget ?? 0,
+       input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null, rate, baseTotal]))[0]
+    await insertLines(query, row.id, input.lines)
+    return row.id
+  })
 }
-async function insertLines(docId: number, lines: LineRow[]) {
+async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]
-    await pgQuery(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    await query(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
       [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i, l.productId ?? null])
   }
 }
@@ -163,41 +174,56 @@ export async function submitDocument(id: number): Promise<{ ok: boolean; error?:
  * sets the document to `received` (all product lines complete) or `partial`.
  * Lines without a product (services) are ignored by receiving.
  */
+/**
+ * Phase-4 procurement audit finding: this ran as bare, unlocked pgQuery calls
+ * (doc lookup → per-line read-remaining-then-insert-move-then-update-received
+ * loop → status recompute) with no transaction — two genuinely concurrent
+ * receipts on the same PO line could both read the same `received_qty`,
+ * both compute the same `remaining`, and together over-receive past the
+ * ordered quantity (the identical TOCTOU class fixed on sales payments and
+ * purchase-invoice payments). Fixed: the whole read-decide-write sequence
+ * now runs inside one transaction, serialized per document via
+ * pg_advisory_xact_lock, so a second concurrent receipt sees the first
+ * receipt's committed received_qty before deciding how much it can take.
+ */
 export async function receiveDocument(
   docId: number, warehouseId: number,
   linesIn?: { lineId: number; qty: number }[], userId?: string,
 ): Promise<{ ok: boolean; error?: string; received: number; status?: string }> {
-  const doc = (await pgQuery<{ doc_type: string; status: string; doc_no: string | null; exchange_rate: number }>(
-    `SELECT doc_type, status, doc_no, exchange_rate::float AS exchange_rate FROM purchase_documents WHERE id=$1`, [docId]))[0]
-  if (!doc) return { ok: false, error: 'Document not found', received: 0 }
-  if (doc.doc_type !== 'receipt') return { ok: false, error: 'Only goods-receipt (GRN) documents can be received', received: 0 }
-  if (['void', 'rejected'].includes(doc.status)) return { ok: false, error: 'Document is not receivable', received: 0 }
-  const lines = await pgQuery<{ id: number; qty: number; unit_price: number; product_id: number | null; received_qty: number }>(
-    `SELECT id, qty::float AS qty, unit_price::float AS unit_price, product_id, received_qty::float AS received_qty
-     FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [docId])
-  const wanted = new Map((linesIn ?? []).map(l => [l.lineId, Math.max(0, l.qty)]))
-  let received = 0
-  for (const l of lines) {
-    if (!l.product_id) continue
-    const remaining = Math.max(0, num(l.qty) - num(l.received_qty))
-    const take = Math.min(remaining, linesIn ? (wanted.get(l.id) ?? 0) : remaining)
-    if (take <= 0) continue
-    await pgQuery(
-      `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
-       VALUES ($1,$2,'receipt',$3,$4,$5,$6,${NOW})`,
-      // 26.8: stock ledger costs are kept in the Rial base (line price × the
-      // document's registration rate) so FIFO/LIFO/WAVG valuation is uniform.
-      [l.product_id, warehouseId, take, num(l.unit_price) * (num(doc.exchange_rate) || 1), `GRN ${doc.doc_no ?? docId}`, userId ?? null])
-    await pgQuery(`UPDATE purchase_document_lines SET received_qty = received_qty + $2 WHERE id=$1`, [l.id, take])
-    received++
-  }
-  const after = await pgQuery<{ qty: number; received_qty: number; product_id: number | null }>(
-    `SELECT qty::float AS qty, received_qty::float AS received_qty, product_id FROM purchase_document_lines WHERE document_id=$1`, [docId])
-  const productLines = after.filter(l => l.product_id)
-  const complete = productLines.length === 0 || productLines.every(l => num(l.received_qty) + 0.0001 >= num(l.qty))
-  const status = complete ? 'received' : 'partial'
-  await pgQuery(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, status])
-  return { ok: true, received, status }
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_receive:${docId}`])
+    const doc = (await query<{ doc_type: string; status: string; doc_no: string | null; exchange_rate: number }>(
+      `SELECT doc_type, status, doc_no, exchange_rate::float AS exchange_rate FROM purchase_documents WHERE id=$1`, [docId]))[0]
+    if (!doc) return { ok: false, error: 'Document not found', received: 0 }
+    if (doc.doc_type !== 'receipt') return { ok: false, error: 'Only goods-receipt (GRN) documents can be received', received: 0 }
+    if (['void', 'rejected'].includes(doc.status)) return { ok: false, error: 'Document is not receivable', received: 0 }
+    const lines = await query<{ id: number; qty: number; unit_price: number; product_id: number | null; received_qty: number }>(
+      `SELECT id, qty::float AS qty, unit_price::float AS unit_price, product_id, received_qty::float AS received_qty
+       FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [docId])
+    const wanted = new Map((linesIn ?? []).map(l => [l.lineId, Math.max(0, l.qty)]))
+    let received = 0
+    for (const l of lines) {
+      if (!l.product_id) continue
+      const remaining = Math.max(0, num(l.qty) - num(l.received_qty))
+      const take = Math.min(remaining, linesIn ? (wanted.get(l.id) ?? 0) : remaining)
+      if (take <= 0) continue
+      await query(
+        `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+         VALUES ($1,$2,'receipt',$3,$4,$5,$6,${NOW})`,
+        // 26.8: stock ledger costs are kept in the Rial base (line price × the
+        // document's registration rate) so FIFO/LIFO/WAVG valuation is uniform.
+        [l.product_id, warehouseId, take, num(l.unit_price) * (num(doc.exchange_rate) || 1), `GRN ${doc.doc_no ?? docId}`, userId ?? null])
+      await query(`UPDATE purchase_document_lines SET received_qty = received_qty + $2 WHERE id=$1`, [l.id, take])
+      received++
+    }
+    const after = await query<{ qty: number; received_qty: number; product_id: number | null }>(
+      `SELECT qty::float AS qty, received_qty::float AS received_qty, product_id FROM purchase_document_lines WHERE document_id=$1`, [docId])
+    const productLines = after.filter(l => l.product_id)
+    const complete = productLines.length === 0 || productLines.every(l => num(l.received_qty) + 0.0001 >= num(l.qty))
+    const status = complete ? 'received' : 'partial'
+    await query(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, status])
+    return { ok: true, received, status }
+  })
 }
 
 /** RFQ quotation comparison: every vendor quotation linked to the RFQ, side by
@@ -212,29 +238,85 @@ export async function compareQuotes(rfqId: number) {
      ORDER BY d.total ASC`, [rfqId])
 }
 
-/** Record an approval decision; advance to 'approved' once every level signs. */
-export async function decideApproval(id: number, level: number, decision: 'approved' | 'rejected', approverId?: string, comment?: string): Promise<PurchaseStatus> {
-  await pgQuery(`INSERT INTO purchase_approvals (document_id,level,decision,approver_id,comment,created_at) VALUES ($1,$2,$3,$4,$5,${NOW})`,
-    [id, level, decision, approverId ?? null, comment ?? null])
-  if (decision === 'rejected') { await pgQuery(`UPDATE purchase_documents SET status='rejected', updated_at=${NOW} WHERE id=$1`, [id]); return 'rejected' }
-  const d = (await pgQuery<{ total: number }>(`SELECT total FROM purchase_documents WHERE id=$1`, [id]))[0]
-  const approved = (await pgQuery<{ level: number }>(`SELECT DISTINCT level FROM purchase_approvals WHERE document_id=$1 AND decision='approved'`, [id])).map(r => r.level)
-  if (isFullyApproved(num(d.total), approved)) { await pgQuery(`UPDATE purchase_documents SET status='approved', updated_at=${NOW} WHERE id=$1`, [id]); return 'approved' }
-  return 'submitted'
+/**
+ * Record an approval decision; advance to 'approved' once every level signs.
+ *
+ * Phase-4 procurement audit finding: `purchase_approvals` is a genuinely
+ * separate approval mechanism from the shared `lib/approval/*` engine (its
+ * own table, its own tier math) — migrating it onto the shared engine would
+ * be a new architectural feature well beyond this phase's scope, so per the
+ * instruction not to create a SECOND approval system, this hardens the
+ * existing one in place instead: (1) maker/checker — the document's creator
+ * may not approve/reject their own request, matching the separation-of-
+ * duties rule already enforced on the shared engine; (2) the whole insert-
+ * decide-advance sequence now runs in one transaction serialized per
+ * document via pg_advisory_xact_lock, closing the same class of TOCTOU that
+ * let two concurrent decisions both read a stale set of approved levels;
+ * (3) a duplicate decision from the same approver at the same level is
+ * rejected instead of inserting a second row.
+ */
+export async function decideApproval(id: number, level: number, decision: 'approved' | 'rejected', approverId?: string, comment?: string): Promise<{ ok: boolean; error?: string; status?: PurchaseStatus }> {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_approval:${id}`])
+    const d = (await query<{ total: number; created_by: string | null; status: string }>(`SELECT total, created_by, status FROM purchase_documents WHERE id=$1`, [id]))[0]
+    if (!d) return { ok: false, error: 'Document not found' }
+    if (approverId && d.created_by && approverId === d.created_by)
+      return { ok: false, error: 'The creator of this document cannot approve or reject it (separation of duties)' }
+    const dup = (await query<{ id: number }>(`SELECT id FROM purchase_approvals WHERE document_id=$1 AND level=$2 AND approver_id=$3`, [id, level, approverId ?? null]))[0]
+    if (dup) return { ok: false, error: 'This approver has already decided this level' }
+    await query(`INSERT INTO purchase_approvals (document_id,level,decision,approver_id,comment,created_at) VALUES ($1,$2,$3,$4,$5,${NOW})`,
+      [id, level, decision, approverId ?? null, comment ?? null])
+    if (decision === 'rejected') {
+      await query(`UPDATE purchase_documents SET status='rejected', updated_at=${NOW} WHERE id=$1`, [id])
+      return { ok: true, status: 'rejected' }
+    }
+    const approved = (await query<{ level: number }>(`SELECT DISTINCT level FROM purchase_approvals WHERE document_id=$1 AND decision='approved'`, [id])).map(r => r.level)
+    if (isFullyApproved(num(d.total), approved)) {
+      await query(`UPDATE purchase_documents SET status='approved', updated_at=${NOW} WHERE id=$1`, [id])
+      return { ok: true, status: 'approved' }
+    }
+    return { ok: true, status: 'submitted' }
+  })
 }
 
-/** Record a payment against a purchase invoice and recompute its settle status. */
-export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR') {
+/**
+ * Record a payment against a purchase invoice and recompute its settle
+ * status.
+ *
+ * Phase-4 procurement audit finding: this had NO overpayment guard at
+ * all (unlike the sales side, which at least had one before its own
+ * concurrency fix) — purchaseInvoiceStatus() marks 'paid' once
+ * paid>=total but never rejects paid>total, so nothing stopped an
+ * arbitrary overpayment. It also ran as bare, unlocked pgQuery calls
+ * (insert payment, recompute paid, update status) — the identical TOCTOU
+ * class fixed on the sales payment route: two concurrent payments could
+ * both read the same "already paid" sum and both insert, together
+ * exceeding the invoice total. Fixed: reuses sales.ts's validatePayment
+ * (no second money-validation implementation) inside one transaction,
+ * serialized per document via pg_advisory_xact_lock.
+ */
+export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR'): Promise<{ ok: boolean; error?: string; paymentId?: number }> {
   const rate = (await rialRateFor(currency)) ?? 1
-  const pay = (await pgQuery<{ id: number }>(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW}) RETURNING id`,
-    [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate]))[0]
+  const result = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_invoice_payment:${documentId}`])
+    const d = (await query<{ total: number; status: string }>(`SELECT total::float AS total, status FROM purchase_documents WHERE id=$1`, [documentId]))[0]
+    if (!d) return { ok: false, error: 'Document not found' } as const
+    const already = num((await query<{ t: number }>(`SELECT COALESCE(SUM(amount),0)::float AS t FROM purchase_payments WHERE document_id=$1`, [documentId]))[0]?.t)
+    const v = validatePayment({ status: d.status, invoiceTotal: num(d.total), alreadyPaid: already, amount })
+    if (!v.ok) return { ok: false, error: v.error === 'cannot pay a void/draft invoice' ? 'Cannot record a payment against a void/draft invoice' : `Overpayment: invoice total ${d.total}, already paid ${already}, this ${amount}` } as const
+    const pay = (await query<{ id: number }>(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW}) RETURNING id`,
+      [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate]))[0]
+    const paid = already + amount
+    const status = purchaseInvoiceStatus(num(d.total), paid)
+    await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [documentId, paid, status])
+    return { ok: true, paymentId: pay.id } as const
+  })
+  if (!result.ok) return result
   // 26.23: every supplier payment books Dr AP / Cr Bank (idempotent, best-effort —
-  // a closed period leaves the payment recorded and self-heal/manual can post later).
-  try { await postPurchasePaymentToGl(pay.id, userId) } catch { /* stays unposted */ }
-  const d = (await pgQuery<{ total: number }>(`SELECT total FROM purchase_documents WHERE id=$1`, [documentId]))[0]
-  const paid = num((await pgQuery<{ t: number }>(`SELECT COALESCE(SUM(amount),0) AS t FROM purchase_payments WHERE document_id=$1`, [documentId]))[0]?.t)
-  const status = purchaseInvoiceStatus(num(d.total), paid)
-  await pgQuery(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [documentId, paid, status])
+  // a closed period leaves the payment recorded and self-heal/manual can post
+  // later). GL posting stays its own transaction, run after the payment commits.
+  try { await postPurchasePaymentToGl(result.paymentId!, userId) } catch { /* stays unposted */ }
+  return result
 }
 
 /** Convert an upstream doc (e.g. PR→PO, PO→GRN, GRN→invoice) copying its lines. */

@@ -11,6 +11,7 @@ import {
 import { issueVendorToken, revokeVendorTokens } from '@/lib/erp/vendorPortal'
 import type { PurchaseDocType } from '@/lib/erp/purchasing'
 import { clientIp } from '@/lib/api/clientIp'
+import { runOnce } from '@/lib/api/idempotency'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -69,7 +70,19 @@ export async function POST(req: NextRequest) {
       case 'vendor.create': { const id = await createVendor(d, uid); await logAction(auth.user, 'erp.vendor.create', 'purchase_vendors', String(id), { name: d.name }); return NextResponse.json({ id }) }
       case 'vendor.update': { await updateVendor(d.id, d); await logAction(auth.user, 'erp.vendor.update', 'purchase_vendors', String(d.id), {}); return NextResponse.json({ ok: true }) }
       case 'vendor.evaluate': { const s = await evaluateVendor(d.vendorId, d, d.note, uid); await logAction(auth.user, 'erp.vendor.evaluate', 'purchase_vendors', String(d.vendorId), { score: s.score, grade: s.grade }); return NextResponse.json(s) }
-      case 'doc.save': { const id = await saveDocument(d, uid); await logAction(auth.user, 'erp.purchase.save', 'purchase_documents', String(id), { type: d.docType }); return NextResponse.json({ id }) }
+      case 'doc.save': {
+        // Phase-4 procurement audit finding: a CREATE (no d.id) had no
+        // double-submit guard — two genuinely concurrent identical POSTs
+        // (double-click, network retry) created two purchase requests/
+        // orders with two different doc numbers. A replayed duplicate
+        // must not add a second success audit row either (didWrite gates
+        // it to the one real write, matching the sales-route fix).
+        let didWrite = false
+        const write = async () => { didWrite = true; return saveDocument(d, uid) }
+        const id = d.id ? await write() : await runOnce(uid, 'erp/purchasing/doc.save', d, write)
+        if (d.id || didWrite) await logAction(auth.user, 'erp.purchase.save', 'purchase_documents', String(id), { type: d.docType })
+        return NextResponse.json({ id })
+      }
       case 'doc.submit': {
         const r = await submitDocument(d.id)
         if (!r.ok) return NextResponse.json({ error: r.error, budget: r.budget }, { status: 400 })
@@ -85,12 +98,18 @@ export async function POST(req: NextRequest) {
       case 'doc.approve': {
         // Level ≥2 approvals require an elevated role (multi-level approval).
         if (d.level >= 2 && !['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'This approval level requires an administrator' }, { status: 403 })
-        const status = await decideApproval(d.id, d.level, d.decision, uid, d.comment)
-        await logAction(auth.user, 'erp.purchase.approve', 'purchase_documents', String(d.id), { level: d.level }, { decision: d.decision, status }, ip)
-        return NextResponse.json({ ok: true, status })
+        const r = await decideApproval(d.id, d.level, d.decision, uid, d.comment)
+        if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
+        await logAction(auth.user, 'erp.purchase.approve', 'purchase_documents', String(d.id), { level: d.level }, { decision: d.decision, status: r.status }, ip)
+        return NextResponse.json({ ok: true, status: r.status })
       }
       case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }
-      case 'doc.payment': { await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid); await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount }); return NextResponse.json({ ok: true }) }
+      case 'doc.payment': {
+        const r = await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid)
+        if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
+        await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount })
+        return NextResponse.json({ ok: true })
+      }
       case 'vendor.portalLink': {
         const token = await issueVendorToken(d.vendorId, uid, d.days ?? 90)
         await logAction(auth.user, 'erp.vendor.portal.issue', 'purchase_vendors', String(d.vendorId), { days: d.days ?? 90 })

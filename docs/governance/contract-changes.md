@@ -139,3 +139,28 @@ guaranteed, what the new one guarantees, why, and who approved it.
   stored grant referenced the old key (`audit:rbac` 162 guarded · 0 failures).
 - **Approver:** maintainer (phase 28 spec, `cross_cutting.rbac` names these keys);
   recorded per rule 5.
+
+## CC-007 · 26.24b closeout regression — "AP negative then corrected" → "payment blocked pre-confirm"
+- **Date:** 2026-08-29 · **Phase:** 4 (Procurement/Purchase-to-Pay hardening) ·
+  **Suite:** `scripts/verify-2624b.ts` (بند ۱ BUG-008 AP proof, tests #1 and #7)
+- **Old assertion:** paying a purchase invoice that was never posted to the GL
+  **succeeds and drives AP negative** (the bug being demonstrated); later
+  confirming that same invoice books it and brings **global AP back to exactly
+  zero without ever recording a second payment**.
+- **New assertion:** `recordPayment` now refuses a payment against a
+  draft/unconfirmed purchase invoice outright (`ok:false`, reusing
+  `sales.ts`'s `validatePayment`) — AP is **provably unchanged**, not merely
+  corrected afterwards. The stranded invoice is confirmed and THEN paid (now
+  that it is no longer draft), and global AP still settles to exactly zero.
+- **What the old version guaranteed that the new one no longer does:** that a
+  payment could be recorded against an unconfirmed purchase invoice at all.
+  That was the real, unguarded defect Phase 4's procurement audit found —
+  purchasing had zero overpayment/status guard on `recordPayment`, unlike the
+  sales side. Blocking the payment outright is a strictly stronger fix than
+  "let it happen, then reconcile."
+- **Reason:** Phase 4 procurement hardening — `recordPayment` gained the same
+  status/overpayment guard the sales payment path already had, reusing the
+  existing pure `validatePayment` (no duplicated validation logic).
+- **Approved by:** Phase 4 procurement master-prompt scope (Section 8: "Look
+  specifically for TOCTOU patterns similar to the Sales payment bug... treat
+  as a real concurrency defect").

@@ -51,6 +51,7 @@ let seed = 26210
 const rnd = () => { seed = (seed * 1103515245 + 12345) % 2 ** 31; return seed / 2 ** 31 }
 
 let ADMIN = ''
+let APPROVER = ''
 const acct = new Map<string, number>()
 async function loadChart() {
   for (const a of await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts`)) acct.set(a.code, a.id)
@@ -127,6 +128,13 @@ async function main() {
   await runMigrations()
   await seedDatabase()
   ADMIN = (await one<{ id: string }>(`SELECT id FROM users ORDER BY created_at LIMIT 1`)).id
+  // Phase-4 procurement hardening added a maker/checker guard to decideApproval
+  // (a document's creator may not approve/reject their own request) — a second
+  // seeded user approves purchase documents ADMIN creates, so this simulation
+  // still exercises a realistic two-person approval flow instead of tripping
+  // the new separation-of-duties rule against itself.
+  await pgQuery(`INSERT INTO users (id,name,email,password_hash,role,created_at) VALUES ('sim-approver','Sim Approver','sim-approver@habibazar.com','x','administrator',now()) ON CONFLICT (id) DO NOTHING`)
+  APPROVER = (await one<{ id: string }>(`SELECT id FROM users WHERE id='sim-approver'`)).id
   await loadChart()
 
   // Fiscal years + monthly USD rate baseline.
@@ -248,7 +256,10 @@ async function main() {
     const sub = await submitDocument(prId)
     if (!sub.ok) throw new Error(`PR submit failed: ${sub.error}`)
     const prDoc = await one<{ total: number; approval_levels: number }>(`SELECT total::float AS total, approval_levels FROM purchase_documents WHERE id=$1`, [prId])
-    for (let lvl = 1; lvl <= prDoc.approval_levels; lvl++) await decideApproval(prId, lvl, 'approved', ADMIN)
+    for (let lvl = 1; lvl <= prDoc.approval_levels; lvl++) {
+      const r = await decideApproval(prId, lvl, 'approved', APPROVER)
+      if (!r.ok) throw new Error(`approval failed: ${r.error}`)
+    }
     const poId = await convertDocument(prId, 'order', ADMIN)
     poCount++
     const grnId = await convertDocument(poId, 'receipt', ADMIN)
@@ -312,8 +323,8 @@ async function main() {
   // Cancelled PO + rejected approval (exception paths).
   const cancelPr = await savePurchaseDoc({ docType: 'request', vendorId: vendorIds[0], date: '2025-06-05', lines: [{ description: 'cancelled buy', qty: 5, unitPrice: 900_000_000, discountPct: 0, taxPct: 0 }] }, ADMIN)
   await submitDocument(cancelPr)
-  const rejStatus = await decideApproval(cancelPr, 1, 'rejected', ADMIN, 'over budget, not needed')
-  ok(rejStatus === 'rejected', 'approval rejection stops a purchase request')
+  const rej = await decideApproval(cancelPr, 1, 'rejected', APPROVER, 'over budget, not needed')
+  ok(rej.ok && rej.status === 'rejected', 'approval rejection stops a purchase request')
   const voidPo = await savePurchaseDoc({ docType: 'order', vendorId: vendorIds[1], date: '2025-06-10', lines: [{ description: 'to cancel', qty: 1, unitPrice: 10_000_000, discountPct: 0, taxPct: 0 }] }, ADMIN)
   await pgQuery(`UPDATE purchase_documents SET status='void', updated_at=${NOW} WHERE id=$1`, [voidPo])
   ok(true, 'cancelled PO voided (excluded from aggregates)')
