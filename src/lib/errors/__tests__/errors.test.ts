@@ -27,6 +27,13 @@ describe('businessError', () => {
     expect(err.recoverable).toBe(true)
   })
 
+  it('ERP-SALES-CUSTOMER-NOT-FOUND: a nonexistent customerId returns 404, not a raw FK-violation 500', () => {
+    const err = businessError('ERP-SALES-CUSTOMER-NOT-FOUND', {})
+    expect(err.httpStatus).toBe(404)
+    expect(err.en).toContain('does not exist')
+    expect(err.fa).toContain('وجود ندارد')
+  })
+
   it('ERP-SALES-VOID-PAID-INVOICE-BLOCKED (BUG-013 rule): a paid invoice must never be voided directly', () => {
     const err = businessError('ERP-SALES-VOID-PAID-INVOICE-BLOCKED', {})
     expect(err.httpStatus).toBe(400)

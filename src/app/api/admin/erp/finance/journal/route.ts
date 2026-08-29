@@ -119,7 +119,17 @@ export async function POST(req: NextRequest) {
     // Full-remediation RULE-002: header + every line + the optional template
     // save now commit as one transaction — the old bare-pgQuery loop could
     // leave a draft entry with missing/wrong lines on a mid-loop failure.
+    // Phase-3B live-verification finding: a replayed duplicate call (from
+    // runOnce dedup) used to still run the d.post branch below —
+    // makerCheckerGate (creating a SECOND approval request for the same
+    // entry) and postEntryById (which correctly no-ops but then made the
+    // route return a spurious 400 "Only draft entries can be posted" to
+    // what should have been a successful replayed response) — plus a
+    // second logAction "success" row per duplicate. `didWrite` is true
+    // only for the call whose closure actually ran the INSERT.
+    let didWrite = false
     const entry = await runOnce(auth.user.id, 'erp/finance/journal', d, () => withTransaction(async query => {
+      didWrite = true
       const entryNo = await nextNumber('journal', { legacyPrefix: 'JE', userId: auth.user.id })
       const e = (await query(
         `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, currency, exchange_rate, posted_at)
@@ -137,14 +147,19 @@ export async function POST(req: NextRequest) {
       return { id: e.id, entryNo }
     }))
     let pendingApproval: number | null = null
-    if (d.post) {
-      pendingApproval = await makerCheckerGate(entry.id, check.totalDebit, auth.user.id)
-      if (!pendingApproval) {
-        const res = await postEntryById(entry.id)
-        if (!res.ok) return badRequest(res.error!)
+    // A replayed duplicate (didWrite still false) must not re-run posting/
+    // approval side effects or add a second success audit row — the entry
+    // already exists and was already handled by the original call.
+    if (didWrite) {
+      if (d.post) {
+        pendingApproval = await makerCheckerGate(entry.id, check.totalDebit, auth.user.id)
+        if (!pendingApproval) {
+          const res = await postEntryById(entry.id)
+          if (!res.ok) return badRequest(res.error!)
+        }
       }
+      await logAction(auth.user, d.post ? 'gl.entry.post' : 'gl.entry.create', 'gl_journal_entry', entry.id, null, { entryNo: entry.entryNo, total: check.totalDebit, pendingApproval }, clientIp(req))
     }
-    await logAction(auth.user, d.post ? 'gl.entry.post' : 'gl.entry.create', 'gl_journal_entry', entry.id, null, { entryNo: entry.entryNo, total: check.totalDebit, pendingApproval }, clientIp(req))
     return NextResponse.json({ id: entry.id, entryNo: entry.entryNo, pendingApproval })
   } catch (e) { return apiError(e, 'Failed to create entry') }
 }

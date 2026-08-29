@@ -32,6 +32,15 @@ export const CATALOG = {
     fa: (p: { limit: string; projected: string }) =>
       `سقف اعتبار مشتری (${p.limit}) با مانده پیش‌بینی‌شده ${p.projected} عبور کرده و تایید فاکتور متوقف شد.`,
   },
+  'ERP-SALES-CUSTOMER-NOT-FOUND': {
+    code: 'ERP-SALES-CUSTOMER-NOT-FOUND',
+    httpStatus: 404,
+    severity: 'warning',
+    module: 'sales',
+    recoverable: true,
+    en: () => 'The selected customer does not exist.',
+    fa: () => 'مشتری انتخاب‌شده وجود ندارد.',
+  },
   'ERP-SALES-VOID-PAID-INVOICE-BLOCKED': {
     code: 'ERP-SALES-VOID-PAID-INVOICE-BLOCKED',
     httpStatus: 400,

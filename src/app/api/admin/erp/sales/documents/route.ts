@@ -102,6 +102,14 @@ export async function POST(req: NextRequest) {
     const rate = await rialRateFor(currency)
     if (rate == null) return badRequest(`No exchange rate configured for ${currency} — set one in Finance → Currency`)
     const baseTotal = Math.round(totals.total * rate * 100) / 100
+    // Phase-3B live-verification finding: a nonexistent customerId fell
+    // through to a raw PG foreign-key violation (23503), which apiError
+    // does not special-case (only 23502/23505 do), so it surfaced as an
+    // unhandled HTTP 500 "Failed to save document" — exactly the class of
+    // bug the master prompt's own ERP-SALES-CUSTOMER-NOT-FOUND example
+    // names. Fixed with an explicit existence check.
+    const custExists = (await pgQuery<{ c: number }>(`SELECT count(*)::int AS c FROM sales_customers WHERE id=$1`, [d.customerId]))[0]
+    if (!custExists?.c) return toApiResponse(businessError('ERP-SALES-CUSTOMER-NOT-FOUND', undefined))
     if (d.id) {
       const cur = (await pgQuery(`SELECT status FROM sales_documents WHERE id=$1`, [d.id]))[0] as { status: string } | undefined
       if (!cur) return badRequest('Not found')
@@ -119,11 +127,21 @@ export async function POST(req: NextRequest) {
     // actually written (caught by a live-concurrency test on the journal
     // route's identical pattern).
     const createOnce = <T>(fn: () => Promise<T>) => d.id ? fn() : runOnce(auth.user.id, 'erp/sales/documents', d, fn)
+    // Phase-3B live-verification finding: 5 concurrent identical creates
+    // correctly wrote exactly ONE row (runOnce dedup working), but
+    // logAction below used to fire unconditionally for every HTTP request
+    // that reached this point — including the 4 replayed duplicates — so
+    // audit_logs ended up with 5 "success" rows for one real creation.
+    // `didWrite` is set true only inside the closure that actually runs;
+    // a replayed call never invokes it (runOnce short-circuits before
+    // calling fn()), so it stays false for every duplicate.
+    let didWrite = false
     // Full-remediation RULE-002: header write + line replacement now commit
     // as one transaction — the old bare-pgQuery sequence (UPDATE/INSERT
     // header, DELETE old lines, loop-INSERT new lines) could leave a
     // document with missing/mismatched lines on a mid-sequence failure.
     const docId = await createOnce(() => withTransaction(async query => {
+      didWrite = true
       let id = d.id
       if (id) {
         await query(
@@ -145,7 +163,12 @@ export async function POST(req: NextRequest) {
       }
       return id!
     }))
-    await logAction(auth.user, d.id ? 'sales.doc.update' : 'sales.doc.create', 'sales_document', docId, null, { docType: d.docType, total: totals.total })
+    // An update always logs; a create only logs on the real write — a
+    // replayed duplicate (didWrite still false) must not add a second
+    // "success" audit row for a document that already existed.
+    if (d.id || didWrite) {
+      await logAction(auth.user, d.id ? 'sales.doc.update' : 'sales.doc.create', 'sales_document', docId, null, { docType: d.docType, total: totals.total })
+    }
     return NextResponse.json({ id: docId, total: totals.total })
   } catch (e) { return apiError(e, 'Failed to save document') }
 }
