@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiError, readJson, requirePermission, requireOp } from '@/lib/api/respond'
+import { apiError, notFound, readJson, requirePermission, requireOp } from '@/lib/api/respond'
 import { logAction } from '@/lib/admin/audit'
+import { pgQuery } from '@/lib/db'
 import { clientIp } from '@/lib/api/clientIp'
 import { DOC_TYPES } from '@/lib/approval/matrix'
 import {
@@ -50,6 +51,13 @@ export async function POST(req: NextRequest) {
     if (d.action === 'decide') {
       { const opKey = d.decision === 'approved' ? 'erp.approvals:approve' : 'erp.approvals:reject'
         const deny = await requireOp(auth.user, opKey, 'edit'); if (deny) return deny }
+      // Phase-2B live-verification finding: a nonexistent id used to fall
+      // through to actOnRequest's thrown "Request not found" Error, mapped
+      // by the generic catch-all below to a 500 — a client-facing lookup
+      // miss must be a 404 (this project's own rule: a missing row is a
+      // 404, never a 500).
+      const exists = (await pgQuery<{ c: number }>(`SELECT count(*)::int AS c FROM approval_requests WHERE id=$1`, [d.id]))[0]
+      if (!exists?.c) return notFound('Approval request not found')
       const r = await actOnRequest(d.id, auth.user, d.decision, d.comment, ip)
       await logAction(auth.user, `approval.${d.decision}`, 'approval_requests', d.id, null, { decision: d.decision }, ip)
       return NextResponse.json(r)
