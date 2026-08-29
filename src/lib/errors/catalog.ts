@@ -70,6 +70,16 @@ export const CATALOG = {
     en: () => 'Only draft entries can be deleted — a posted or voided entry is a permanent audit record. Use a reversal instead.',
     fa: () => 'فقط اسناد پیش‌نویس قابل حذف‌اند — سند ثبت‌شده یا باطل‌شده یک رکورد دائمی حسابرسی است. به‌جای آن از سند اصلاحی (reversal) استفاده کنید.',
   },
+  'ERP-PURCHASING-PAYMENT-BLOCKED-MISMATCH': {
+    code: 'ERP-PURCHASING-PAYMENT-BLOCKED-MISMATCH',
+    httpStatus: 400,
+    severity: 'warning',
+    module: 'purchasing',
+    recoverable: true,
+    recommendedAction: 'Resolve the quantity/price/tax mismatch against the purchase order and receipt, or have an administrator override with a recorded reason.',
+    en: (p: { reasons: string }) => `This invoice does not match its purchase order/receipt and cannot be paid: ${p.reasons}`,
+    fa: (p: { reasons: string }) => `این فاکتور با سفارش خرید/رسید کالا مطابقت ندارد و قابل پرداخت نیست: ${p.reasons}`,
+  },
   'ERP-GENERIC-VALIDATION-FAILED': {
     code: 'ERP-GENERIC-VALIDATION-FAILED',
     httpStatus: 400,

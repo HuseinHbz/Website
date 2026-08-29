@@ -7,11 +7,13 @@ import {
   listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
   recordPayment, convertDocument, overview, postPurchaseInvoiceToGl, analytics,
   receiveDocument, compareQuotes, confirmPurchaseInvoice, voidPurchaseInvoice,
+  matchPurchaseInvoice, overrideMatch,
 } from '@/lib/erp/purchasingData'
 import { issueVendorToken, revokeVendorTokens } from '@/lib/erp/vendorPortal'
 import type { PurchaseDocType } from '@/lib/erp/purchasing'
 import { clientIp } from '@/lib/api/clientIp'
 import { runOnce } from '@/lib/api/idempotency'
+import { businessError, toApiResponse } from '@/lib/errors'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -55,7 +57,9 @@ const docVoid = z.object({ action: z.literal('doc.void'), id: z.number().int() }
 const docReceive = z.object({ action: z.literal('doc.receive'), id: z.number().int(), warehouseId: z.number().int(), lines: z.array(z.object({ lineId: z.number().int(), qty: z.number().min(0) })).optional() })
 const portalLink = z.object({ action: z.literal('vendor.portalLink'), vendorId: z.number().int(), days: z.number().int().min(1).max(365).optional() })
 const portalRevoke = z.object({ action: z.literal('vendor.portalRevoke'), vendorId: z.number().int() })
-const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost, docConfirm, docVoid, docReceive, portalLink, portalRevoke])
+const docMatch = z.object({ action: z.literal('doc.match'), id: z.number().int() })
+const docMatchOverride = z.object({ action: z.literal('doc.matchOverride'), id: z.number().int(), reason: z.string().min(3).max(500) })
+const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost, docConfirm, docVoid, docReceive, portalLink, portalRevoke, docMatch, docMatchOverride])
 
 export async function POST(req: NextRequest) {
   const auth = await requirePermission('erp.purchasing', 'write', 'edit')
@@ -106,8 +110,30 @@ export async function POST(req: NextRequest) {
       case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }
       case 'doc.payment': {
         const r = await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid)
-        if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
+        if (!r.ok) {
+          // Phase-5 three-way match block: recordPayment signals this class
+          // with a stable prefix (not a generic string) so the route can
+          // shape a proper bilingual error without the data layer knowing
+          // about NextResponse/the error catalog.
+          if (r.error?.startsWith('THREE_WAY_MATCH_FAILED: '))
+            return toApiResponse(businessError('ERP-PURCHASING-PAYMENT-BLOCKED-MISMATCH', { reasons: r.error.slice('THREE_WAY_MATCH_FAILED: '.length) }))
+          return NextResponse.json({ error: r.error }, { status: 400 })
+        }
         await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount })
+        return NextResponse.json({ ok: true })
+      }
+      case 'doc.match': {
+        const r = await matchPurchaseInvoice(d.id)
+        return NextResponse.json(r)
+      }
+      case 'doc.matchOverride': {
+        // Overriding a failed three-way match to let a mismatched invoice be
+        // paid anyway is an accounting-control bypass — administrator only,
+        // reason required, fully audited (no silent bypass).
+        if (!['super_admin', 'administrator'].includes(auth.user.role)) return NextResponse.json({ error: 'Overriding a three-way match requires an administrator' }, { status: 403 })
+        const r = await overrideMatch(d.id, d.reason, uid)
+        if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
+        await logAction(auth.user, 'erp.purchase.matchOverride', 'purchase_documents', String(d.id), null, { reason: d.reason }, ip)
         return NextResponse.json({ ok: true })
       }
       case 'vendor.portalLink': {

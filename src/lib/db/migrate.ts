@@ -4150,6 +4150,32 @@ export async function runMigrations() {
       SELECT 'hr_review', 'Performance review finalization', 'نهایی‌سازی ارزیابی عملکرد', 0,
              '[{"level":1,"mode":"any","approvers":[{"type":"role","ref":"administrator"},{"type":"role","ref":"super_admin"}]}]', 0, 1
       WHERE NOT EXISTS (SELECT 1 FROM approval_matrix WHERE doc_type='hr_review');
+
+    -- ══ Phase 5 — Three-Way Match (PO / Receipt / Supplier Invoice) ══
+    -- Line-level ancestry so an invoice line can be traced back to the exact
+    -- receipt line (and, through it, the PO line) it was converted from.
+    -- convertDocument() already copies lines 1:1 in sort_order when moving
+    -- order→receipt→invoice — these columns just record that lineage instead
+    -- of leaving it implicit. Self-referencing FK (nullable): a standalone
+    -- invoice with no PO/receipt behind it simply leaves both null, which is
+    -- the honest "nothing to match against" case (status 'pending', not a
+    -- fabricated pass).
+    ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS po_line_id INTEGER REFERENCES purchase_document_lines(id);
+    ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS receipt_line_id INTEGER REFERENCES purchase_document_lines(id);
+    ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS match_status TEXT;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS match_status TEXT;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS match_checked_at TEXT;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS match_override BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS match_override_reason TEXT;
+    ALTER TABLE purchase_documents ADD COLUMN IF NOT EXISTS match_override_by TEXT;
+    CREATE INDEX IF NOT EXISTS idx_pur_lines_po_line ON purchase_document_lines(po_line_id);
+    CREATE INDEX IF NOT EXISTS idx_pur_lines_receipt_line ON purchase_document_lines(receipt_line_id);
+    -- Same off/warn/block precedent as 26.25's credit_guard_mode: default
+    -- 'warn' so the payment gate never silently blocks the many legitimate
+    -- standalone invoices this system already supports (no PO/receipt
+    -- behind them), but a genuine mismatch is always surfaced.
+    INSERT INTO erp_settings (key, value) VALUES ('three_way_match_mode','warn')
+    ON CONFLICT (key) DO NOTHING;
   `)
 
   await pgQuery(`

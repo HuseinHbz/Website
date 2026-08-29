@@ -12,6 +12,7 @@ import {
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
 } from './purchasing'
 import { validatePayment } from './sales'
+import { matchLine, overallMatchStatus, type MatchStatus } from './threeWayMatch'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 const num = (v: unknown) => Number(v ?? 0)
@@ -21,7 +22,13 @@ export interface VendorInput {
   taxId?: string; economicCode?: string; address?: string; iban?: string
   currency?: string; paymentTerms?: number
 }
-export interface LineRow extends LineInput { description: string; productId?: number | null }
+export interface LineRow extends LineInput {
+  description: string; productId?: number | null
+  /** Three-way match lineage (Phase 5) — which PO/receipt line this line was
+   * converted from, set by convertDocument. Undefined for a hand-entered or
+   * standalone document. */
+  poLineId?: number | null; receiptLineId?: number | null
+}
 
 // ── Vendors ──────────────────────────────────────────────────────────────────
 export async function listVendors() {
@@ -91,7 +98,8 @@ export async function listDocuments(docType?: PurchaseDocType) {
 export async function getDocument(id: number) {
   const d = (await pgQuery<DocRow>(`SELECT * FROM purchase_documents WHERE id=$1`, [id]))[0]
   if (!d) return null
-  const lines = await pgQuery(`SELECT id, description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct", product_id AS "productId", received_qty::float AS "receivedQty" FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [id])
+  const lines = await pgQuery(`SELECT id, description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct", product_id AS "productId", received_qty::float AS "receivedQty",
+    po_line_id AS "poLineId", receipt_line_id AS "receiptLineId", match_status AS "matchStatus" FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [id])
   const approvals = await pgQuery(`SELECT level, decision, approver_id AS "approverId", comment, created_at AS "createdAt" FROM purchase_approvals WHERE document_id=$1 ORDER BY created_at`, [id])
   return { ...d, lines, approvals }
 }
@@ -135,8 +143,8 @@ export async function saveDocument(input: {
 async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]
-    await query(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i, l.productId ?? null])
+    await query(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id,po_line_id,receipt_line_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i, l.productId ?? null, l.poLineId ?? null, l.receiptLineId ?? null])
   }
 }
 
@@ -297,13 +305,34 @@ export async function decideApproval(id: number, level: number, decision: 'appro
  */
 export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR'): Promise<{ ok: boolean; error?: string; paymentId?: number }> {
   const rate = (await rialRateFor(currency)) ?? 1
+  let mismatchReasons: string[] | null = null
   const result = await withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_invoice_payment:${documentId}`])
-    const d = (await query<{ total: number; status: string }>(`SELECT total::float AS total, status FROM purchase_documents WHERE id=$1`, [documentId]))[0]
+    const d = (await query<{ total: number; status: string; doc_type: string; match_override: boolean }>(
+      `SELECT total::float AS total, status, doc_type, match_override FROM purchase_documents WHERE id=$1`, [documentId]))[0]
     if (!d) return { ok: false, error: 'Document not found' } as const
     const already = num((await query<{ t: number }>(`SELECT COALESCE(SUM(amount),0)::float AS t FROM purchase_payments WHERE document_id=$1`, [documentId]))[0]?.t)
     const v = validatePayment({ status: d.status, invoiceTotal: num(d.total), alreadyPaid: already, amount })
     if (!v.ok) return { ok: false, error: v.error === 'cannot pay a void/draft invoice' ? 'Cannot record a payment against a void/draft invoice' : `Overpayment: invoice total ${d.total}, already paid ${already}, this ${amount}` } as const
+    // Phase-5 three-way match payment gate: re-computed fresh inside this
+    // same locked transaction (never trusting a stale persisted status) so
+    // the check and the payment insert are atomic against a concurrent
+    // receive/invoice-edit. 'pending' (no PO/receipt behind this invoice —
+    // the normal case for a standalone invoice) never blocks; only a real
+    // 'mismatch' is gated, and only in 'block' mode, and only when an
+    // administrator has not already recorded an override.
+    if (d.doc_type === 'invoice' && !d.match_override) {
+      const mode = (await query<{ value: string }>(`SELECT value FROM erp_settings WHERE key='three_way_match_mode'`))[0]?.value ?? 'warn'
+      if (mode !== 'off') {
+        const match = await matchPurchaseInvoice(documentId, query)
+        await persistMatch(query, documentId, match)
+        if (match.status === 'mismatch') {
+          const reasons = match.lines.flatMap(l => l.reasons)
+          if (mode === 'block') return { ok: false, error: `THREE_WAY_MATCH_FAILED: ${reasons.join('; ')}` } as const
+          mismatchReasons = reasons // warn: allow, alert after commit
+        }
+      }
+    }
     const pay = (await query<{ id: number }>(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW}) RETURNING id`,
       [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate]))[0]
     const paid = already + amount
@@ -316,7 +345,69 @@ export async function recordPayment(documentId: number, vendorId: number, amount
   // a closed period leaves the payment recorded and self-heal/manual can post
   // later). GL posting stays its own transaction, run after the payment commits.
   try { await postPurchasePaymentToGl(result.paymentId!, userId) } catch { /* stays unposted */ }
+  // Notification/event ordering (Phase-5 Section rule 17): the alert fires
+  // only AFTER the payment transaction has committed, never before/during.
+  if (mismatchReasons) await raiseMismatchAlert(documentId, mismatchReasons)
   return result
+}
+
+/** Administrator override: allow a mismatched invoice to be paid anyway, with a
+ * recorded reason (no silent bypass — this is itself an audited action). */
+export async function overrideMatch(invoiceId: number, reason: string, userId?: string): Promise<{ ok: boolean; error?: string }> {
+  const d = (await pgQuery<{ doc_type: string }>(`SELECT doc_type FROM purchase_documents WHERE id=$1`, [invoiceId]))[0]
+  if (!d) return { ok: false, error: 'Document not found' }
+  if (d.doc_type !== 'invoice') return { ok: false, error: 'Only a purchase invoice can have its match overridden' }
+  await pgQuery(`UPDATE purchase_documents SET match_override=true, match_override_reason=$2, match_override_by=$3, updated_at=${NOW} WHERE id=$1`, [invoiceId, reason, userId ?? null])
+  return { ok: true }
+}
+
+/**
+ * Three-way match (Phase 5): compares each invoice line against its linked
+ * PO line (quantity/price/tax) and receipt line (received quantity), via
+ * the po_line_id/receipt_line_id lineage convertDocument records. Pure
+ * decision logic lives in threeWayMatch.ts — this only supplies the rows.
+ * Runs read-only against whatever query/tx is handed in (defaults to a
+ * plain pgQuery call so it can be invoked standalone via the API), and does
+ * NOT persist by itself — callers decide whether/when to persist depending
+ * on context (see persistMatch, used inside the payment transaction).
+ */
+export async function matchPurchaseInvoice(invoiceId: number, query: TxQuery = pgQuery): Promise<{ status: MatchStatus; lines: { lineId: number; status: MatchStatus; reasons: string[] }[] }> {
+  const rows = await query<{
+    lineId: number; invoiceQty: number; invoicePrice: number; invoiceTaxPct: number
+    poQty: number | null; poPrice: number | null; poTaxPct: number | null; receiptReceivedQty: number | null
+  }>(
+    `SELECT il.id AS "lineId", il.qty::float AS "invoiceQty", il.unit_price::float AS "invoicePrice", il.tax_pct::float AS "invoiceTaxPct",
+            po.qty::float AS "poQty", po.unit_price::float AS "poPrice", po.tax_pct::float AS "poTaxPct",
+            rc.received_qty::float AS "receiptReceivedQty"
+     FROM purchase_document_lines il
+     LEFT JOIN purchase_document_lines po ON po.id = il.po_line_id
+     LEFT JOIN purchase_document_lines rc ON rc.id = il.receipt_line_id
+     WHERE il.document_id=$1 ORDER BY il.sort_order, il.id`, [invoiceId])
+  const lines = rows.map(r => ({
+    lineId: r.lineId,
+    ...matchLine({
+      poQty: r.poQty, poPrice: r.poPrice, poTaxPct: r.poTaxPct,
+      receivedQty: r.receiptReceivedQty,
+      invoiceQty: num(r.invoiceQty), invoicePrice: num(r.invoicePrice), invoiceTaxPct: num(r.invoiceTaxPct),
+    }),
+  }))
+  return { status: overallMatchStatus(lines.map(l => l.status)), lines }
+}
+
+async function persistMatch(query: TxQuery, invoiceId: number, match: { status: MatchStatus; lines: { lineId: number; status: MatchStatus; reasons: string[] }[] }) {
+  await query(`UPDATE purchase_documents SET match_status=$2, match_checked_at=${NOW} WHERE id=$1`, [invoiceId, match.status])
+  for (const l of match.lines) await query(`UPDATE purchase_document_lines SET match_status=$2 WHERE id=$1`, [l.lineId, l.status])
+}
+
+/** Best-effort business_alert on a genuine mismatch (warn mode / block-then-overridden). */
+async function raiseMismatchAlert(invoiceId: number, reasons: string[]) {
+  try {
+    await pgQuery(
+      `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, fingerprint, updated_at)
+       VALUES ('three_way_match_mismatch','financial','warning','Purchase invoice does not match its PO/receipt','فاکتور خرید با سفارش/رسید مطابقت ندارد',$1,'purchase_documents',$2,$3,${NOW})
+       ON CONFLICT (fingerprint) DO UPDATE SET updated_at=${NOW}, status='open'`,
+      [reasons.join('; '), invoiceId, `three_way_match:${invoiceId}`])
+  } catch { /* alert is best-effort */ }
 }
 
 /** Convert an upstream doc (e.g. PR→PO, PO→GRN, GRN→invoice) copying its lines. */
@@ -343,7 +434,21 @@ export async function convertDocument(sourceId: number, toType: PurchaseDocType,
         [`Vendor credit of ${num(src.total)} — apply to a future PO or record a refund receipt.`, sourceId, `purchase_return_pending:${sourceId}`])
     }
   }
-  const lines = (src.lines as unknown as LineRow[]).map(l => ({ description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }))
+  // Three-way match lineage (Phase 5): order→receipt records the PO line
+  // each receipt line came from; receipt→invoice records the receipt line
+  // AND propagates the PO line it already carries, so an invoice converted
+  // straight from a receipt can be matched against both ancestors. A PO
+  // converted directly to an invoice (skipping receipt) still records the
+  // PO line — matchLine correctly reports 'pending' with no receivedQty to
+  // compare against, rather than fabricating a pass.
+  const srcLines = src.lines as unknown as (LineRow & { id: number })[]
+  const lines = srcLines.map(l => {
+    const row: LineRow = { description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }
+    if (toType === 'receipt' && src.doc_type === 'order') row.poLineId = l.id
+    else if (toType === 'invoice' && src.doc_type === 'receipt') { row.receiptLineId = l.id; row.poLineId = l.poLineId ?? null }
+    else if (toType === 'invoice' && src.doc_type === 'order') row.poLineId = l.id
+    return row
+  })
   return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
 }
 

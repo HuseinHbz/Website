@@ -55,6 +55,14 @@ describe('businessError', () => {
     expect(err.fa).toContain('پیش‌نویس')
   })
 
+  it('ERP-PURCHASING-PAYMENT-BLOCKED-MISMATCH (Phase 5 three-way match): interpolates the mismatch reasons in both languages', () => {
+    const err = businessError('ERP-PURCHASING-PAYMENT-BLOCKED-MISMATCH', { reasons: 'invoice qty 120 exceeds ordered qty 100' })
+    expect(err.httpStatus).toBe(400)
+    expect(err.en).toContain('invoice qty 120 exceeds ordered qty 100')
+    expect(err.fa).toContain('invoice qty 120 exceeds ordered qty 100')
+    expect(err.fa).toContain('قابل پرداخت نیست')
+  })
+
   it('a parameterless code (not-found) renders both languages with no interpolation needed', () => {
     const err = businessError('ERP-GENERIC-NOT-FOUND', {})
     expect(err.httpStatus).toBe(404)
