@@ -205,19 +205,6 @@ export async function PUT(req: NextRequest) {
       await logAction(auth.user, 'sales.doc.post', 'sales_document', id, null, { entryId: res.entryId, alreadyPosted: res.alreadyPosted }, clientIp(req))
       return NextResponse.json({ ok: true, entryId: res.entryId, alreadyPosted: res.alreadyPosted })
     }
-    // 26.25 بند ۱.۳: credit guard on confirming a sales invoice. block mode
-    // rejects an over-limit confirm; warn mode allows it and raises an alert;
-    // no limit (0) never blocks (backward compatible).
-    if (op === 'confirm' && String(src.doc_type) === 'invoice') {
-      { const deny = await requireOp(auth.user, 'erp.sales:confirm', 'edit'); if (deny) return deny }
-      const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
-      if (decision.exceeded) {
-        if (decision.mode === 'block') return toApiResponse(businessError('ERP-SALES-CREDIT-LIMIT-EXCEEDED', {
-          limit: decision.limit.toLocaleString(), projected: decision.projected.toLocaleString(),
-        }))
-        await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
-      }
-    }
     // BUG-013 (26.26): a paid invoice may NOT be voided (deleting a settled
     // financial doc breaks the audit trail) — the operator must return/refund first.
     if (op === 'void' && String(src.doc_type) === 'invoice') {
@@ -228,7 +215,34 @@ export async function PUT(req: NextRequest) {
     if (op === 'confirm') { const deny = await requireOp(auth.user, 'erp.sales:confirm', 'edit'); if (deny) return deny }
     if (op === 'void') { const deny = await requireOp(auth.user, 'erp.sales:void', 'edit'); if (deny) return deny }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
-    await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
+
+    if (op === 'confirm' && String(src.doc_type) === 'invoice') {
+      // Phase-3 sales audit finding: evaluateCredit() read the live AR
+      // balance, then the status UPDATE ran as a separate, unlocked
+      // statement — two genuinely concurrent confirms for the SAME
+      // customer could both read the pre-confirm balance and both pass
+      // the credit check, together landing the customer over their limit
+      // (a classic TOCTOU race). Fixed: the credit check + status write for
+      // an invoice confirm now run inside one transaction, serialized per
+      // customer via a pg_advisory_xact_lock — the second concurrent
+      // confirm blocks until the first commits, then correctly re-reads
+      // the now-updated balance. 26.25 بند ۱.۳: block mode rejects an
+      // over-limit confirm; warn mode allows it and raises an alert; no
+      // limit (0) never blocks (backward compatible).
+      const blocked = await withTransaction(async query => {
+        await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_customer_credit:${src.customer_id}`])
+        const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
+        if (decision.exceeded && decision.mode === 'block') return decision
+        await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
+        if (decision.exceeded) await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
+        return null
+      })
+      if (blocked) return toApiResponse(businessError('ERP-SALES-CREDIT-LIMIT-EXCEEDED', {
+        limit: blocked.limit.toLocaleString(), projected: blocked.projected.toLocaleString(),
+      }))
+    } else {
+      await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
+    }
     // 26.23 (بند ۱.۱): confirming an invoice/credit note auto-posts it to the GL
     // (idempotent — gl_entry_id guard). A closed fiscal period fails loudly.
     let entryId: number | null = null
