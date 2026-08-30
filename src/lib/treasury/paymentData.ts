@@ -56,6 +56,18 @@ async function postGl(query: TxQuery, lines: GlLine[], memo: string, reference: 
 // ── Payment orders (M4) ──────────────────────────────────────────────────────
 export interface PaymentInput { paymentType: PaymentType; party?: string; partyRef?: string; amount: number; currency?: string; bankAccountId?: number; date?: string; memo?: string; companyId?: number }
 
+/**
+ * Phase-10: parses a vendor id out of `party_ref` (`vendor:5`) — the ONLY
+ * structural link a Treasury payment order has to a specific vendor. Not a
+ * real FK (party_ref is a free-text column), so this is deliberately
+ * defensive: an unparseable/missing ref means "no vendor identified,
+ * allocate nothing" rather than guessing.
+ */
+function vendorIdFromPartyRef(partyRef: string | null): number | null {
+  const m = /^vendor:(\d+)$/.exec(partyRef ?? '')
+  return m ? Number(m[1]) : null
+}
+
 export async function createPayment(input: PaymentInput, userId: string): Promise<{ id: number; number: string }> {
   return runOnce(userId, 'treasury/payments.create', input, async () => {
     const number = await nextNumber('payment_order', { module: 'treasury', userId, legacyPrefix: 'PAY' }).catch(() => `PAY-${Date.now().toString(36)}`)
@@ -90,18 +102,72 @@ export async function submitPayment(id: number, userId: string): Promise<{ appro
  * commits, then correctly sees status='completed' and is idempotently
  * refused rather than double-posting.
  */
-export async function processPayment(id: number, user: AdminUser): Promise<{ glEntryId: number; alreadyProcessed: boolean }> {
+/**
+ * Phase-10: closes the Treasury supplier-payment ↔ AP subledger gap
+ * documented (not fixed) in Phase 9. Discovery confirmed the model already
+ * has everything needed: `purchase_payments.document_id` is nullable —
+ * exactly the "one row per allocated invoice" shape `sales_payments`
+ * already uses for receipts — and `purchase_documents.paid_total` gives an
+ * exact per-invoice outstanding balance (a stronger signal than the
+ * receipt side even has). Reuses `allocateReceipt` UNCHANGED (it is
+ * already generic — amount + a list of {id, open} — not sales-specific;
+ * no second allocation engine was written) against the vendor's open
+ * invoices, resolved from `party_ref` (`vendor:N`). Runs inside the SAME
+ * transaction/lock this function already had — one commit covers the
+ * status transition, every allocated `purchase_payments` row, each
+ * invoice's `paid_total`/status update, and the GL post; a failure at any
+ * point rolls back all of it. If `party_ref` doesn't identify a vendor
+ * (or the vendor has no open invoices), the payment still posts its GL
+ * entry exactly as before — no invoice-level information to allocate
+ * against is the honest, existing "nothing to match" case, not an error.
+ */
+export async function processPayment(id: number, user: AdminUser): Promise<{ glEntryId: number; alreadyProcessed: boolean; apAllocations: { invoiceId: number; amount: number }[] }> {
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_payment_process:${id}`])
-    const p = (await query<{ status: string; payment_type: PaymentType; amount: number; date: string; party: string | null; gl_entry_id: number | null }>(
-      `SELECT status, payment_type, amount::float AS amount, date, party, gl_entry_id FROM payment_orders WHERE id=$1`, [id]))[0]
+    const p = (await query<{ status: string; payment_type: PaymentType; amount: number; date: string; party: string | null; party_ref: string | null; gl_entry_id: number | null }>(
+      `SELECT status, payment_type, amount::float AS amount, date, party, party_ref, gl_entry_id FROM payment_orders WHERE id=$1`, [id]))[0]
     if (!p) throw new Error('Payment not found')
-    if (p.status === 'completed') return { glEntryId: p.gl_entry_id!, alreadyProcessed: true }
+    if (p.status === 'completed') return { glEntryId: p.gl_entry_id!, alreadyProcessed: true, apAllocations: [] }
     if (p.status !== 'approved') throw new Error(`Payment must be approved before processing (is ${p.status})`)
     await query(`UPDATE payment_orders SET status='processing', updated_at=${NOW} WHERE id=$1`, [id])
+
+    // Post the GL entry FIRST (one entry for the whole payment amount,
+    // matching every other Treasury payment) so its id can be stamped onto
+    // every allocated purchase_payments row below — without that stamp,
+    // Phase-7's postPurchasePaymentToGl (gl_entry_id-IS-NULL-guarded) could
+    // later run on one of these rows and post a SECOND, duplicate GL entry
+    // for money this Treasury payment already booked (the exact
+    // cross-module double-post class closed for receipts in Phase 8).
     const glId = await postGl(query, paymentGlLines(p.payment_type, Number(p.amount)), `Payment ${p.payment_type} ${p.party ?? ''}`.trim(), `TRZPAY-${id}`, p.date, user.id)
+
+    let apAllocations: { invoiceId: number; amount: number }[] = []
+    if (p.payment_type === 'supplier_payment') {
+      const vendorId = vendorIdFromPartyRef(p.party_ref)
+      if (vendorId != null) {
+        // Oldest-first, same discipline as the receipt side — never more
+        // than each invoice's real outstanding balance (paid_total-aware,
+        // so this is exact, not the receipt side's "no partial tracking"
+        // approximation).
+        const invs = await query<{ id: number; open: number }>(
+          `SELECT id, (total - paid_total)::float AS open FROM purchase_documents
+           WHERE vendor_id=$1 AND doc_type='invoice' AND status IN ('confirmed','partial') AND (total - paid_total) > 0.001
+           ORDER BY date`, [vendorId])
+        const alloc = allocateReceipt(Number(p.amount), invs.map(i => ({ id: i.id, open: Number(i.open) })))
+        apAllocations = alloc.allocations
+        for (const a of apAllocations) {
+          await query(
+            `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,${NOW})`,
+            [vendorId, a.invoiceId, p.date, a.amount, `TRZPAY-${id}`, user.id, glId])
+          const inv = (await query<{ total: number; paid_total: number }>(`SELECT total::float AS total, paid_total::float AS "paid_total" FROM purchase_documents WHERE id=$1`, [a.invoiceId]))[0]
+          const paid = Number(inv.paid_total) + a.amount
+          const status = paid + 0.001 >= Number(inv.total) ? 'paid' : 'partial'
+          await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [a.invoiceId, paid, status])
+        }
+      }
+    }
+
     await query(`UPDATE payment_orders SET status='completed', gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [id, glId])
-    return { glEntryId: glId, alreadyProcessed: false }
+    return { glEntryId: glId, alreadyProcessed: false, apAllocations }
   })
 }
 
