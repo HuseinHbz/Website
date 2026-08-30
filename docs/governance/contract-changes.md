@@ -164,3 +164,34 @@ guaranteed, what the new one guarantees, why, and who approved it.
 - **Approved by:** Phase 4 procurement master-prompt scope (Section 8: "Look
   specifically for TOCTOU patterns similar to the Sales payment bug... treat
   as a real concurrency defect").
+
+## CC-008 · 26.23 regression — postEntryById on an already-posted entry: "error" → "idempotent success"
+- **Date:** 2026-08-30 · **Phase:** 7 (Finance/AR/AP/GL hardening) ·
+  **Suite:** `scripts/verify-2623.ts` (بند ۴ maker/checker section)
+- **Old assertion:** calling `postEntryById` on an entry that is already
+  `posted` returns `{ok:false, error:'Only draft entries can be posted'}`.
+- **New assertion:** the same call now returns `{ok:true, alreadyPosted:true}`
+  — a genuinely idempotent no-op, not an error.
+- **What the old version guaranteed that the new one no longer does:** that
+  re-posting an already-posted entry was treated as a caller mistake. That
+  was too strict for the real failure mode this phase closed: `postEntryById`
+  previously did a bare, unlocked read-then-write, so two genuinely
+  concurrent "post" calls on the same draft could both pass the
+  `status==='draft'` check before either committed. The fix wraps the whole
+  check+write in one transaction locked per entry id — the SECOND concurrent
+  caller now correctly blocks on the lock, then re-reads the (now-posted)
+  status. Returning it as an error would misreport a legitimate concurrent
+  duplicate as a failure; returning idempotent success matches the master
+  remediation program's own requirement that a retry after a successful
+  POST report the same logical (successful) result.
+- **Reason:** Phase 7 finance-hardening master prompt, Section 2 ("retry
+  after successful POST") and Section 3 ("5 concurrent identical posting
+  requests... exactly 1 financial event") — an idempotent no-op is the
+  correct externally-observable behavior for a duplicate/concurrent post,
+  not an error.
+- **Approved by:** Phase 7 master-prompt scope (explicit idempotency
+  requirement); the callers that need "reject a non-draft post" as a hard
+  error (the journal route's PUT handler) keep their own separate,
+  unaffected `e.status !== 'draft'` pre-check for a genuinely *manual*
+  re-post attempt by a user who can see the entry is already posted —
+  only the internal race between two concurrent calls is now idempotent.

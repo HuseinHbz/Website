@@ -170,7 +170,19 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
   // old bare-pgQuery loop could leave a POSTED, UNBALANCED entry on the
   // books if any line insert failed mid-loop (this is the highest-volume
   // real GL-posting path: every sales invoice confirm goes through it).
-  const entryId = await withTransaction(async query => {
+  // Phase-7 finance audit finding: the gl_entry_id-null pre-check above ran
+  // outside any transaction/lock — two genuinely concurrent postSalesInvoiceToGl
+  // calls for the SAME document (e.g. a double-click on "confirm") could both
+  // read gl_entry_id=null and both post a full duplicate GL entry, with the
+  // second UPDATE just overwriting the document's link (an orphan, un-linked,
+  // still-POSTED duplicate entry — double revenue recognition). Fixed:
+  // re-verified the SAME check inside the transaction, after an advisory lock
+  // keyed per document, so a second concurrent caller blocking on the lock
+  // correctly sees the now-populated gl_entry_id once the first commits.
+  const result = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_doc_gl_post:${docId}`])
+    const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_documents WHERE id=$1`, [docId]))[0]
+    if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     const entry = (await query<{ id: number }>(
       `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
        VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, ${NOW_SQL}, ${NOW_SQL}) RETURNING id`,
@@ -181,9 +193,9 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
         [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
     }
     await query(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
-    return entry.id
+    return { entryId: entry.id, alreadyPosted: false }
   })
-  return { entryId, alreadyPosted: false }
+  return result
 }
 
 // ── Sales return + settlement (Phase 26.26, BUG-013) ──────────────────────────

@@ -489,7 +489,14 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   // the source-document gl_entry_id link now commit as ONE transaction — the
   // old bare-pgQuery loop could leave a POSTED, UNBALANCED entry on the
   // books if any line insert failed mid-loop (mirrors the sales-invoice fix).
-  const entryId = await withTransaction(async query => {
+  // Phase-7 finance audit finding: same class as the sales-invoice fix — the
+  // gl_entry_id-null pre-check ran outside any lock, so two concurrent posts
+  // for the same invoice could both post a duplicate GL entry. Re-verified
+  // inside the lock before inserting.
+  const result = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_doc_gl_post:${docId}`])
+    const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
+    if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     // Carry the document's company + currency onto the entry (tenancy + multi-currency).
     const entry = (await query<{ id: number }>(
       `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, company_id, currency, exchange_rate, created_at, posted_at)
@@ -503,9 +510,9 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
         [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, d.cost_center_id ?? null])
     }
     await query(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
-    return entry.id
+    return { entryId: entry.id, alreadyPosted: false }
   })
-  return { entryId, alreadyPosted: false }
+  return result
 }
 
 /**

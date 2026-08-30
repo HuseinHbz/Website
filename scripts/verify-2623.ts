@@ -131,8 +131,12 @@ async function main() {
   const posted = await one<{ status: string }>(`SELECT status FROM gl_journal_entries WHERE id=$1`, [draft.id])
   ok(decision.status === 'approved' && posted.status === 'posted', 'checker approval posts the entry (advanceDocument hook)')
   await pgQuery(`UPDATE erp_settings SET value='off' WHERE key='gl_posting_approval'`)
-  // postEntryById guard: posting a posted entry again fails cleanly.
-  ok(!(await postEntryById(draft.id)).ok, 'postEntryById refuses a non-draft entry')
+  // Phase-7 CC-008: postEntryById guard on a posted entry — now IDEMPOTENT
+  // (ok:true, alreadyPosted:true) rather than an error, so a genuinely
+  // concurrent duplicate "post" no longer surfaces as a spurious failure
+  // (see docs/governance/contract-changes.md CC-008).
+  const repost = await postEntryById(draft.id)
+  ok(repost.ok === true && repost.alreadyPosted === true, 'postEntryById is idempotent on an already-posted entry (ok, alreadyPosted)')
 
   console.log('— بند ۶.۲: books still reconcile —')
   const tb = trialBalance(await loadTallies())

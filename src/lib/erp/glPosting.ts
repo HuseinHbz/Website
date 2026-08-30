@@ -93,7 +93,11 @@ export async function insertPostedEntry(
   return { id: e.id, entryNo }
 }
 
-/** Sales receipt → Dr Bank / Cr AR (idempotent per payment). */
+/**
+ * Sales receipt → Dr Bank / Cr AR (idempotent per payment).
+ * Phase-7 finance audit: same class of race as the invoice posters — the
+ * gl_entry_id pre-check now re-verifies inside a per-payment advisory lock.
+ */
 export async function postSalesPaymentToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
   const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null }>(
     `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer
@@ -102,13 +106,15 @@ export async function postSalesPaymentToGl(paymentId: number, userId?: string): 
   if (p.gl_entry_id) return { entryId: p.gl_entry_id, alreadyPosted: true }
   const map = await loadGlMap()
   const [bank, ar] = await Promise.all([accountIdByCode(map.bank), accountIdByCode(map.ar)])
-  const entryId = await withTransaction(async query => {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_payment_gl_post:${paymentId}`])
+    const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_payments WHERE id=$1`, [paymentId]))[0]
+    if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     const e = await insertPostedEntry(query, p.date, `Customer receipt${p.customer ? ` — ${p.customer}` : ''}`, `SPAY-${paymentId}`, num(p.amount), userId,
       [{ accountId: bank, debit: num(p.amount), credit: 0 }, { accountId: ar, debit: 0, credit: num(p.amount) }])
     await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
-    return e.id
+    return { entryId: e.id, alreadyPosted: false }
   })
-  return { entryId, alreadyPosted: false }
 }
 
 /**
@@ -126,13 +132,15 @@ export async function postCustomerRefundToGl(paymentId: number, userId?: string)
   const amt = Math.abs(num(p.amount))
   const map = await loadGlMap()
   const [ar, bank] = await Promise.all([accountIdByCode(map.ar), accountIdByCode(map.bank)])
-  const entryId = await withTransaction(async query => {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_payment_gl_post:${paymentId}`])
+    const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_payments WHERE id=$1`, [paymentId]))[0]
+    if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     const e = await insertPostedEntry(query, p.date, `Customer refund${p.customer ? ` — ${p.customer}` : ''}`, `SREF-${paymentId}`, amt, userId,
       [{ accountId: ar, debit: amt, credit: 0 }, { accountId: bank, debit: 0, credit: amt }])
     await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
-    return e.id
+    return { entryId: e.id, alreadyPosted: false }
   })
-  return { entryId, alreadyPosted: false }
 }
 
 /** Purchase payment → Dr AP / Cr Bank (idempotent per payment). */
@@ -144,48 +152,79 @@ export async function postPurchasePaymentToGl(paymentId: number, userId?: string
   if (p.gl_entry_id) return { entryId: p.gl_entry_id, alreadyPosted: true }
   const map = await loadGlMap()
   const [ap, bank] = await Promise.all([accountIdByCode(map.ap), accountIdByCode(map.bank)])
-  const entryId = await withTransaction(async query => {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_payment_gl_post:${paymentId}`])
+    const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM purchase_payments WHERE id=$1`, [paymentId]))[0]
+    if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     const e = await insertPostedEntry(query, p.date, `Supplier payment${p.vendor ? ` — ${p.vendor}` : ''}`, `PPAY-${paymentId}`, num(p.amount), userId,
       [{ accountId: ap, debit: num(p.amount), credit: 0 }, { accountId: bank, debit: 0, credit: num(p.amount) }])
     await query(`UPDATE purchase_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
-    return e.id
+    return { entryId: e.id, alreadyPosted: false }
   })
-  return { entryId, alreadyPosted: false }
 }
 
-/** Shared posting path (journal route + approval hook): balance + period gate → posted. */
-export async function postEntryById(id: number): Promise<{ ok: boolean; error?: string }> {
-  const e = (await pgQuery<{ status: string; date: string }>(`SELECT status, date FROM gl_journal_entries WHERE id=$1`, [id]))[0]
-  if (!e) return { ok: false, error: 'Not found' }
-  if (e.status !== 'draft') return { ok: false, error: 'Only draft entries can be posted' }
-  const lines = await pgQuery<{ debit: number; credit: number }>(
-    `SELECT debit::float AS debit, credit::float AS credit FROM gl_journal_lines WHERE entry_id=$1`, [id])
-  const dr = lines.reduce((s, l) => s + num(l.debit), 0), cr = lines.reduce((s, l) => s + num(l.credit), 0)
-  if (lines.length < 2 || Math.abs(dr - cr) > 0.001) return { ok: false, error: 'Entry is not balanced' }
-  const gate = await assertPostable(e.date)
-  if (!gate.ok) return { ok: false, error: gate.error }
-  await pgQuery(`UPDATE gl_journal_entries SET status='posted', posted_at=${NOW}, period_id=COALESCE(period_id,$2) WHERE id=$1`, [id, gate.periodId ?? null])
-  return { ok: true }
+/**
+ * Shared posting path (journal route + approval hook): balance + period
+ * gate → posted. Phase-7 finance audit: locked + transactional so two
+ * concurrent "post" calls on the same draft can't both pass the
+ * status==='draft' check and both run makerCheckerGate/audit at the route
+ * layer as if each were the real transition — the second now correctly
+ * sees the already-posted status and reports the same non-error outcome
+ * (posting is inherently a single status transition, not a duplicatable
+ * financial event, but the check-then-act race itself is closed here).
+ */
+export async function postEntryById(id: number): Promise<{ ok: boolean; error?: string; alreadyPosted?: boolean }> {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`gl_entry_post:${id}`])
+    const e = (await query<{ status: string; date: string }>(`SELECT status, date FROM gl_journal_entries WHERE id=$1`, [id]))[0]
+    if (!e) return { ok: false, error: 'Not found' }
+    if (e.status === 'posted') return { ok: true, alreadyPosted: true }
+    if (e.status !== 'draft') return { ok: false, error: 'Only draft entries can be posted' }
+    const lines = await query<{ debit: number; credit: number }>(
+      `SELECT debit::float AS debit, credit::float AS credit FROM gl_journal_lines WHERE entry_id=$1`, [id])
+    const dr = lines.reduce((s, l) => s + num(l.debit), 0), cr = lines.reduce((s, l) => s + num(l.credit), 0)
+    if (lines.length < 2 || Math.abs(dr - cr) > 0.001) return { ok: false, error: 'Entry is not balanced' }
+    const gate = await assertPostable(e.date)
+    if (!gate.ok) return { ok: false, error: gate.error }
+    await query(`UPDATE gl_journal_entries SET status='posted', posted_at=${NOW}, period_id=COALESCE(period_id,$2) WHERE id=$1`, [id, gate.periodId ?? null])
+    return { ok: true, alreadyPosted: false }
+  })
 }
 
 /**
  * Reverse a posted entry: books a posted mirror entry dated `asOf` (default:
  * today), marks the source void and links both directions. Idempotent — an
  * already-reversed entry returns the existing reversal.
+ *
+ * Phase-7 finance audit finding: the idempotency check (`e.reversed_by`)
+ * and every subsequent guard ran as a bare pre-transaction read — two
+ * genuinely concurrent void/reverse calls on the SAME posted entry (e.g.
+ * a double-click, or two callers racing on the same invoice) could both
+ * read `reversed_by=null`, both pass every guard, and both post a full
+ * balanced reversal entry, with the second `UPDATE ... SET reversed_by`
+ * simply overwriting the first's link — leaving TWO real reversal entries
+ * posted on the books (double-reversing the original's financial effect)
+ * while only one stayed linked, breaking this function's OWN idempotency
+ * check on any future retry. Fixed: the whole read-check-insert-link
+ * sequence now runs inside one transaction serialized per entry id via
+ * pg_advisory_xact_lock — the second concurrent call blocks until the
+ * first commits, then correctly re-reads the now-populated `reversed_by`
+ * and returns the EXISTING reversal instead of creating a second one.
  */
 export async function reverseEntry(entryId: number, userId?: string, asOf?: string): Promise<{ reversalId: number; alreadyReversed: boolean }> {
-  const e = (await pgQuery<{ status: string; entry_no: string; total: number; reversed_by: number | null; reversal_of: number | null }>(
-    `SELECT status, entry_no, total::float AS total, reversed_by, reversal_of FROM gl_journal_entries WHERE id=$1`, [entryId]))[0]
-  if (!e) throw new Error('Entry not found')
-  if (e.reversed_by) return { reversalId: e.reversed_by, alreadyReversed: true }
-  // 26.26c بند ۱.۲: a reversal entry can never itself be reversed — that would
-  // un-reverse the original and re-apply its (already-cancelled) balance effect.
-  if (e.reversal_of) throw new Error('A reversal entry cannot itself be reversed')
-  if (e.status !== 'posted') throw new Error('Only posted entries can be reversed')
-  const lines = await pgQuery<{ account_id: number; debit: number; credit: number; memo: string | null }>(
-    `SELECT account_id, debit::float AS debit, credit::float AS credit, memo FROM gl_journal_lines WHERE entry_id=$1 ORDER BY line_no, id`, [entryId])
   const date = asOf ?? new Date().toISOString().slice(0, 10)
-  const revId = await withTransaction(async query => {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`gl_entry_reversal:${entryId}`])
+    const e = (await query<{ status: string; entry_no: string; total: number; reversed_by: number | null; reversal_of: number | null }>(
+      `SELECT status, entry_no, total::float AS total, reversed_by, reversal_of FROM gl_journal_entries WHERE id=$1`, [entryId]))[0]
+    if (!e) throw new Error('Entry not found')
+    if (e.reversed_by) return { reversalId: e.reversed_by, alreadyReversed: true }
+    // 26.26c بند ۱.۲: a reversal entry can never itself be reversed — that would
+    // un-reverse the original and re-apply its (already-cancelled) balance effect.
+    if (e.reversal_of) throw new Error('A reversal entry cannot itself be reversed')
+    if (e.status !== 'posted') throw new Error('Only posted entries can be reversed')
+    const lines = await query<{ account_id: number; debit: number; credit: number; memo: string | null }>(
+      `SELECT account_id, debit::float AS debit, credit::float AS credit, memo FROM gl_journal_lines WHERE entry_id=$1 ORDER BY line_no, id`, [entryId])
     const rev = await insertPostedEntry(query, date, `Reversal of ${e.entry_no}`, `REV-${entryId}`, num(e.total), userId,
       reversalLines(lines.map(l => ({ accountId: l.account_id, debit: l.debit, credit: l.credit, memo: l.memo }))))
     await query(`UPDATE gl_journal_entries SET reversal_of=$2 WHERE id=$1`, [rev.id, entryId])
@@ -201,7 +240,6 @@ export async function reverseEntry(entryId: number, userId?: string, asOf?: stri
     // link it back to the original on a crash, breaking reverseEntry's own
     // idempotency check (e.reversed_by) on a retry.
     await query(`UPDATE gl_journal_entries SET reversed_by=$2 WHERE id=$1`, [entryId, rev.id])
-    return rev.id
+    return { reversalId: rev.id, alreadyReversed: false }
   })
-  return { reversalId: revId, alreadyReversed: false }
 }
