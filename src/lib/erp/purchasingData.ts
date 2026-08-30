@@ -115,11 +115,11 @@ export async function getDocument(id: number) {
 export async function saveDocument(input: {
   id?: number; docType: PurchaseDocType; vendorId?: number; date: string; currency?: string
   department?: string; budget?: number; sourceId?: number; note?: string; priority?: string; lines: LineRow[]
-}, userId?: string): Promise<number> {
+}, userId?: string, externalQuery?: TxQuery): Promise<number> {
   const totals = documentTotals(input.lines)
   const rate = (await rialRateFor(input.currency ?? 'IRR')) ?? 1
   const baseTotal = Math.round(totals.total * rate * 100) / 100
-  return withTransaction(async query => {
+  const run = async (query: TxQuery) => {
     if (input.id) {
       await query(
         `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
@@ -138,7 +138,15 @@ export async function saveDocument(input: {
        input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null, rate, baseTotal]))[0]
     await insertLines(query, row.id, input.lines)
     return row.id
-  })
+  }
+  // Phase-8 returns audit: callers guarding a compound invariant (e.g.
+  // convertDocument's "this invoice hasn't already been returned" check
+  // for purchase returns) need saveDocument's insert to join THEIR
+  // already-locked transaction — otherwise the check and the write are
+  // two separate transactions and the same race can slip through between
+  // them. Self-transactional when called standalone (every other caller).
+  if (externalQuery) return run(externalQuery)
+  return withTransaction(run)
 }
 async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
   for (let i = 0; i < lines.length; i++) {
@@ -410,37 +418,28 @@ async function raiseMismatchAlert(invoiceId: number, reasons: string[]) {
   } catch { /* alert is best-effort */ }
 }
 
-/** Convert an upstream doc (e.g. PR→PO, PO→GRN, GRN→invoice) copying its lines. */
+/**
+ * Convert an upstream doc (e.g. PR→PO, PO→GRN, GRN→invoice) copying its lines.
+ *
+ * Phase-8 returns audit finding: the "this invoice hasn't already been
+ * returned" check (`prior`) and the actual return-document insert
+ * (`saveDocument`) ran as two SEPARATE, unlocked operations — two genuinely
+ * concurrent `convertDocument(invoiceId, 'return', ...)` calls on the same
+ * purchase invoice could both read `prior=0` and both create a full return,
+ * a real double-return (200% of the invoice credited, not merely over an
+ * amount cap — purchase returns in this codebase copy the FULL invoice).
+ * Fixed for the return/credit_note-against-invoice path specifically (every
+ * other conversion — PR→PO, PO→GRN, GRN→invoice — has no such duplicate-
+ * return invariant to protect and is left as a plain, unlocked read + a
+ * self-transactional saveDocument call, matching prior behavior exactly):
+ * the prior-return check and the saveDocument insert now share ONE
+ * transaction locked per source invoice id, via saveDocument's
+ * externalQuery parameter.
+ */
 export async function convertDocument(sourceId: number, toType: PurchaseDocType, userId?: string): Promise<number> {
   const src = await getDocument(sourceId)
   if (!src) throw new Error('Source not found')
-  // BUG-013 sibling (26.26): a purchase return/credit_note against an invoice must
-  // be guarded exactly like the sales side — only a confirmed/posted invoice, and
-  // the cumulative return may not exceed the invoice total (else AP goes negative).
-  if ((toType === 'credit_note' || toType === 'return') && src.doc_type === 'invoice') {
-    if (['draft', 'void'].includes(String(src.status))) throw new Error('Only a confirmed purchase invoice can be returned')
-    // convertDocument copies the FULL invoice, so any prior non-void return means
-    // the invoice is already fully returned → block the duplicate (idempotency).
-    const prior = num((await pgQuery<{ s: number }>(
-      `SELECT COALESCE(SUM(total),0)::float AS s FROM purchase_documents WHERE source_id=$1 AND doc_type IN ('credit_note','return') AND status<>'void'`, [sourceId]))[0]?.s)
-    if (prior > 0.001) throw new Error('This invoice has already been returned')
-    // If the invoice was already paid, the vendor owes us back — flag until settled.
-    const paid = num((await pgQuery<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE vendor_id=$1`, [src.vendor_id ?? 0]))[0]?.s)
-    if (paid > 0) {
-      await pgQuery(
-        `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, channels, fingerprint, updated_at)
-         VALUES ('purchase_return_pending','financial','warning','Purchase return awaiting vendor settlement','برگشت خرید در انتظار تسویه فروشنده',$1,'purchase_documents',$2,'["inapp"]',$3,to_char(now(),'YYYY-MM-DD HH24:MI:SS'))
-         ON CONFLICT (fingerprint) DO UPDATE SET updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS')`,
-        [`Vendor credit of ${num(src.total)} — apply to a future PO or record a refund receipt.`, sourceId, `purchase_return_pending:${sourceId}`])
-    }
-  }
-  // Three-way match lineage (Phase 5): order→receipt records the PO line
-  // each receipt line came from; receipt→invoice records the receipt line
-  // AND propagates the PO line it already carries, so an invoice converted
-  // straight from a receipt can be matched against both ancestors. A PO
-  // converted directly to an invoice (skipping receipt) still records the
-  // PO line — matchLine correctly reports 'pending' with no receivedQty to
-  // compare against, rather than fabricating a pass.
+  const isReturn = (toType === 'credit_note' || toType === 'return') && src.doc_type === 'invoice'
   const srcLines = src.lines as unknown as (LineRow & { id: number })[]
   const lines = srcLines.map(l => {
     const row: LineRow = { description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }
@@ -449,7 +448,35 @@ export async function convertDocument(sourceId: number, toType: PurchaseDocType,
     else if (toType === 'invoice' && src.doc_type === 'order') row.poLineId = l.id
     return row
   })
-  return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
+  if (!isReturn) {
+    return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
+  }
+  // BUG-013 sibling (26.26): a purchase return/credit_note against an invoice must
+  // be guarded exactly like the sales side — only a confirmed/posted invoice, and
+  // the cumulative return may not exceed the invoice total (else AP goes negative).
+  if (['draft', 'void'].includes(String(src.status))) throw new Error('Only a confirmed purchase invoice can be returned')
+  const newId = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_invoice_return:${sourceId}`])
+    // convertDocument copies the FULL invoice, so any prior non-void return means
+    // the invoice is already fully returned → block the duplicate (idempotency).
+    const prior = num((await query<{ s: number }>(
+      `SELECT COALESCE(SUM(total),0)::float AS s FROM purchase_documents WHERE source_id=$1 AND doc_type IN ('credit_note','return') AND status<>'void'`, [sourceId]))[0]?.s)
+    if (prior > 0.001) throw new Error('This invoice has already been returned')
+    return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId, query)
+  })
+  // If the invoice was already paid, the vendor owes us back — flag until settled.
+  // Best-effort, after commit (never blocks the return itself).
+  const paid = num((await pgQuery<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE vendor_id=$1`, [src.vendor_id ?? 0]))[0]?.s)
+  if (paid > 0) {
+    try {
+      await pgQuery(
+        `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, channels, fingerprint, updated_at)
+         VALUES ('purchase_return_pending','financial','warning','Purchase return awaiting vendor settlement','برگشت خرید در انتظار تسویه فروشنده',$1,'purchase_documents',$2,'["inapp"]',$3,to_char(now(),'YYYY-MM-DD HH24:MI:SS'))
+         ON CONFLICT (fingerprint) DO UPDATE SET updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS')`,
+        [`Vendor credit of ${num(src.total)} — apply to a future PO or record a refund receipt.`, sourceId, `purchase_return_pending:${sourceId}`])
+    } catch { /* alert is best-effort */ }
+  }
+  return newId
 }
 
 // ── GL posting ───────────────────────────────────────────────────────────────

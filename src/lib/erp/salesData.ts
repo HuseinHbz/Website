@@ -4,7 +4,7 @@
  * the pure engine (lib/erp/sales.ts): one source of truth shared by the customer
  * list, the credit check and the dashboard.
  */
-import { pgQuery, withTransaction } from '@/lib/db'
+import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
@@ -203,8 +203,8 @@ import { validateReturnRequest, remainingReturnable } from './sales'
 import { postCustomerRefundToGl } from './glPosting'
 
 /** Sum of confirmed/non-void credit notes already raised against an invoice. */
-async function priorReturned(invoiceId: number): Promise<number> {
-  return Number(((await pgQuery<{ s: number }>(
+async function priorReturned(invoiceId: number, query: TxQuery = pgQuery): Promise<number> {
+  return Number(((await query<{ s: number }>(
     `SELECT COALESCE(SUM(total),0)::float AS s FROM sales_documents
      WHERE source_id=$1 AND doc_type='credit_note' AND status<>'void'`, [invoiceId]))[0]?.s) || 0)
 }
@@ -217,46 +217,64 @@ export interface ReturnLine { lineId: number; qty: number }
  * invoice total (idempotent). Optional `lines` → partial return (selected qty);
  * omitted → full remaining return. Returns the draft credit note id.
  */
+/**
+ * Phase-8 returns audit finding: this whole function — read invoice, read
+ * lines, compute the requested return amount, read priorReturned, validate
+ * against remaining-returnable, mint a doc number, insert the credit note +
+ * lines — ran as a sequence of bare, unlocked pgQuery calls. Two genuinely
+ * concurrent return requests against the SAME invoice (e.g. "return 7" /
+ * "return 7" on a 10-unit invoice) could both read the same priorReturned=0,
+ * both individually pass validateReturnRequest, and both insert a credit
+ * note — a real over-return (14 > 10), exactly the race the master
+ * remediation program's own test scenario describes. Fixed: the whole
+ * read-validate-insert sequence now runs inside one transaction locked per
+ * invoice id — the second concurrent call blocks until the first commits,
+ * then correctly re-reads priorReturned (now including the first return)
+ * and is rejected once the remaining-returnable amount is exhausted.
+ */
 export async function createSalesReturn(invoiceId: number, opts: { lines?: ReturnLine[]; userId?: string }): Promise<{ ok: boolean; error?: string; id?: number; docNo?: string }> {
-  const inv = (await pgQuery<{ id: number; doc_type: string; status: string; customer_id: number; doc_no: string; total: number; currency: string; exchange_rate: number }>(
-    `SELECT id, doc_type, status, customer_id, doc_no, total::float AS total, currency, exchange_rate::float AS exchange_rate FROM sales_documents WHERE id=$1`, [invoiceId]))[0]
-  if (!inv || inv.doc_type !== 'invoice') return { ok: false, error: 'Only an invoice can be returned' }
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_invoice_return:${invoiceId}`])
+    const inv = (await query<{ id: number; doc_type: string; status: string; customer_id: number; doc_no: string; total: number; currency: string; exchange_rate: number }>(
+      `SELECT id, doc_type, status, customer_id, doc_no, total::float AS total, currency, exchange_rate::float AS exchange_rate FROM sales_documents WHERE id=$1`, [invoiceId]))[0]
+    if (!inv || inv.doc_type !== 'invoice') return { ok: false, error: 'Only an invoice can be returned' }
 
-  const srcLines = await pgQuery<{ id: number; description: string; qty: number; unit_price: number; discount_pct: number; tax_pct: number; line_total: number; line_no: number; product_id: number | null }>(
-    `SELECT id, description, qty::float AS qty, unit_price::float AS unit_price, discount_pct::float AS discount_pct, tax_pct::float AS tax_pct, line_total::float AS line_total, line_no, product_id
-     FROM sales_document_lines WHERE document_id=$1 ORDER BY line_no`, [invoiceId])
+    const srcLines = await query<{ id: number; description: string; qty: number; unit_price: number; discount_pct: number; tax_pct: number; line_total: number; line_no: number; product_id: number | null }>(
+      `SELECT id, description, qty::float AS qty, unit_price::float AS unit_price, discount_pct::float AS discount_pct, tax_pct::float AS tax_pct, line_total::float AS line_total, line_no, product_id
+       FROM sales_document_lines WHERE document_id=$1 ORDER BY line_no`, [invoiceId])
 
-  // Build the return lines: full remaining, or the selected subset/qty.
-  const pick = opts.lines?.length
-    ? opts.lines.map(rl => {
-        const s = srcLines.find(x => x.id === rl.lineId)
-        if (!s) return null
-        const qty = Math.min(rl.qty, s.qty)
-        const net = qty * s.unit_price * (1 - s.discount_pct / 100)
-        const line_total = net * (1 + s.tax_pct / 100)
-        return { ...s, qty, line_total }
-      }).filter((x): x is NonNullable<typeof x> => !!x)
-    : srcLines
+    // Build the return lines: full remaining, or the selected subset/qty.
+    const pick = opts.lines?.length
+      ? opts.lines.map(rl => {
+          const s = srcLines.find(x => x.id === rl.lineId)
+          if (!s) return null
+          const qty = Math.min(rl.qty, s.qty)
+          const net = qty * s.unit_price * (1 - s.discount_pct / 100)
+          const line_total = net * (1 + s.tax_pct / 100)
+          return { ...s, qty, line_total }
+        }).filter((x): x is NonNullable<typeof x> => !!x)
+      : srcLines
 
-  const subtotal = pick.reduce((a, l) => a + l.qty * l.unit_price * (1 - l.discount_pct / 100), 0)
-  const taxTotal = pick.reduce((a, l) => a + (l.qty * l.unit_price * (1 - l.discount_pct / 100)) * (l.tax_pct / 100), 0)
-  const total = Math.round((subtotal + taxTotal) * 100) / 100
+    const subtotal = pick.reduce((a, l) => a + l.qty * l.unit_price * (1 - l.discount_pct / 100), 0)
+    const taxTotal = pick.reduce((a, l) => a + (l.qty * l.unit_price * (1 - l.discount_pct / 100)) * (l.tax_pct / 100), 0)
+    const total = Math.round((subtotal + taxTotal) * 100) / 100
 
-  const verdict = validateReturnRequest({ status: inv.status, invoiceTotal: Number(inv.total), priorReturned: await priorReturned(invoiceId), requestedAmount: total })
-  if (!verdict.ok) return { ok: false, error: verdict.error }
+    const verdict = validateReturnRequest({ status: inv.status, invoiceTotal: Number(inv.total), priorReturned: await priorReturned(invoiceId, query), requestedAmount: total })
+    if (!verdict.ok) return { ok: false, error: verdict.error }
 
-  const docNo = await nextNumber('credit_note', { module: 'sales', userId: opts.userId, legacyPrefix: 'CN' })
-  const cn = (await pgQuery<{ id: number }>(
-    `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
-     VALUES ('credit_note',$1,$2,to_char(now(),'YYYY-MM-DD'),'draft',$3,0,$4,$5,$6,$7,$8,$9,$10,$11,${NOW_SQL}) RETURNING id`,
-    [docNo, inv.customer_id, Math.round(subtotal * 100) / 100, Math.round(taxTotal * 100) / 100, total, invoiceId, `Return of ${inv.doc_no}`, opts.userId ?? null, inv.currency ?? 'IRR', inv.exchange_rate ?? 1, total * (inv.exchange_rate ?? 1)]))[0]
-  for (const l of pick) {
-    await pgQuery(
-      `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [cn.id, l.description, l.qty, l.unit_price, l.discount_pct, l.tax_pct, Math.round(l.line_total * 100) / 100, l.line_no, l.product_id ?? null])
-  }
-  return { ok: true, id: cn.id, docNo }
+    const docNo = await nextNumber('credit_note', { module: 'sales', userId: opts.userId, legacyPrefix: 'CN' })
+    const cn = (await query<{ id: number }>(
+      `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
+       VALUES ('credit_note',$1,$2,to_char(now(),'YYYY-MM-DD'),'draft',$3,0,$4,$5,$6,$7,$8,$9,$10,$11,${NOW_SQL}) RETURNING id`,
+      [docNo, inv.customer_id, Math.round(subtotal * 100) / 100, Math.round(taxTotal * 100) / 100, total, invoiceId, `Return of ${inv.doc_no}`, opts.userId ?? null, inv.currency ?? 'IRR', inv.exchange_rate ?? 1, total * (inv.exchange_rate ?? 1)]))[0]
+    for (const l of pick) {
+      await query(
+        `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [cn.id, l.description, l.qty, l.unit_price, l.discount_pct, l.tax_pct, Math.round(l.line_total * 100) / 100, l.line_no, l.product_id ?? null])
+    }
+    return { ok: true, id: cn.id, docNo }
+  })
 }
 
 /**
@@ -265,6 +283,15 @@ export async function createSalesReturn(invoiceId: number, opts: { lines?: Retur
  * erp_settings.sales_return_settlement: 'refund' books a negative sales_payment +
  * Dr AR/Cr Bank (AR → 0); 'credit' leaves the customer-credit balance and raises a
  * pending-settlement business_alert. Idempotent per credit note.
+ */
+/**
+ * Phase-8 refund audit finding: the "a refund already exists for this
+ * credit note" idempotency check was a bare SELECT, separate from the
+ * INSERT that followed — two genuinely concurrent settlement calls for
+ * the SAME credit note (e.g. a double confirm) could both read "no refund
+ * yet" and both insert a refund payment, a real double-refund. Fixed: the
+ * whole check-then-insert (refund mode) now runs inside one transaction
+ * locked per credit note id.
  */
 export async function settleReturnIfPaid(creditNoteId: number, userId?: string): Promise<{ settled: 'refund' | 'credit' | 'none'; paymentId?: number }> {
   const cn = (await pgQuery<{ id: number; doc_type: string; status: string; source_id: number | null; customer_id: number; total: number; doc_no: string; currency: string; exchange_rate: number }>(
@@ -276,23 +303,29 @@ export async function settleReturnIfPaid(creditNoteId: number, userId?: string):
     `SELECT COALESCE(SUM(amount),0)::float AS s FROM sales_payments WHERE document_id=$1 AND method<>'refund'`, [cn.source_id]))[0]?.s) || 0)
   if (paid <= 0) return { settled: 'none' }
 
-  // Idempotency: skip if a refund already exists for this credit note.
-  const already = (await pgQuery<{ id: number }>(
-    `SELECT id FROM sales_payments WHERE reference=$1 AND method='refund' LIMIT 1`, [`REFUND-CN-${creditNoteId}`]))[0]
-  if (already) return { settled: 'refund', paymentId: already.id }
-
   const mode = (((await pgQuery<{ value: string }>(`SELECT value FROM erp_settings WHERE key='sales_return_settlement'`))[0]?.value) || 'credit') as 'refund' | 'credit'
 
   if (mode === 'refund') {
-    const pay = (await pgQuery<{ id: number }>(
-      `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, currency, exchange_rate)
-       VALUES ($1,$2,to_char(now(),'YYYY-MM-DD'),$3,'refund',$4,$5,$6) RETURNING id`,
-      [cn.customer_id, cn.source_id, -Math.abs(Number(cn.total)), `REFUND-CN-${creditNoteId}`, cn.currency ?? 'IRR', cn.exchange_rate ?? 1]))[0]
-    try { await postCustomerRefundToGl(pay.id, userId) } catch { /* stays unposted; self-heal can post */ }
-    return { settled: 'refund', paymentId: pay.id }
+    const result = await withTransaction(async query => {
+      await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_return_settle:${creditNoteId}`])
+      const already = (await query<{ id: number }>(
+        `SELECT id FROM sales_payments WHERE reference=$1 AND method='refund' LIMIT 1`, [`REFUND-CN-${creditNoteId}`]))[0]
+      if (already) return { settled: 'refund' as const, paymentId: already.id }
+      const pay = (await query<{ id: number }>(
+        `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, currency, exchange_rate)
+         VALUES ($1,$2,to_char(now(),'YYYY-MM-DD'),$3,'refund',$4,$5,$6) RETURNING id`,
+        [cn.customer_id, cn.source_id, -Math.abs(Number(cn.total)), `REFUND-CN-${creditNoteId}`, cn.currency ?? 'IRR', cn.exchange_rate ?? 1]))[0]
+      return { settled: 'refund' as const, paymentId: pay.id, isNew: true }
+    })
+    if ('isNew' in result && result.isNew) {
+      try { await postCustomerRefundToGl(result.paymentId, userId) } catch { /* stays unposted; self-heal can post */ }
+    }
+    return { settled: result.settled, paymentId: result.paymentId }
   }
 
   // credit mode → explicit customer-credit balance + pending-settlement alert.
+  // ON CONFLICT makes this idempotent by construction (fingerprint-keyed
+  // upsert) — no separate lock needed for this branch.
   await pgQuery(
     `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, metric_value, ref_type, ref_id, channels, fingerprint, updated_at)
      VALUES ('sales_return_pending','financial','warning',$1,$2,$3,$4,'sales_document',$5,'["inapp"]',$6,${NOW_SQL})
