@@ -49,7 +49,11 @@ function tabOf(href: string): string | null {
  */
 export const SENSITIVE_OPS: Record<string, string[]> = {
   'erp.finance': ['post', 'void', 'delete', 'close_period', 'reopen_period'],
-  'erp.sales': ['confirm', 'void', 'return', 'post', 'payment_create', 'refund'],
+  // Phase 6: fulfilling a confirmed order (issuing real stock + posting
+  // COGS) is a distinct authority from confirming/voiding the order itself
+  // — a sales rep can confirm an order without being able to move physical
+  // inventory out the door.
+  'erp.sales': ['confirm', 'void', 'return', 'post', 'payment_create', 'refund', 'deliver'],
   'erp.purchasing': ['confirm', 'void', 'post'],
   'erp.treasury': ['reconcile', 'cheque_state'],
   // Phase 28 — HR. Payroll ops are separated because calculating a run,

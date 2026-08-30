@@ -4176,6 +4176,21 @@ export async function runMigrations() {
     -- behind them), but a genuine mismatch is always surfaced.
     INSERT INTO erp_settings (key, value) VALUES ('three_way_match_mode','warn')
     ON CONFLICT (key) DO NOTHING;
+
+    -- ══ Phase 6 — Sales ↔ Inventory ↔ Fulfillment ══
+    -- sales_documents had NO warehouse concept at all — the minimal,
+    -- additive schema decision needed before a sales order can reserve or
+    -- deliver against real stock. Nullable: an order with no warehouse set
+    -- simply never reserves (same "nothing to match against" honesty as
+    -- Phase 5's standalone invoice).
+    ALTER TABLE sales_documents ADD COLUMN IF NOT EXISTS warehouse_id INTEGER REFERENCES inv_warehouses(id);
+    -- inv_shipments already implements a real fulfillment state machine
+    -- (Phase 26.19) but had zero structural link back to sales_documents —
+    -- reused, not duplicated: one FK, not a second delivery table.
+    ALTER TABLE inv_shipments ADD COLUMN IF NOT EXISTS sales_document_id INTEGER REFERENCES sales_documents(id);
+    -- Idempotent COGS posting on the ship transition (Dr COGS / Cr Inventory).
+    ALTER TABLE inv_shipments ADD COLUMN IF NOT EXISTS gl_entry_id INTEGER;
+    CREATE INDEX IF NOT EXISTS idx_inv_shipments_sales_doc ON inv_shipments(sales_document_id);
   `)
 
   await pgQuery(`

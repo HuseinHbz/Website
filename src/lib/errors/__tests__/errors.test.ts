@@ -63,6 +63,20 @@ describe('businessError', () => {
     expect(err.fa).toContain('قابل پرداخت نیست')
   })
 
+  it('ERP-SALES-INSUFFICIENT-STOCK (Phase 6 reservation gate): interpolates the reason in both languages', () => {
+    const err = businessError('ERP-SALES-INSUFFICIENT-STOCK', { reason: 'Only 3 available (on-hand 10 − held 7)' })
+    expect(err.httpStatus).toBe(400)
+    expect(err.en).toContain('Only 3 available')
+    expect(err.fa).toContain('موجودی کافی')
+  })
+
+  it('ERP-SALES-DELIVERY-EXCEEDS-RESERVATION (Phase 6 delivery gate): interpolates the reason in both languages', () => {
+    const err = businessError('ERP-SALES-DELIVERY-EXCEEDS-RESERVATION', { reason: 'delivery qty 8 exceeds reserved_remaining 5' })
+    expect(err.httpStatus).toBe(400)
+    expect(err.en).toContain('8 exceeds reserved_remaining 5')
+    expect(err.fa).toContain('رزروشده')
+  })
+
   it('a parameterless code (not-found) renders both languages with no interpolation needed', () => {
     const err = businessError('ERP-GENERIC-NOT-FOUND', {})
     expect(err.httpStatus).toBe(404)

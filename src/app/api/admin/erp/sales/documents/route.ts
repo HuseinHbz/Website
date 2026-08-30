@@ -13,6 +13,7 @@ import { defaultCurrency } from '@/lib/erp/settings'
 import { evaluateCredit } from '@/lib/crm/customer360Data'
 import { businessError, toApiResponse } from '@/lib/errors'
 import { runOnce } from '@/lib/api/idempotency'
+import { reserveSalesOrderTx, releaseSalesOrderReservation, deliverSalesOrder } from '@/lib/erp/salesFulfillment'
 
 /** Idempotent credit-limit breach alert (26.25 بند ۱.۳), fingerprinted per invoice. */
 async function raiseCreditAlert(customerId: number, invoiceId: number, limit: number, projected: number) {
@@ -80,6 +81,10 @@ const createSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   sourceId: z.number().int().positive().optional(),
   currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).optional(),
+  // Phase 6: the fulfillment warehouse an ORDER reserves/delivers against.
+  // Nullable/optional — an order with no warehouse simply never reserves
+  // (matches Phase 5's "nothing to match against" honesty for a standalone doc).
+  warehouseId: z.number().int().positive().optional().nullable(),
   lines: z.array(z.object({
     description: z.string().min(1).max(300),
     qty: z.number().positive(),
@@ -145,15 +150,15 @@ export async function POST(req: NextRequest) {
       let id = d.id
       if (id) {
         await query(
-          `UPDATE sales_documents SET customer_id=$2, date=$3, due_date=$4, notes=$5, subtotal=$6, discount_total=$7, tax_total=$8, total=$9, currency=$10, exchange_rate=$11, base_total=$12, updated_at=${NOW} WHERE id=$1`,
-          [id, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, currency, rate, baseTotal])
+          `UPDATE sales_documents SET customer_id=$2, date=$3, due_date=$4, notes=$5, subtotal=$6, discount_total=$7, tax_total=$8, total=$9, currency=$10, exchange_rate=$11, base_total=$12, warehouse_id=$13, updated_at=${NOW} WHERE id=$1`,
+          [id, d.customerId, d.date, d.dueDate ?? null, d.notes ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, currency, rate, baseTotal, d.warehouseId ?? null])
         await query(`DELETE FROM sales_document_lines WHERE document_id=$1`, [id])
       } else {
         const docNo = await nextNumber(d.docType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[d.docType] })
         const row = (await query(
-          `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, updated_at)
-           VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,${NOW}) RETURNING id`,
-          [d.docType, docNo, d.customerId, d.date, d.dueDate ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, d.sourceId ?? null, d.notes ?? null, auth.user.id, currency, rate, baseTotal]))[0] as { id: number }
+          `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, currency, exchange_rate, base_total, warehouse_id, updated_at)
+           VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,${NOW}) RETURNING id`,
+          [d.docType, docNo, d.customerId, d.date, d.dueDate ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, d.sourceId ?? null, d.notes ?? null, auth.user.id, currency, rate, baseTotal, d.warehouseId ?? null]))[0] as { id: number }
         id = row.id
       }
       for (let i = 0; i < d.lines.length; i++) {
@@ -174,8 +179,11 @@ export async function POST(req: NextRequest) {
 }
 
 const opSchema = z.object({
-  id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return', 'post']), toType: z.enum(DOC_TYPES).optional(),
+  id: z.number().int().positive(), op: z.enum(['send', 'confirm', 'void', 'convert', 'return', 'post', 'deliver']), toType: z.enum(DOC_TYPES).optional(),
   // BUG-013: optional partial-return selection (omit → full remaining return).
+  // Phase 6 'deliver': which lines/qty to ship from a confirmed order's
+  // reservation (omit → error; delivery is always explicit, never implicit
+  // "deliver everything", so a partial pick never silently over-ships).
   lines: z.array(z.object({ lineId: z.number().int().positive(), qty: z.number().positive() })).optional(),
 })
 
@@ -197,15 +205,27 @@ export async function PUT(req: NextRequest) {
       const dup = (await pgQuery(`SELECT 1 FROM sales_documents WHERE source_id=$1 AND doc_type=$2 AND status<>'void' LIMIT 1`, [id, toType]))[0]
       if (dup) return badRequest(`Already converted to a ${toType}`)
       const docNo = await nextNumber(toType, { module: 'sales', userId: auth.user.id, legacyPrefix: PREFIX[toType] })
-      const newDoc = (await pgQuery(
-        `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, updated_at)
-         VALUES ($1,$2,$3,to_char(now(),'YYYY-MM-DD'),$4,'draft',$5,$6,$7,$8,$9,$10,$11,${NOW}) RETURNING id`,
-        [toType, docNo, src.customer_id, src.due_date ?? null, src.subtotal, src.discount_total, src.tax_total, src.total, id, src.notes ?? null, auth.user.id]))[0] as { id: number }
-      await pgQuery(
-        `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no)
-         SELECT $1, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no FROM sales_document_lines WHERE document_id=$2`,
-        [newDoc.id, id])
-      await pgQuery(`UPDATE sales_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [id])
+      // Phase-6 audit finding: this INSERT...SELECT never copied `product_id` —
+      // converting a quote→order (or order→invoice) silently dropped the
+      // inventory-product link on every line, which would have made
+      // reservation/delivery impossible for any order that started life as a
+      // quote (the normal path). Also had no transaction — a mid-sequence
+      // failure could leave a new document header with zero/partial lines
+      // while the source stayed un-confirmed. Both fixed: copies product_id,
+      // and warehouse_id (a quote's chosen fulfillment warehouse carries
+      // forward to the order it becomes), atomically.
+      const newDoc = await withTransaction(async query => {
+        const row = (await query(
+          `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, warehouse_id, updated_at)
+           VALUES ($1,$2,$3,to_char(now(),'YYYY-MM-DD'),$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12,${NOW}) RETURNING id`,
+          [toType, docNo, src.customer_id, src.due_date ?? null, src.subtotal, src.discount_total, src.tax_total, src.total, id, src.notes ?? null, auth.user.id, src.warehouse_id ?? null]))[0] as { id: number }
+        await query(
+          `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id)
+           SELECT $1, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id FROM sales_document_lines WHERE document_id=$2`,
+          [row.id, id])
+        await query(`UPDATE sales_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [id])
+        return row
+      })
       await logAction(auth.user, 'sales.doc.convert', 'sales_document', id, null, { toType, newId: newDoc.id })
       return NextResponse.json({ id: newDoc.id, docNo })
     }
@@ -219,6 +239,18 @@ export async function PUT(req: NextRequest) {
       if (!res.ok) return badRequest(res.error ?? 'Return not allowed')
       await logAction(auth.user, 'sales.doc.return', 'sales_document', id, null, { creditNoteId: res.id, partial: !!lines }, clientIp(req))
       return NextResponse.json({ id: res.id, docNo: res.docNo })
+    }
+    if (op === 'deliver') {
+      { const deny = await requireOp(auth.user, 'erp.sales:deliver', 'edit'); if (deny) return deny }
+      if (!lines || lines.length === 0) return badRequest('Select at least one line to deliver')
+      const res = await deliverSalesOrder(id, lines, auth.user.id)
+      if (!res.ok) {
+        if (res.error?.includes('exceeds reserved_remaining')) return toApiResponse(businessError('ERP-SALES-DELIVERY-EXCEEDS-RESERVATION', { reason: res.error }))
+        return badRequest(res.error ?? 'Delivery failed')
+      }
+      await logAction(auth.user, 'delivery.confirmed', 'sales_document', id, null, { shipmentId: res.shipmentId, cogsEntryId: res.cogsEntryId, lines }, clientIp(req))
+      if (res.cogsEntryId) await logAction(auth.user, 'cogs.posted', 'inv_shipment', res.shipmentId!, null, { entryId: res.cogsEntryId }, clientIp(req))
+      return NextResponse.json({ ok: true, shipmentId: res.shipmentId, cogsEntryId: res.cogsEntryId })
     }
     if (op === 'post') {
       { const deny = await requireOp(auth.user, 'erp.sales:post', 'edit'); if (deny) return deny }
@@ -263,8 +295,38 @@ export async function PUT(req: NextRequest) {
       if (blocked) return toApiResponse(businessError('ERP-SALES-CREDIT-LIMIT-EXCEEDED', {
         limit: blocked.limit.toLocaleString(), projected: blocked.projected.toLocaleString(),
       }))
+    } else if (op === 'confirm' && String(src.doc_type) === 'order' && src.status !== 'confirmed' && src.warehouse_id) {
+      // Phase 6: confirming a sales ORDER reserves its product lines against
+      // the order's fulfillment warehouse — "Draft → Pending Approval →
+      // Approved → Reservation → Reserved" using this repo's REAL
+      // terminology (there is no distinct "approved" status for sales
+      // documents; `confirmed` IS the approval gate here, matching how
+      // invoice-confirm already gates the credit check above). Guarded by
+      // `src.status !== 'confirmed'` so a repeat confirm on an
+      // already-confirmed order is a no-op status write, never a second
+      // reservation (idempotent). An order with no warehouse set never
+      // reserves — the honest "nothing to reserve against" case, not an
+      // error (matches every prior phase's standalone-document precedent).
+      // The reservation and the status write commit together: insufficient
+      // stock on ANY line rolls back the whole confirm — no partial
+      // reservation, order stays unconfirmed.
+      const reserveFailure = await withTransaction(async query => {
+        const r = await reserveSalesOrderTx(query, id, Number(src.warehouse_id), auth.user.id)
+        if (!r.ok) return r.error!
+        await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
+        return null
+      })
+      if (reserveFailure) return toApiResponse(businessError('ERP-SALES-INSUFFICIENT-STOCK', { reason: reserveFailure }))
+      await logAction(auth.user, 'inventory.reservation.created', 'sales_document', id, null, { warehouseId: src.warehouse_id }, clientIp(req))
     } else {
       await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
+      // Cancelling (void) a confirmed order before delivery releases its
+      // reservations — never silently orphaned, never a physical stock
+      // mutation (nothing was ever issued). A no-op if nothing was reserved.
+      if (op === 'void' && String(src.doc_type) === 'order') {
+        const released = await releaseSalesOrderReservation(id)
+        if (released > 0) await logAction(auth.user, 'inventory.reservation.released', 'sales_document', id, null, { count: released }, clientIp(req))
+      }
     }
     // 26.23 (بند ۱.۱): confirming an invoice/credit note auto-posts it to the GL
     // (idempotent — gl_entry_id guard). A closed fiscal period fails loudly.

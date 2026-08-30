@@ -4,7 +4,8 @@
  * `inv_moves` ledger and costing engine — never a second stock ledger. GL
  * postings reuse the shared posting primitives + the Numbering Engine.
  */
-import { pgQuery, getPool } from '@/lib/db'
+import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
+import { accountIdByCode, insertPostedEntry, loadGlMap } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { loadProductLevels } from '@/lib/erp/inventoryData'
 import { postingBalanced } from '@/lib/erp/sales'
@@ -121,30 +122,54 @@ export async function recallSerials(productId: number, batchId?: number | null):
 }
 
 // ── Stock states + holds (PART 3) ────────────────────────────────────────────
-async function onHandOf(productId: number, warehouseId: number): Promise<number> {
-  return (await pgQuery<{ q: number }>(`SELECT COALESCE(SUM(qty),0)::float AS q FROM inv_moves WHERE product_id=$1 AND warehouse_id=$2`, [productId, warehouseId]))[0].q
+// Phase 6 audit finding: these read helpers, and createHold below, ran as
+// bare unlocked pgQuery calls — a classic read-then-write TOCTOU. Two
+// concurrent createHold calls for the SAME product×warehouse could both
+// read the same `available` and both pass canHold(), together reserving
+// MORE than physical stock allows. Every read here now optionally accepts
+// an injected TxQuery (default `pgQuery`, so every existing standalone
+// caller is unaffected) so createHold — and, transitively, createShipment
+// — can run its read+check+insert inside ONE locked transaction.
+async function onHandOf(productId: number, warehouseId: number, query: TxQuery = pgQuery): Promise<number> {
+  return (await query<{ q: number }>(`SELECT COALESCE(SUM(qty),0)::float AS q FROM inv_moves WHERE product_id=$1 AND warehouse_id=$2`, [productId, warehouseId]))[0].q
 }
-async function holdsOf(productId: number, warehouseId: number): Promise<Hold[]> {
-  return pgQuery<Hold>(`SELECT kind, qty::float AS qty, status FROM inv_reservations WHERE product_id=$1 AND warehouse_id=$2`, [productId, warehouseId])
+async function holdsOf(productId: number, warehouseId: number, query: TxQuery = pgQuery): Promise<Hold[]> {
+  return query<Hold>(`SELECT kind, qty::float AS qty, status FROM inv_reservations WHERE product_id=$1 AND warehouse_id=$2`, [productId, warehouseId])
 }
-async function inTransitOf(productId: number, warehouseId: number): Promise<number> {
-  return (await pgQuery<{ q: number }>(
+async function inTransitOf(productId: number, warehouseId: number, query: TxQuery = pgQuery): Promise<number> {
+  return (await query<{ q: number }>(
     `SELECT COALESCE(SUM(l.qty),0)::float AS q FROM inv_shipment_lines l JOIN inv_shipments s ON s.id=l.shipment_id
      WHERE l.product_id=$1 AND s.warehouse_id=$2 AND s.status IN ('picking','packed')`, [productId, warehouseId]))[0].q
 }
-export async function stockStateFor(productId: number, warehouseId: number): Promise<StockState> {
-  const [onHand, holds, transit] = await Promise.all([onHandOf(productId, warehouseId), holdsOf(productId, warehouseId), inTransitOf(productId, warehouseId)])
+export async function stockStateFor(productId: number, warehouseId: number, query: TxQuery = pgQuery): Promise<StockState> {
+  const [onHand, holds, transit] = await Promise.all([onHandOf(productId, warehouseId, query), holdsOf(productId, warehouseId, query), inTransitOf(productId, warehouseId, query)])
   return stockState(onHand, holds, transit)
 }
-export async function createHold(d: { productId: number; warehouseId: number; kind: 'reserve' | 'block' | 'damage'; qty: number; ref?: string }, userId?: string): Promise<{ id: number }> {
-  const state = await stockStateFor(d.productId, d.warehouseId)
-  const chk = canHold(state, d.qty)
-  if (!chk.ok) throw new Error(chk.reason)
-  const row = (await pgQuery<{ id: number }>(
-    `INSERT INTO inv_reservations (product_id, warehouse_id, kind, qty, ref, status, created_by, created_at)
-     VALUES ($1,$2,$3,$4,$5,'active',$6,${NOW}) RETURNING id`,
-    [d.productId, d.warehouseId, d.kind, d.qty, d.ref ?? null, userId ?? null]))[0]
-  return row
+/**
+ * Create a reservation/block/damage hold. ALWAYS runs its read-check-insert
+ * as one atomic, per-product×warehouse-locked sequence: if the caller
+ * passes an externally-managed `query` (already inside a transaction that
+ * has, or will, cover this same lock — e.g. createShipment looping over
+ * several lines), the lock+read+insert join that transaction. Otherwise
+ * createHold opens its own single-statement transaction. Either way, a
+ * SECOND concurrent createHold for the same product×warehouse blocks on
+ * the advisory lock until the first commits, then correctly re-reads the
+ * now-reduced availability — the exact "Stock=10, A wants 7, B wants 7 →
+ * one succeeds, one fails" invariant this phase requires.
+ */
+export async function createHold(d: { productId: number; warehouseId: number; kind: 'reserve' | 'block' | 'damage'; qty: number; ref?: string }, userId?: string, externalQuery?: TxQuery): Promise<{ id: number }> {
+  const run = async (query: TxQuery) => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`stock:${d.productId}:${d.warehouseId}`])
+    const state = await stockStateFor(d.productId, d.warehouseId, query)
+    const chk = canHold(state, d.qty)
+    if (!chk.ok) throw new Error(chk.reason)
+    return (await query<{ id: number }>(
+      `INSERT INTO inv_reservations (product_id, warehouse_id, kind, qty, ref, status, created_by, created_at)
+       VALUES ($1,$2,$3,$4,$5,'active',$6,${NOW}) RETURNING id`,
+      [d.productId, d.warehouseId, d.kind, d.qty, d.ref ?? null, userId ?? null]))[0]
+  }
+  if (externalQuery) return run(externalQuery)
+  return withTransaction(run)
 }
 export async function releaseHold(id: number, consumed = false): Promise<void> {
   await pgQuery(`UPDATE inv_reservations SET status=$2, released_at=${NOW} WHERE id=$1 AND status='active'`, [id, consumed ? 'consumed' : 'released'])
@@ -235,58 +260,121 @@ export async function countDetail(countId: number) {
 }
 
 // ── Shipments (PART 6) ───────────────────────────────────────────────────────
-export async function createShipment(d: { warehouseId: number; customerId?: number | null; carrier?: string; ref?: string; lines: { productId: number; qty: number; serial?: string | null }[] }, userId?: string): Promise<{ id: number; shipmentNo: string }> {
+/**
+ * Phase 6 audit finding: this ran as a pre-loop validation pass (bare reads)
+ * followed by a SEPARATE insert loop, with no transaction — a mid-sequence
+ * failure left a shipment header with a partial set of lines/holds, and two
+ * concurrent shipments for the same product could each pass their OWN
+ * pre-loop check (computed before either had inserted) and then both
+ * insert, over-reserving. Fixed: the header insert, every line insert, and
+ * every hold creation now commit as one transaction — createHold is called
+ * with this transaction's query so its own per-product×warehouse advisory
+ * lock (see createHold) joins the same atomic scope, closing the race for
+ * real rather than just moving the pre-check earlier.
+ */
+export async function createShipment(d: { warehouseId: number; customerId?: number | null; carrier?: string; ref?: string; salesDocumentId?: number | null; lines: { productId: number; qty: number; serial?: string | null }[] }, userId?: string): Promise<{ id: number; shipmentNo: string }> {
   if (d.lines.length === 0) throw new Error('A shipment needs at least one line')
-  for (const l of d.lines) {
-    const state = await stockStateFor(l.productId, d.warehouseId)
-    const chk = canHold(state, l.qty)
-    if (!chk.ok) throw new Error(`Product ${l.productId}: ${chk.reason}`)
-  }
   const shipmentNo = await nextNumber('shipment', { legacyPrefix: 'SHP' })
-  const row = (await pgQuery<{ id: number }>(
-    `INSERT INTO inv_shipments (shipment_no, warehouse_id, customer_id, carrier, status, ref, created_by, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,'draft',$5,$6,${NOW},${NOW}) RETURNING id`,
-    [shipmentNo, d.warehouseId, d.customerId ?? null, d.carrier ?? null, d.ref ?? null, userId ?? null]))[0]
-  for (const l of d.lines) {
-    await pgQuery(`INSERT INTO inv_shipment_lines (shipment_id, product_id, qty, serial) VALUES ($1,$2,$3,$4)`, [row.id, l.productId, l.qty, l.serial ?? null])
-    await createHold({ productId: l.productId, warehouseId: d.warehouseId, kind: 'reserve', qty: l.qty, ref: `SHP-${row.id}` }, userId)
-  }
-  return { id: row.id, shipmentNo }
+  return withTransaction(async query => {
+    const row = (await query<{ id: number }>(
+      `INSERT INTO inv_shipments (shipment_no, warehouse_id, customer_id, carrier, status, ref, sales_document_id, created_by, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,${NOW},${NOW}) RETURNING id`,
+      [shipmentNo, d.warehouseId, d.customerId ?? null, d.carrier ?? null, d.ref ?? null, d.salesDocumentId ?? null, userId ?? null]))[0]
+    for (const l of d.lines) {
+      await query(`INSERT INTO inv_shipment_lines (shipment_id, product_id, qty, serial) VALUES ($1,$2,$3,$4)`, [row.id, l.productId, l.qty, l.serial ?? null])
+      try {
+        await createHold({ productId: l.productId, warehouseId: d.warehouseId, kind: 'reserve', qty: l.qty, ref: `SHP-${row.id}` }, userId, query)
+      } catch (e) {
+        throw new Error(`Product ${l.productId}: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    }
+    return { id: row.id, shipmentNo }
+  })
 }
 
-export async function advanceShipment(id: number, to: ShipmentStatus, d: { trackingNo?: string; containerNo?: string } = {}, userId?: string): Promise<void> {
-  const s = (await pgQuery<{ status: ShipmentStatus; warehouse_id: number }>(`SELECT status, warehouse_id FROM inv_shipments WHERE id=$1`, [id]))[0]
-  if (!s) throw new Error('Shipment not found')
-  if (!canTransitionShipment(s.status, to)) throw new Error(`Illegal shipment transition ${s.status} → ${to}`)
-  const lines = await pgQuery<{ product_id: number; qty: number; serial: string | null }>(
-    `SELECT product_id, qty::float AS qty, serial FROM inv_shipment_lines WHERE shipment_id=$1`, [id])
+/**
+ * Phase 6 audit finding: same class as createShipment — a status read,
+ * then a sequence of unlocked updates/inserts. Two concurrent "ship" calls
+ * on the SAME shipment could both pass canTransitionShipment (both read
+ * the pre-transition status) and both consume the hold and both write an
+ * issue move — a double stock issue. Fixed: the whole transition (status
+ * re-check, hold consumption, inv_moves writes, serial updates, COGS
+ * posting, header update) runs inside one transaction serialized per
+ * shipment id via pg_advisory_xact_lock — the second concurrent call
+ * blocks until the first commits, then re-reads the ALREADY-transitioned
+ * status and correctly fails `canTransitionShipment`.
+ *
+ * COGS (Phase 6, new): on the transition that issues stock, if this
+ * shipment is linked to a sales document, posts Dr COGS(5000)/Cr
+ * Inventory(1200) for the line cost total — idempotent via
+ * inv_shipments.gl_entry_id (never a duplicate posting on retry/replay).
+ * On the transition that returns stock, a linked shipment's original COGS
+ * posting is reversed (Dr Inventory/Cr COGS) rather than mutating the
+ * original entry — the same reversal-not-void principle used everywhere
+ * else in this codebase's GL.
+ */
+export async function advanceShipment(id: number, to: ShipmentStatus, d: { trackingNo?: string; containerNo?: string } = {}, userId?: string): Promise<{ cogsEntryId?: number }> {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`shipment:${id}`])
+    const s = (await query<{ status: ShipmentStatus; warehouse_id: number; sales_document_id: number | null; gl_entry_id: number | null }>(
+      `SELECT status, warehouse_id, sales_document_id, gl_entry_id FROM inv_shipments WHERE id=$1`, [id]))[0]
+    if (!s) throw new Error('Shipment not found')
+    if (!canTransitionShipment(s.status, to)) throw new Error(`Illegal shipment transition ${s.status} → ${to}`)
+    const lines = await query<{ product_id: number; qty: number; serial: string | null; cost: number }>(
+      `SELECT sl.product_id, sl.qty::float AS qty, sl.serial, p.cost::float AS cost FROM inv_shipment_lines sl JOIN inv_products p ON p.id=sl.product_id WHERE sl.shipment_id=$1`, [id])
 
-  if (shipmentIssuesStock(s.status, to)) {
-    // Ship: consume the reserve holds and write real issue moves.
-    await pgQuery(`UPDATE inv_reservations SET status='consumed', released_at=${NOW} WHERE ref=$1 AND status='active'`, [`SHP-${id}`])
-    for (const l of lines) {
-      await pgQuery(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, serial, ref, created_by, created_at)
-        VALUES ($1,$2,'issue',$3,(SELECT cost FROM inv_products WHERE id=$1),$4,$5,$6,${NOW})`,
-        [l.product_id, s.warehouse_id, -Math.abs(l.qty), l.serial, `SHP-${id}`, userId ?? null])
-      if (l.serial) await pgQuery(`UPDATE inv_serials SET status='sold', updated_at=${NOW} WHERE serial=$1 AND status IN ('in_stock','reserved')`, [l.serial])
+    let cogsEntryId: number | undefined
+    if (shipmentIssuesStock(s.status, to)) {
+      // Ship: consume the reserve holds and write real issue moves.
+      await query(`UPDATE inv_reservations SET status='consumed', released_at=${NOW} WHERE ref=$1 AND status='active'`, [`SHP-${id}`])
+      for (const l of lines) {
+        await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, serial, ref, created_by, created_at)
+          VALUES ($1,$2,'issue',$3,$4,$5,$6,$7,${NOW})`,
+          [l.product_id, s.warehouse_id, -Math.abs(l.qty), l.cost, l.serial, `SHP-${id}`, userId ?? null])
+        if (l.serial) await query(`UPDATE inv_serials SET status='sold', updated_at=${NOW} WHERE serial=$1 AND status IN ('in_stock','reserved')`, [l.serial])
+      }
+      if (s.sales_document_id && !s.gl_entry_id) {
+        const cogsTotal = lines.reduce((sum, l) => sum + Math.abs(l.qty) * l.cost, 0)
+        if (cogsTotal > 0) {
+          const map = await loadGlMap()
+          const [cogsAcc, invAcc] = await Promise.all([accountIdByCode('5000', query), accountIdByCode(map.inventory, query)])
+          const entry = await insertPostedEntry(query, today(), `COGS — shipment ${id}`, `SHP-COGS-${id}`, cogsTotal, userId,
+            [{ accountId: cogsAcc, debit: cogsTotal, credit: 0 }, { accountId: invAcc, debit: 0, credit: cogsTotal }])
+          await query(`UPDATE inv_shipments SET gl_entry_id=$2 WHERE id=$1`, [id, entry.id])
+          cogsEntryId = entry.id
+        }
+      }
     }
-  }
-  if (shipmentReturnsStock(s.status, to)) {
-    for (const l of lines) {
-      await pgQuery(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, serial, ref, created_by, created_at)
-        VALUES ($1,$2,'return',$3,(SELECT cost FROM inv_products WHERE id=$1),$4,$5,$6,${NOW})`,
-        [l.product_id, s.warehouse_id, Math.abs(l.qty), l.serial, `SHP-${id}-RET`, userId ?? null])
-      if (l.serial) await pgQuery(`UPDATE inv_serials SET status='returned', updated_at=${NOW} WHERE serial=$1 AND status='sold'`, [l.serial])
+    if (shipmentReturnsStock(s.status, to)) {
+      for (const l of lines) {
+        await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, serial, ref, created_by, created_at)
+          VALUES ($1,$2,'return',$3,$4,$5,$6,$7,${NOW})`,
+          [l.product_id, s.warehouse_id, Math.abs(l.qty), l.cost, l.serial, `SHP-${id}-RET`, userId ?? null])
+        if (l.serial) await query(`UPDATE inv_serials SET status='returned', updated_at=${NOW} WHERE serial=$1 AND status='sold'`, [l.serial])
+      }
+      // Reverse the original COGS posting (if one exists) rather than voiding it.
+      if (s.gl_entry_id) {
+        const orig = await query<{ account_id: number; debit: number; credit: number; memo: string | null }>(
+          `SELECT account_id, debit::float AS debit, credit::float AS credit, memo FROM gl_journal_lines WHERE entry_id=$1`, [s.gl_entry_id])
+        if (orig.length > 0) {
+          const total = orig.reduce((sum, l) => sum + Number(l.debit), 0)
+          const reversed = orig.map(l => ({ accountId: l.account_id, debit: Number(l.credit), credit: Number(l.debit), memo: l.memo }))
+          const rev = await insertPostedEntry(query, today(), `COGS reversal — shipment ${id} return`, `SHP-COGS-${id}-REV`, total, userId, reversed)
+          await query(`UPDATE gl_journal_entries SET reversal_of=$2 WHERE id=$1`, [rev.id, s.gl_entry_id])
+          await query(`UPDATE gl_journal_entries SET reversed_by=$2 WHERE id=$1`, [s.gl_entry_id, rev.id])
+        }
+      }
     }
-  }
-  if (to === 'cancelled') {
-    await pgQuery(`UPDATE inv_reservations SET status='released', released_at=${NOW} WHERE ref=$1 AND status='active'`, [`SHP-${id}`])
-  }
-  await pgQuery(
-    `UPDATE inv_shipments SET status=$2, tracking_no=COALESCE($3,tracking_no), container_no=COALESCE($4,container_no),
-       shipped_at=CASE WHEN $2='shipped' THEN to_char(now(),'YYYY-MM-DD HH24:MI:SS') ELSE shipped_at END,
-       delivered_at=CASE WHEN $2='delivered' THEN to_char(now(),'YYYY-MM-DD HH24:MI:SS') ELSE delivered_at END,
-       updated_at=${NOW} WHERE id=$1`, [id, to, d.trackingNo ?? null, d.containerNo ?? null])
+    if (to === 'cancelled') {
+      await query(`UPDATE inv_reservations SET status='released', released_at=${NOW} WHERE ref=$1 AND status='active'`, [`SHP-${id}`])
+    }
+    await query(
+      `UPDATE inv_shipments SET status=$2, tracking_no=COALESCE($3,tracking_no), container_no=COALESCE($4,container_no),
+         shipped_at=CASE WHEN $2='shipped' THEN to_char(now(),'YYYY-MM-DD HH24:MI:SS') ELSE shipped_at END,
+         delivered_at=CASE WHEN $2='delivered' THEN to_char(now(),'YYYY-MM-DD HH24:MI:SS') ELSE delivered_at END,
+         updated_at=${NOW} WHERE id=$1`, [id, to, d.trackingNo ?? null, d.containerNo ?? null])
+    return { cogsEntryId }
+  })
 }
 export async function listShipments() {
   return pgQuery(

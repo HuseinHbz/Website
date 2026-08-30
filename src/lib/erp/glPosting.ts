@@ -50,7 +50,7 @@ export function reversalLines(lines: { accountId: number; debit: number; credit:
   return lines.map(l => ({ accountId: l.accountId, debit: num(l.credit), credit: num(l.debit), memo: l.memo ?? null }))
 }
 
-async function accountIdByCode(code: string, query: TxQuery = pgQuery): Promise<number> {
+export async function accountIdByCode(code: string, query: TxQuery = pgQuery): Promise<number> {
   const r = (await query<{ id: number }>(`SELECT id FROM gl_accounts WHERE code=$1 LIMIT 1`, [code]))[0]
   if (!r) throw new Error(`GL account ${code} is missing from the chart`)
   return r.id
@@ -75,7 +75,7 @@ async function accountIdByCode(code: string, query: TxQuery = pgQuery): Promise<
  * (gaps in a sequence are acceptable; duplicates are not) — not a new gap
  * introduced here.
  */
-async function insertPostedEntry(
+export async function insertPostedEntry(
   query: TxQuery,
   date: string, memo: string, reference: string, total: number, userId: string | undefined,
   lines: { accountId: number; debit: number; credit: number; memo?: string | null }[],
