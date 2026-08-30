@@ -34,6 +34,7 @@ const SUITES = [
   { name: 'Phase 6 sales/inventory/fulfillment', script: 'verify-phase6-sales-inventory.ts', db: 'rg_p6' },
   { name: 'Phase 7 finance/AR/AP/GL hardening', script: 'verify-phase7-finance.ts', db: 'rg_p7' },
   { name: 'Phase 8 treasury/returns/refund hardening', script: 'verify-phase8-finance.ts', db: 'rg_p8' },
+  { name: 'Phase 9 treasury-AP/bank-recon/precision controls', script: 'verify-phase9-financial-controls.ts', db: 'rg_p9' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

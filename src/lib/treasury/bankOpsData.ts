@@ -4,7 +4,7 @@
  * smart reconciliation (candidates from sales/purchase payments + payment_orders
  * → scored suggestions → persisted matches with audit). Reuses the pure engines.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { parseCsv, parseMt940, parseCamt053, detectDuplicates, lineFingerprint, mapErpType, type ImportedLine, type CsvMapping } from './statementImport'
 import { reconcile, reconStats, type StmtLine, type ErpCandidate } from './reconcile'
 
@@ -77,11 +77,40 @@ export async function suggestMatches(accountId: number): Promise<{ suggestions: 
   return { suggestions, stats: reconStats(suggestions) }
 }
 
-/** Confirm a match (or reject) — persists to bank_matches + flips the line. */
-export async function confirmMatch(lineId: number, erpRef: string, confidence: number, status: 'matched' | 'rejected', reasons: string[], userId: string): Promise<void> {
-  await pgQuery(`INSERT INTO bank_matches (statement_line_id, erp_ref, confidence, status, reasons, matched_by) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [lineId, erpRef, confidence, status, reasons.join('; '), userId])
-  if (status === 'matched') await pgQuery(`UPDATE bank_statement_lines SET status='matched', matched_ref=$2 WHERE id=$1`, [lineId, erpRef])
+/**
+ * Confirm a match (or reject) — persists to bank_matches + flips the line.
+ *
+ * Phase-9 audit finding: this ran as two bare, unlocked statements (INSERT
+ * bank_matches, then UPDATE bank_statement_lines) with NO transaction and NO
+ * "already matched" guard. Two concurrent confirmMatch calls on the SAME
+ * line — or a retried request — could both insert a match row and both
+ * flip the line, and a line already matched to one ERP reference could be
+ * silently RE-matched to a different one (a contradictory final state: the
+ * line's `matched_ref` would end up pointing at whichever call won the
+ * race, not the one an operator actually reviewed). Fixed: the whole
+ * check-insert-update sequence now runs inside one transaction locked per
+ * statement-line id — a line already `matched` or `rejected` returns the
+ * EXISTING match deterministically (idempotent) instead of creating a
+ * second, possibly-contradictory one.
+ */
+export async function confirmMatch(lineId: number, erpRef: string, confidence: number, status: 'matched' | 'rejected', reasons: string[], userId: string): Promise<{ alreadyReconciled: boolean; matchedRef: string | null }> {
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`bank_stmt_line_match:${lineId}`])
+    const line = (await query<{ status: string; matched_ref: string | null }>(`SELECT status, matched_ref FROM bank_statement_lines WHERE id=$1`, [lineId]))[0]
+    if (!line) throw new Error('Statement line not found')
+    // A line already MATCHED is settled — never silently re-matched to a
+    // different reference. A 'rejected' STATUS doesn't exist on this column
+    // (rejecting a suggestion intentionally leaves the line 'unmatched' so
+    // it can still be matched later — only the bank_matches audit trail
+    // remembers the rejection, established behavior, unchanged here).
+    if (line.status === 'matched') {
+      return { alreadyReconciled: true, matchedRef: line.matched_ref }
+    }
+    await query(`INSERT INTO bank_matches (statement_line_id, erp_ref, confidence, status, reasons, matched_by) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [lineId, erpRef, confidence, status, reasons.join('; '), userId])
+    if (status === 'matched') await query(`UPDATE bank_statement_lines SET status='matched', matched_ref=$2 WHERE id=$1`, [lineId, erpRef])
+    return { alreadyReconciled: false, matchedRef: status === 'matched' ? erpRef : null }
+  })
 }
 
 /**
