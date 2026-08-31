@@ -37,6 +37,7 @@ const SUITES = [
   { name: 'Phase 9 treasury-AP/bank-recon/precision controls', script: 'verify-phase9-financial-controls.ts', db: 'rg_p9' },
   { name: 'Phase 10 supplier-payment AP allocation + master reconciliation', script: 'verify-phase10-financial-controls.ts', db: 'rg_p10' },
   { name: 'Phase 11 treasury unapplied cash + payment allocation closure', script: 'verify-phase11-financial-controls.ts', db: 'rg_p11' },
+  { name: 'Phase 12 supplier prepayment consumption', script: 'verify-phase12-financial-controls.ts', db: 'rg_p12' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

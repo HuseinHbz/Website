@@ -222,6 +222,101 @@ export async function processPayment(id: number, user: AdminUser): Promise<{ glE
   })
 }
 
+// ── Supplier prepayment consumption (Phase 12) ───────────────────────────────
+/**
+ * Phase 12: consumes a vendor's existing unapplied Treasury cash (Phase 11's
+ * document_id=NULL purchase_payments rows) against that vendor's currently
+ * open invoices — the "future-invoice consumption" half of the unapplied-cash
+ * lifecycle Phase 11 deliberately left undone.
+ *
+ * Schema decision (see docs/engineering/phase12-supplier-prepayment-audit.md):
+ * no migration, no new columns. An unapplied SOURCE row's remaining balance is
+ * derived, never mutated — `purchase_payments` rows stay append-only (the same
+ * discipline BUG-020/CC-family already enforces for the GL). Consuming amount
+ * X of source row S against invoice I writes exactly TWO new rows sharing the
+ * reference `AP-CONSUME:${S.id}`:
+ *   - a NEGATIVE adjustment (vendor_id=S.vendor_id, document_id=NULL, amount=-X)
+ *   - a POSITIVE allocation (document_id=I,        amount=+X)
+ * Both stamped with SOURCE row S's own gl_entry_id — never NULL. This is not
+ * cosmetic: `postPurchasePaymentToGl` treats gl_entry_id IS NULL as "a real
+ * cash payment nobody posted yet" and will post a brand-new Dr AP/Cr Bank
+ * entry for it. Since consumption moves already-paid cash between subledger
+ * buckets (unapplied → a specific invoice) with NO new bank movement, leaving
+ * gl_entry_id null would create a phantom, duplicate cash-out entry the first
+ * time anything called that poster. Reusing S's existing (already-posted)
+ * gl_entry_id makes both new rows correctly inert to that poster (Section 8:
+ * option A — no new GL event, by design) while remaining fully traceable back
+ * to the Treasury payment that actually moved the cash.
+ *
+ * A source row's remaining balance = its own amount + Σ(negative adjustment
+ * rows whose reference is `AP-CONSUME:${source.id}`) — computed fresh from the
+ * database on every call, so re-running this function (after a partial
+ * consumption, or with nothing left to consume) is naturally idempotent: it
+ * just finds a smaller/zero remaining balance and does correspondingly less
+ * or nothing. Distribution is oldest-source-first × oldest-invoice-first,
+ * reusing `allocateReceipt` unchanged as the per-source distribution
+ * primitive — no second allocation engine.
+ *
+ * Concurrency: locks the SAME `treasury_ap_allocate:vendor:${vendorId}`
+ * advisory key `processPayment` already takes before its own AP allocation —
+ * deliberately the same lock domain, not a new one, so a new Treasury
+ * payment being processed for this vendor and a consumption run for this
+ * vendor can never interleave (Section 5, Scenario F).
+ */
+export interface ConsumptionDetail { sourceId: number; invoiceId: number; amount: number }
+export async function consumeUnappliedForVendor(vendorId: number, userId: string, date?: string): Promise<{ totalConsumed: number; details: ConsumptionDetail[] }> {
+  const today = date ?? new Date().toISOString().slice(0, 10)
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_ap_allocate:vendor:${vendorId}`])
+
+    // Every still-open unapplied SOURCE row, oldest first, with its remaining
+    // (unconsumed) balance derived from the append-only ledger — never a
+    // stored/mutated counter.
+    const sources = await query<{ id: number; amount: number; gl_entry_id: number | null; consumed: number }>(
+      `SELECT s.id, s.amount::float AS amount, s.gl_entry_id,
+              COALESCE((SELECT SUM(-c.amount) FROM purchase_payments c
+                        WHERE c.document_id IS NULL AND c.reference = 'AP-CONSUME:'||s.id), 0)::float AS consumed
+       FROM purchase_payments s
+       WHERE s.vendor_id = $1 AND s.document_id IS NULL AND s.amount > 0
+       ORDER BY s.date, s.id`, [vendorId])
+
+    const invRows = await query<{ id: number; open: number }>(
+      `SELECT id, (total - paid_total)::float AS open FROM purchase_documents
+       WHERE vendor_id=$1 AND doc_type='invoice' AND status IN ('confirmed','partial') AND (total - paid_total) > 0.001
+       ORDER BY date, id`, [vendorId])
+    const invoicePool = invRows.map(r => ({ id: r.id, open: Math.round(Number(r.open) * 100) / 100 }))
+
+    const details: ConsumptionDetail[] = []
+    let totalConsumed = 0
+    for (const src of sources) {
+      const remaining = Math.round((Number(src.amount) - Number(src.consumed)) * 100) / 100
+      if (remaining <= 0.001) continue
+      if (!invoicePool.some(i => i.open > 0.001)) break
+
+      const { allocations } = allocateReceipt(remaining, invoicePool)
+      for (const a of allocations) {
+        await query(
+          `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
+          [vendorId, today, -a.amount, `AP-CONSUME:${src.id}`, userId, src.gl_entry_id, `Unapplied payment #${src.id} consumed against invoice #${a.invoiceId}`])
+        await query(
+          `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
+          [vendorId, a.invoiceId, today, a.amount, `AP-CONSUME:${src.id}`, userId, src.gl_entry_id, `Settled from unapplied payment #${src.id}`])
+
+        const inv = (await query<{ total: number; paid_total: number }>(`SELECT total::float AS total, paid_total::float AS "paid_total" FROM purchase_documents WHERE id=$1`, [a.invoiceId]))[0]
+        const paid = Math.round((Number(inv.paid_total) + a.amount) * 100) / 100
+        const status = paid + 0.001 >= Number(inv.total) ? 'paid' : 'partial'
+        await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [a.invoiceId, paid, status])
+
+        details.push({ sourceId: src.id, invoiceId: a.invoiceId, amount: a.amount })
+        totalConsumed = Math.round((totalConsumed + a.amount) * 100) / 100
+        const pool = invoicePool.find(i => i.id === a.invoiceId)!
+        pool.open = Math.round((pool.open - a.amount) * 100) / 100
+      }
+    }
+    return { totalConsumed, details }
+  })
+}
+
 // ── Receipts (M5) ────────────────────────────────────────────────────────────
 export interface ReceiptInput { receiptType?: string; customerId?: number; amount: number; currency?: string; bankAccountId?: number; date?: string; invoiceIds?: number[] }
 

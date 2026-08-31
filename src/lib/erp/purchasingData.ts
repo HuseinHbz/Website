@@ -550,19 +550,36 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
  * Idempotent via the gl_entry_id guard inside postPurchaseInvoiceToGl.
  */
 export async function confirmPurchaseInvoice(docId: number, userId?: string): Promise<{ status: PurchaseStatus; entryId: number | null }> {
-  const d = (await pgQuery<{ doc_type: string; status: string }>(`SELECT doc_type, status FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  const d = (await pgQuery<{ doc_type: string; status: string; vendor_id: number | null }>(`SELECT doc_type, status, vendor_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
   if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices can be confirmed to the GL')
   if (d.status === 'void') throw new Error('Voided documents cannot be confirmed')
   const prev = d.status
   await pgQuery(`UPDATE purchase_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [docId])
+  let entryId: number | null
   try {
     const res = await postPurchaseInvoiceToGl(docId, userId)
-    return { status: 'confirmed', entryId: res.entryId }
+    entryId = res.entryId
   } catch (err) {
     await pgQuery(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, prev])
     throw err
   }
+  // Phase 12: a freshly confirmed/open invoice is exactly the "future
+  // invoice" a vendor's pre-existing unapplied Treasury cash (Phase 11) was
+  // waiting for — settle any of it against this vendor's now-open invoices
+  // (including this one). Its own transaction, locked per vendor (see
+  // consumeUnappliedForVendor) — deliberately OUTSIDE the try/catch above:
+  // the GL post already committed by this point, so a consumption failure
+  // must never trigger the GL-post-failure revert (which would leave a
+  // real posted GL entry behind a document whose status was rolled back —
+  // an inconsistent state neither of these two failure modes should ever
+  // produce). A consumption failure here surfaces to the caller as-is,
+  // exactly like any other genuine defect — never silently swallowed.
+  if (d.vendor_id != null && userId) {
+    const { consumeUnappliedForVendor } = await import('@/lib/treasury/paymentData')
+    await consumeUnappliedForVendor(d.vendor_id, userId)
+  }
+  return { status: 'confirmed', entryId }
 }
 
 /**
