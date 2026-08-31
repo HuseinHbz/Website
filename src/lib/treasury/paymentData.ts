@@ -121,13 +121,16 @@ export async function submitPayment(id: number, userId: string): Promise<{ appro
  * entry exactly as before — no invoice-level information to allocate
  * against is the honest, existing "nothing to match" case, not an error.
  */
-export async function processPayment(id: number, user: AdminUser): Promise<{ glEntryId: number; alreadyProcessed: boolean; apAllocations: { invoiceId: number; amount: number }[] }> {
+export async function processPayment(id: number, user: AdminUser): Promise<{ glEntryId: number; alreadyProcessed: boolean; apAllocations: { invoiceId: number; amount: number }[]; unappliedAmount: number }> {
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_payment_process:${id}`])
     const p = (await query<{ status: string; payment_type: PaymentType; amount: number; date: string; party: string | null; party_ref: string | null; gl_entry_id: number | null }>(
       `SELECT status, payment_type, amount::float AS amount, date, party, party_ref, gl_entry_id FROM payment_orders WHERE id=$1`, [id]))[0]
     if (!p) throw new Error('Payment not found')
-    if (p.status === 'completed') return { glEntryId: p.gl_entry_id!, alreadyProcessed: true, apAllocations: [] }
+    if (p.status === 'completed') {
+      const unapplied = (await query<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE reference=$1 AND document_id IS NULL`, [`TRZPAY-${id}`]))[0]
+      return { glEntryId: p.gl_entry_id!, alreadyProcessed: true, apAllocations: [], unappliedAmount: Number(unapplied.s) }
+    }
     if (p.status !== 'approved') throw new Error(`Payment must be approved before processing (is ${p.status})`)
     await query(`UPDATE payment_orders SET status='processing', updated_at=${NOW} WHERE id=$1`, [id])
 
@@ -141,9 +144,31 @@ export async function processPayment(id: number, user: AdminUser): Promise<{ glE
     const glId = await postGl(query, paymentGlLines(p.payment_type, Number(p.amount)), `Payment ${p.payment_type} ${p.party ?? ''}`.trim(), `TRZPAY-${id}`, p.date, user.id)
 
     let apAllocations: { invoiceId: number; amount: number }[] = []
+    let unappliedAmount = 0
     if (p.payment_type === 'supplier_payment') {
-      const vendorId = vendorIdFromPartyRef(p.party_ref)
+      let vendorId = vendorIdFromPartyRef(p.party_ref)
+      // party_ref is free text, not a real FK — a stale/typo'd/nonexistent
+      // vendor id must never reach an INSERT (would violate purchase_payments'
+      // vendor_id FK). Confirm the vendor actually exists before allocating
+      // or recording any unapplied amount against it.
       if (vendorId != null) {
+        const vendorExists = await query<{ id: number }>(`SELECT id FROM purchase_vendors WHERE id=$1`, [vendorId])
+        if (vendorExists.length === 0) vendorId = null
+      }
+      if (vendorId != null) {
+        // Phase 11 fix: the `treasury_payment_process:${id}` lock above only
+        // serializes calls against the SAME payment id — it does nothing for
+        // two DIFFERENT payments racing to allocate against the SAME
+        // vendor's open invoices. Without a vendor-scoped lock, both
+        // transactions can read an invoice's pre-race "open" balance before
+        // either commits, each correctly compute their OWN incremental
+        // update against a freshly re-read paid_total, and still drive
+        // paid_total past the invoice's own total (a real overpay, not
+        // merely a lost update — verified live under
+        // scripts/verify-phase11-financial-controls.ts). Serialize the
+        // whole allocation decision per vendor so a second concurrent
+        // payment always sees the first payment's committed allocation.
+        await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_ap_allocate:vendor:${vendorId}`])
         // Oldest-first, same discipline as the receipt side — never more
         // than each invoice's real outstanding balance (paid_total-aware,
         // so this is exact, not the receipt side's "no partial tracking"
@@ -163,11 +188,37 @@ export async function processPayment(id: number, user: AdminUser): Promise<{ glE
           const status = paid + 0.001 >= Number(inv.total) ? 'paid' : 'partial'
           await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [a.invoiceId, paid, status])
         }
+        // Phase 11: money conservation — payment amount = Σ allocated + unapplied.
+        // Any amount `allocateReceipt` couldn't place against an open invoice
+        // (the vendor's open AP is smaller than the payment) is NEVER
+        // discarded and NEVER used to push an invoice's paid_total past its
+        // own total. It is recorded as its own purchase_payments row with
+        // document_id=NULL — reusing the EXISTING nullable column (no schema
+        // change, no new "advance" table/column) — vendor_id set, tagged
+        // with the SAME gl_entry_id. `vendorPosition`'s AP balance query
+        // (`SUM(amount) FROM purchase_payments WHERE vendor_id=$1`, no
+        // document_id filter) already includes this row with zero code
+        // changes, correctly showing the vendor's balance go negative — a
+        // vendor debit balance / prepayment, exactly how an over-returned
+        // customer credit already surfaces elsewhere in this codebase
+        // (shown, never floored at zero). Future-invoice consumption of
+        // this balance is intentionally NOT implemented — the symmetric
+        // customer-side concept (`receipt_transactions.advance`) has been
+        // record-only with no consumption path since Phase 8, so building
+        // consumption only for suppliers would be a one-sided capability
+        // with no evidenced product need; documented in
+        // docs/engineering/phase11-treasury-unapplied-cash-audit.md.
+        if (alloc.advance > 0.001) {
+          unappliedAmount = alloc.advance
+          await query(
+            `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
+            [vendorId, p.date, alloc.advance, `TRZPAY-${id}`, user.id, glId, 'Unapplied supplier payment (exceeds open AP at processing time)'])
+        }
       }
     }
 
     await query(`UPDATE payment_orders SET status='completed', gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [id, glId])
-    return { glEntryId: glId, alreadyProcessed: false, apAllocations }
+    return { glEntryId: glId, alreadyProcessed: false, apAllocations, unappliedAmount }
   })
 }
 
