@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
         { const deny = await requireOp(auth.user, 'erp.purchasing:void', 'edit'); if (deny) return deny }
         // Voiding a GL-posted purchase invoice books a balanced reversal entry.
         const res = await voidPurchaseInvoice(d.id, uid)
-        await logAction(auth.user, 'erp.purchase.void', 'purchase_documents', String(d.id), null, { status: res.status, reversalId: res.reversalId }, ip)
+        await logAction(auth.user, 'erp.purchase.void', 'purchase_documents', String(d.id), null, { status: res.status, reversalId: res.reversalId, paymentsReversed: res.paymentsReversed }, ip)
         return NextResponse.json(res)
       }
     }

@@ -582,18 +582,102 @@ export async function confirmPurchaseInvoice(docId: number, userId?: string): Pr
   return { status: 'confirmed', entryId }
 }
 
+// ── Phase 13: reverse payment allocations on invoice cancellation ───────────
+/**
+ * Phase 13: reverses every currently-un-reversed positive `purchase_payments`
+ * allocation row against a purchase invoice — direct `recordPayment`,
+ * Treasury `processPayment` AP allocation (Phase 10), and Phase 12
+ * `consumeUnappliedForVendor` rows are all the SAME row shape
+ * (`document_id=<invoiceId>, amount>0`), so ONE mechanism reverses all three
+ * sources uniformly — no per-source special-casing.
+ *
+ * Design (docs/engineering/phase13-purchase-invoice-cancellation-audit.md):
+ * append-only, no mutation, no migration. For each un-reversed positive row
+ * P against this invoice, writes a matched pair sharing `reference =
+ * 'AP-VOID:'||P.id`:
+ *   - a NEGATIVE row against the SAME invoice (document_id=docId, -P.amount)
+ *     — nets this specific allocation back to zero, so `paid_total` (kept in
+ *     exact sync with `SUM(amount) WHERE document_id=docId` by every writer)
+ *     returns to 0 once every row is reversed.
+ *   - a POSITIVE row with document_id=NULL (+P.amount) — the money the
+ *     vendor already received does not disappear on cancellation; it
+ *     returns to the SAME unapplied pool Phase 11/12 already established,
+ *     immediately available for `consumeUnappliedForVendor` to apply to a
+ *     future invoice. This is the deterministic answer to "where does
+ *     consumed-then-cancelled money go": back to unapplied, uniformly,
+ *     regardless of whether it was originally a direct payment, a Treasury
+ *     allocation, or itself a Phase-12 consumption row.
+ * Both rows carry P's own `gl_entry_id` (never NULL) — the same reason
+ * Phase 12 did this: `postPurchasePaymentToGl` treats `gl_entry_id IS NULL`
+ * as an unposted real cash payment and would post a phantom Dr AP/Cr Bank
+ * entry otherwise. Un-earmarking already-moved cash is a pure subledger
+ * reclassification — zero new GL events, the same principle Phase 12
+ * established and Section 5 of this phase requires preserving.
+ *
+ * Idempotent by construction (the `NOT EXISTS ... AP-VOID:` filter — a
+ * second call finds nothing left to reverse) and locked on the SAME
+ * `treasury_ap_allocate:vendor:${vendorId}` advisory key Phase 11/12 already
+ * use for their own AP-allocation sections, so a cancellation can never
+ * interleave with a concurrent Treasury payment or consumption run for the
+ * same vendor.
+ */
+export async function reversePurchaseInvoicePaymentAllocations(docId: number, userId?: string): Promise<{ totalReversed: number; details: { sourceRowId: number; amount: number }[] }> {
+  const d = (await pgQuery<{ vendor_id: number | null }>(`SELECT vendor_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!d || d.vendor_id == null) return { totalReversed: 0, details: [] }
+  const vendorId = d.vendor_id
+  const today = new Date().toISOString().slice(0, 10)
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_ap_allocate:vendor:${vendorId}`])
+    const rows = await query<{ id: number; amount: number; gl_entry_id: number | null }>(
+      `SELECT p.id, p.amount::float AS amount, p.gl_entry_id
+       FROM purchase_payments p
+       WHERE p.document_id = $1 AND p.amount > 0
+         AND NOT EXISTS (SELECT 1 FROM purchase_payments r WHERE r.reference = 'AP-VOID:'||p.id)
+       ORDER BY p.id`, [docId])
+
+    const details: { sourceRowId: number; amount: number }[] = []
+    let totalReversed = 0
+    for (const r of rows) {
+      const amt = Math.round(Number(r.amount) * 100) / 100
+      await query(
+        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
+        [vendorId, docId, today, -amt, `AP-VOID:${r.id}`, userId ?? null, r.gl_entry_id, `Reversed on invoice #${docId} void (source payment #${r.id})`])
+      await query(
+        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
+        [vendorId, today, amt, `AP-VOID:${r.id}`, userId ?? null, r.gl_entry_id, `Returned to unapplied balance — invoice #${docId} voided`])
+      details.push({ sourceRowId: r.id, amount: amt })
+      totalReversed = Math.round((totalReversed + amt) * 100) / 100
+    }
+
+    if (rows.length) {
+      const remaining = (await query<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE document_id=$1`, [docId]))[0]
+      await query(`UPDATE purchase_documents SET paid_total=$2, updated_at=${NOW} WHERE id=$1`, [docId, Math.max(0, Math.round(Number(remaining.s) * 100) / 100)])
+    }
+    return { totalReversed, details }
+  })
+}
+
 /**
  * Void a purchase invoice. If it was posted to the GL, book a balanced REVERSAL
  * entry (reuses the 26.23 reverseEntry mechanism → two-way reversal_of/reversed_by
  * linkage). Idempotent — re-voiding a posted+reversed doc books nothing new.
+ * Phase 13: also reverses every payment allocation this invoice received —
+ * see `reversePurchaseInvoicePaymentAllocations` — restoring the vendor's
+ * correct AP position and returning any consumed unapplied cash to the
+ * unapplied pool. Independently idempotent from the GL reversal above; a
+ * repeat void call (or two concurrent ones) produces exactly one of each.
  */
-export async function voidPurchaseInvoice(docId: number, userId?: string): Promise<{ status: PurchaseStatus; reversalId: number | null }> {
-  const d = (await pgQuery<{ status: string; gl_entry_id: number | null }>(`SELECT status, gl_entry_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
+export async function voidPurchaseInvoice(docId: number, userId?: string): Promise<{ status: PurchaseStatus; reversalId: number | null; paymentsReversed: number }> {
+  const d = (await pgQuery<{ status: string; gl_entry_id: number | null; vendor_id: number | null }>(`SELECT status, gl_entry_id, vendor_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
   let reversalId: number | null = null
   if (d.gl_entry_id) reversalId = (await reverseEntry(Number(d.gl_entry_id), userId)).reversalId
+  let paymentsReversed = 0
+  if (d.vendor_id != null) {
+    paymentsReversed = (await reversePurchaseInvoicePaymentAllocations(docId, userId)).totalReversed
+  }
   await pgQuery(`UPDATE purchase_documents SET status='void', updated_at=${NOW} WHERE id=$1`, [docId])
-  return { status: 'void', reversalId }
+  return { status: 'void', reversalId, paymentsReversed }
 }
 
 // ── Analytics ────────────────────────────────────────────────────────────────
