@@ -12,12 +12,16 @@ import { executiveOverview } from '@/lib/admin/executiveOverview'
 import { opsSnapshot } from '@/lib/ops/snapshot'
 import { widgetById, widgetTtl } from '@/lib/admin/widgets'
 
+// Every human-readable label carries a bilingual pair (en + Fa) — the same
+// convention CMS content tables use — so the client (which already has the
+// admin locale) renders the right language instead of a server-hardcoded
+// English string leaking into a Persian UI.
 export type WidgetPayload =
-  | { kind: 'kpi'; value: number; unit?: string; sub?: string }
+  | { kind: 'kpi'; value: number; unit?: string; sub?: string; subFa?: string }
   | { kind: 'chart'; points: { x: string; y: number }[] }
-  | { kind: 'table'; columns: string[]; rows: (string | number)[][] }
-  | { kind: 'list'; items: { level: string; text: string }[] }
-  | { kind: 'ops'; metrics: { label: string; value: string; pct?: number }[] }
+  | { kind: 'table'; columns: { en: string; fa: string }[]; rows: (string | number)[][] }
+  | { kind: 'list'; items: { level: string; text: string; textFa: string }[] }
+  | { kind: 'ops'; metrics: { label: string; labelFa: string; value: string; pct?: number }[] }
   | { kind: 'empty' }
   | { kind: 'error'; message: string }
 
@@ -68,11 +72,11 @@ async function onePayload(id: string, exec: Exec | null, ops: Ops | null): Promi
     case 'kpi_net_income': return exec?.finance ? { kind: 'kpi', value: exec.finance.netIncome, unit: '$' } : { kind: 'empty' }
     case 'kpi_cash': return exec?.finance ? { kind: 'kpi', value: exec.finance.cash, unit: '$' } : { kind: 'empty' }
     case 'kpi_revenue': return exec?.finance ? { kind: 'kpi', value: exec.finance.revenue, unit: '$' } : { kind: 'empty' }
-    case 'kpi_inventory_value': return exec?.inventory ? { kind: 'kpi', value: exec.inventory.totalValue, unit: '$', sub: `${exec.inventory.outOfStock} out of stock` } : { kind: 'empty' }
-    case 'kpi_active_assets': return exec?.assets ? { kind: 'kpi', value: exec.assets.active, sub: `${exec.assets.total} total` } : { kind: 'empty' }
-    case 'kpi_crm_pipeline': return exec?.crm ? { kind: 'kpi', value: exec.crm.openValue, unit: '$', sub: `${exec.crm.winRate}% win rate` } : { kind: 'empty' }
+    case 'kpi_inventory_value': return exec?.inventory ? { kind: 'kpi', value: exec.inventory.totalValue, unit: '$', sub: `${exec.inventory.outOfStock} out of stock`, subFa: `${exec.inventory.outOfStock} کالا ناموجود` } : { kind: 'empty' }
+    case 'kpi_active_assets': return exec?.assets ? { kind: 'kpi', value: exec.assets.active, sub: `${exec.assets.total} total`, subFa: `${exec.assets.total} مجموع` } : { kind: 'empty' }
+    case 'kpi_crm_pipeline': return exec?.crm ? { kind: 'kpi', value: exec.crm.openValue, unit: '$', sub: `${exec.crm.winRate}% win rate`, subFa: `${exec.crm.winRate}% نرخ برد` } : { kind: 'empty' }
     case 'kpi_crm_leads': return exec?.crm ? { kind: 'kpi', value: exec.crm.count } : { kind: 'empty' }
-    case 'kpi_ai_calls': return exec?.ai ? { kind: 'kpi', value: exec.ai.totalCalls, sub: `${exec.ai.successRate}% success` } : { kind: 'empty' }
+    case 'kpi_ai_calls': return exec?.ai ? { kind: 'kpi', value: exec.ai.totalCalls, sub: `${exec.ai.successRate}% success`, subFa: `${exec.ai.successRate}% موفق` } : { kind: 'empty' }
     case 'chart_ai_daily': {
       const daily = exec?.ai?.daily ?? []
       if (daily.length === 0) return { kind: 'empty' }
@@ -82,30 +86,31 @@ async function onePayload(id: string, exec: Exec | null, ops: Ops | null): Promi
       const rows = (exec?.activity ?? []) as Record<string, unknown>[]
       if (rows.length === 0) return { kind: 'empty' }
       return {
-        kind: 'table', columns: ['When', 'User', 'Action', 'Resource'],
+        kind: 'table',
+        columns: [{ en: 'When', fa: 'زمان' }, { en: 'User', fa: 'کاربر' }, { en: 'Action', fa: 'عملیات' }, { en: 'Resource', fa: 'منبع' }],
         rows: rows.slice(0, 8).map(r => [String(r.createdAt ?? ''), String(r.userEmail ?? '—'), String(r.action ?? ''), `${r.resource ?? ''}${r.resourceId ? `:${r.resourceId}` : ''}`]),
       }
     }
     case 'list_alerts': {
       const alerts = exec?.alerts ?? []
       if (alerts.length === 0) return { kind: 'empty' }
-      return { kind: 'list', items: alerts.map(a => ({ level: a.level, text: a.message })) }
+      return { kind: 'list', items: alerts.map(a => ({ level: a.level, text: a.message, textFa: a.messageFa })) }
     }
     case 'ops_system_health': {
       if (!ops) return { kind: 'empty' }
       const m = ops.metrics
       return {
         kind: 'ops', metrics: [
-          { label: 'CPU', value: `${m.cpuLoadPct}%`, pct: m.cpuLoadPct },
-          { label: 'Memory', value: `${m.memPct}%`, pct: m.memPct },
-          { label: 'Availability', value: `${ops.sre.availabilityPct}%`, pct: ops.sre.availabilityPct },
-          { label: 'Error rate', value: `${m.errorRatePct}%`, pct: m.errorRatePct },
+          { label: 'CPU', labelFa: 'پردازنده', value: `${m.cpuLoadPct}%`, pct: m.cpuLoadPct },
+          { label: 'Memory', labelFa: 'حافظه', value: `${m.memPct}%`, pct: m.memPct },
+          { label: 'Availability', labelFa: 'در دسترس‌بودن', value: `${ops.sre.availabilityPct}%`, pct: ops.sre.availabilityPct },
+          { label: 'Error rate', labelFa: 'نرخ خطا', value: `${m.errorRatePct}%`, pct: m.errorRatePct },
         ],
       }
     }
     case 'ops_subsystems': {
       if (!ops) return { kind: 'empty' }
-      return { kind: 'list', items: ops.subsystems.map(s => ({ level: s.status === 'healthy' ? 'ok' : s.status === 'warning' ? 'warning' : 'critical', text: `${s.name}` })) }
+      return { kind: 'list', items: ops.subsystems.map(s => ({ level: s.status === 'healthy' ? 'ok' : s.status === 'warning' ? 'warning' : 'critical', text: `${s.name}`, textFa: `${s.name}` })) }
     }
     case 'ops_backup': {
       const rows = (await pgQuery(
@@ -114,9 +119,9 @@ async function onePayload(id: string, exec: Exec | null, ops: Ops | null): Promi
       const by = Object.fromEntries(rows.map(r => [r.status, r.n]))
       const total = rows.reduce((s, r) => s + r.n, 0)
       return { kind: 'ops', metrics: [
-        { label: 'Total backups', value: String(total) },
-        { label: 'Success', value: String(by.success ?? 0) },
-        { label: 'Failed', value: String(by.failed ?? 0) },
+        { label: 'Total backups', labelFa: 'مجموع بکاپ‌ها', value: String(total) },
+        { label: 'Success', labelFa: 'موفق', value: String(by.success ?? 0) },
+        { label: 'Failed', labelFa: 'ناموفق', value: String(by.failed ?? 0) },
       ] }
     }
     default: return { kind: 'error', message: 'unknown widget' }

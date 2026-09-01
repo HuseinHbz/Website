@@ -46,6 +46,13 @@ function timeAgo(iso?: string | null): string {
   return `${Math.round(h / 24)} روز پیش`
 }
 const statusColor: Record<string, string> = { success: 'green', failed: 'red', invalid: 'red', started: 'yellow' }
+const statusLabel: Record<string, [string, string]> = {
+  success: ['Success', 'موفق'], failed: ['Failed', 'ناموفق'], invalid: ['Invalid', 'نامعتبر'], started: ['Running', 'در حال اجرا'],
+}
+function fmtStatus(status: string, locale: 'fa' | 'en'): string {
+  const pair = statusLabel[status]
+  return pair ? (locale === 'fa' ? pair[1] : pair[0]) : status
+}
 
 function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'ok' | 'warn' | 'bad' }) {
   const ring = tone === 'ok' ? 'border-success/40' : tone === 'warn' ? 'border-warning/40' : tone === 'bad' ? 'border-danger/40' : 'border-subtle'
@@ -143,7 +150,7 @@ export function BackupManager() {
               <h3 className="text-sm font-semibold text-text-primary">بکاپ‌گیری خودکار (زمان‌بند داخلی — بدون cron)</h3>
               {engine.latest && (
                 <Badge color={statusColor[engine.latest.status] ?? 'slate'}>
-                  آخرین: {engine.latest.trigger} · {engine.latest.status} · {timeAgo(engine.latest.started_at)}
+                  آخرین: {engine.latest.trigger} · {fmtStatus(engine.latest.status, locale)} · {timeAgo(engine.latest.started_at)}
                 </Badge>
               )}
             </div>
@@ -175,7 +182,7 @@ export function BackupManager() {
                   { key: 'version', labelEn: 'Version', labelFa: 'نسخه', render: b => <span className="font-mono text-text-secondary truncate max-w-[160px] inline-block" title={b.version}>{b.version}</span> },
                   { key: 'trigger', labelEn: 'Source', labelFa: 'منبع', type: 'enum', render: b => <span className="text-text-tertiary">{b.trigger}</span> },
                   { key: 'bucket', labelEn: 'Period', labelFa: 'دوره', type: 'enum', render: b => <span className="text-text-tertiary">{b.bucket ?? '—'}</span> },
-                  { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: b => <Badge color={statusColor[b.status] ?? 'slate'}>{b.status}</Badge> },
+                  { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', render: b => <Badge color={statusColor[b.status] ?? 'slate'}>{fmtStatus(b.status, locale)}</Badge> },
                   { key: 'verified', labelEn: 'Verified', labelFa: 'تأیید', type: 'boolean', value: b => !!b.verified, render: b => b.verified ? <span className="text-success">✓</span> : <span className="text-text-disabled">—</span> },
                   { key: 'size', labelEn: 'Size', labelFa: 'حجم', type: 'number', numeric: true, render: b => <span className="text-text-secondary">{fmtSize(b.size)}</span> },
                   { key: 'copies', labelEn: 'Copies', labelFa: 'نسخه‌ها', type: 'number', numeric: true, value: b => b.copies ? (JSON.parse(b.copies) as unknown[]).length : 0, render: b => <span className="text-text-tertiary">{b.copies ? (JSON.parse(b.copies) as unknown[]).length : 0}×</span> },

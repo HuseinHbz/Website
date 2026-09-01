@@ -15,7 +15,7 @@ interface InvK { totalProducts: number; totalOnHand: number; totalValue: number;
 interface AssetK { total: number; active: number; totalCost: number; totalBookValue: number; totalDepreciation: number; warrantyExpiring: number; warrantyExpired: number; openMaintenance: number }
 interface CrmK { total: number; count: number; openValue: number; wonValue: number; winRate: number; avgScore: number; byStatus: Record<string, number> }
 interface AiK { totalCalls: number; successRate: number; avgLatencyMs: number; totalTokens: number; failedCalls: number; thumbsUp: number; thumbsDown: number }
-interface Alert { level: 'critical' | 'warning'; module: string; message: string }
+interface Alert { level: 'critical' | 'warning'; module: string; message: string; messageFa: string }
 interface Activity { id: number; userEmail: string; action: string; resource: string; resourceId: string; createdAt: string }
 interface Overview { finance: FinanceK | null; inventory: InvK | null; assets: AssetK | null; crm: CrmK | null; ai: AiK | null; activity: Activity[]; alerts: Alert[]; generatedAt: string }
 interface Traffic { stats: { totalViews: number; weeklyViews: number; newContacts: number; newConsultations: number; publishedPosts: number; activeProjects: number }; dailyViews: { date: string; count: number }[]; topPages: { page: string; count: number }[] }
@@ -63,7 +63,7 @@ export function ExecutiveDashboard() {
         <div className="flex flex-wrap gap-2">
           {ov.alerts.map((al, i) => (
             <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs border ${al.level === 'critical' ? 'border-danger/40 bg-danger/10 text-danger-text' : 'border-warning/40 bg-warning/10 text-warning-text'}`}>
-              <span aria-hidden>{al.level === 'critical' ? '⛔' : '⚠️'}</span>{al.message}
+              <span aria-hidden>{al.level === 'critical' ? '⛔' : '⚠️'}</span>{locale === 'fa' ? al.messageFa : al.message}
             </div>
           ))}
         </div>

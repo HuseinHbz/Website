@@ -15,7 +15,12 @@ async function guard<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try { return await fn() } catch { return fallback }
 }
 
-export interface Alert { level: 'critical' | 'warning'; module: string; message: string }
+// Bilingual pair (message/messageFa) — the same en/fa-column convention the
+// CMS content tables already use — so every consumer (ExecutiveDashboard,
+// the Dashboard Engine's `list_alerts` widget) can pick the right language
+// client-side instead of rendering a hardcoded English string inside a
+// Persian UI.
+export interface Alert { level: 'critical' | 'warning'; module: string; message: string; messageFa: string }
 
 export async function executiveOverview() {
   const [finance, inventory, assets, crm, ai, activity] = await Promise.all([
@@ -43,15 +48,15 @@ export async function executiveOverview() {
   // Derive cross-module alerts.
   const alerts: Alert[] = []
   if (inventory) {
-    if (inventory.outOfStock > 0) alerts.push({ level: 'critical', module: 'inventory', message: `${inventory.outOfStock} product(s) out of stock` })
-    if (inventory.needReorder > 0) alerts.push({ level: 'warning', module: 'inventory', message: `${inventory.needReorder} product(s) below reorder point` })
+    if (inventory.outOfStock > 0) alerts.push({ level: 'critical', module: 'inventory', message: `${inventory.outOfStock} product(s) out of stock`, messageFa: `${inventory.outOfStock} کالا ناموجود است` })
+    if (inventory.needReorder > 0) alerts.push({ level: 'warning', module: 'inventory', message: `${inventory.needReorder} product(s) below reorder point`, messageFa: `${inventory.needReorder} کالا زیر نقطهٔ سفارش مجدد است` })
   }
   if (assets) {
-    if (assets.warrantyExpired > 0) alerts.push({ level: 'critical', module: 'assets', message: `${assets.warrantyExpired} asset warranty(ies) expired` })
-    if (assets.warrantyExpiring > 0) alerts.push({ level: 'warning', module: 'assets', message: `${assets.warrantyExpiring} asset warranty(ies) expiring soon` })
-    if (assets.openMaintenance > 0) alerts.push({ level: 'warning', module: 'assets', message: `${assets.openMaintenance} open maintenance task(s)` })
+    if (assets.warrantyExpired > 0) alerts.push({ level: 'critical', module: 'assets', message: `${assets.warrantyExpired} asset warranty(ies) expired`, messageFa: `گارانتی ${assets.warrantyExpired} دارایی منقضی شده است` })
+    if (assets.warrantyExpiring > 0) alerts.push({ level: 'warning', module: 'assets', message: `${assets.warrantyExpiring} asset warranty(ies) expiring soon`, messageFa: `گارانتی ${assets.warrantyExpiring} دارایی به‌زودی منقضی می‌شود` })
+    if (assets.openMaintenance > 0) alerts.push({ level: 'warning', module: 'assets', message: `${assets.openMaintenance} open maintenance task(s)`, messageFa: `${assets.openMaintenance} کار نگهداری باز وجود دارد` })
   }
-  if (ai && ai.failedCalls > 0) alerts.push({ level: 'warning', module: 'ai', message: `${ai.failedCalls} AI call(s) failed in 30 days` })
+  if (ai && ai.failedCalls > 0) alerts.push({ level: 'warning', module: 'ai', message: `${ai.failedCalls} AI call(s) failed in 30 days`, messageFa: `${ai.failedCalls} فراخوان هوش مصنوعی در ۳۰ روز اخیر ناموفق بوده است` })
 
   return { finance, inventory, assets, crm, ai, activity, alerts, generatedAt: new Date().toISOString() }
 }

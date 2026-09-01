@@ -15,11 +15,11 @@ interface WidgetConfig { refreshInterval?: number; warn?: number; critical?: num
 interface LayoutEntry { id: string; size: Size; config?: WidgetConfig }
 interface Available { id: string; titleEn: string; titleFa: string; category: string; size: Size; icon: string }
 type Payload =
-  | { kind: 'kpi'; value: number; unit?: string; sub?: string }
+  | { kind: 'kpi'; value: number; unit?: string; sub?: string; subFa?: string }
   | { kind: 'chart'; points: { x: string; y: number }[] }
-  | { kind: 'table'; columns: string[]; rows: (string | number)[][] }
-  | { kind: 'list'; items: { level: string; text: string }[] }
-  | { kind: 'ops'; metrics: { label: string; value: string; pct?: number }[] }
+  | { kind: 'table'; columns: { en: string; fa: string }[]; rows: (string | number)[][] }
+  | { kind: 'list'; items: { level: string; text: string; textFa: string }[] }
+  | { kind: 'ops'; metrics: { label: string; labelFa: string; value: string; pct?: number }[] }
   | { kind: 'empty' } | { kind: 'error'; message: string } | { kind: 'denied' }
 
 const SPAN: Record<Size, string> = { sm: 'md:col-span-1', md: 'md:col-span-2', lg: 'md:col-span-4' }
@@ -304,18 +304,21 @@ function WidgetBody({ payload, t, locale }: { payload: Payload | undefined; t: (
     case 'denied': return <p className="text-xs text-text-tertiary py-4">{t('dash_denied')}</p>
     case 'error': return <p className="text-xs text-danger-text py-4">{t('dash_error')}</p>
     case 'empty': return <p className="text-xs text-text-tertiary py-4">{t('dash_noData')}</p>
-    case 'kpi': return (
-      <div>
-        <p className="text-3xl font-bold text-text-primary tracking-tight">{fmt(payload.value, payload.unit)}</p>
-        {payload.sub && <p className="text-xs text-text-tertiary mt-1">{payload.sub}</p>}
-      </div>
-    )
+    case 'kpi': {
+      const sub = locale === 'fa' ? (payload.subFa ?? payload.sub) : payload.sub
+      return (
+        <div>
+          <p className="text-3xl font-bold text-text-primary tracking-tight">{fmt(payload.value, payload.unit)}</p>
+          {sub && <p className="text-xs text-text-tertiary mt-1">{sub}</p>}
+        </div>
+      )
+    }
     case 'chart': return <WidgetChart points={payload.points} locale={locale} />
     case 'ops': return (
       <div className="space-y-2">
         {payload.metrics.map(m => (
           <div key={m.label} className="flex items-center gap-2 text-sm">
-            <span className="w-28 shrink-0 text-text-secondary">{m.label}</span>
+            <span className="w-28 shrink-0 text-text-secondary">{locale === 'fa' ? m.labelFa : m.label}</span>
             {m.pct != null ? (
               <div className="flex-1 h-2 rounded bg-white/[0.05] overflow-hidden"><div className="h-full rounded bg-brand" style={{ width: `${Math.min(100, m.pct)}%` }} /></div>
             ) : <div className="flex-1" />}
@@ -329,7 +332,7 @@ function WidgetBody({ payload, t, locale }: { payload: Payload | undefined; t: (
         {payload.items.slice(0, 8).map((it, i) => (
           <li key={i} className="flex items-start gap-2 text-sm">
             <span className={`text-xs mt-0.5 ${LEVEL_COLOR[it.level] ?? 'text-text-tertiary'}`}>●</span>
-            <span className="text-text-secondary">{it.text}</span>
+            <span className="text-text-secondary">{locale === 'fa' ? it.textFa : it.text}</span>
           </li>
         ))}
       </ul>
@@ -337,7 +340,7 @@ function WidgetBody({ payload, t, locale }: { payload: Payload | undefined; t: (
     case 'table': return (
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
-          <thead><tr className="text-text-tertiary">{payload.columns.map(c => <th key={c} className="text-start font-medium py-1 pe-3">{c}</th>)}</tr></thead>
+          <thead><tr className="text-text-tertiary">{payload.columns.map(c => <th key={c.en} className="text-start font-medium py-1 pe-3">{locale === 'fa' ? c.fa : c.en}</th>)}</tr></thead>
           <tbody>{payload.rows.map((row, i) => <tr key={i} className="border-t border-border/40">{row.map((c, j) => <td key={j} className="py-1.5 pe-3 text-text-secondary truncate max-w-[160px]">{c}</td>)}</tr>)}</tbody>
         </table>
       </div>
