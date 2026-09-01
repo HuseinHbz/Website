@@ -34,7 +34,7 @@ import type { AdminUser } from '@/lib/admin/auth'
 import { canTransitionPayment, paymentGlLines, glBalanced, allocateReceipt, type PaymentType, type PaymentStatus, type GlLine } from './payments'
 import { createApprovalRequest } from '@/lib/erp/approvalData'
 import { nextNumber } from '@/lib/numbering/integrate'
-import { insertPostedEntry, accountIdByCode } from '@/lib/erp/glPosting'
+import { insertPostedEntry, accountIdByCode, reverseEntry } from '@/lib/erp/glPosting'
 import { runOnce } from '@/lib/api/idempotency'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -315,6 +315,120 @@ export async function consumeUnappliedForVendor(vendorId: number, userId: string
     }
     return { totalConsumed, details }
   })
+}
+
+// ── Phase 14: Treasury payment reversal ──────────────────────────────────────
+/**
+ * Phase 14: reverses a completed Treasury payment — the gap Phases 11-13
+ * explicitly documented as out of scope. Two independent reversal steps:
+ *
+ * 1. GL: reuses `reverseEntry(payment.gl_entry_id)` UNCHANGED (the exact
+ *    mechanism journal/invoice reversal already use — a real, balanced
+ *    reversing entry, idempotent, two-way linked via `reversal_of`/
+ *    `reversed_by`). Unlike Phase 12/13's subledger reclassifications, a
+ *    Treasury payment's own GL entry IS the cash movement itself, so
+ *    reversing it here genuinely needs a second real GL event (Dr Bank/Cr AP,
+ *    the mirror of the original Dr AP/Cr Bank) — not a no-GL-event subledger
+ *    trick.
+ *
+ * 2. Subledger: reverses every `purchase_payments` row still carrying this
+ *    payment's `gl_entry_id` — NOT just the rows `processPayment` originally
+ *    wrote. `gl_entry_id` is a persistent lineage tag that Phase 12
+ *    (`consumeUnappliedForVendor`) and Phase 13
+ *    (`reversePurchaseInvoicePaymentAllocations`) both deliberately carry
+ *    forward onto every row they create FROM a source row — a Phase-12
+ *    consumption pair and a Phase-13 void-restoration pair both inherit the
+ *    SAME gl_entry_id their source row already had. That means "every row
+ *    tagged with this payment's gl_entry_id" already IS the complete,
+ *    flattened picture of wherever this payment's money currently sits —
+ *    still unapplied, consumed into an invoice, or bounced back to unapplied
+ *    after that invoice was voided — with no separate graph to walk. Each
+ *    row gets an exact-negation reversal row (reference
+ *    `TRZPAY-REVERSE:<sourceRowId>`, same gl_entry_id, same document_id),
+ *    idempotent via the same `NOT EXISTS` pattern Phase 12/13 use. No
+ *    payment_orders column changes and no migration: `payment_orders` never
+ *    gained a `status='reversed'` value (its CHECK constraint is unchanged)
+ *    — a reversed payment's `status` stays `'completed'` (mirroring
+ *    `gl_journal_entries` keeping a reversed entry `status='posted'`, rule
+ *    11) and "has this payment been reversed?" is fully derivable from
+ *    `gl_journal_entries.reversed_by IS NOT NULL` for its own `gl_entry_id`
+ *    — no new field needed to represent it.
+ *
+ * Locks the SAME `treasury_ap_allocate:vendor:${vendorId}` advisory key
+ * Phases 11-13 already use (when a vendor is resolvable), so this can never
+ * interleave with a concurrent new Treasury payment, consumption run, or
+ * invoice void for the same vendor.
+ */
+export async function reversePayment(id: number, userId: string): Promise<{ reversalId: number; alreadyReversed: boolean; paymentAmount: number; ledgerRowsReversed: number }> {
+  const p = (await pgQuery<{ amount: number; status: string; gl_entry_id: number | null; party_ref: string | null }>(
+    `SELECT amount::float AS amount, status, gl_entry_id, party_ref FROM payment_orders WHERE id=$1`, [id]))[0]
+  if (!p) throw new Error('Payment not found')
+  if (p.status !== 'completed') throw new Error(`Only a completed payment can be reversed (is ${p.status})`)
+  if (!p.gl_entry_id) throw new Error('Payment has no posted GL entry to reverse')
+
+  const rev = await reverseEntry(p.gl_entry_id, userId)
+  const glEntryId = p.gl_entry_id
+  const vendorId = vendorIdFromPartyRef(p.party_ref)
+  const today = new Date().toISOString().slice(0, 10)
+
+  const reverseRows = async (query: TxQuery): Promise<number> => {
+    // Excludes rows that are THEMSELVES a reversal (reference LIKE
+    // 'TRZPAY-REVERSE:%') — without this, a reversal row (also tagged with
+    // the same glEntryId, by design) would be picked up as "still needing
+    // reversal" on the very next call and get reversed again, forever.
+    const rows = await query<{ id: number; document_id: number | null; amount: number }>(
+      `SELECT p.id, p.document_id, p.amount::float AS amount FROM purchase_payments p
+       WHERE p.gl_entry_id = $1
+         AND p.reference NOT LIKE 'TRZPAY-REVERSE:%'
+         AND NOT EXISTS (SELECT 1 FROM purchase_payments r WHERE r.reference = 'TRZPAY-REVERSE:'||p.id)
+       ORDER BY p.id`, [glEntryId])
+    if (rows.length === 0) return 0
+
+    const affectedInvoices = new Set<number>()
+    for (const row of rows) {
+      const amt = Math.round(Number(row.amount) * 100) / 100
+      await query(
+        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
+        [vendorId, row.document_id, today, -amt, `TRZPAY-REVERSE:${row.id}`, userId, glEntryId, `Reversed on Treasury payment #${id} reversal (source row #${row.id})`])
+      if (row.document_id != null) affectedInvoices.add(row.document_id)
+    }
+    // Recompute BOTH paid_total and status — a partial reversal (this
+    // payment was only one of several sources on the invoice) can drop
+    // paid_total below total without zeroing it, and leaving status stuck
+    // at 'paid' would hide the invoice from processPayment's/
+    // consumeUnappliedForVendor's own "WHERE status IN ('confirmed',
+    // 'partial')" open-invoice queries — a real defect caught live before
+    // this fix (Scenario C/I/L in verify-phase14-financial-controls.ts).
+    for (const invId of affectedInvoices) {
+      const row = (await query<{ s: number; total: number; status: string }>(
+        `SELECT COALESCE((SELECT SUM(amount) FROM purchase_payments WHERE document_id=$1),0)::float AS s, total::float AS total, status
+         FROM purchase_documents WHERE id=$1`, [invId]))[0]
+      const paid = Math.max(0, Math.round(Number(row.s) * 100) / 100)
+      // A voided invoice's status is a terminal, deliberate state (Phase 13)
+      // — a payment reversal must correct paid_total (kept in sync with the
+      // ledger everywhere else) but must NEVER silently un-void it back to
+      // confirmed/partial/paid as a side effect.
+      if (row.status === 'void') {
+        await query(`UPDATE purchase_documents SET paid_total=$2, updated_at=${NOW} WHERE id=$1`, [invId, paid])
+        continue
+      }
+      const status = paid <= 0 ? 'confirmed' : (paid + 0.001 >= Number(row.total) ? 'paid' : 'partial')
+      await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [invId, paid, status])
+    }
+    return rows.length
+  }
+
+  let ledgerRowsReversed = 0
+  if (vendorId != null) {
+    ledgerRowsReversed = await withTransaction(async query => {
+      await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_ap_allocate:vendor:${vendorId}`])
+      return reverseRows(query)
+    })
+  } else {
+    ledgerRowsReversed = await withTransaction(reverseRows)
+  }
+
+  return { reversalId: rev.reversalId, alreadyReversed: rev.alreadyReversed, paymentAmount: Number(p.amount), ledgerRowsReversed }
 }
 
 // ── Receipts (M5) ────────────────────────────────────────────────────────────
