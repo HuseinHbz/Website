@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Btn, PageHeader, Badge } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { faDigits } from '@/lib/admin/chartRtl'
 
 type Risk = 'low' | 'medium' | 'high' | 'critical'
 interface Soc {
@@ -29,6 +30,7 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: 'ok
 
 export function SocDashboard() {
   const t = useT()
+  const locale = useAdminLocale()
   const [data, setData] = useState<Soc | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -45,7 +47,7 @@ export function SocDashboard() {
     <>
       <PageHeader
         title={t('soc_title')}
-        subtitle={data ? `${t('soc_last')} ${data.windowHours}h · ${t('soc_updated')} ${new Date(data.generatedAt).toLocaleTimeString()}` : undefined}
+        subtitle={data ? `${t('soc_last')} ${locale === 'fa' ? faDigits(data.windowHours) : data.windowHours}h · ${t('soc_updated')} ${locale === 'fa' ? faDigits(new Date(data.generatedAt).toLocaleTimeString('en-US')) : new Date(data.generatedAt).toLocaleTimeString()}` : undefined}
         action={<Btn size="sm" variant="secondary" onClick={load} disabled={loading}>{t('soc_refresh')}</Btn>}
       />
 
@@ -106,7 +108,7 @@ export function SocDashboard() {
                 <div className="space-y-1.5 max-h-72 overflow-y-auto">
                   {data.timeline.map((e, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs">
-                      <span className="text-text-disabled shrink-0 w-14">{new Date(e.ts).toLocaleTimeString()}</span>
+                      <span className="text-text-disabled shrink-0 w-14">{locale === 'fa' ? faDigits(new Date(e.ts).toLocaleTimeString('en-US')) : new Date(e.ts).toLocaleTimeString()}</span>
                       <Badge color={e.level === 'error' ? 'red' : e.level === 'warn' ? 'yellow' : 'slate'}>{e.source}</Badge>
                       <span className={`flex-1 break-all ${e.level === 'error' ? 'text-danger' : 'text-text-secondary'}`}>{e.message}</span>
                     </div>

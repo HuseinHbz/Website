@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { PageHeader, Badge } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { faDigits } from '@/lib/admin/chartRtl'
 import { DataTable } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -72,7 +73,7 @@ export function OperationsCenter() {
 
   return (
     <div>
-      <PageHeader title={t('operationsTitle')} subtitle={updated ? `Last updated: ${updated.toLocaleTimeString()}` : t('operationsTitle')} />
+      <PageHeader title={t('operationsTitle')} subtitle={updated ? `${t('soc_updated')} ${opsLocale === 'fa' ? faDigits(updated.toLocaleTimeString('en-US')) : updated.toLocaleTimeString()}` : t('operationsTitle')} />
 
       <div className="flex gap-2 mb-6 flex-wrap items-center">
         {TABS.map((x) => (
@@ -168,7 +169,7 @@ export function OperationsCenter() {
         <DataTable
           tableId="ops-recent-errors"
           columns={[
-            { key: 'ts', labelEn: 'Time', labelFa: 'زمان', type: 'date', render: e => <span className="text-text-tertiary font-mono text-xs whitespace-nowrap">{new Date(e.ts).toLocaleTimeString()}</span> },
+            { key: 'ts', labelEn: 'Time', labelFa: 'زمان', type: 'date', render: e => <span className="text-text-tertiary font-mono text-xs whitespace-nowrap">{opsLocale === 'fa' ? faDigits(new Date(e.ts).toLocaleTimeString('en-US')) : new Date(e.ts).toLocaleTimeString()}</span> },
             { key: 'source', labelEn: 'Source', labelFa: 'منبع', type: 'enum', render: e => <Badge color="red">{e.source}</Badge> },
             { key: 'service', labelEn: 'Service', labelFa: 'سرویس', type: 'enum', render: e => <span className="text-text-tertiary text-xs">{e.service}</span> },
             { key: 'message', labelEn: 'Message', labelFa: 'پیام', render: e => <span className="text-text-primary font-mono text-xs break-all">{e.message}</span> },

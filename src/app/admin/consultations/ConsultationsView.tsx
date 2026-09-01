@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, PageHeader, Badge, Modal, Btn, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -43,7 +44,7 @@ export function ConsultationsView() {
     { key: 'type', labelEn: 'Type', labelFa: t('type'), type: 'enum', render: c => <Badge>{c.type}</Badge> },
     { key: 'budget', labelEn: 'Budget', labelFa: t('budget'), render: c => <span className="text-text-tertiary">{c.budget || '—'}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['new', 'scheduled', 'completed', 'cancelled'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={STATUS_COLOR[c.status]}>{statusLabel[c.status] || c.status}</Badge> },
-    { key: 'createdAt', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</span> },
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-xs text-text-disabled">{formatDateTime(c.createdAt, locale)}</span> },
   ]
   const rowActions: RowAction<Consult>[] = [{ id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => del(c.id) }]
 

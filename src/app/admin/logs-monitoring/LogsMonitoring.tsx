@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card, Btn, Badge, PageHeader, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
+import { faDigits } from '@/lib/admin/chartRtl'
 import { DataTable } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -34,9 +35,11 @@ const levelClass: Record<Level, string> = {
 }
 const levelBadge: Record<Level, string> = { debug: 'slate', info: 'blue', warn: 'yellow', error: 'red' }
 
-function fmtTime(iso: string): string {
+function fmtTime(iso: string, fa?: boolean): string {
   const d = new Date(iso)
-  return isNaN(d.getTime()) ? iso : d.toLocaleTimeString(undefined, { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0')
+  if (isNaN(d.getTime())) return iso
+  const s = d.toLocaleTimeString('en-US', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0')
+  return fa ? faDigits(s) : s
 }
 function fmtBytes(n: number): string {
   if (!n) return '0 B'
@@ -276,7 +279,7 @@ export function LogsMonitoring() {
               { key: 'level', labelEn: 'Level', labelFa: 'سطح', type: 'enum', render: g => <Badge color={levelBadge[g.level]}>{g.level}</Badge> },
               { key: 'source', labelEn: 'Source', labelFa: 'منبع', type: 'enum', render: g => <span className="text-text-tertiary">{g.source}</span> },
               { key: 'message', labelEn: 'Message', labelFa: 'پیام', render: g => <span className={`font-mono ${levelClass[g.level]}`}>{g.message}</span> },
-              { key: 'lastTs', labelEn: 'Last seen', labelFa: 'آخرین', type: 'date', render: g => <span className="text-text-tertiary">{fmtTime(g.lastTs)}</span> },
+              { key: 'lastTs', labelEn: 'Last seen', labelFa: 'آخرین', type: 'date', render: g => <span className="text-text-tertiary">{fmtTime(g.lastTs, logsLocale === 'fa')}</span> },
             ] as Column<Group>[]}
             rows={groups}
             locale={logsLocale}
@@ -292,7 +295,7 @@ export function LogsMonitoring() {
               <p className="text-text-tertiary p-4">{mode === 'live' ? 'Waiting for log events…' : 'No logs match the filters.'}</p>
             ) : rows.map((e, i) => (
               <div key={e.id ?? `${e.ts}-${i}`} className={`flex gap-2 py-0.5 px-1 ${e.level === 'error' ? 'bg-danger/5' : ''}`}>
-                <span className="text-text-disabled shrink-0 w-24">{fmtTime(e.ts)}</span>
+                <span className="text-text-disabled shrink-0 w-24">{fmtTime(e.ts, logsLocale === 'fa')}</span>
                 <span className={`shrink-0 w-12 uppercase font-semibold ${levelClass[e.level]}`}>{e.level}</span>
                 <span className="text-brand shrink-0 w-28 truncate" title={`${e.source}/${e.service}`}>{e.source}</span>
                 <span className={`flex-1 break-all ${e.level === 'error' ? 'text-danger' : 'text-text-primary'}`}>

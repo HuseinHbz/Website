@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 import { SECTION_TYPES, SECTION_CATEGORIES, SECTION_TYPE_MAP, type SectionTypeId } from '@/lib/sectionTypes'
@@ -223,7 +224,7 @@ export function SectionsManager() {
             { key: 'theme', labelEn: 'Theme', labelFa: t('theme'), type: 'enum', render: s => <span className="text-xs text-text-secondary">{s.theme}</span> },
             { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['draft', 'published', 'archived'].map(x => ({ value: x, labelEn: x, labelFa: x })), render: s => <div className="relative group"><Badge color={STATUS_COLOR[s.status] || 'slate'}>{s.status}</Badge><div className="absolute left-0 top-6 hidden group-hover:flex flex-col gap-1 bg-surface-2 border border-border rounded-lg p-2 z-10 shadow-xl">{(['draft', 'published', 'archived'] as const).filter((st) => st !== s.status).map((st) => (<button key={st} onClick={() => changeStatus(s, st)} className="text-xs text-left px-2 py-1 rounded hover:bg-surface-2 text-text-primary whitespace-nowrap">→ {st}</button>))}</div></div> },
             { key: 'version', labelEn: 'Version', labelFa: t('version'), type: 'number', numeric: true, render: s => <span className="text-xs text-text-tertiary">v{s.version}</span> },
-            { key: 'updatedAt', labelEn: 'Updated', labelFa: t('updated'), type: 'date', render: s => <span className="text-xs text-text-tertiary">{new Date(s.updatedAt).toLocaleDateString()}</span> },
+            { key: 'updatedAt', labelEn: 'Updated', labelFa: t('updated'), type: 'date', render: s => <span className="text-xs text-text-tertiary">{formatDateTime(s.updatedAt, locale)}</span> },
           ] as Column<Section>[]}
           rows={filtered}
           locale={locale}
@@ -372,7 +373,7 @@ export function SectionsManager() {
                   <div key={v.version} className="bg-background border border-border rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-text-primary">Version {v.version}</span>
-                      <span className="text-xs text-text-tertiary">{new Date(v.createdAt).toLocaleString()}</span>
+                      <span className="text-xs text-text-tertiary">{formatDateTime(v.createdAt, locale)}</span>
                     </div>
                     <div className="text-xs text-text-secondary">
                       <span className="text-brand">{snap.titleEn || 'Untitled'}</span>

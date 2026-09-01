@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 import { SECTION_TYPE_MAP, type SectionTypeId } from '@/lib/sectionTypes'
@@ -221,8 +222,8 @@ export function PagesManager() {
             { key: 'slug', labelEn: 'Slug', labelFa: 'اسلاگ', render: p => <span className="text-xs text-brand font-mono">/{p.slug}</span> },
             { key: 'layout', labelEn: 'Layout', labelFa: 'چیدمان', type: 'enum', render: p => <span className="text-xs text-text-secondary">{p.layout}</span> },
             { key: 'status', labelEn: 'Status', labelFa: 'وضعیت', type: 'enum', options: ['draft', 'published', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: p => <Badge color={STATUS_COLOR[p.status] || 'slate'}>{p.status}</Badge> },
-            { key: 'publishedAt', labelEn: 'Published', labelFa: 'انتشار', type: 'date', render: p => <span className="text-xs text-text-tertiary">{p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}</span> },
-            { key: 'updatedAt', labelEn: 'Updated', labelFa: 'به‌روزرسانی', type: 'date', render: p => <span className="text-xs text-text-tertiary">{new Date(p.updatedAt).toLocaleDateString()}</span> },
+            { key: 'publishedAt', labelEn: 'Published', labelFa: 'انتشار', type: 'date', render: p => <span className="text-xs text-text-tertiary">{p.publishedAt ? formatDateTime(p.publishedAt, locale) : '—'}</span> },
+            { key: 'updatedAt', labelEn: 'Updated', labelFa: 'به‌روزرسانی', type: 'date', render: p => <span className="text-xs text-text-tertiary">{formatDateTime(p.updatedAt, locale)}</span> },
           ] as Column<PageRow>[]}
           rows={pages}
           locale={locale}

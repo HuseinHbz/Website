@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Btn, PageHeader, Badge, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 
 type MediaFile = { id: number; filename: string; originalName: string; mimeType: string; size: number; url: string; folder: string; alt: string; uploadedAt: string }
 
@@ -44,6 +45,7 @@ export function MediaManager() {
   const [selected, setSelected] = useState<MediaFile | null>(null)
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
   const t = useT()
+  const locale = useAdminLocale()
   const { toast, ToastContainer } = useToast()
 
   async function load() {
@@ -202,9 +204,9 @@ export function MediaManager() {
               )}
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between"><span className="text-text-tertiary">{t('type')}</span><Badge>{selected.mimeType.split('/')[1]}</Badge></div>
-                <div className="flex justify-between"><span className="text-text-tertiary">Size</span><span className="text-text-primary">{formatBytes(selected.size)}</span></div>
-                <div className="flex justify-between"><span className="text-text-tertiary">Folder</span><span className="text-text-primary">{selected.folder}</span></div>
-                <div className="flex justify-between"><span className="text-text-tertiary">Date</span><span className="text-text-primary">{new Date(selected.uploadedAt).toLocaleDateString()}</span></div>
+                <div className="flex justify-between"><span className="text-text-tertiary">{t('fileSize')}</span><span className="text-text-primary">{formatBytes(selected.size)}</span></div>
+                <div className="flex justify-between"><span className="text-text-tertiary">{t('folder')}</span><span className="text-text-primary">{selected.folder}</span></div>
+                <div className="flex justify-between"><span className="text-text-tertiary">{t('date')}</span><span className="text-text-primary">{formatDateTime(selected.uploadedAt, locale)}</span></div>
               </div>
               <div className="space-y-1">
                 <p className="text-3xs text-text-tertiary font-medium">URL</p>

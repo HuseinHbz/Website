@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, PageHeader, Badge, Modal, Btn, Select, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -45,7 +46,7 @@ export function ContactsView() {
     { key: 'company', labelEn: 'Company', labelFa: t('company'), render: c => <span className="text-text-tertiary">{c.company || '—'}</span> },
     { key: 'subject', labelEn: 'Subject', labelFa: t('subject'), render: c => <span className="text-text-secondary">{c.subject || '—'}</span> },
     { key: 'status', labelEn: 'Status', labelFa: t('status'), type: 'enum', options: ['new', 'read', 'replied', 'archived'].map(s => ({ value: s, labelEn: s, labelFa: s })), render: c => <Badge color={STATUS_COLOR[c.status]}>{t(`status${c.status.charAt(0).toUpperCase() + c.status.slice(1)}`) || c.status}</Badge> },
-    { key: 'createdAt', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-xs text-text-disabled">{new Date(c.createdAt).toLocaleDateString()}</span> },
+    { key: 'createdAt', labelEn: 'Date', labelFa: t('date'), type: 'date', render: c => <span className="text-xs text-text-disabled">{formatDateTime(c.createdAt, locale)}</span> },
   ]
   const rowActions: RowAction<Contact>[] = [
     { id: 'del', labelEn: 'Delete', labelFa: t('delete'), icon: '🗑', danger: true, onClick: c => del(c.id) },
@@ -80,7 +81,7 @@ export function ContactsView() {
               <div><p className="text-text-tertiary text-xs mb-1">{t('phone')}</p><p className="text-text-primary">{selected.phone || '—'}</p></div>
               <div><p className="text-text-tertiary text-xs mb-1">{t('company')}</p><p className="text-text-primary">{selected.company || '—'}</p></div>
               <div><p className="text-text-tertiary text-xs mb-1">{t('subject')}</p><p className="text-text-primary">{selected.subject || '—'}</p></div>
-              <div><p className="text-text-tertiary text-xs mb-1">{t('date')}</p><p className="text-text-primary">{new Date(selected.createdAt).toLocaleString()}</p></div>
+              <div><p className="text-text-tertiary text-xs mb-1">{t('date')}</p><p className="text-text-primary">{formatDateTime(selected.createdAt, locale)}</p></div>
             </div>
             <div>
               <p className="text-text-tertiary text-xs mb-1">{t('message')}</p>
