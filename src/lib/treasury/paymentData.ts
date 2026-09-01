@@ -35,6 +35,7 @@ import { canTransitionPayment, paymentGlLines, glBalanced, allocateReceipt, type
 import { createApprovalRequest } from '@/lib/erp/approvalData'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { insertPostedEntry, accountIdByCode, reverseEntry } from '@/lib/erp/glPosting'
+import { invoiceStatus } from '@/lib/erp/sales'
 import { runOnce } from '@/lib/api/idempotency'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -436,12 +437,31 @@ export interface ReceiptInput { receiptType?: string; customerId?: number; amoun
 
 /**
  * Record a customer receipt: allocate across open invoices (oldest-first),
- * write the real sales_payments row (the AR subledger's own record — reused,
- * never a parallel AR ledger), post the GL, and catalog the receipt. The
- * whole sequence is one transaction locked per customer id, closing both a
- * mid-sequence orphan-write risk and a real double-allocation race (two
- * concurrent receipts for the same customer both reading the same "open"
- * invoice balances and both allocating against them).
+ * write real PER-ALLOCATION sales_payments rows (the AR subledger's own
+ * record — reused, never a parallel AR ledger), post the GL, and catalog
+ * the receipt. The whole sequence is one transaction locked per customer
+ * id, closing both a mid-sequence orphan-write risk and a real double-
+ * allocation race (two concurrent receipts for the same customer both
+ * reading the same "open" invoice balances and both allocating against
+ * them).
+ *
+ * Phase 16: previously wrote exactly ONE opaque sales_payments row
+ * (customer_id, amount, date only — no document_id, no reference) per
+ * receipt, with the actual per-invoice breakdown recorded ONLY as a JSON
+ * blob on receipt_transactions.allocations that nothing else could query.
+ * This meant `customer360Data`'s own per-invoice `SUM(amount) FROM
+ * sales_payments WHERE document_id=d.id` was silently wrong (always 0) for
+ * any invoice paid through a Treasury receipt — a real, live, already-
+ * broken consumer, not a hypothetical one. Now mirrors the AP side's
+ * `processPayment` design (Phase 10/11) exactly: one sales_payments row per
+ * invoice allocation (document_id set, reference `TRZRCP-<receiptId>`)
+ * plus one document_id=NULL row for any advance/unapplied remainder — the
+ * SAME shape `purchase_payments` already uses, making a future customer-
+ * side unapplied-consumption/reversal mechanism representable without a
+ * further schema change. Every row is stamped with the SAME gl_entry_id
+ * this receipt posts, exactly like the AP side, so
+ * `postSalesPaymentToGl` (gated on `gl_entry_id IS NULL`) never re-posts a
+ * duplicate GL entry for any of them.
  */
 export async function createReceipt(input: ReceiptInput, userId: string): Promise<{ id: number; allocations: { invoiceId: number; amount: number }[]; advance: number; glEntryId: number }> {
   const date = input.date ?? new Date().toISOString().slice(0, 10)
@@ -452,33 +472,111 @@ export async function createReceipt(input: ReceiptInput, userId: string): Promis
     // not-yet-paid invoices; a full allocation marks it paid, a partial one partial.
     let allocations: { invoiceId: number; amount: number }[] = []
     let advance = input.amount
-    let paymentId: number | null = null
+    const openById = new Map<number, number>()
     if (input.customerId) {
       const invs = await query<{ id: number; open: number }>(
         `SELECT id, total::float AS open FROM sales_documents WHERE customer_id=$1 AND doc_type='invoice' AND status IN ('sent','confirmed','partial') ${input.invoiceIds?.length ? 'AND id = ANY($2)' : ''} ORDER BY date`,
         input.invoiceIds?.length ? [input.customerId, input.invoiceIds] : [input.customerId])
       const res = allocateReceipt(input.amount, invs.map(i => ({ id: i.id, open: Number(i.open) })))
       allocations = res.allocations; advance = res.advance
-      const openById = new Map(invs.map(i => [i.id, Number(i.open)]))
-      for (const a of allocations) await query(`UPDATE sales_documents SET status = CASE WHEN $2 >= $3 THEN 'paid' ELSE 'partial' END WHERE id=$1`, [a.invoiceId, a.amount, openById.get(a.invoiceId) ?? a.amount])
-      // The receipt IS a real AR payment — record it in sales_payments (the
-      // one AR subledger table; never a parallel ledger).
-      const pay = (await query<{ id: number }>(`INSERT INTO sales_payments (customer_id, amount, date) VALUES ($1,$2,$3) RETURNING id`, [input.customerId, input.amount, date]))[0]
-      paymentId = pay.id
+      for (const i of invs) openById.set(i.id, Number(i.open))
     }
-    const glId = await postGl(query, paymentGlLines('customer_receipt', input.amount), 'Customer receipt', `TRZRCP-${Date.now()}`, date, userId)
-    // Stamp the SAME gl_entry_id onto the sales_payments row this receipt
-    // created — without this, Phase 7's postSalesPaymentToGl (gated on
-    // gl_entry_id IS NULL) would later post a SECOND, duplicate GL entry
-    // for money already booked here.
-    if (paymentId) await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, glId])
     const number = await nextNumber('receipt', { module: 'treasury', userId, legacyPrefix: 'RCP' }).catch(() => `RCP-${Date.now().toString(36)}`)
+    // Insert the receipt row FIRST (no gl_entry_id yet) purely to mint a
+    // stable id — used as the reference tag for every sales_payments row
+    // this receipt writes, exactly how Treasury's supplier-payment side
+    // uses `TRZPAY-${paymentOrderId}`.
     const r = (await query<{ id: number }>(
-      `INSERT INTO receipt_transactions (receipt_no, receipt_type, customer_id, amount, currency, bank_account_id, date, allocations, advance, gl_entry_id, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-      [number, input.receiptType ?? 'customer_receipt', input.customerId ?? null, input.amount, input.currency ?? 'IRR', input.bankAccountId ?? null, date, JSON.stringify(allocations), advance, glId, userId]))[0]
+      `INSERT INTO receipt_transactions (receipt_no, receipt_type, customer_id, amount, currency, bank_account_id, date, allocations, advance, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      [number, input.receiptType ?? 'customer_receipt', input.customerId ?? null, input.amount, input.currency ?? 'IRR', input.bankAccountId ?? null, date, JSON.stringify(allocations), advance, userId]))[0]
+
+    const glId = await postGl(query, paymentGlLines('customer_receipt', input.amount), 'Customer receipt', `TRZRCP-${r.id}`, date, userId)
+    await query(`UPDATE receipt_transactions SET gl_entry_id=$2 WHERE id=$1`, [r.id, glId])
+
+    if (input.customerId) {
+      for (const a of allocations) {
+        await query(`UPDATE sales_documents SET status = CASE WHEN $2 >= $3 THEN 'paid' ELSE 'partial' END WHERE id=$1`, [a.invoiceId, a.amount, openById.get(a.invoiceId) ?? a.amount])
+        await query(
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,${NOW})`,
+          [input.customerId, a.invoiceId, date, a.amount, `TRZRCP-${r.id}`, userId, glId])
+      }
+      if (advance > 0.001) {
+        await query(
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by, gl_entry_id, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
+          [input.customerId, date, advance, `TRZRCP-${r.id}`, 'Unapplied customer receipt (exceeds open AR at receipt time)', userId, glId])
+      }
+    }
     return { id: r.id, allocations, advance, glEntryId: glId }
   })
+}
+
+// ── Phase 16: customer receipt reversal ──────────────────────────────────────
+/**
+ * Reverses a completed Treasury customer receipt — the AR-side mirror of
+ * Phase 14's `reversePayment`. Two independent, reused steps:
+ *
+ * 1. GL: `reverseEntry(receipt.gl_entry_id)`, verbatim — the receipt's own
+ *    entry IS the cash movement (Dr Bank/Cr AR), so reversing it genuinely
+ *    needs a real second GL event (the mirror, Dr AR/Cr Bank).
+ * 2. Subledger: reverses every `sales_payments` row still carrying this
+ *    receipt's `gl_entry_id` (every allocation row AND any advance row —
+ *    all stamped with the SAME gl_entry_id by `createReceipt`, above) with
+ *    an exact-negation row (`reference='TRZRCP-REVERSE:<sourceRowId>'`),
+ *    excluding rows that are themselves already a reversal — the identical
+ *    self-reversal-loop guard Phase 14 needed for the AP side. Recomputes
+ *    each affected invoice's status from `invoiceStatus` (the canonical
+ *    sales-side function, mirroring `purchaseInvoiceStatus`).
+ *
+ * Locked on `treasury_receipt_customer:${customerId}` — the SAME domain
+ * `createReceipt` already uses — so this can never interleave with a new
+ * receipt for the same customer.
+ */
+export async function reverseCustomerReceipt(receiptId: number, userId: string): Promise<{ reversalId: number | null; alreadyReversed: boolean; amountReversed: number }> {
+  const r = (await pgQuery<{ customer_id: number | null; gl_entry_id: number | null }>(
+    `SELECT customer_id, gl_entry_id FROM receipt_transactions WHERE id=$1`, [receiptId]))[0]
+  if (!r) throw new Error('Receipt not found')
+  if (!r.gl_entry_id) throw new Error('Receipt has no posted GL entry to reverse')
+
+  const rev = await reverseEntry(r.gl_entry_id, userId)
+  const glEntryId = r.gl_entry_id
+  const customerId = r.customer_id
+  const today = new Date().toISOString().slice(0, 10)
+  const revReference = `TRZRCP-REVERSE:`
+
+  const amountReversed = await withTransaction(async query => {
+    if (customerId != null) await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_receipt_customer:${customerId}`])
+    const rows = await query<{ id: number; document_id: number | null; amount: number; customer_id: number }>(
+      `SELECT p.id, p.document_id, p.amount::float AS amount, p.customer_id FROM sales_payments p
+       WHERE p.gl_entry_id = $1
+         AND p.reference NOT LIKE 'TRZRCP-REVERSE:%'
+         AND NOT EXISTS (SELECT 1 FROM sales_payments x WHERE x.reference = $2||p.id)
+       ORDER BY p.id`, [glEntryId, revReference])
+    if (rows.length === 0) return 0
+
+    let total = 0
+    const affectedInvoices = new Set<number>()
+    for (const row of rows) {
+      const amt = Math.round(Number(row.amount) * 100) / 100
+      await query(
+        `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
+        [row.customer_id, row.document_id, today, -amt, `${revReference}${row.id}`, userId, glEntryId, `Reversed on receipt #${receiptId} reversal (source payment #${row.id})`])
+      total = Math.round((total + Math.abs(amt)) * 100) / 100
+      if (row.document_id != null) affectedInvoices.add(row.document_id)
+    }
+    for (const invId of affectedInvoices) {
+      const inv = (await query<{ s: number; total: number; status: string }>(
+        `SELECT COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=$1),0)::float AS s, total::float AS total, status
+         FROM sales_documents WHERE id=$1`, [invId]))[0]
+      const paid = Math.max(0, Math.round(Number(inv.s) * 100) / 100)
+      if (inv.status !== 'void') {
+        await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [invId, invoiceStatus(Number(inv.total), paid)])
+      }
+    }
+    return total
+  })
+
+  return { reversalId: rev.reversalId, alreadyReversed: rev.alreadyReversed, amountReversed }
 }
 
 export async function listReceipts() {

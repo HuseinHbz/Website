@@ -41,6 +41,7 @@ const SUITES = [
   { name: 'Phase 13 purchase invoice cancellation / payment reversal', script: 'verify-phase13-financial-controls.ts', db: 'rg_p13' },
   { name: 'Phase 14 treasury payment reversal', script: 'verify-phase14-financial-controls.ts', db: 'rg_p14' },
   { name: 'Phase 15 direct AP payment reversal', script: 'verify-phase15-financial-controls.ts', db: 'rg_p15' },
+  { name: 'Phase 16 customer receipt (AR) reversal', script: 'verify-phase16-financial-controls.ts', db: 'rg_p16' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'
@@ -73,7 +74,10 @@ async function main() {
     })
     if (r.status !== 0) { failed++; console.error(`  ✗ ${s.name} FAILED (exit ${r.status})`) }
   }
-  console.log(`\n${failed === 0 ? '✅ ALL' : `❌ ${failed}`} regression suites — ${SUITES.length} total`)
+  console.log(`\nDiscovered: ${SUITES.length}`)
+  console.log(`Passed: ${SUITES.length - failed}`)
+  console.log(`Failed: ${failed}`)
+  console.log(`${failed === 0 ? '✅ ALL' : `❌ ${failed}`} regression suites — ${SUITES.length} total`)
   process.exit(failed === 0 ? 0 : 1)
 }
 main().catch(e => { console.error(e); process.exit(1) })
