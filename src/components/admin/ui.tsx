@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useId } from 'react'
+import { JalaliDatePicker } from './JalaliDatePicker'
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -114,6 +115,11 @@ export function Input({
           disabled={disabled}
           className="form-input py-2.5 resize-none disabled:opacity-60"
         />
+      ) : type === 'date' ? (
+        // A real Jalali calendar in fa, the native Gregorian picker in en —
+        // same ISO value/onChange contract either way, so this is a drop-in
+        // swap for every existing `<Input type="date">` call site.
+        <JalaliDatePicker id={id} value={value} onChange={onChange} disabled={disabled} className="h-9 disabled:opacity-60" />
       ) : (
         <input
           id={id}

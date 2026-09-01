@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, Btn } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 
 const ViewsChart = dynamic(() => import('./ViewsChart'), { ssr: false, loading: () => <div className="h-[200px] animate-pulse rounded-lg bg-surface-2" /> })
 
@@ -110,7 +111,7 @@ export function ExecutiveDashboard() {
                 <div key={x.id} className="flex items-start gap-2 text-xs">
                   <span className={`font-semibold shrink-0 ${ACTION_COLOR[x.action] ?? 'text-text-tertiary'}`}>{x.action}</span>
                   <span className="text-text-secondary flex-1 truncate">{x.resource}{x.resourceId ? ` #${x.resourceId}` : ''}</span>
-                  <span className="text-text-disabled shrink-0">{new Date(x.createdAt).toLocaleDateString()}</span>
+                  <span className="text-text-disabled shrink-0">{formatDateTime(x.createdAt, locale)}</span>
                 </div>
               ))}
             </div>

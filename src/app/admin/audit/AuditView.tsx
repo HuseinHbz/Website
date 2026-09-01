@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card, PageHeader, Badge } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDateTime } from '@/lib/admin/datetime'
 import { DataTable } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -33,7 +34,7 @@ export function AuditView() {
   }, [logs])
 
   const columns: Column<Log>[] = [
-    { key: 'createdAt', labelEn: 'Time', labelFa: t('time'), type: 'date', render: l => <span className="text-text-tertiary whitespace-nowrap">{new Date(l.createdAt).toLocaleString()}</span> },
+    { key: 'createdAt', labelEn: 'Time', labelFa: t('time'), type: 'date', render: l => <span className="text-text-tertiary whitespace-nowrap">{formatDateTime(l.createdAt, locale)}</span> },
     { key: 'userEmail', labelEn: 'User', labelFa: t('user'), render: l => <span className="text-text-secondary">{l.userEmail || '—'}</span> },
     { key: 'action', labelEn: 'Action', labelFa: t('action'), type: 'enum', options: uniqueActions.map(a => ({ value: a, labelEn: a, labelFa: a })), render: l => <Badge color={ACTION_COLOR[l.action] || 'slate'}>{ACTION_ICON[l.action] || ''} {l.action}</Badge> },
     { key: 'resource', labelEn: 'Resource', labelFa: t('resource'), type: 'enum', options: uniqueResources.map(r => ({ value: r, labelEn: r, labelFa: r })), render: l => <span className="text-text-primary font-mono">{l.resource}</span> },

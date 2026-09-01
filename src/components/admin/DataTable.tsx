@@ -8,6 +8,19 @@ import {
 } from '@/lib/admin/dataTable'
 import { toCsv, toJson, toExcelXml, exportColumns } from '@/lib/admin/dataTableExport'
 import { usePointerDnd } from '@/lib/admin/pointerDnd'
+import { toJalaliStr } from '@/lib/erp/jalali'
+import { faDigits } from '@/lib/admin/chartRtl'
+
+/** Default rendering for a `type: 'date'` column with no custom `render` —
+ *  Jalali + Persian digits in fa, plain ISO in en. A pure date value (no
+ *  time component) so this deliberately does NOT go through
+ *  `formatDateTime` (which always appends a time and shows "Never"/"هرگز"
+ *  for empty — correct for a timestamp column, wrong for a plain date). */
+function formatDateCell(value: string | null | undefined, isRTL: boolean): string {
+  if (!value) return '—'
+  const iso = String(value).slice(0, 10)
+  return isRTL ? faDigits(toJalaliStr(iso)) : iso
+}
 
 // ── Public action contracts ─────────────────────────────────────────────────
 export interface RowAction<T extends object> {
@@ -510,7 +523,9 @@ export function DataTable<T extends object>({
         )}
         {viewedCols.map(c => (
           <td key={c.key} style={colStyle(c)} className={`${pad} text-text-secondary text-${align(c)} ${c.numeric || c.type === 'number' ? 'tabular-nums' : ''} ${c.pinned ? 'sticky bg-surface z-[2]' : ''}`}>
-            {(c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)) as React.ReactNode}
+            {(c.render ? c.render(row)
+              : c.type === 'date' ? formatDateCell((row as Record<string, unknown>)[c.key] as string | null, isRTL)
+                : ((row as Record<string, unknown>)[c.key] as React.ReactNode)) as React.ReactNode}
           </td>
         ))}
         {rowActions?.length ? (

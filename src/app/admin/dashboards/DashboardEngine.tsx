@@ -7,6 +7,7 @@ import { Card, Btn, Badge, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
 import Link from 'next/link'
 import { workspaceById } from '@/lib/admin/workspaces'
+import { formatDateTime } from '@/lib/admin/datetime'
 
 const WidgetChart = dynamic(() => import('./WidgetChart'), { ssr: false, loading: () => <div className="h-[180px] animate-pulse bg-white/[0.03] rounded" /> })
 
@@ -341,7 +342,7 @@ function WidgetBody({ payload, t, locale }: { payload: Payload | undefined; t: (
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead><tr className="text-text-tertiary">{payload.columns.map(c => <th key={c.en} className="text-start font-medium py-1 pe-3">{locale === 'fa' ? c.fa : c.en}</th>)}</tr></thead>
-          <tbody>{payload.rows.map((row, i) => <tr key={i} className="border-t border-border/40">{row.map((c, j) => <td key={j} className="py-1.5 pe-3 text-text-secondary truncate max-w-[160px]">{c}</td>)}</tr>)}</tbody>
+          <tbody>{payload.rows.map((row, i) => <tr key={i} className="border-t border-border/40">{row.map((c, j) => <td key={j} className="py-1.5 pe-3 text-text-secondary truncate max-w-[160px]">{j === 0 ? formatDateTime(String(c), locale === 'fa' ? 'fa' : 'en') : c}</td>)}</tr>)}</tbody>
         </table>
       </div>
     )
