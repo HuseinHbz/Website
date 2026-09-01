@@ -5,7 +5,7 @@ import { logAction } from '@/lib/admin/audit'
 import {
   listVendors, createVendor, updateVendor, evaluateVendor, vendorPosition, vendorEvaluationHistory,
   listDocuments, getDocument, saveDocument, submitDocument, decideApproval,
-  recordPayment, convertDocument, overview, postPurchaseInvoiceToGl, analytics,
+  recordPayment, reverseDirectPayment, convertDocument, overview, postPurchaseInvoiceToGl, analytics,
   receiveDocument, compareQuotes, confirmPurchaseInvoice, voidPurchaseInvoice,
   matchPurchaseInvoice, overrideMatch,
 } from '@/lib/erp/purchasingData'
@@ -51,6 +51,7 @@ const docSubmit = z.object({ action: z.literal('doc.submit'), id: z.number().int
 const docApprove = z.object({ action: z.literal('doc.approve'), id: z.number().int(), level: z.number().int().min(1).max(3), decision: z.enum(['approved', 'rejected']), comment: z.string().max(500).optional() })
 const docConvert = z.object({ action: z.literal('doc.convert'), sourceId: z.number().int(), toType: z.enum(DOC_TYPES) })
 const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional() })
+const docPaymentReverse = z.object({ action: z.literal('doc.paymentReverse'), paymentId: z.number().int() })
 const docPost = z.object({ action: z.literal('doc.post'), id: z.number().int() })
 const docConfirm = z.object({ action: z.literal('doc.confirm'), id: z.number().int() })
 const docVoid = z.object({ action: z.literal('doc.void'), id: z.number().int() })
@@ -59,7 +60,7 @@ const portalLink = z.object({ action: z.literal('vendor.portalLink'), vendorId: 
 const portalRevoke = z.object({ action: z.literal('vendor.portalRevoke'), vendorId: z.number().int() })
 const docMatch = z.object({ action: z.literal('doc.match'), id: z.number().int() })
 const docMatchOverride = z.object({ action: z.literal('doc.matchOverride'), id: z.number().int(), reason: z.string().min(3).max(500) })
-const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPost, docConfirm, docVoid, docReceive, portalLink, portalRevoke, docMatch, docMatchOverride])
+const body = z.discriminatedUnion('action', [vendorCreate, vendorUpdate, evaluate, docSave, docSubmit, docApprove, docConvert, docPayment, docPaymentReverse, docPost, docConfirm, docVoid, docReceive, portalLink, portalRevoke, docMatch, docMatchOverride])
 
 export async function POST(req: NextRequest) {
   const auth = await requirePermission('erp.purchasing', 'write', 'edit')
@@ -121,6 +122,15 @@ export async function POST(req: NextRequest) {
         }
         await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount })
         return NextResponse.json({ ok: true })
+      }
+      case 'doc.paymentReverse': {
+        // Phase 15 — undoing a previously committed purchase transaction is
+        // exactly as sensitive as voiding one; reuses the SAME registered op
+        // doc.void already requires rather than a new RBAC registration.
+        { const deny = await requireOp(auth.user, 'erp.purchasing:void', 'edit'); if (deny) return deny }
+        const r = await reverseDirectPayment(d.paymentId, uid)
+        await logAction(auth.user, 'erp.purchase.paymentReverse', 'purchase_payments', String(d.paymentId), null, r, ip)
+        return NextResponse.json(r)
       }
       case 'doc.match': {
         const r = await matchPurchaseInvoice(d.id)

@@ -40,6 +40,7 @@ const SUITES = [
   { name: 'Phase 12 supplier prepayment consumption', script: 'verify-phase12-financial-controls.ts', db: 'rg_p12' },
   { name: 'Phase 13 purchase invoice cancellation / payment reversal', script: 'verify-phase13-financial-controls.ts', db: 'rg_p13' },
   { name: 'Phase 14 treasury payment reversal', script: 'verify-phase14-financial-controls.ts', db: 'rg_p14' },
+  { name: 'Phase 15 direct AP payment reversal', script: 'verify-phase15-financial-controls.ts', db: 'rg_p15' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

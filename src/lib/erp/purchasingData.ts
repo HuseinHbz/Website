@@ -359,6 +359,90 @@ export async function recordPayment(documentId: number, vendorId: number, amount
   return result
 }
 
+// ── Phase 15: direct AP payment reversal ─────────────────────────────────────
+/**
+ * Phase 15: reverses a single direct AP payment created via `recordPayment` —
+ * the reversal gap Phase 14 explicitly left open (a direct payment has no
+ * `payment_orders` row, so Treasury's `reversePayment` cannot target it).
+ *
+ * Structurally simpler than Phase 14's Treasury reversal: `recordPayment`
+ * always writes exactly ONE `purchase_payments` row per call, always with a
+ * real `document_id` (never NULL — there is no "unapplied" concept on this
+ * path, `validatePayment` already rejects overpayment beyond the invoice
+ * total), and that row is never itself the source of any derived row the way
+ * a Treasury unapplied row can be (Phase 12 `consumeUnappliedForVendor` only
+ * ever reads `document_id IS NULL` rows, which `recordPayment` never
+ * creates). So reversing a direct payment is one exact-negation row, not a
+ * gl_entry_id-tagged group — the `paymentId` (the `purchase_payments.id`
+ * itself) is both the stable identifier (Q4) and the whole "lineage".
+ *
+ * One real structural difference from every other payment path in this
+ * codebase: `recordPayment` posts to the GL as a SEPARATE, best-effort step
+ * AFTER its own transaction commits (`postPurchasePaymentToGl`, wrapped in
+ * try/catch — a closed period at recording time leaves the row correctly
+ * unposted rather than blocking the payment). So `gl_entry_id` may
+ * legitimately be NULL forever on a direct-payment row. This function
+ * reverses the `purchase_payments` row and recomputes the invoice
+ * regardless; it only calls `reverseEntry` when `gl_entry_id` is actually
+ * set — there is no GL entry to reverse for a payment that was never posted.
+ *
+ * Idempotent via the same `reference NOT LIKE`/`NOT EXISTS` pattern Phase
+ * 12-14 established (`AP-DIRECT-REVERSE:<paymentId>`), locked on the SAME
+ * `treasury_ap_allocate:vendor:${vendorId}` advisory key Phases 11-14 all
+ * share, so this can never interleave with a concurrent Treasury payment,
+ * unapplied-cash consumption, another direct payment, or an invoice void for
+ * the same vendor.
+ */
+export async function reverseDirectPayment(paymentId: number, userId?: string): Promise<{ reversalId: number | null; alreadyReversed: boolean; amountReversed: number }> {
+  const p = (await pgQuery<{ vendor_id: number; document_id: number | null; amount: number; gl_entry_id: number | null; reference: string | null }>(
+    `SELECT vendor_id, document_id, amount::float AS amount, gl_entry_id, reference FROM purchase_payments WHERE id=$1`, [paymentId]))[0]
+  if (!p) throw new Error('Payment not found')
+  if (p.document_id == null) throw new Error('Not a direct AP payment against an invoice — nothing to reverse this way')
+  const ref = p.reference ?? ''
+  if (ref.startsWith('AP-DIRECT-REVERSE:') || ref.startsWith('AP-CONSUME:') || ref.startsWith('AP-VOID:') || ref.startsWith('TRZPAY-REVERSE:')) {
+    throw new Error('This row is itself a reversal/consumption adjustment, not an original direct payment — nothing to reverse')
+  }
+  if (ref.startsWith('TRZPAY-')) {
+    throw new Error('This row was created by a Treasury payment — reverse it with reversePayment(paymentOrderId), not reverseDirectPayment')
+  }
+
+  let reversalId: number | null = null
+  if (p.gl_entry_id) {
+    const rev = await reverseEntry(p.gl_entry_id, userId)
+    reversalId = rev.reversalId
+  }
+
+  const vendorId = p.vendor_id
+  const invId = p.document_id
+  const today = new Date().toISOString().slice(0, 10)
+  const revReference = `AP-DIRECT-REVERSE:${paymentId}`
+
+  const amountReversed = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_ap_allocate:vendor:${vendorId}`])
+    const already = (await query<{ c: number }>(`SELECT COUNT(*)::int AS c FROM purchase_payments WHERE reference=$1`, [revReference]))[0]
+    if (already.c > 0) return 0
+
+    const amt = Math.round(Number(p.amount) * 100) / 100
+    await query(
+      `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
+      [vendorId, invId, today, -amt, revReference, userId ?? null, p.gl_entry_id, `Reversed direct AP payment #${paymentId}`])
+
+    const row = (await query<{ s: number; total: number; status: string }>(
+      `SELECT COALESCE((SELECT SUM(amount) FROM purchase_payments WHERE document_id=$1),0)::float AS s, total::float AS total, status
+       FROM purchase_documents WHERE id=$1`, [invId]))[0]
+    const paid = Math.max(0, Math.round(Number(row.s) * 100) / 100)
+    if (row.status !== 'void') {
+      const status = purchaseInvoiceStatus(Number(row.total), paid)
+      await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [invId, paid, status])
+    } else {
+      await query(`UPDATE purchase_documents SET paid_total=$2, updated_at=${NOW} WHERE id=$1`, [invId, paid])
+    }
+    return amt
+  })
+
+  return { reversalId, alreadyReversed: amountReversed === 0, amountReversed }
+}
+
 /** Administrator override: allow a mismatched invoice to be paid anyway, with a
  * recorded reason (no silent bypass — this is itself an audited action). */
 export async function overrideMatch(invoiceId: number, reason: string, userId?: string): Promise<{ ok: boolean; error?: string }> {
