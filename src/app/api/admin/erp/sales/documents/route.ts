@@ -344,6 +344,26 @@ export async function PUT(req: NextRequest) {
       if (String(src.doc_type) === 'credit_note' && src.source_id) {
         try { await settleReturnIfPaid(id, auth.user.id) } catch { /* alert/refund is best-effort; never blocks confirm */ }
       }
+      // Phase 17: a freshly confirmed/open invoice is exactly the "future
+      // invoice" a customer's pre-existing unapplied Treasury cash (or
+      // unapplied direct payment) was waiting for — settle any of it
+      // against this customer's now-open invoices (including this one).
+      // Placed AFTER the try/catch above, on purpose: the GL entry has
+      // already committed by this point (the exact structural risk Phase 12
+      // hit on the AP side — a consumption failure must never trigger the
+      // GL-post-failure revert, which would leave a real posted GL entry
+      // behind a document whose status was rolled back). Mirrors
+      // confirmPurchaseInvoice exactly: NOT wrapped in a swallowing
+      // try/catch — a consumption failure surfaces to the caller as-is,
+      // exactly like any other genuine defect, never silently swallowed.
+      // The confirm's own GL post + status change already committed by this
+      // point (separate transaction), so a retry after a real failure here
+      // is safe — both postSalesInvoiceToGl and consumeUnappliedForCustomer
+      // are idempotent.
+      if (String(src.doc_type) === 'invoice' && src.customer_id) {
+        const { consumeUnappliedForCustomer } = await import('@/lib/treasury/paymentData')
+        await consumeUnappliedForCustomer(Number(src.customer_id), auth.user.id)
+      }
     }
     // 26.23 (بند ۱.۳/۲.۱): voiding a GL-posted document books a reversal entry.
     if (op === 'void' && src.gl_entry_id) {

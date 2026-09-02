@@ -47,7 +47,7 @@ export async function createVendor(v: VendorInput, userId?: string): Promise<num
     `INSERT INTO purchase_vendors (code,name,kind,email,phone,tax_id,economic_code,address,iban,currency,payment_terms,
        national_id,reg_no,contact_name,contact_phone,bank_name,city,postal_code,website,category,notes,
        created_by,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,${NOW},${NOW}) RETURNING id`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,${NOW},${NOW}) RETURNING id`,
     [code, v.name, v.kind ?? 'company', v.email ?? null, v.phone ?? null, v.taxId ?? null, v.economicCode ?? null,
      v.address ?? null, v.iban ?? null, v.currency ?? 'IRR', v.paymentTerms ?? 0,
      v.nationalId ?? null, v.regNo ?? null, v.contactName ?? null, v.contactPhone ?? null,

@@ -579,6 +579,135 @@ export async function reverseCustomerReceipt(receiptId: number, userId: string):
   return { reversalId: rev.reversalId, alreadyReversed: rev.alreadyReversed, amountReversed }
 }
 
+// ── Phase 17: customer AR unapplied-receipt consumption ─────────────────────
+/**
+ * Phase 17: the AR-side mirror of Phase 12's `consumeUnappliedForVendor` —
+ * consumes a customer's existing unapplied cash (document_id=NULL
+ * sales_payments rows, written either by `createReceipt`'s advance branch
+ * above or by the direct customer-payment route when `documentId` is
+ * omitted) against that customer's currently open invoices.
+ *
+ * Discovery (docs/engineering/phase17-customer-ar-advance-audit.md) found
+ * the AR model is structurally IDENTICAL to AP's for this purpose —
+ * `sales_payments.customer_id` NOT NULL / `document_id` nullable, exactly
+ * `purchase_payments`' shape — so this reuses `allocateReceipt` UNCHANGED
+ * (already generic: amount + {id,open} list, not vendor-specific) as the
+ * per-source distribution primitive. No second allocation engine, no
+ * schema migration.
+ *
+ * One real structural difference from AP, found during discovery and
+ * deliberately NOT copied: `purchase_documents` has a real `paid_total`
+ * column: `sales_documents` does not — AR "paid" is always DERIVED as
+ * `SUM(sales_payments.amount WHERE document_id=id)` (confirmed against
+ * `customer360Data.ts`'s `customerArBalance`). `createReceipt`'s own
+ * invoice-pool query above uses `total AS open` (no paid subtraction) —
+ * correct ONLY because it only ever runs once at receipt time against
+ * invoices that had no prior payment from decidedly this same amount; it is
+ * NOT reused here. This function computes "open" as
+ * `total - COALESCE(SUM(sales_payments.amount WHERE document_id=id), 0)`,
+ * the same derivation `customerArBalance` already uses — so a 'partial'
+ * invoice (one that already carries real payments) is never over-allocated.
+ *
+ * Append-only, mirrors Phase 12 exactly: consuming amount X of source row S
+ * against invoice I writes exactly TWO new rows sharing the reference
+ * `AR-CONSUME:${S.id}` — a NEGATIVE adjustment (customer_id=S.customer_id,
+ * document_id=NULL, amount=-X) and a POSITIVE allocation (document_id=I,
+ * amount=+X). Both stamped with SOURCE row S's own `gl_entry_id` — never
+ * NULL — so `postSalesPaymentToGl` (gl_entry_id-IS-NULL-guarded, see above)
+ * never posts a second, phantom Dr Bank/Cr AR entry for money that already
+ * moved. This is a subledger reclassification, not a second cash event
+ * (Section 6): no new GL event is created here.
+ *
+ * One case Phase 12's AP side cannot hit but AR's direct customer-payment
+ * route (`/api/admin/erp/sales/payments`, `documentId` optional) CAN: an
+ * unapplied row whose own `gl_entry_id` is still NULL (best-effort GL
+ * posting failed — e.g. a closed fiscal period at the time it was
+ * recorded). Such a source is deliberately EXCLUDED from the source query
+ * below (`s.gl_entry_id IS NOT NULL`) — consumption only ever reclassifies
+ * ALREADY-POSTED cash; an unposted source waits for its own GL posting
+ * (self-heal/manual retry, exactly how `postSalesPaymentToGl` is already
+ * called best-effort elsewhere) before it becomes consumable. Documented,
+ * not silently worked around.
+ *
+ * A source row's remaining balance = its own amount + Σ(negative adjustment
+ * rows whose reference is `AR-CONSUME:${source.id}`) — derived fresh from
+ * the database on every call (never a stored/mutated counter), so repeated
+ * execution (retry, double-click, cron re-run) is naturally idempotent: it
+ * just finds a smaller/zero remaining balance and does correspondingly less
+ * or nothing.
+ *
+ * Fiscal period: NOT gated here, matching Phase 12's decision for the
+ * identical reason — no new GL event is created, so there is nothing a
+ * period lock needs to protect. The invoice's own GL posting (which IS
+ * period-gated, in `postSalesInvoiceToGl`) already ran to completion before
+ * this function is ever reached from the automatic trigger.
+ *
+ * Concurrency: locks `treasury_receipt_customer:${customerId}` — the SAME
+ * domain `createReceipt` and `reverseCustomerReceipt` already use, not a
+ * new lock — so this can never interleave with a new Treasury receipt or a
+ * receipt reversal for the same customer. Distribution is oldest-source-
+ * first × oldest-invoice-first.
+ */
+export interface ArConsumptionDetail { sourceId: number; invoiceId: number; amount: number }
+export async function consumeUnappliedForCustomer(customerId: number, userId: string, date?: string): Promise<{ totalConsumed: number; details: ArConsumptionDetail[] }> {
+  const today = date ?? new Date().toISOString().slice(0, 10)
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_receipt_customer:${customerId}`])
+
+    // Every still-open unapplied SOURCE row, oldest first, with its remaining
+    // (unconsumed) balance derived from the append-only ledger — never a
+    // stored/mutated counter. Only already-GL-posted sources are consumable
+    // (see the function doc above).
+    const sources = await query<{ id: number; amount: number; gl_entry_id: number; consumed: number }>(
+      `SELECT s.id, s.amount::float AS amount, s.gl_entry_id,
+              COALESCE((SELECT SUM(-c.amount) FROM sales_payments c
+                        WHERE c.document_id IS NULL AND c.reference = 'AR-CONSUME:'||s.id), 0)::float AS consumed
+       FROM sales_payments s
+       WHERE s.customer_id = $1 AND s.document_id IS NULL AND s.amount > 0 AND s.gl_entry_id IS NOT NULL
+       ORDER BY s.date, s.id`, [customerId])
+
+    // "open" is DERIVED (total minus real payments), not `total` alone —
+    // see the function doc for why `createReceipt`'s shortcut is not reused.
+    const invRows = await query<{ id: number; open: number }>(
+      `SELECT d.id, (d.total - COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=d.id), 0))::float AS open
+       FROM sales_documents d
+       WHERE d.customer_id=$1 AND d.doc_type='invoice' AND d.status IN ('sent','confirmed','partial') AND d.deleted_at IS NULL
+       ORDER BY d.date, d.id`, [customerId])
+    const invoicePool = invRows
+      .map(r => ({ id: r.id, open: Math.round(Number(r.open) * 100) / 100 }))
+      .filter(r => r.open > 0.001)
+
+    const details: ArConsumptionDetail[] = []
+    let totalConsumed = 0
+    for (const src of sources) {
+      const remaining = Math.round((Number(src.amount) - Number(src.consumed)) * 100) / 100
+      if (remaining <= 0.001) continue
+      if (!invoicePool.some(i => i.open > 0.001)) break
+
+      const { allocations } = allocateReceipt(remaining, invoicePool)
+      for (const a of allocations) {
+        await query(
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
+          [customerId, today, -a.amount, `AR-CONSUME:${src.id}`, userId, src.gl_entry_id, `Unapplied receipt #${src.id} consumed against invoice #${a.invoiceId}`])
+        await query(
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
+          [customerId, a.invoiceId, today, a.amount, `AR-CONSUME:${src.id}`, userId, src.gl_entry_id, `Settled from unapplied receipt #${src.id}`])
+
+        const inv = (await query<{ total: number; paidSum: number }>(
+          `SELECT total::float AS total, COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=$1),0)::float AS "paidSum" FROM sales_documents WHERE id=$1`, [a.invoiceId]))[0]
+        const status = invoiceStatus(Number(inv.total), Number(inv.paidSum))
+        await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [a.invoiceId, status])
+
+        details.push({ sourceId: src.id, invoiceId: a.invoiceId, amount: a.amount })
+        totalConsumed = Math.round((totalConsumed + a.amount) * 100) / 100
+        const pool = invoicePool.find(i => i.id === a.invoiceId)!
+        pool.open = Math.round((pool.open - a.amount) * 100) / 100
+      }
+    }
+    return { totalConsumed, details }
+  })
+}
+
 export async function listReceipts() {
   return pgQuery(`SELECT r.id, r.receipt_no AS "receiptNo", r.receipt_type AS "receiptType", COALESCE(c.name,'?') AS customer, r.amount::float AS amount, r.currency, r.date, r.advance::float AS advance, r.gl_entry_id AS "glEntryId" FROM receipt_transactions r LEFT JOIN sales_customers c ON c.id=r.customer_id ORDER BY r.id DESC LIMIT 300`)
 }
