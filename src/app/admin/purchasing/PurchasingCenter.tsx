@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useAdminLocale } from '@/lib/admin/locale'
@@ -129,24 +129,49 @@ function Dashboard({ rtl }: { rtl: boolean }) {
   )
 }
 
-interface Vendor { id: number; code: string; name: string; kind: string; email: string | null; currency: string; score: number; grade: string; active: boolean }
+interface Vendor {
+  id: number; code: string; name: string; kind: string; email: string | null; phone: string | null
+  taxId: string | null; economicCode: string | null; nationalId: string | null; regNo: string | null
+  address: string | null; iban: string | null; bankName: string | null
+  contactName: string | null; contactPhone: string | null; city: string | null; postalCode: string | null
+  website: string | null; category: string | null; notes: string | null
+  currency: string; paymentTerms: number; score: number; grade: string; active: boolean
+}
+const VENDOR_EMPTY = { name: '', kind: 'company', email: '', phone: '', currency: 'IRR', taxId: '', economicCode: '', nationalId: '', regNo: '', address: '', iban: '', bankName: '', contactName: '', contactPhone: '', city: '', postalCode: '', website: '', category: '', notes: '', paymentTerms: 0 }
+type VendorForm = typeof VENDOR_EMPTY
 function Vendors({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; toast: Toast }) {
   const [rows, setRows] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [editing, setEditing] = useState<Vendor | null>(null)
   const [evalFor, setEvalFor] = useState<Vendor | null>(null)
-  const [form, setForm] = useState({ name: '', kind: 'company', email: '', currency: 'IRR' })
+  const [form, setForm] = useState<VendorForm>(VENDOR_EMPTY)
   const load = useCallback(async () => { setLoading(true); try { const d = await fetch('/api/admin/erp/purchasing?view=vendors').then(r => r.json()); setRows(d.vendors ?? []) } finally { setLoading(false) } }, [])
   useEffect(() => { load() }, [load])
 
   async function add() {
     if (!form.name) return
     const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vendor.create', ...form }) })
-    if (r.ok) { toast(lc(rtl, 'Vendor created', 'تأمین‌کننده ساخته شد'), 'success'); setShowAdd(false); setForm({ name: '', kind: 'company', email: '', currency: 'IRR' }); load() } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+    if (r.ok) { toast(lc(rtl, 'Vendor created', 'تأمین‌کننده ساخته شد'), 'success'); setShowAdd(false); setForm(VENDOR_EMPTY); load() } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
+  }
+  function openEdit(v: Vendor) {
+    setForm({ name: v.name, kind: v.kind, email: v.email ?? '', phone: v.phone ?? '', currency: v.currency,
+      taxId: v.taxId ?? '', economicCode: v.economicCode ?? '', nationalId: v.nationalId ?? '', regNo: v.regNo ?? '',
+      address: v.address ?? '', iban: v.iban ?? '', bankName: v.bankName ?? '', contactName: v.contactName ?? '',
+      contactPhone: v.contactPhone ?? '', city: v.city ?? '', postalCode: v.postalCode ?? '', website: v.website ?? '',
+      category: v.category ?? '', notes: v.notes ?? '', paymentTerms: v.paymentTerms ?? 0 })
+    setEditing(v)
+  }
+  async function saveEdit() {
+    if (!editing) return
+    const r = await fetch('/api/admin/erp/purchasing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vendor.update', id: editing.id, ...form }) })
+    if (r.ok) { toast(lc(rtl, 'Vendor updated', 'تأمین‌کننده به‌روزرسانی شد'), 'success'); setEditing(null); load() } else toast(lc(rtl, 'Failed', 'ناموفق'), 'error')
   }
   const columns: Column<Vendor>[] = [
     { key: 'name', labelEn: 'Vendor', labelFa: 'تأمین‌کننده', render: v => <div><div className="font-medium text-text-primary">{v.name}</div><div className="text-3xs text-text-tertiary font-mono">{v.code}</div></div> },
     { key: 'kind', labelEn: 'Type', labelFa: 'نوع', type: 'enum' },
+    { key: 'phone', labelEn: 'Phone', labelFa: 'تلفن', render: v => <span>{v.phone || '—'}</span> },
+    { key: 'contactName', labelEn: 'Contact', labelFa: 'رابط', render: v => <span>{v.contactName || '—'}</span> },
     { key: 'currency', labelEn: 'Currency', labelFa: 'ارز' },
     { key: 'score', labelEn: 'Score', labelFa: 'امتیاز', type: 'number', numeric: true },
     { key: 'grade', labelEn: 'Grade', labelFa: 'درجه', render: v => <Badge color={v.grade === 'A' ? 'green' : v.grade === 'B' ? 'blue' : v.grade === 'C' ? 'yellow' : 'red'}>{v.grade}</Badge> },
@@ -165,26 +190,63 @@ function Vendors({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; to
     if (r.ok) toast(lc(rtl, 'Portal links revoked', 'پیوندهای پرتال باطل شد'), 'success')
   }
   const rowActions: RowAction<Vendor>[] = [
+    { id: 'edit', labelEn: 'Edit', labelFa: 'ویرایش', icon: '✎', onClick: v => openEdit(v) },
     { id: 'eval', labelEn: 'Evaluate', labelFa: 'ارزیابی', icon: '★', onClick: v => setEvalFor(v) },
     { id: 'portal', labelEn: 'Portal link', labelFa: 'پیوند پرتال', icon: '🔗', onClick: v => portalLink(v) },
     { id: 'portal-revoke', labelEn: 'Revoke portal', labelFa: 'ابطال پرتال', icon: '🚫', danger: true, onClick: v => portalRevoke(v) },
   ]
   return (
     <div className="space-y-4">
-      <div className="flex justify-end"><Btn onClick={() => setShowAdd(true)}>+ {lc(rtl, 'New vendor', 'تأمین‌کننده جدید')}</Btn></div>
+      <div className="flex justify-end"><Btn onClick={() => { setForm(VENDOR_EMPTY); setShowAdd(true) }}>+ {lc(rtl, 'New vendor', 'تأمین‌کننده جدید')}</Btn></div>
       <Card className="p-4"><DataTable tableId="pur-vendors" columns={columns} rows={rows} locale={locale} loading={loading} rowKey={v => String(v.id)} rowActions={rowActions} exportName="vendors" onRefresh={load} emptyLabel={lc(rtl, 'No vendors.', 'تأمین‌کننده‌ای نیست.')} /></Card>
       {showAdd && (
         <Modal open onClose={() => setShowAdd(false)} title={lc(rtl, 'New vendor', 'تأمین‌کننده جدید')}>
           <div className="space-y-3">
-            <Input label={lc(rtl, 'Name', 'نام')} value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} />
-            <Select label={lc(rtl, 'Type', 'نوع')} value={form.kind} onChange={v => setForm(f => ({ ...f, kind: v }))} options={[{ value: 'company', label: lc(rtl, 'Company', 'شرکت') }, { value: 'individual', label: lc(rtl, 'Individual', 'شخص') }, { value: 'international', label: lc(rtl, 'International', 'بین‌المللی') }]} />
-            <Input label={lc(rtl, 'Email', 'ایمیل')} value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} />
-            <Select label={lc(rtl, 'Currency', 'ارز')} value={form.currency} onChange={v => setForm(f => ({ ...f, currency: v }))} options={['IRR', 'IRT', 'USD', 'EUR', 'AED'].map(c => ({ value: c, label: c }))} />
+            <VendorFields rtl={rtl} form={form} setForm={setForm} />
             <div className="flex justify-end gap-2"><Btn variant="ghost" onClick={() => setShowAdd(false)}>{lc(rtl, 'Cancel', 'انصراف')}</Btn><Btn onClick={add}>{lc(rtl, 'Create', 'ساخت')}</Btn></div>
           </div>
         </Modal>
       )}
+      {editing && (
+        <Modal open onClose={() => setEditing(null)} title={lc(rtl, `Edit vendor — ${editing.name}`, `ویرایش تأمین‌کننده — ${editing.name}`)}>
+          <div className="space-y-3">
+            <VendorFields rtl={rtl} form={form} setForm={setForm} />
+            <div className="flex justify-end gap-2"><Btn variant="ghost" onClick={() => setEditing(null)}>{lc(rtl, 'Cancel', 'انصراف')}</Btn><Btn onClick={saveEdit}>{lc(rtl, 'Save', 'ذخیره')}</Btn></div>
+          </div>
+        </Modal>
+      )}
       {evalFor && <EvaluateModal rtl={rtl} vendor={evalFor} onClose={() => setEvalFor(null)} onDone={() => { setEvalFor(null); load() }} toast={toast} />}
+    </div>
+  )
+}
+
+/** Full vendor identity/contact/banking field set (item 4 — complete supplier
+ * information collection), shared by the create and edit modals. */
+function VendorFields({ rtl, form, setForm }: { rtl: boolean; form: VendorForm; setForm: Dispatch<SetStateAction<VendorForm>> }) {
+  const set = (k: keyof VendorForm) => (v: string) => setForm(f => ({ ...f, [k]: v }))
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="col-span-2"><Input label={lc(rtl, 'Name', 'نام')} value={form.name} onChange={set('name')} /></div>
+      <Select label={lc(rtl, 'Type', 'نوع')} value={form.kind} onChange={set('kind')} options={[{ value: 'company', label: lc(rtl, 'Company', 'شرکت') }, { value: 'individual', label: lc(rtl, 'Individual', 'شخص') }, { value: 'international', label: lc(rtl, 'International', 'بین‌المللی') }]} />
+      <Input label={lc(rtl, 'Category', 'دسته‌بندی')} value={form.category} onChange={set('category')} />
+      <Input label={lc(rtl, 'Email', 'ایمیل')} value={form.email} onChange={set('email')} />
+      <Input label={lc(rtl, 'Phone', 'تلفن')} value={form.phone} onChange={set('phone')} />
+      <Input label={lc(rtl, 'Contact person', 'نام رابط')} value={form.contactName} onChange={set('contactName')} />
+      <Input label={lc(rtl, 'Contact phone', 'تلفن رابط')} value={form.contactPhone} onChange={set('contactPhone')} />
+      {form.kind === 'individual'
+        ? <Input label={lc(rtl, 'National ID', 'کد ملی')} value={form.nationalId} onChange={set('nationalId')} />
+        : <Input label={lc(rtl, 'Registration No.', 'شماره ثبت')} value={form.regNo} onChange={set('regNo')} />}
+      <Input label={lc(rtl, 'Tax ID', 'شناسه مالیاتی')} value={form.taxId} onChange={set('taxId')} />
+      <Input label={lc(rtl, 'Economic code', 'کد اقتصادی')} value={form.economicCode} onChange={set('economicCode')} />
+      <Input label={lc(rtl, 'City', 'شهر')} value={form.city} onChange={set('city')} />
+      <Input label={lc(rtl, 'Postal code', 'کد پستی')} value={form.postalCode} onChange={set('postalCode')} />
+      <div className="col-span-2"><Input label={lc(rtl, 'Address', 'آدرس')} value={form.address} onChange={set('address')} /></div>
+      <Input label={lc(rtl, 'Website', 'وب‌سایت')} value={form.website} onChange={set('website')} />
+      <Select label={lc(rtl, 'Currency', 'ارز')} value={form.currency} onChange={set('currency')} options={['IRR', 'IRT', 'USD', 'EUR', 'AED'].map(c => ({ value: c, label: c }))} />
+      <Input label={lc(rtl, 'Bank name', 'نام بانک')} value={form.bankName} onChange={set('bankName')} />
+      <Input label={lc(rtl, 'IBAN / Account', 'شبا / شماره حساب')} value={form.iban} onChange={set('iban')} />
+      <Input label={lc(rtl, 'Payment terms (days)', 'مهلت پرداخت (روز)')} value={String(form.paymentTerms)} onChange={v => setForm(f => ({ ...f, paymentTerms: Number(v) || 0 }))} />
+      <div className="col-span-2"><Input label={lc(rtl, 'Notes', 'یادداشت')} value={form.notes} onChange={set('notes')} /></div>
     </div>
   )
 }

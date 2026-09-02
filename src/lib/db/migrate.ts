@@ -4193,6 +4193,24 @@ export async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_inv_shipments_sales_doc ON inv_shipments(sales_document_id);
   `)
 
+  // Item 4 (bug-fix pack): complete vendor/supplier information collection.
+  // purchase_vendors already carried kind/tax_id/economic_code/iban — this
+  // adds the remaining identity/contact/banking fields an operator needs to
+  // fully register a supplier (mirrors sales_customers' national_id/reg_no
+  // party-identity pattern from Phase 26.2).
+  await pgQuery(`
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS national_id TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS reg_no TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS contact_name TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS contact_phone TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS bank_name TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS postal_code TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS website TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS category TEXT;
+    ALTER TABLE purchase_vendors ADD COLUMN IF NOT EXISTS notes TEXT;
+  `)
+
   await pgQuery(`
     SELECT 1;
   `)

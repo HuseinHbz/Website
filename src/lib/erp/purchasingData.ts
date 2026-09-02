@@ -21,6 +21,9 @@ export interface VendorInput {
   code?: string; name: string; kind?: string; email?: string; phone?: string
   taxId?: string; economicCode?: string; address?: string; iban?: string
   currency?: string; paymentTerms?: number
+  nationalId?: string; regNo?: string; contactName?: string; contactPhone?: string
+  bankName?: string; city?: string; postalCode?: string; website?: string
+  category?: string; notes?: string
 }
 export interface LineRow extends LineInput {
   description: string; productId?: number | null
@@ -32,23 +35,36 @@ export interface LineRow extends LineInput {
 
 // ── Vendors ──────────────────────────────────────────────────────────────────
 export async function listVendors() {
-  return pgQuery(`SELECT id, code, name, kind, email, phone, tax_id AS "taxId", currency,
+  return pgQuery(`SELECT id, code, name, kind, email, phone, tax_id AS "taxId", economic_code AS "economicCode",
+    national_id AS "nationalId", reg_no AS "regNo", address, iban, bank_name AS "bankName",
+    contact_name AS "contactName", contact_phone AS "contactPhone", city, postal_code AS "postalCode",
+    website, category, notes, currency,
     payment_terms AS "paymentTerms", score, grade, active FROM purchase_vendors ORDER BY name`)
 }
 export async function createVendor(v: VendorInput, userId?: string): Promise<number> {
   const code = v.code || await nextNumber('vendor', { legacyPrefix: 'VEN' })
   const row = (await pgQuery<{ id: number }>(
-    `INSERT INTO purchase_vendors (code,name,kind,email,phone,tax_id,economic_code,address,iban,currency,payment_terms,created_by,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,${NOW},${NOW}) RETURNING id`,
+    `INSERT INTO purchase_vendors (code,name,kind,email,phone,tax_id,economic_code,address,iban,currency,payment_terms,
+       national_id,reg_no,contact_name,contact_phone,bank_name,city,postal_code,website,category,notes,
+       created_by,created_at,updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,${NOW},${NOW}) RETURNING id`,
     [code, v.name, v.kind ?? 'company', v.email ?? null, v.phone ?? null, v.taxId ?? null, v.economicCode ?? null,
-     v.address ?? null, v.iban ?? null, v.currency ?? 'IRR', v.paymentTerms ?? 0, userId ?? null]))[0]
+     v.address ?? null, v.iban ?? null, v.currency ?? 'IRR', v.paymentTerms ?? 0,
+     v.nationalId ?? null, v.regNo ?? null, v.contactName ?? null, v.contactPhone ?? null,
+     v.bankName ?? null, v.city ?? null, v.postalCode ?? null, v.website ?? null, v.category ?? null, v.notes ?? null,
+     userId ?? null]))[0]
   return row.id
 }
 export async function updateVendor(id: number, v: Partial<VendorInput>) {
   await pgQuery(
     `UPDATE purchase_vendors SET name=COALESCE($2,name), email=$3, phone=$4, tax_id=$5, address=$6,
-       iban=$7, currency=COALESCE($8,currency), payment_terms=COALESCE($9,payment_terms), updated_at=${NOW} WHERE id=$1`,
-    [id, v.name ?? null, v.email ?? null, v.phone ?? null, v.taxId ?? null, v.address ?? null, v.iban ?? null, v.currency ?? null, v.paymentTerms ?? null])
+       iban=$7, currency=COALESCE($8,currency), payment_terms=COALESCE($9,payment_terms),
+       economic_code=$10, national_id=$11, reg_no=$12, contact_name=$13, contact_phone=$14,
+       bank_name=$15, city=$16, postal_code=$17, website=$18, category=$19, notes=$20, updated_at=${NOW} WHERE id=$1`,
+    [id, v.name ?? null, v.email ?? null, v.phone ?? null, v.taxId ?? null, v.address ?? null, v.iban ?? null,
+     v.currency ?? null, v.paymentTerms ?? null, v.economicCode ?? null, v.nationalId ?? null, v.regNo ?? null,
+     v.contactName ?? null, v.contactPhone ?? null, v.bankName ?? null, v.city ?? null, v.postalCode ?? null,
+     v.website ?? null, v.category ?? null, v.notes ?? null])
 }
 
 /** Record an evaluation and roll the vendor's headline score/grade. */
