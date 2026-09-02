@@ -2666,6 +2666,44 @@ export async function runMigrations() {
       ('Employee', 'کارمند', '{"executive":"read","crm.crm.tickets":"write","erp":"none","system":"none","security":"none","backup":"none"}', '{}', '{"crm.crm.tickets":"own"}', true)
     ON CONFLICT (name) DO NOTHING;
 
+    -- Item 6 (bug-fix pack): granular job-title role templates. 'Finance
+    -- Specialist' (کارشناس مالی) and 'Auditor' (حسابرس) already existed above
+    -- and are reused, not duplicated (the already-exists exception). These
+    -- are the remaining named positions, each restricting the ERP/HR
+    -- submodules it should not touch with an explicit 'none' (deny dominates
+    -- the whole subtree per the tree engine) rather than denying the whole
+    -- workspace, which would also kill the submodules it SHOULD have.
+    INSERT INTO rbac_role_templates (name, name_fa, grants, ops, row_scopes, is_system) VALUES
+      ('Senior Admin', 'ادمین ارشد',
+       '{"executive":"write","erp":"write","crm":"write","hr":"write","ai":"write","brand":"write","content":"write","operations":"write","analytics":"read","system":"read","security":"read","backup":"read"}',
+       '{"erp.finance:post":true,"erp.finance:void":true,"erp.sales:confirm":true,"erp.sales:void":true,"erp.sales:post":true,"erp.sales:return":true,"erp.sales:payment_create":true,"erp.sales:refund":true,"erp.sales:deliver":true,"erp.purchasing:confirm":true,"erp.purchasing:void":true,"erp.purchasing:post":true,"erp.treasury:reconcile":true,"erp.treasury:cheque_state":true,"erp.approvals:approve":true,"erp.approvals:reject":true,"erp.approvals:delegate":true,"erp.moadian:submit":true,"hr.leave:approve":true,"hr.leave:adjust":true,"hr.recruitment:offer":true,"hr.recruitment:hire":true,"hr.reviews:finalize":true}',
+       '{}', true),
+      ('Admin', 'ادمین',
+       '{"executive":"read","brand":"write","content":"write","crm":"write","erp":"write","hr":"read","ai":"write","operations":"read","analytics":"read","system":"none","security":"none","backup":"none"}',
+       '{"erp.finance:post":false,"erp.finance:void":false,"erp.finance:close_period":false,"erp.finance:reopen_period":false,"erp.sales:confirm":false,"erp.sales:void":false,"erp.purchasing:confirm":false,"erp.purchasing:void":false,"erp.purchasing:post":false}',
+       '{}', true),
+      ('HR Specialist', 'کارشناس منابع انسانی',
+       '{"hr":"write","executive":"read","erp":"none","crm":"none","system":"none","security":"none","backup":"none","ai":"none"}',
+       '{"hr.employees:sensitive_view":true,"hr.employees:delete":false,"hr.payroll:amounts_view":true,"hr.payroll:calculate":true,"hr.payroll:approve":false,"hr.payroll:pay":false,"hr.payroll:settings_write":false,"hr.leave:approve":true,"hr.leave:adjust":false,"hr.recruitment:offer":false,"hr.recruitment:hire":false,"hr.reviews:finalize":false}',
+       '{"hr.employees":"department","hr.payroll":"department"}', true),
+      ('Finance & HR Manager', 'مدیر مالی و منابع انسانی',
+       '{"erp.finance":"write","erp.sales":"write","erp.purchasing":"write","erp.treasury":"write","erp.inventory":"read","hr":"write","executive":"read","analytics":"read","crm":"read","system":"none","security":"none","backup":"none"}',
+       '{"erp.finance:post":true,"erp.finance:void":true,"erp.finance:close_period":true,"erp.finance:reopen_period":true,"erp.sales:confirm":true,"erp.sales:void":true,"erp.sales:post":true,"erp.sales:payment_create":true,"erp.sales:refund":true,"erp.purchasing:confirm":true,"erp.purchasing:void":true,"erp.purchasing:post":true,"erp.treasury:reconcile":true,"erp.treasury:cheque_state":true,"erp.approvals:approve":true,"erp.approvals:reject":true,"hr.employees:sensitive_view":true,"hr.payroll:amounts_view":true,"hr.payroll:calculate":true,"hr.payroll:approve":true,"hr.payroll:pay":true,"hr.leave:approve":true,"hr.leave:adjust":true,"hr.recruitment:offer":true,"hr.recruitment:hire":true,"hr.reviews:finalize":true}',
+       '{}', true),
+      ('Warehouse Keeper', 'انباردار',
+       '{"erp.inventory":"write","erp.purchasing":"read","erp.sales":"read","erp.finance":"none","erp.treasury":"none","erp.approvals":"none","hr":"none","crm":"none","system":"none","security":"none","backup":"none","ai":"none","executive":"none"}',
+       '{"erp.inventory:cost_view":false}',
+       '{}', true),
+      ('Procurement', 'تدارکات',
+       '{"erp.purchasing":"write","erp.inventory":"read","erp.finance":"none","erp.treasury":"none","hr":"none","crm":"none","system":"none","security":"none","backup":"none","ai":"none","executive":"read"}',
+       '{"erp.purchasing:confirm":false,"erp.purchasing:void":false,"erp.purchasing:post":false}',
+       '{}', true),
+      ('Customer Service Specialist', 'کارشناس امور مشتریان',
+       '{"crm.crm":"write","crm.crm.customers":"write","operations.crm.tickets":"write","erp.sales":"read","erp.finance":"none","erp.treasury":"none","erp.purchasing":"none","hr":"none","system":"none","security":"none","backup":"none","ai":"none","executive":"none"}',
+       '{}',
+       '{"crm.crm":"own","operations.crm.tickets":"own","erp.sales":"own"}', true)
+    ON CONFLICT (name) DO NOTHING;
+
     -- 26.28: NULL company_id defeats the plain UNIQUE constraint (SQL NULLs are
     -- distinct) → duplicates were possible. Dedupe (keep the newest row) and add
     -- NULL-safe unique indexes so the invariant holds at the DB level too.
