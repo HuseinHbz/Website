@@ -54,7 +54,7 @@ const docConvert = z.object({ action: z.literal('doc.convert'), sourceId: z.numb
 const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional() })
 const docPaymentReverse = z.object({ action: z.literal('doc.paymentReverse'), paymentId: z.number().int() })
 const docPost = z.object({ action: z.literal('doc.post'), id: z.number().int() })
-const docConfirm = z.object({ action: z.literal('doc.confirm'), id: z.number().int() })
+const docConfirm = z.object({ action: z.literal('doc.confirm'), id: z.number().int(), warehouseId: z.number().int().optional() })
 const docVoid = z.object({ action: z.literal('doc.void'), id: z.number().int() })
 const docReceive = z.object({ action: z.literal('doc.receive'), id: z.number().int(), warehouseId: z.number().int(), lines: z.array(z.object({ lineId: z.number().int(), qty: z.number().min(0) })).optional() })
 const portalLink = z.object({ action: z.literal('vendor.portalLink'), vendorId: z.number().int(), days: z.number().int().min(1).max(365).optional() })
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
         // (Cr Accounts Payable), mirroring sales. A closed period fails loudly and
         // the status rolls back so AP can never drift negative on later payment.
         try {
-          const res = await confirmPurchaseInvoice(d.id, uid)
+          const res = await confirmPurchaseInvoice(d.id, uid, d.warehouseId)
           await logAction(auth.user, 'erp.purchase.confirm', 'purchase_documents', String(d.id), null, { status: res.status, entryId: res.entryId }, ip)
           return NextResponse.json(res)
         } catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : 'Confirm failed' }, { status: 400 }) }

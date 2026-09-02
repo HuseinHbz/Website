@@ -559,7 +559,7 @@ function PriceListManager({ fa, toast }: { fa: boolean; toast: Toast }) {
 // loads the whole catalog into the client (fixes the "load 1000 products" gap).
 export interface InvProduct { id: number; sku: string; barcode?: string | null; nameEn: string; nameFa: string | null; price: number }
 
-function ProductSearchPicker({ locale, onPick }: { locale: string; onPick: (p: InvProduct) => void }) {
+export function ProductSearchPicker({ locale, onPick }: { locale: string; onPick: (p: InvProduct) => void }) {
   const rtl = locale === 'fa'
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)

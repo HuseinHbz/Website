@@ -649,7 +649,52 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
  * never credited to AP" (the asymmetry that let AP drift negative on payment).
  * Idempotent via the gl_entry_id guard inside postPurchaseInvoiceToGl.
  */
-export async function confirmPurchaseInvoice(docId: number, userId?: string): Promise<{ status: PurchaseStatus; entryId: number | null }> {
+/**
+ * Item 5 (bug-fix pack): confirming a purchase invoice adds the invoiced
+ * quantities to warehouse stock, the same way GRN receiving already does —
+ * for the common workflow where an operator records the vendor's invoice
+ * directly, with no separate goods-receipt step in between.
+ *
+ * Guarded against double-stocking: if the invoice's immediate source
+ * document is itself a 'receipt' (GRN), the goods were already moved into
+ * the warehouse by `receiveDocument` at receiving time, so confirming the
+ * invoice must NOT move stock a second time. Idempotent via a `ref` marker
+ * check (`PINV <docNo>`) — a retried confirm never double-stocks.
+ */
+async function stockPurchaseInvoice(docId: number, warehouseId: number | undefined, userId?: string): Promise<void> {
+  const doc = (await pgQuery<{ doc_no: string | null; source_id: number | null; exchange_rate: number | null }>(
+    `SELECT doc_no, source_id, exchange_rate::float AS exchange_rate FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!doc) return
+  const lines = await pgQuery<{ id: number; qty: number; unit_price: number; product_id: number | null }>(
+    `SELECT id, qty::float AS qty, unit_price::float AS unit_price, product_id FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [docId])
+  const productLines = lines.filter(l => l.product_id != null)
+  if (productLines.length === 0) return // service-only invoice — nothing to stock
+
+  if (doc.source_id != null) {
+    const src = (await pgQuery<{ doc_type: string }>(`SELECT doc_type FROM purchase_documents WHERE id=$1`, [doc.source_id]))[0]
+    if (src?.doc_type === 'receipt') return // already moved into the warehouse at GRN time
+  }
+
+  const ref = `PINV ${doc.doc_no ?? docId}`
+  const already = (await pgQuery<{ id: number }>(`SELECT id FROM inv_moves WHERE ref=$1 LIMIT 1`, [ref]))[0]
+  if (already) return // idempotent — a retried confirm never double-stocks
+
+  let wh = warehouseId
+  if (!wh) {
+    const w = (await pgQuery<{ id: number }>(`SELECT id FROM inv_warehouses WHERE active=1 ORDER BY id LIMIT 1`))[0]
+    if (!w) throw new Error('No active warehouse exists — create one before confirming a stocked invoice')
+    wh = w.id
+  }
+  const rate = num(doc.exchange_rate) || 1
+  for (const l of productLines) {
+    await pgQuery(
+      `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+       VALUES ($1,$2,'receipt',$3,$4,$5,$6,${NOW})`,
+      [l.product_id, wh, num(l.qty), num(l.unit_price) * rate, ref, userId ?? null])
+  }
+}
+
+export async function confirmPurchaseInvoice(docId: number, userId?: string, warehouseId?: number): Promise<{ status: PurchaseStatus; entryId: number | null }> {
   const d = (await pgQuery<{ doc_type: string; status: string; vendor_id: number | null }>(`SELECT doc_type, status, vendor_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
   if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices can be confirmed to the GL')
@@ -660,6 +705,7 @@ export async function confirmPurchaseInvoice(docId: number, userId?: string): Pr
   try {
     const res = await postPurchaseInvoiceToGl(docId, userId)
     entryId = res.entryId
+    await stockPurchaseInvoice(docId, warehouseId, userId)
   } catch (err) {
     await pgQuery(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, prev])
     throw err

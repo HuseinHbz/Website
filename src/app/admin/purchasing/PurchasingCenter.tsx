@@ -9,6 +9,7 @@ import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 import { formatDateTime } from '@/lib/admin/datetime'
+import { ProductSearchPicker, type InvProduct } from '../sales/SalesCenter'
 import type { PurchasingChartsData } from './PurchasingCharts'
 
 // Recharts is heavy — load the chart chunk only when the Analytics tab renders.
@@ -307,6 +308,7 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
   const [showNew, setShowNew] = useState(false)
   const [receiveFor, setReceiveFor] = useState<PurDoc | null>(null)
   const [compareFor, setCompareFor] = useState<PurDoc | null>(null)
+  const [confirmFor, setConfirmFor] = useState<PurDoc | null>(null)
   const load = useCallback(async () => { setLoading(true); try { const q = type === 'all' ? '' : `?type=${type}`; const d = await fetch(`/api/admin/erp/purchasing${q}`).then(r => r.json()); setRows(d.documents ?? []) } finally { setLoading(false) } }, [type])
   useEffect(() => { load() }, [load])
 
@@ -334,7 +336,7 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
     { id: 'grn', labelEn: 'Convert to GRN', labelFa: 'تبدیل به رسید', icon: '📦', hidden: d => d.docType !== 'order' || !['approved', 'confirmed'].includes(d.status), onClick: d => op('doc.convert', { sourceId: d.id, toType: 'receipt' }) },
     { id: 'receive', labelEn: 'Receive (GRN)', labelFa: 'دریافت کالا', icon: '🏭', hidden: d => d.docType !== 'receipt' || ['received', 'void', 'rejected'].includes(d.status), onClick: d => setReceiveFor(d) },
     { id: 'compare', labelEn: 'Compare quotes', labelFa: 'مقایسه استعلام‌ها', icon: '⚖', hidden: d => d.docType !== 'rfq', onClick: d => setCompareFor(d) },
-    { id: 'confirm', labelEn: 'Confirm & post', labelFa: 'تأیید و ثبت', icon: '✅', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || d.status !== 'draft', onClick: d => op('doc.confirm', { id: d.id }) },
+    { id: 'confirm', labelEn: 'Confirm & post', labelFa: 'تأیید و ثبت', icon: '✅', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || d.status !== 'draft', onClick: d => setConfirmFor(d) },
     { id: 'post', labelEn: 'Post to GL', labelFa: 'ثبت در دفتر کل', icon: '📒', hidden: d => d.docType !== 'invoice' || !!d.glEntryId || ['draft', 'void'].includes(d.status), onClick: d => op('doc.post', { id: d.id }) },
     { id: 'void', labelEn: 'Void', labelFa: 'ابطال', icon: '🚫', hidden: d => d.docType !== 'invoice' || ['void', 'draft'].includes(d.status), onClick: d => op('doc.void', { id: d.id }) },
   ]
@@ -348,7 +350,48 @@ function Documents({ rtl, locale, toast }: { rtl: boolean; locale: 'fa' | 'en'; 
       {showNew && <NewDocModal rtl={rtl} onClose={() => setShowNew(false)} onDone={() => { setShowNew(false); load() }} toast={toast} />}
       {receiveFor && <ReceiveModal rtl={rtl} doc={receiveFor} onClose={() => setReceiveFor(null)} onDone={() => { setReceiveFor(null); load() }} toast={toast} />}
       {compareFor && <CompareModal rtl={rtl} doc={compareFor} onClose={() => setCompareFor(null)} />}
+      {confirmFor && <ConfirmInvoiceModal rtl={rtl} doc={confirmFor} onClose={() => setConfirmFor(null)} onDone={() => { setConfirmFor(null); load() }} toast={toast} />}
     </div>
+  )
+}
+
+/** Item 5: confirming a purchase invoice posts it to the GL AND adds the
+ * invoiced quantities to the chosen warehouse's stock (unless the invoice
+ * traces back to a GRN that already moved the goods). Picks the sole
+ * warehouse silently when there is only one. */
+function ConfirmInvoiceModal({ rtl, doc, onClose, onDone, toast }: { rtl: boolean; doc: PurDoc; onClose: () => void; onDone: () => void; toast: Toast }) {
+  const [warehouses, setWarehouses] = useState<{ id: number; code: string; nameEn: string; nameFa: string | null }[]>([])
+  const [warehouseId, setWarehouseId] = useState('')
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    fetch('/api/admin/erp/inventory/warehouses').then(r => r.json()).then(d => {
+      const list = d.warehouses ?? []
+      setWarehouses(list)
+      if (list.length === 1) setWarehouseId(String(list[0].id))
+    }).catch(() => {})
+  }, [])
+  async function confirm() {
+    setSaving(true)
+    try {
+      const r = await fetch('/api/admin/erp/purchasing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'doc.confirm', id: doc.id, warehouseId: warehouseId ? Number(warehouseId) : undefined }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) { toast(lc(rtl, 'Confirmed and posted', 'تأیید و ثبت شد'), 'success'); onDone() } else toast(d.error || lc(rtl, 'Failed', 'ناموفق'), 'error')
+    } finally { setSaving(false) }
+  }
+  return (
+    <Modal open onClose={onClose} title={lc(rtl, `Confirm invoice ${doc.docNo || ''}`, `تأیید فاکتور ${doc.docNo || ''}`)}>
+      <div className="space-y-3">
+        <p className="text-sm text-text-secondary">{lc(rtl, 'Posts to the GL and adds the invoiced items to warehouse stock (skipped for lines already received via a GRN).', 'در دفتر کل ثبت و کالاهای فاکتور به موجودی انبار افزوده می‌شود (ردیف‌هایی که قبلاً با رسید انبار دریافت شده‌اند، دوباره اضافه نمی‌شوند).')}</p>
+        {warehouses.length > 1 && (
+          <Select label={lc(rtl, 'Warehouse', 'انبار')} value={warehouseId} onChange={setWarehouseId}
+            options={[{ value: '', label: lc(rtl, '— default —', '— پیش‌فرض —') }, ...warehouses.map(w => ({ value: String(w.id), label: `${w.code} — ${rtl ? (w.nameFa || w.nameEn) : w.nameEn}` }))]} />
+        )}
+        <div className="flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>{lc(rtl, 'Cancel', 'انصراف')}</Btn><Btn onClick={confirm} disabled={saving}>{lc(rtl, 'Confirm', 'تأیید')}</Btn></div>
+      </div>
+    </Modal>
   )
 }
 
@@ -482,6 +525,13 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
       unitPrice: p && !x.unitPrice ? Number(p.price) || 0 : x.unitPrice,
     }))
   }
+  // Item 5: pick already-registered products the same way sales invoices do —
+  // a debounced server-side search (not the full-catalog dropdown above,
+  // which stays for small catalogs) that appends a ready-filled line.
+  function addProductLine(p: InvProduct) {
+    setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice),
+      { description: rtl ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: 9, productId: p.id }])
+  }
   async function save() {
     const clean = lines.filter(l => l.description.trim())
     if (!clean.length) { toast(lc(rtl, 'Add at least one line', 'حداقل یک ردیف'), 'error'); return }
@@ -522,7 +572,10 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
               <div className="col-span-1"><Btn size="sm" variant="ghost" onClick={() => setLines(ls => ls.filter((_, j) => j !== i))}>✕</Btn></div>
             </div>
           ))}
-          <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9, productId: null }])}>+ {lc(rtl, 'Add line', 'افزودن ردیف')}</Btn>
+          <div className="flex items-center gap-3 flex-wrap">
+            <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9, productId: null }])}>+ {lc(rtl, 'Add line', 'افزودن ردیف')}</Btn>
+            <ProductSearchPicker locale={rtl ? 'fa' : 'en'} onPick={addProductLine} />
+          </div>
         </div>
         <div className="flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>{lc(rtl, 'Cancel', 'انصراف')}</Btn><Btn onClick={save}>{lc(rtl, 'Create', 'ساخت')}</Btn></div>
       </div>
