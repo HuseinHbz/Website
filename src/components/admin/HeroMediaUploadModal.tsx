@@ -26,6 +26,25 @@ export const HERO_MEDIA_CATEGORIES: HeroMediaCategory[] = [
   { value: 'hero-poster', labelEn: 'Poster image', labelFa: 'تصویر پوستر' },
 ]
 
+/**
+ * Real bug found live: the file `<input accept>` was always the parent's
+ * fixed `accept` prop (video/svg/json only on every caller in HeroCenter),
+ * while the "Media type" dropdown above still offered "Poster image" as a
+ * choice — selecting it, the browser's native file picker filtered out
+ * every image file, so a poster image could never actually be attached.
+ * The accept attribute must track the SELECTED category, not the parent's
+ * default, matching what `src/lib/media/validate.ts` accepts server-side
+ * for each category (kept as a small literal here — mirrored, not
+ * imported, since that module pulls in server-only Node code).
+ */
+const ACCEPT_BY_CATEGORY: Record<string, string> = {
+  'hero-background-video': 'video/mp4,video/webm,.mp4,.webm',
+  'hero-animation-video': 'video/mp4,video/webm,.mp4,.webm',
+  'hero-animation-vector': 'image/svg+xml,.svg',
+  'hero-animation-lottie': 'application/json,.json',
+  'hero-poster': 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp',
+}
+
 function toKebab(s: string) {
   return s.trim().toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
@@ -175,7 +194,7 @@ export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCatego
           <>
             <div>
               <label className="form-label">{t('File', 'فایل')}</label>
-              <input ref={fileRef} type="file" accept={accept} className="form-input h-auto py-2"
+              <input ref={fileRef} type="file" accept={ACCEPT_BY_CATEGORY[category] ?? accept} className="form-input h-auto py-2"
                 onChange={e => setFile(e.target.files?.[0] ?? null)} />
               {file && <p className="text-3xs text-text-tertiary mt-1">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
             </div>
@@ -188,7 +207,8 @@ export function HeroMediaUploadModal({ open, onClose, rtl, folder, defaultCatego
               <Input label={t('Alt text (EN)', 'متن جایگزین (EN)')} value={altEn} onChange={setAltEn} />
               <Input label={t('Alt text (FA)', 'متن جایگزین (FA)')} value={altFa} onChange={setAltFa} />
             </div>
-            <Select label={t('Media type', 'نوع رسانه')} value={category} onChange={setCategory}
+            <Select label={t('Media type', 'نوع رسانه')} value={category}
+              onChange={v => { setCategory(v); setFile(null); if (fileRef.current) fileRef.current.value = '' }}
               options={HERO_MEDIA_CATEGORIES.map(c => ({ value: c.value, label: rtl ? c.labelFa : c.labelEn }))} />
             <Input label={t('Description (optional)', 'توضیح (اختیاری)')} value={description} onChange={setDescription} multiline rows={2} />
             <div className="flex gap-3">
