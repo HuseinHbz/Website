@@ -1545,6 +1545,16 @@ const T: Record<string, { fa: string; en: string }> = {
   fin_at_equity:    { fa: 'حقوق صاحبان سهام', en: 'Equity' },
   fin_at_revenue:   { fa: 'درآمد', en: 'Revenue' },
   fin_at_expense:   { fa: 'هزینه', en: 'Expense' },
+  fin_at_memo:      { fa: 'انتظامی', en: 'Memo' },
+  // Chart-of-Accounts import (Phase 18 statutory coding workbook)
+  fin_coaImport:        { fa: 'وارد کردن کدینگ استاندارد', en: 'Import standard chart' },
+  fin_coaTemplate:      { fa: 'نوع کدینگ', en: 'Coding type' },
+  fin_coaToCreate:      { fa: 'ایجاد می‌شود', en: 'Will create' },
+  fin_coaAlreadyExists: { fa: 'از قبل موجود است', en: 'Already exists' },
+  fin_coaTotal:         { fa: 'مجموع', en: 'Total' },
+  fin_coaExists:        { fa: 'موجود', en: 'Exists' },
+  fin_coaNew:           { fa: 'جدید', en: 'New' },
+  fin_coaApply:         { fa: 'وارد کردن', en: 'Import' },
   // entry statuses
   fin_st_draft:     { fa: 'پیش‌نویس', en: 'Draft' },
   fin_st_posted:    { fa: 'ثبت‌شده', en: 'Posted' },

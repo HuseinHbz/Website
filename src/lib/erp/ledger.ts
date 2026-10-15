@@ -8,10 +8,15 @@
  * every report is derived here so the books always tie out.
  */
 
-export const ACCOUNT_TYPES = ['asset', 'liability', 'equity', 'revenue', 'expense'] as const
+export const ACCOUNT_TYPES = ['asset', 'liability', 'equity', 'revenue', 'expense', 'memo'] as const
 export type AccountType = (typeof ACCOUNT_TYPES)[number]
 
-/** Debit-normal accounts increase with debits; credit-normal with credits. */
+/** Debit-normal accounts increase with debits; credit-normal with credits.
+ * 'memo' (off-balance-sheet guarantee/promissory-note accounts, Phase 18's
+ * statutory chart import) is credit-normal by convention here — harmless,
+ * since no automatic posting path ever targets a memo account and every
+ * financial statement below filters tallies by the 5 real double-entry
+ * types, so a memo account never appears in any statement regardless. */
 export type NormalSide = 'debit' | 'credit'
 export function normalSide(type: AccountType): NormalSide {
   return type === 'asset' || type === 'expense' ? 'debit' : 'credit'

@@ -10,7 +10,7 @@ import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
 type Tab = 'dashboard' | 'accounts' | 'journal' | 'accounting' | 'reports' | 'currency' | 'banking' | 'compliance'
-type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
+type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'memo'
 
 interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
 interface Line { accountId: number; debit: number; credit: number; memo?: string }
@@ -28,8 +28,8 @@ interface Overview {
   recent: Entry[]; byStatus: Record<string, number>
 }
 
-const ATYPES: AType[] = ['asset', 'liability', 'equity', 'revenue', 'expense']
-const TYPE_COLOR: Record<AType, 'blue' | 'red' | 'indigo' | 'green' | 'yellow'> = { asset: 'blue', liability: 'red', equity: 'indigo', revenue: 'green', expense: 'yellow' }
+const ATYPES: AType[] = ['asset', 'liability', 'equity', 'revenue', 'expense', 'memo']
+const TYPE_COLOR: Record<AType, 'blue' | 'red' | 'indigo' | 'green' | 'yellow' | 'slate'> = { asset: 'blue', liability: 'red', equity: 'indigo', revenue: 'green', expense: 'yellow', memo: 'slate' }
 const money = (n: number | null | undefined) => fmtMoney(n, { min: 2, max: 2, signed: true })
 
 export function FinanceCenter() {
@@ -143,6 +143,7 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Partial<Account>>({ type: 'asset', active: 1 })
   const [saving, setSaving] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const load = useCallback(async () => { setLoading(true); try { const r = await fetch('/api/admin/erp/finance/accounts'); if (r.ok) { const d = await r.json(); setAccounts(d.accounts ?? []) } } catch { toast(t('fin_loadFail'), 'error') } finally { setLoading(false) } }, [toast, t])
   useEffect(() => { load() }, [load])
@@ -167,7 +168,10 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
   const rowActions: RowAction<Account>[] = [{ id: 'edit', labelEn: 'Edit', labelFa: t('fin_edit'), icon: '✎', onClick: a => { setEditing(a); setModal(true) } }]
   return (
     <>
-      <div className="flex justify-end mb-4"><Btn onClick={() => { setEditing({ type: 'asset', active: 1 }); setModal(true) }}>{t('fin_newAccount')}</Btn></div>
+      <div className="flex justify-end gap-2 mb-4">
+        <Btn variant="secondary" onClick={() => setImportOpen(true)}>{t('fin_coaImport')}</Btn>
+        <Btn onClick={() => { setEditing({ type: 'asset', active: 1 }); setModal(true) }}>{t('fin_newAccount')}</Btn>
+      </div>
       <Card className="p-4">
         <DataTable tableId="finance-accounts" columns={columns} rows={accounts} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={a => String(a.id)} rowActions={rowActions} exportName="chart-of-accounts" />
       </Card>
@@ -182,7 +186,90 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
           <div className="flex gap-3"><Btn onClick={save} disabled={saving}>{saving ? t('fin_saving') : t('fin_save')}</Btn><Btn variant="secondary" onClick={() => setModal(false)}>{t('fin_cancel')}</Btn></div>
         </div>
       </Modal>
+      {importOpen && <CoaImportModal t={t} fa={fa} toast={toast} onClose={() => setImportOpen(false)} onDone={load} />}
     </>
+  )
+}
+
+interface CoaTemplateMeta { key: string; nameEn: string; nameFa: string }
+interface CoaPlanNodeUi { level: 'group' | 'control' | 'detail'; code: string; nameFa: string; nameEn: string | null; accountType: string; exists: boolean }
+interface CoaSummary { totalNodes: number; toCreate: number; alreadyExists: number; byType: Record<string, number> }
+
+/** Phase 18 (statutory coding workbook): import one of the 3 seeded Iranian
+ * chart-of-accounts variants (service/production/trading) into the live
+ * chart — additive-only, existing codes are shown as already-imported and
+ * are never touched. */
+function CoaImportModal({ t, fa, toast, onClose, onDone }: { t: T; fa: boolean; toast: Toast; onClose: () => void; onDone: () => void }) {
+  const [templates, setTemplates] = useState<CoaTemplateMeta[]>([])
+  const [key, setKey] = useState('')
+  const [plan, setPlan] = useState<CoaPlanNodeUi[]>([])
+  const [summary, setSummary] = useState<CoaSummary | null>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
+  const [importing, setImporting] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/erp/finance/coa-import?view=templates').then(r => r.json()).then(d => {
+      const list: CoaTemplateMeta[] = d.templates ?? []
+      setTemplates(list)
+      if (list.length > 0) setKey(list[0].key)
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!key) return
+    setLoadingPreview(true)
+    fetch(`/api/admin/erp/finance/coa-import?view=preview&key=${encodeURIComponent(key)}`)
+      .then(r => r.json())
+      .then(d => { setPlan(d.plan ?? []); setSummary(d.summary ?? null) })
+      .catch(() => { setPlan([]); setSummary(null) })
+      .finally(() => setLoadingPreview(false))
+  }, [key])
+
+  async function apply() {
+    setImporting(true)
+    try {
+      const r = await fetch('/api/admin/erp/finance/coa-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'apply', templateKey: key }) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'failed')
+      toast(fa ? `${d.created} حساب ایجاد شد، ${d.skipped} حساب از قبل موجود بود` : `${d.created} accounts created, ${d.skipped} already existed`, 'success')
+      onDone(); onClose()
+    } catch (e) { toast(e instanceof Error ? e.message : t('fin_saveFail'), 'error') } finally { setImporting(false) }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t('fin_coaImport')} size="lg">
+      <div className="space-y-4">
+        <p className="text-xs text-text-tertiary">{fa
+          ? 'یکی از سه کدینگ استاندارد حسابداری ایران را انتخاب کنید. وارد کردن فقط حساب‌هایی را می‌سازد که هنوز وجود ندارند — هیچ حساب موجودی تغییر یا حذف نمی‌شود.'
+          : 'Pick one of the three standard Iranian chart-of-accounts variants. Import only creates accounts that do not already exist — no existing account is changed or removed.'}</p>
+        <Select label={t('fin_coaTemplate')} value={key} onChange={setKey}
+          options={templates.map(tm => ({ value: tm.key, label: fa ? tm.nameFa : tm.nameEn }))} />
+        {loadingPreview ? (
+          <p className="text-xs text-text-tertiary">{t('fin_loading')}</p>
+        ) : summary && (
+          <div className="rounded-lg border border-subtle p-3 grid grid-cols-3 gap-2 text-sm">
+            <div><p className="text-xs text-text-tertiary">{t('fin_coaToCreate')}</p><p className="font-bold text-success-text">{summary.toCreate}</p></div>
+            <div><p className="text-xs text-text-tertiary">{t('fin_coaAlreadyExists')}</p><p className="font-medium text-text-secondary">{summary.alreadyExists}</p></div>
+            <div><p className="text-xs text-text-tertiary">{t('fin_coaTotal')}</p><p className="font-medium text-text-primary">{summary.totalNodes}</p></div>
+          </div>
+        )}
+        <div className="max-h-72 overflow-y-auto rounded-lg border border-subtle divide-y divide-border/40">
+          {plan.map(n => (
+            <div key={n.code} className={`flex items-center justify-between gap-2 px-3 py-1.5 text-xs ${n.level === 'group' ? 'font-bold bg-surface-2' : n.level === 'control' ? 'font-medium ps-6' : 'ps-10 text-text-secondary'}`}>
+              <span className="truncate">{n.nameFa}</span>
+              <span className="flex items-center gap-2 shrink-0">
+                <span className="font-mono text-text-tertiary">{n.code}</span>
+                <Badge color={n.exists ? 'slate' : 'green'}>{n.exists ? t('fin_coaExists') : t('fin_coaNew')}</Badge>
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3">
+          <Btn onClick={apply} disabled={importing || !summary || summary.toCreate === 0}>{importing ? t('fin_saving') : t('fin_coaApply')}</Btn>
+          <Btn variant="secondary" onClick={onClose}>{t('fin_cancel')}</Btn>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
