@@ -316,8 +316,15 @@ export async function inbox(tab: 'pending' | 'approved' | 'rejected' | 'delegate
     return pgQuery(`SELECT r.* FROM approval_requests r WHERE r.created_by IN (SELECT from_user_id FROM approval_delegations WHERE to_user_id=$1 AND active=1) ORDER BY r.id DESC LIMIT 200`, [userId])
   }
   if (tab === 'expired') return pgQuery(`SELECT id, doc_type AS "docType", title, amount::float AS amount, currency, department, status, current_level AS "currentLevel", pending_since AS "pendingSince", sla_breached AS "slaBreached", created_at AS "createdAt" FROM approval_requests WHERE status IN ('pending','changes_requested') AND sla_breached=1 ORDER BY pending_since LIMIT 200`)
-  const status = tab === 'pending' ? `status IN ('pending','changes_requested')` : `status='${tab}'`
-  return pgQuery(`SELECT id, doc_type AS "docType", title, amount::float AS amount, currency, department, status, current_level AS "currentLevel", pending_since AS "pendingSince", sla_breached AS "slaBreached", created_at AS "createdAt" FROM approval_requests WHERE ${status} ORDER BY id DESC LIMIT 200`)
+  // SEC-FIX-1 BUG-ERP-01 — second, independent layer: even if the caller
+  // (route.ts) ever regressed its own validation, `tab` here is NEVER
+  // interpolated into the SQL text. `gate` only ever chooses between two
+  // hardcoded literal fragments (the 'listPayments'/'listSlaEvents' pattern);
+  // the actual value always travels through $1.
+  const gate = tab === 'pending' ? `status IN ('pending','changes_requested')` : `status=$1`
+  return pgQuery(
+    `SELECT id, doc_type AS "docType", title, amount::float AS amount, currency, department, status, current_level AS "currentLevel", pending_since AS "pendingSince", sla_breached AS "slaBreached", created_at AS "createdAt" FROM approval_requests WHERE ${gate} ORDER BY id DESC LIMIT 200`,
+    tab === 'pending' ? [] : [tab])
 }
 
 // ── Analytics (M11) ──────────────────────────────────────────────────────────

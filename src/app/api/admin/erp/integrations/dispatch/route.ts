@@ -16,12 +16,16 @@ export async function GET(req: NextRequest) {
   try {
     const dlq = req.nextUrl.searchParams.get('dlq')
     const cid = Number(req.nextUrl.searchParams.get('connectorId')) || 0
-    const where = dlq ? `WHERE d.status='dead' AND d.resolved=0` : cid ? `WHERE d.connector_id=${cid}` : ''
+    // SEC-FIX-1 بند۳ (third finding) — `cid` used to be spliced straight
+    // into the SQL text. `Number(...) || 0` meant it could never actually
+    // carry an injection payload, but it still violated the project's own
+    // $n-parametrized rule — fixed the same way as the other real findings.
+    const where = dlq ? `WHERE d.status='dead' AND d.resolved=0` : cid ? `WHERE d.connector_id=$1` : ''
     const rows = await pgQuery(
       `SELECT d.id, d.connector_id AS "connectorId", i.key AS "connectorKey", i.type,
               d.status, d.latency_ms AS "latencyMs", d.attempts, d.error, d.created_at AS "createdAt"
        FROM integration_dispatches d JOIN integrations i ON i.id=d.connector_id
-       ${where} ORDER BY d.created_at DESC LIMIT 100`, [])
+       ${where} ORDER BY d.created_at DESC LIMIT 100`, !dlq && cid ? [cid] : [])
     // Lightweight metrics.
     const m = (await pgQuery(
       `SELECT COUNT(*)::int AS total,

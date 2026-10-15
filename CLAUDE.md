@@ -315,6 +315,21 @@
    route through the EXISTING `payment_request` approval doc type, never a
    parallel table; the Warehouse Keeper/Procurement/CFO+Finance Specialist
    RBAC templates are reused as-is, never duplicated.)
+55. هیچ مقدار غیرثابتی مستقیم در متن یک کوئری pgQuery درج نشود؛ حتی
+   فیلترهای اختیاری فقط بین چند رشتهٔ SQL ثابت انتخاب می‌شوند، مقدار واقعی
+   همیشه از طریق $n می‌رود؛ این با audit گیت دائمی در CI اعمال می‌شود.
+   (SEC-FIX-1 — `npm run audit:sql`, `scripts/sql-injection-audit.mjs`: a
+   `?tab=`-style query param that reached raw SQL text with only a
+   TypeScript `as` cast — no runtime check — let any `erp.approvals:read`
+   user read any table via UNION injection; a `userId` hand-escaped with
+   `.replace(/'/g,"''")` instead of a bound param was the same anti-pattern
+   without the exploit. Every `pgQuery`/`query` template literal under
+   `src/lib` and `src/app/api` is now gated: the only allowed
+   `${...}` interpolations are `${NOW}`, a safe positional-placeholder
+   index (`arr.length [+ N]`), or an identifier/array provably built ONLY
+   from hardcoded literal SQL fragments — the real value always travels
+   through `$n`. A genuine false positive gets a documented one-line
+   reason in the script's `ALLOWLIST`, never a silent pass.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

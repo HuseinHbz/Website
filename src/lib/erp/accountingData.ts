@@ -42,9 +42,16 @@ export async function transitionPeriod(id: number, to: PeriodStatus, userId?: st
   const cur = (await pgQuery<{ status: PeriodStatus }>(`SELECT status FROM gl_fiscal_periods WHERE id=$1`, [id]))[0]
   if (!cur) return { ok: false, error: 'Period not found' }
   if (!canTransitionPeriod(cur.status, to)) return { ok: false, error: `Cannot move a ${cur.status} period to ${to}` }
-  const stamp = to === 'closed' ? `, closed_at=${NOW}, closed_by=${userId ? `'${userId.replace(/'/g, "''")}'` : 'NULL'}`
+  // SEC-FIX-1 BUG-ERP-02 — `userId` used to be manually escaped
+  // (`replace(/'/g, "''")`) and spliced into the SQL text. Not reachable
+  // with an attacker-controlled value today (userId comes from the server
+  // session), but it violated the project's own $n-parametrized rule. Now
+  // `$3` carries the real value and a CASE WHEN decides, per `to`, which
+  // (already-hardcoded) column set applies — the observable behavior
+  // (which columns get stamped, when) is unchanged.
+  const stamp = to === 'closed' ? `, closed_at=${NOW}, closed_by=$3`
     : to === 'locked' ? `, locked_at=${NOW}` : ''
-  await pgQuery(`UPDATE gl_fiscal_periods SET status=$2${stamp} WHERE id=$1`, [id, to])
+  await pgQuery(`UPDATE gl_fiscal_periods SET status=$2${stamp} WHERE id=$1`, to === 'closed' ? [id, to, userId ?? null] : [id, to])
   return { ok: true }
 }
 

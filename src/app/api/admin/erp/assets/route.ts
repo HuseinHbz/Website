@@ -101,11 +101,18 @@ export async function PUT(req: NextRequest) {
     const existing = (await pgQuery(`SELECT id, status, currency FROM assets WHERE id=$1`, [d.id]))[0] as { id: number; status: string; currency: string | null } | undefined
     if (!existing) return badRequest('asset not found')
     // Original registration rate is immutable; recapture only on a currency change.
-    const rateSql = existing.currency !== d.currency ? `, exchange_rate=${(await rialRateFor(d.currency)) ?? 1}` : ''
+    // SEC-FIX-1 بند۳ (third finding) — the computed rate used to be spliced
+    // directly into the SQL text instead of travelling as a bound param; a
+    // plain number can't carry an injection payload, but it still violated
+    // the project's own $n-parametrized rule, so it's fixed the same way as
+    // the other two real bugs rather than allowlisted.
+    const newRate = existing.currency !== d.currency ? (await rialRateFor(d.currency)) ?? 1 : null
+    const baseParams = [d.id, ...values(d)]
+    const rateSql = newRate != null ? `, exchange_rate=$${baseParams.length + 1}` : ''
     const cols = COLS.split(',').map((c, i) => `${c.trim()}=$${i + 2}`).join(', ')
     await pgQuery(
       `UPDATE assets SET ${cols}${rateSql}, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`,
-      [d.id, ...values(d)],
+      newRate != null ? [...baseParams, newRate] : baseParams,
     )
     if (existing.status !== d.status) {
       await pgQuery(`INSERT INTO asset_activity (asset_id, action, detail, user_id) VALUES ($1,'status',$2,$3)`,

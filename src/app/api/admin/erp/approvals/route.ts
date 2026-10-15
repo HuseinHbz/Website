@@ -13,6 +13,8 @@ import {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const TAB_SCHEMA = z.enum(['pending', 'approved', 'rejected', 'delegated', 'expired'])
+
 // GET ?tab=pending|approved|rejected|delegated|expired | ?id= | ?view=analytics
 export async function GET(req: NextRequest) {
   const auth = await requirePermission('erp.approvals', 'read')
@@ -22,8 +24,15 @@ export async function GET(req: NextRequest) {
     if (sp.get('view') === 'analytics') return NextResponse.json(await approvalAnalytics())
     const id = Number(sp.get('id'))
     if (id) { const r = await getApprovalRequest(id); return r ? NextResponse.json(r) : NextResponse.json({ error: 'Not found' }, { status: 404 }) }
-    const tab = (sp.get('tab') ?? 'pending') as 'pending' | 'approved' | 'rejected' | 'delegated' | 'expired'
-    return NextResponse.json({ requests: await inbox(tab, auth.user.id) })
+    // SEC-FIX-1 BUG-ERP-01 — `tab` used to be a bare `as` cast with no runtime
+    // check, reaching inbox() as a raw string that was interpolated straight
+    // into SQL for any value other than the three special-cased ones. A real
+    // zod enum here is the first of two independent layers (inbox() itself
+    // never interpolates the value either — see approvalData.ts).
+    const tabParam = sp.get('tab') ?? 'pending'
+    const parsedTab = TAB_SCHEMA.safeParse(tabParam)
+    if (!parsedTab.success) return NextResponse.json({ error: `Invalid tab: ${tabParam}` }, { status: 400 })
+    return NextResponse.json({ requests: await inbox(parsedTab.data, auth.user.id) })
   } catch (e) { return apiError(e, 'Failed to load approvals') }
 }
 
