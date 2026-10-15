@@ -8,14 +8,18 @@ import { useT, useAdminLocale } from '@/lib/admin/locale'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 import { IntelligenceTab, TrackingTab, StockOpsTab, LogisticsTab } from './InventoryOps'
+import { GoodsRequestPanel } from '@/components/admin/SupplyFlowTab'
 
-type Tab = 'dashboard' | 'products' | 'warehouses' | 'moves' | 'intelligence' | 'tracking' | 'stockops' | 'logistics'
+type Tab = 'dashboard' | 'products' | 'warehouses' | 'moves' | 'intelligence' | 'tracking' | 'stockops' | 'logistics' | 'supplyflow'
 // Phase 26.19 tabs carry inline bilingual labels (outside the locale dictionary).
 const OPS_TABS: [Tab, string, string][] = [
   ['intelligence', 'Intelligence', 'هوش موجودی'],
   ['tracking', 'Serial / Batch', 'سریال / بچ'],
   ['stockops', 'Stock Ops', 'عملیات موجودی'],
   ['logistics', 'Logistics', 'لجستیک'],
+  // PROC-FLOW-1 — Warehouse Keeper's own queue: goods requests → direct
+  // delivery or a supply note. Not duplicated anywhere else.
+  ['supplyflow', 'Stock Shortages', 'کسری و برگ تأمین'],
 ]
 type StockStatus = 'out' | 'below_safety' | 'reorder' | 'ok' | 'overstock'
 
@@ -81,8 +85,19 @@ export function InventoryCenter() {
       {tab === 'tracking' && <TrackingTab fa={fa} toast={toast} />}
       {tab === 'stockops' && <StockOpsTab fa={fa} toast={toast} canAdmin />}
       {tab === 'logistics' && <LogisticsTab fa={fa} toast={toast} />}
+      {tab === 'supplyflow' && <SupplyFlowWrapper fa={fa} toast={toast} />}
     </>
   )
+}
+
+function SupplyFlowWrapper({ fa, toast }: { fa: boolean; toast: ReturnType<typeof useToast>['toast'] }) {
+  const [products, setProducts] = useState<{ id: number; label: string }[]>([])
+  const [warehouses, setWarehouses] = useState<{ id: number; label: string }[]>([])
+  useEffect(() => {
+    fetch('/api/admin/erp/inventory/products').then(r => r.json()).then(d => setProducts((d.products ?? []).map((p: Product) => ({ id: p.id!, label: `${p.sku} — ${p.nameEn}` }))))
+    fetch('/api/admin/erp/inventory/warehouses').then(r => r.json()).then(d => setWarehouses((d.warehouses ?? []).map((w: Warehouse) => ({ id: w.id!, label: w.nameEn }))))
+  }, [])
+  return <GoodsRequestPanel fa={fa} toast={toast} products={products} warehouses={warehouses} />
 }
 
 type T = ReturnType<typeof useT>

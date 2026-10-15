@@ -44,6 +44,13 @@ export async function POST(req: NextRequest) {
   const ip = clientIp(req)
   try {
     if (d.action === 'create') {
+      // PROC-FLOW-1 بند۱: a payment_request raised BEFORE goods receipt moves
+      // money, not just paperwork — gate it with its own op so a role with
+      // only the generic erp.approvals:write grant (needed to create ANY
+      // approval request) cannot raise one without also holding this op.
+      if (d.docType === 'payment_request') {
+        const deny = await requireOp(auth.user, 'erp.purchasing:request_payment', 'edit'); if (deny) return deny
+      }
       const r = await createApprovalRequest(d, auth.user.id)
       await logAction(auth.user, 'approval.request', 'approval_requests', r.id, null, { docType: d.docType, amount: d.amount }, ip)
       return NextResponse.json(r)

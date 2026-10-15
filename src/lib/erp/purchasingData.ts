@@ -254,6 +254,24 @@ export async function receiveDocument(
     const complete = productLines.length === 0 || productLines.every(l => num(l.received_qty) + 0.0001 >= num(l.qty))
     const status = complete ? 'received' : 'partial'
     await query(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, status])
+    // PROC-FLOW-1 بند۳.۱.۴ — a goods-request route into this SAME chain
+    // (via a supply note → convertDocument's request→…→receipt lineage,
+    // chained by source_id) auto-closes once the chain it fed is fully
+    // received. Walks source_id up to the root request; a no-op for any
+    // document that was never fed by a supply note (the common case).
+    if (status === 'received') {
+      const root = await query<{ id: number }>(
+        `WITH RECURSIVE up(id, source_id, depth) AS (
+           SELECT id, source_id, 0 FROM purchase_documents WHERE id=$1
+           UNION ALL
+           SELECT p.id, p.source_id, u.depth+1 FROM purchase_documents p JOIN up u ON p.id=u.source_id WHERE u.depth < 10
+         ) SELECT id FROM up ORDER BY depth DESC LIMIT 1`, [docId])
+      if (root[0]) {
+        await query(
+          `UPDATE inv_supply_notes SET status='closed', updated_at=${NOW}
+           WHERE linked_purchase_document_id=$1 AND status NOT IN ('closed','cancelled')`, [root[0].id])
+      }
+    }
     return { ok: true, received, status }
   })
 }

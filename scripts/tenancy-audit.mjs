@@ -25,6 +25,8 @@ const TRANSACTIONAL = [
   // 26.25: CRM transactional tables (tickets + campaign sends).
   'crm_tickets', 'crm_campaigns', 'crm_campaign_recipients',
   'crm_customer_channels',
+  // PROC-FLOW-1: the two genuinely new tables this phase adds.
+  'inv_supply_notes', 'erp_service_requests',
 ]
 
 // A table "has company_id" if it declares it inline in its CREATE TABLE body OR

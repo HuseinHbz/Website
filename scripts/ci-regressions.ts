@@ -43,6 +43,7 @@ const SUITES = [
   { name: 'Phase 15 direct AP payment reversal', script: 'verify-phase15-financial-controls.ts', db: 'rg_p15' },
   { name: 'Phase 16 customer receipt (AR) reversal', script: 'verify-phase16-financial-controls.ts', db: 'rg_p16' },
   { name: 'Phase 17 customer AR unapplied-receipt consumption', script: 'verify-phase17-financial-controls.ts', db: 'rg_p17' },
+  { name: 'PROC-FLOW-1 supply notes + service requests + payment_request SoD', script: 'verify-procflow1-supply-service.ts', db: 'rg_pf1' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

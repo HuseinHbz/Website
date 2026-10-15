@@ -629,7 +629,9 @@ export async function runMigrations() {
       ('doc_completion_certificate','Document · Completion Certificate','سند · گواهی تکمیل','{PREFIX}-{YEAR}-{COUNTER}','CC','yearly',6,1),
       ('doc_financial_report','Document · Financial Report','سند · گزارش مالی','{PREFIX}-{YEAR}-{COUNTER}','FR','yearly',6,1),
       ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1),
-      ('ticket','Support Ticket','تیکت پشتیبانی','{PREFIX}-{YEAR}-{COUNTER}','TK','yearly',5,1)
+      ('ticket','Support Ticket','تیکت پشتیبانی','{PREFIX}-{YEAR}-{COUNTER}','TK','yearly',5,1),
+      ('supply_note','Supply Note','برگ تأمین','{PREFIX}-{YEAR}-{COUNTER}','SN','yearly',5,1),
+      ('service_request','Service Request','درخواست خدمات','{PREFIX}-{YEAR}-{COUNTER}','SRQ','yearly',5,1)
     ON CONFLICT (doc_type) DO NOTHING;
 
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
@@ -2695,14 +2697,26 @@ export async function runMigrations() {
        '{"erp.inventory:cost_view":false}',
        '{}', true),
       ('Procurement', 'تدارکات',
-       '{"erp.purchasing":"write","erp.inventory":"read","erp.finance":"none","erp.treasury":"none","hr":"none","crm":"none","system":"none","security":"none","backup":"none","ai":"none","executive":"read"}',
-       '{"erp.purchasing:confirm":false,"erp.purchasing:void":false,"erp.purchasing:post":false}',
+       '{"erp.purchasing":"write","erp.inventory":"read","erp.finance":"none","erp.treasury":"none","erp.approvals":"write","hr":"none","crm":"none","system":"none","security":"none","backup":"none","ai":"none","executive":"read"}',
+       '{"erp.purchasing:confirm":false,"erp.purchasing:void":false,"erp.purchasing:post":false,"erp.purchasing:request_payment":true,"erp.approvals:approve":false,"erp.approvals:reject":false}',
        '{}', true),
       ('Customer Service Specialist', 'کارشناس امور مشتریان',
        '{"crm.crm":"write","crm.crm.customers":"write","operations.crm.tickets":"write","erp.sales":"read","erp.finance":"none","erp.treasury":"none","erp.purchasing":"none","hr":"none","system":"none","security":"none","backup":"none","ai":"none","executive":"none"}',
        '{}',
        '{"crm.crm":"own","operations.crm.tickets":"own","erp.sales":"own"}', true)
     ON CONFLICT (name) DO NOTHING;
+
+    -- PROC-FLOW-1 بند۱: 'ON CONFLICT DO NOTHING' above never retro-fits an
+    -- already-seeded 'Procurement' row on an existing install — this is an
+    -- idempotent UPDATE so a prior deploy picks up the new
+    -- erp.purchasing:request_payment op + erp.approvals:write grant
+    -- (needed to raise a payment_request) without ever touching a row an
+    -- operator has since customized (is_system=true guards that).
+    UPDATE rbac_role_templates
+       SET grants = (grants::jsonb || '{"erp.approvals":"write"}'::jsonb)::text,
+           ops = (ops::jsonb || '{"erp.purchasing:request_payment":true,"erp.approvals:approve":false,"erp.approvals:reject":false}'::jsonb)::text
+     WHERE name = 'Procurement' AND is_system = true
+       AND NOT (ops::jsonb ? 'erp.purchasing:request_payment');
 
     -- 26.28: NULL company_id defeats the plain UNIQUE constraint (SQL NULLs are
     -- distinct) → duplicates were possible. Dedupe (keep the newest row) and add
@@ -5015,5 +5029,48 @@ export async function runMigrations() {
 
   await pgQuery(`
     SELECT 1;
+  `)
+
+  // PROC-FLOW-1 بند۲ — the only two genuinely new tables this phase needs
+  // (everything else reuses purchase_documents / approval_requests /
+  // inv_moves unchanged). Raw DDL, consistent with the rest of the ERP
+  // tables (CLAUDE.md rule 28: one table, one owner — neither is declared
+  // in Drizzle schema.ts). company_id is nullable per the existing
+  // multi-company-ready convention (audit:tenancy requires the column,
+  // not that every row be stamped).
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS inv_supply_notes (
+      id SERIAL PRIMARY KEY,
+      note_no TEXT UNIQUE,
+      product_id INTEGER NOT NULL REFERENCES inv_products(id),
+      warehouse_id INTEGER NOT NULL REFERENCES inv_warehouses(id),
+      qty_needed NUMERIC NOT NULL,
+      qty_available_snapshot NUMERIC NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'raised'
+        CHECK(status IN ('raised','sent_to_procurement','linked_to_purchase','closed','cancelled')),
+      raised_by TEXT,
+      sent_at TEXT,
+      linked_purchase_document_id INTEGER REFERENCES purchase_documents(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_supply_notes_status ON inv_supply_notes(status);
+    CREATE INDEX IF NOT EXISTS idx_supply_notes_purchase_doc ON inv_supply_notes(linked_purchase_document_id);
+
+    CREATE TABLE IF NOT EXISTS erp_service_requests (
+      id SERIAL PRIMARY KEY,
+      request_no TEXT UNIQUE,
+      requester_id TEXT,
+      description TEXT NOT NULL,
+      vendor_id INTEGER REFERENCES purchase_vendors(id),
+      status TEXT NOT NULL DEFAULT 'requested'
+        CHECK(status IN ('requested','quoted','invoiced','financial_doc_sent','closed')),
+      linked_purchase_document_id INTEGER REFERENCES purchase_documents(id),
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS idx_service_requests_status ON erp_service_requests(status);
   `)
 }

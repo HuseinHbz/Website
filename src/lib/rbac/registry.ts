@@ -54,7 +54,11 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   // — a sales rep can confirm an order without being able to move physical
   // inventory out the door.
   'erp.sales': ['confirm', 'void', 'return', 'post', 'payment_create', 'refund', 'deliver'],
-  'erp.purchasing': ['confirm', 'void', 'post'],
+  // PROC-FLOW-1 — issuing a payment_request BEFORE goods receipt (cash
+  // purchase path) is materially more dangerous than ordinary purchasing
+  // write (it moves money, not just paperwork), so it needs its own gate
+  // rather than riding on the generic erp.approvals:write create action.
+  'erp.purchasing': ['confirm', 'void', 'post', 'request_payment'],
   'erp.treasury': ['reconcile', 'cheque_state'],
   // Phase 28 — HR. Payroll ops are separated because calculating a run,
   // approving it and paying it must be able to sit with different people

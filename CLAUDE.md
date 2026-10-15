@@ -306,6 +306,15 @@
    the content and only needs a thin per-user layer on top — the 26.32 Root C
    lesson (one table, one owner) generalised to "one catalog, many consumers".
    (کاتالوگ عمومی موجود reuse می‌شود، برای مصرف داخلی fork نمی‌شود.)
+54. برگ تأمین تنها ماشهٔ معتبر ورود به زنجیرهٔ خرید موجود بر مبنای کسری انبار
+   است؛ مسیر پرداخت نقدی از نوع سند تأیید `payment_request` موجود عبور
+   می‌کند، نه جدول موازی؛ نقش‌های انباردار/تدارکات/مالی از تمپلیت‌های RBAC
+   seed‌شدهٔ موجود reuse می‌شوند. (PROC-FLOW-1 — `inv_supply_notes` is the
+   ONE trigger into the existing purchase chain on a stock shortage;
+   `erp_service_requests` for non-stock service invoicing; cash purchases
+   route through the EXISTING `payment_request` approval doc type, never a
+   parallel table; the Warehouse Keeper/Procurement/CFO+Finance Specialist
+   RBAC templates are reused as-is, never duplicated.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

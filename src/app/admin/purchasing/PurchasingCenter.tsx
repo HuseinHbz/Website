@@ -11,11 +11,12 @@ import type { Column } from '@/lib/admin/dataTable'
 import { formatDateTime } from '@/lib/admin/datetime'
 import { ProductSearchPicker, type InvProduct } from '../sales/SalesCenter'
 import type { PurchasingChartsData } from './PurchasingCharts'
+import { ProcurementSupplyQueue, ServiceRequestsPanel } from '@/components/admin/SupplyFlowTab'
 
 // Recharts is heavy — load the chart chunk only when the Analytics tab renders.
 const PurchasingCharts = dynamic(() => import('./PurchasingCharts'), { ssr: false, loading: () => <div className="h-60 rounded-xl border border-subtle bg-surface animate-pulse" /> })
 
-type Tab = 'dashboard' | 'vendors' | 'documents' | 'analytics'
+type Tab = 'dashboard' | 'vendors' | 'documents' | 'analytics' | 'supplyflow'
 const lc = (rtl: boolean, en: string, fa: string) => (rtl ? fa : en)
 const DOC_TYPES = ['request', 'rfq', 'quotation', 'order', 'receipt', 'invoice', 'return', 'credit_note'] as const
 type DocType = typeof DOC_TYPES[number]
@@ -34,6 +35,10 @@ export function PurchasingCenter() {
     { id: 'vendors', en: 'Vendors', fa: 'تأمین‌کنندگان' },
     { id: 'documents', en: 'Documents', fa: 'اسناد خرید' },
     { id: 'analytics', en: 'Analytics', fa: 'تحلیل‌ها' },
+    // PROC-FLOW-1 — Procurement's inbox: supply notes → convert/request-payment,
+    // and service requests → service invoice. Finance still uses the EXISTING
+    // Approval Center inbox for payment_request, no parallel component here.
+    { id: 'supplyflow', en: 'Supply & Service', fa: 'تأمین و خدمات' },
   ]
   return (
     <>
@@ -48,7 +53,21 @@ export function PurchasingCenter() {
       {tab === 'vendors' && <Vendors rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'documents' && <Documents rtl={rtl} locale={locale} toast={toast} />}
       {tab === 'analytics' && <Analytics rtl={rtl} />}
+      {tab === 'supplyflow' && <SupplyFlowTab rtl={rtl} toast={toast} />}
     </>
+  )
+}
+
+function SupplyFlowTab({ rtl, toast }: { rtl: boolean; toast: Toast }) {
+  const [vendors, setVendors] = useState<{ id: number; label: string }[]>([])
+  useEffect(() => {
+    fetch('/api/admin/erp/purchasing?view=vendors').then(r => r.json()).then(d => setVendors((d.vendors ?? []).map((v: { id: number; name: string }) => ({ id: v.id, label: v.name }))))
+  }, [])
+  return (
+    <div className="space-y-6">
+      <ProcurementSupplyQueue fa={rtl} toast={toast} vendors={vendors} />
+      <ServiceRequestsPanel fa={rtl} toast={toast} />
+    </div>
   )
 }
 
