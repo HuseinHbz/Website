@@ -12,7 +12,7 @@ import type { Column } from '@/lib/admin/dataTable'
 type Tab = 'dashboard' | 'accounts' | 'journal' | 'accounting' | 'reports' | 'currency' | 'banking' | 'compliance'
 type AType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'memo'
 
-interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number }
+interface Account { id: number; code: string; nameEn: string; nameFa: string | null; type: AType; active: number; debit?: number; credit?: number; parentId?: number | null }
 interface Line { accountId: number; debit: number; credit: number; memo?: string }
 interface Entry { id: number; entryNo: string; date: string; memo: string | null; status: string; total: number; createdAt?: string; postedAt?: string | null; reversedBy?: number | null; reversalOf?: number | null }
 interface SLine { id: number; code: string; nameEn: string; nameFa?: string | null; amount: number }
@@ -159,7 +159,54 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
   }
 
   const bal = (a: Account) => { const net = (a.debit ?? 0) - (a.credit ?? 0); return (a.type === 'asset' || a.type === 'expense') ? net : -net }
+
+  // Phase 18 completion: resolve each account position in the گروه کل/
+  // گروه معین hierarchy (group → control → detail) that the imported
+  // statutory chart (and the pre-existing 26.22 single-digit roots) already
+  // carry via parent_id — computed client-side from the already-loaded
+  // account list (no extra round trip, no SQL self-joins) so the table can
+  // both group by it (matching the layout of the source workbook) and
+  // filter by it, while the ungrouped/flat view of the SAME data remains
+  // one click away via the "No grouping" option already built into DataTable.
+  const byId = useMemo(() => new Map(accounts.map(a => [a.id, a])), [accounts])
+  const ancestorChain = useCallback((a: Account): Account[] => {
+    const chain: Account[] = []
+    let cur: Account | undefined = a
+    for (let guard = 0; cur?.parentId != null && guard < 10; guard++) {
+      const p = byId.get(cur.parentId)
+      if (!p) break
+      chain.push(p)
+      cur = p
+    }
+    return chain // nearest parent first, topmost (group) last
+  }, [byId])
+  function groupLabel(a: Account): string {
+    const chain = ancestorChain(a)
+    const top = chain[chain.length - 1]
+    return top ? (fa ? (top.nameFa || top.nameEn) : top.nameEn) : (fa ? (a.nameFa || a.nameEn) : a.nameEn)
+  }
+  function controlLabel(a: Account): string {
+    const chain = ancestorChain(a)
+    if (chain.length < 2) return ''
+    const immediate = chain[0]
+    return fa ? (immediate.nameFa || immediate.nameEn) : immediate.nameEn
+  }
+  const groupLabelCb = useCallback(groupLabel, [ancestorChain, fa])
+  const controlLabelCb = useCallback(controlLabel, [ancestorChain, fa])
+  const groupOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const a of accounts) { const l = groupLabelCb(a); if (!seen.has(l)) seen.set(l, l) }
+    return [...seen.keys()].map(v => ({ value: v, labelEn: v, labelFa: v }))
+  }, [accounts, groupLabelCb])
+  const controlOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const a of accounts) { const l = controlLabelCb(a); if (l && !seen.has(l)) seen.set(l, l) }
+    return [...seen.keys()].map(v => ({ value: v, labelEn: v, labelFa: v }))
+  }, [accounts, controlLabelCb])
+
   const columns: Column<Account>[] = [
+    { key: 'group', labelEn: 'Group', labelFa: t('fin_cGroup'), type: 'enum', options: groupOptions, value: groupLabelCb, render: a => <span className="text-text-secondary text-xs">{groupLabelCb(a)}</span> },
+    { key: 'control', labelEn: 'Control', labelFa: t('fin_cControl'), type: 'enum', options: controlOptions, value: controlLabelCb, render: a => <span className="text-text-tertiary text-xs">{controlLabelCb(a) || '—'}</span> },
     { key: 'code', labelEn: 'Code', labelFa: t('fin_cCode'), render: a => <span className="font-mono text-xs text-text-secondary">{a.code}</span> },
     { key: 'nameEn', labelEn: 'Name', labelFa: t('fin_cName'), value: a => fa ? (a.nameFa || a.nameEn) : a.nameEn, render: a => <span className="text-text-primary">{fa ? (a.nameFa || a.nameEn) : a.nameEn}</span> },
     { key: 'type', labelEn: 'Type', labelFa: t('fin_cType'), type: 'enum', options: ATYPES.map(x => ({ value: x, labelEn: x, labelFa: t(`fin_at_${x}` as 'fin_at_asset') })), render: a => <Badge color={TYPE_COLOR[a.type]}>{t(`fin_at_${a.type}` as 'fin_at_asset')}</Badge> },
@@ -173,7 +220,7 @@ function Accounts({ t, fa, toast }: { t: T; fa: boolean; toast: Toast }) {
         <Btn onClick={() => { setEditing({ type: 'asset', active: 1 }); setModal(true) }}>{t('fin_newAccount')}</Btn>
       </div>
       <Card className="p-4">
-        <DataTable tableId="finance-accounts" columns={columns} rows={accounts} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={a => String(a.id)} rowActions={rowActions} exportName="chart-of-accounts" />
+        <DataTable tableId="finance-accounts" columns={columns} rows={accounts} locale={fa ? 'fa' : 'en'} loading={loading} rowKey={a => String(a.id)} rowActions={rowActions} exportName="chart-of-accounts" defaultGroupBy="group" />
       </Card>
       <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? t('fin_editAccount') : t('fin_newAccount')} size="md">
         <div className="space-y-4">

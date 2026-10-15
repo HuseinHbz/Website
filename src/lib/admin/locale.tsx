@@ -1567,6 +1567,8 @@ const T: Record<string, { fa: string; en: string }> = {
   fin_newAccount:   { fa: 'حساب جدید', en: 'New Account' },
   fin_editAccount:  { fa: 'ویرایش حساب', en: 'Edit Account' },
   fin_cCode:        { fa: 'کد', en: 'Code' },
+  fin_cGroup:       { fa: 'گروه کل', en: 'Group' },
+  fin_cControl:     { fa: 'گروه معین', en: 'Control' },
   fin_cName:        { fa: 'نام حساب', en: 'Account' },
   fin_cType:        { fa: 'نوع', en: 'Type' },
   fin_cBalance:     { fa: 'مانده', en: 'Balance' },

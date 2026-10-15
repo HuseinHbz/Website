@@ -74,6 +74,11 @@ interface Props<T extends object> {
   /** Render huge datasets with row windowing instead of pagination. */
   virtualize?: boolean
   rowHeight?: number
+  /** Initial "Group by" column when the user has no saved preference yet
+   *  (e.g. a chart-of-accounts table that should open grouped, matching
+   *  the source spreadsheet's layout). Ignored once a persisted groupBy
+   *  preference loads for this tableId. */
+  defaultGroupBy?: string
 }
 
 const lc = (isRTL: boolean, en: string, fa: string) => (isRTL ? fa : en)
@@ -88,7 +93,7 @@ export function DataTable<T extends object>({
   columns, rows, locale, loading, error, onRetry, onRefresh, pageSize: pageSizeProp = 10,
   searchKeys, rowKey, emptyLabel, onRowClick, title, tableId, role, can,
   selectable, rowActions, bulkActions, quickCreate, canExport = true, exportName = 'export',
-  virtualize, rowHeight = 44,
+  virtualize, rowHeight = 44, defaultGroupBy,
 }: Props<T>) {
   const isRTL = locale === 'fa'
   const allow = useCallback((a?: string) => !a || (can ? can(a) : true), [can])
@@ -107,7 +112,7 @@ export function DataTable<T extends object>({
   const [colMenu, setColMenu] = useState(false)
   const [exportMenu, setExportMenu] = useState(false)
   const [viewMenu, setViewMenu] = useState(false)
-  const [groupBy, setGroupBy] = useState<string | null>(null)
+  const [groupBy, setGroupBy] = useState<string | null>(defaultGroupBy ?? null)
   const [savedViews, setSavedViews] = useState<{ id: number; name: string; state: TableView; owned: boolean; isDefault: boolean }[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const loadedPrefs = useRef(false)
