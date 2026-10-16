@@ -150,6 +150,6 @@ CC-013 (خطوط پایه، FX تحقق‌یافته، true-up خزانه، reve
 | TypeScript | 0 خطا |
 | ESLint | 0 |
 | Unit tests | **1365/1365** (۱۸ تست جدید `money.test.ts`) |
-| Build | BUILD_RESULT |
+| Build | موفق (exit 0؛ ۱۰۵ صفحه — سه صفحهٔ عمومی روی DB خالیِ build به empty state افتادند، رفتار مستند 26.30) |
 | `npm run audit` (۱۵ گیت، شامل gl-writes و coa) | همه سبز (rbac 171/12/0، tenancy 0، sql 0) |
-| Regressions | REGRESSION_RESULT |
+| Regressions (`npm run regressions`) | **39/39 سبز** (ERPFIX-1: 71/71، ERPFIX-2: 53/53) |
