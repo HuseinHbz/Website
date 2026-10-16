@@ -24,6 +24,7 @@
  * arguments.
  */
 import { param, type PayrollParameter } from './payroll'
+import { COA } from '@/lib/erp/coaContract'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
@@ -337,7 +338,7 @@ export function settlementPostingLines(t: {
   const lines: AnnualPostingLine[] = []
   if (t.leaveEncashment !== 0) {
     lines.push({
-      accountCode: '6100',
+      accountCode: COA.payrollExpense,
       debit: t.leaveEncashment > 0 ? round2(t.leaveEncashment) : 0,
       credit: t.leaveEncashment < 0 ? round2(-t.leaveEncashment) : 0,
       memo: 'بازخرید مرخصی استفاده‌نشده',

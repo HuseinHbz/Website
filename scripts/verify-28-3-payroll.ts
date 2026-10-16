@@ -163,7 +163,8 @@ async function main() {
   const salariesPayable = await accountBalance('2300')
   const insurancePayable = await accountBalance('2310')
   const taxPayable = await accountBalance('2320')
-  const payrollExpense = await accountBalance('6100')
+  // ERPFIX-1 (BUG-ERP-10, contract-changes.md): salaries post to 6000 «Salaries Expense», not 6100 «Rent Expense».
+  const payrollExpense = await accountBalance('6000')
 
   // 🔴 assert BALANCES, not just "balanced" (26.26c بند ۲)
   check('🔴 payroll expense is debited with the gross',
@@ -183,7 +184,7 @@ async function main() {
 
   const repost = await postPeriodToGl(periodId, approverId)
   check('🔴 posting twice does NOT double the payroll expense',
-    repost.alreadyPosted === true && (await accountBalance('6100')) === payrollExpense)
+    repost.alreadyPosted === true && (await accountBalance('6000')) === payrollExpense)
 
   // ── loans: a ledger, consumed at payment ──────────────────────────────────
   const loanId = await createLoan({ employeeId: empId, totalAmount: 60_000_000, installments: 3 }, userId)

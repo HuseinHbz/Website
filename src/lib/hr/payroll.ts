@@ -13,6 +13,7 @@
  *
  * Everything is pure — no I/O — so every claim below is testable with numbers.
  */
+import { COA } from '@/lib/erp/coaContract'
 
 // ── inputs ──────────────────────────────────────────────────────────────────
 
@@ -681,7 +682,7 @@ export function payrollPostingLines(totals: {
 }): PayrollPostingLine[] {
   const employerCost = round2(totals.employerInsurance + totals.unemploymentInsurance)
   const lines: PayrollPostingLine[] = [
-    { accountCode: '6100', debit: round2(totals.gross), credit: 0, memo: 'هزینهٔ حقوق و دستمزد' },
+    { accountCode: COA.payrollExpense, debit: round2(totals.gross), credit: 0, memo: 'هزینهٔ حقوق و دستمزد' },
   ]
   if (employerCost > 0) {
     lines.push({ accountCode: '6110', debit: employerCost, credit: 0, memo: 'هزینهٔ بیمهٔ سهم کارفرما' })

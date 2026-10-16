@@ -5,7 +5,7 @@
  * postings reuse the shared posting primitives + the Numbering Engine.
  */
 import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
-import { accountIdByCode, insertPostedEntry, loadGlMap } from '@/lib/erp/glPosting'
+import { accountIdByCode, accountIdsByCodes, insertPostedEntry, loadGlMap } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { loadProductLevels } from '@/lib/erp/inventoryData'
 import { postingBalanced } from '@/lib/erp/sales'
@@ -215,35 +215,33 @@ export async function postCount(countId: number, userId?: string): Promise<{ adj
     `SELECT product_id, system_qty::float AS system_qty, counted_qty::float AS counted_qty, unit_cost::float AS unit_cost FROM inv_count_lines WHERE count_id=$1`, [countId])
   const variances = countVariances(lines.map(l => ({ productId: l.product_id, systemQty: l.system_qty, countedQty: l.counted_qty })))
   let valueDelta = 0
-  for (const v of variances) {
-    const cost = lines.find(l => l.product_id === v.productId)?.unit_cost ?? 0
-    valueDelta += v.variance * cost
-    await pgQuery(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
-      VALUES ($1,$2,'count',$3,$4,$5,$6,${NOW})`,
-      [v.productId, c.warehouse_id, v.variance, cost, `Cycle count #${countId}`, userId ?? null])
-  }
+  for (const v of variances) valueDelta += v.variance * (lines.find(l => l.product_id === v.productId)?.unit_cost ?? 0)
   valueDelta = Math.round(valueDelta * 100) / 100
-  let glEntryId: number | null = null
-  if (valueDelta !== 0) {
-    const glLines = inventoryAdjustmentPostingLines(valueDelta)
-    if (!postingBalanced(glLines)) throw new Error('Adjustment does not balance')
-    const codes = glLines.map(l => l.accountCode)
-    const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
-    const idOf = new Map(accs.map(a => [a.code, a.id]))
-    for (const code of codes) if (!idOf.has(code)) throw new Error(`GL account ${code} missing`)
-    const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
-    const entry = (await pgQuery<{ id: number }>(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
-       VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, ${NOW}, ${NOW}) RETURNING id`,
-      [entryNo, `Cycle count adjustment #${countId}`, `CNT-${countId}`, Math.abs(valueDelta), userId ?? null]))[0]
-    let ln = 0
-    for (const l of glLines) {
-      await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
+  const glLines = valueDelta !== 0 ? inventoryAdjustmentPostingLines(valueDelta) : []
+  if (glLines.length && !postingBalanced(glLines)) throw new Error('Adjustment does not balance')
+  const idOf = glLines.length ? await accountIdsByCodes(glLines.map(l => l.accountCode)) : new Map<string, number>()
+  // ERPFIX-1: adjustment moves + GL entry + status flip now commit together,
+  // and the GL entry goes through the single entry point (period gate) — a
+  // count dated inside a closed period is refused and writes nothing.
+  const glEntryId = await withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`inv_count_post:${countId}`])
+    const cur = (await query<{ status: string }>(`SELECT status FROM inv_counts WHERE id=$1`, [countId]))[0]
+    if (cur?.status !== 'approved') throw new Error('Only an approved count can be posted')
+    for (const v of variances) {
+      const cost = lines.find(l => l.product_id === v.productId)?.unit_cost ?? 0
+      await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+        VALUES ($1,$2,'count',$3,$4,$5,$6,${NOW})`,
+        [v.productId, c.warehouse_id, v.variance, cost, `Cycle count #${countId}`, userId ?? null])
     }
-    glEntryId = entry.id
-  }
-  await pgQuery(`UPDATE inv_counts SET status='posted', gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [countId, glEntryId])
+    let entryId: number | null = null
+    if (glLines.length) {
+      const entry = await insertPostedEntry(query, today(), `Cycle count adjustment #${countId}`, `CNT-${countId}`, userId,
+        glLines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })), { legacyPrefix: 'JV' })
+      entryId = entry.id
+    }
+    await query(`UPDATE inv_counts SET status='posted', gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [countId, entryId])
+    return entryId
+  })
   return { adjusted: variances.length, valueDelta, glEntryId }
 }
 export async function listCounts() {
@@ -338,7 +336,7 @@ export async function advanceShipment(id: number, to: ShipmentStatus, d: { track
         if (cogsTotal > 0) {
           const map = await loadGlMap()
           const [cogsAcc, invAcc] = await Promise.all([accountIdByCode('5000', query), accountIdByCode(map.inventory, query)])
-          const entry = await insertPostedEntry(query, today(), `COGS — shipment ${id}`, `SHP-COGS-${id}`, cogsTotal, userId,
+          const entry = await insertPostedEntry(query, today(), `COGS — shipment ${id}`, `SHP-COGS-${id}`, userId,
             [{ accountId: cogsAcc, debit: cogsTotal, credit: 0 }, { accountId: invAcc, debit: 0, credit: cogsTotal }])
           await query(`UPDATE inv_shipments SET gl_entry_id=$2 WHERE id=$1`, [id, entry.id])
           cogsEntryId = entry.id
@@ -357,9 +355,8 @@ export async function advanceShipment(id: number, to: ShipmentStatus, d: { track
         const orig = await query<{ account_id: number; debit: number; credit: number; memo: string | null }>(
           `SELECT account_id, debit::float AS debit, credit::float AS credit, memo FROM gl_journal_lines WHERE entry_id=$1`, [s.gl_entry_id])
         if (orig.length > 0) {
-          const total = orig.reduce((sum, l) => sum + Number(l.debit), 0)
           const reversed = orig.map(l => ({ accountId: l.account_id, debit: Number(l.credit), credit: Number(l.debit), memo: l.memo }))
-          const rev = await insertPostedEntry(query, today(), `COGS reversal — shipment ${id} return`, `SHP-COGS-${id}-REV`, total, userId, reversed)
+          const rev = await insertPostedEntry(query, today(), `COGS reversal — shipment ${id} return`, `SHP-COGS-${id}-REV`, userId, reversed)
           await query(`UPDATE gl_journal_entries SET reversal_of=$2 WHERE id=$1`, [rev.id, s.gl_entry_id])
           await query(`UPDATE gl_journal_entries SET reversed_by=$2 WHERE id=$1`, [s.gl_entry_id, rev.id])
         }
@@ -451,23 +448,17 @@ export async function revalueInventory(d: { productId: number; warehouseId: numb
   const cur = (await pgQuery<{ cost: number }>(`SELECT cost::float AS cost FROM inv_products WHERE id=$1`, [d.productId]))[0]
   if (!cur) throw new Error('Product not found')
   const valueDelta = Math.round((d.newUnitCost - cur.cost) * onHand * 100) / 100
-  await pgQuery(`UPDATE inv_products SET cost=$2, updated_at=${NOW} WHERE id=$1`, [d.productId, d.newUnitCost])
-  let glEntryId: number | null = null
-  if (valueDelta !== 0) {
-    const glLines = inventoryAdjustmentPostingLines(valueDelta)
-    const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [glLines.map(l => l.accountCode)])
-    const idOf = new Map(accs.map(a => [a.code, a.id]))
-    const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
-    const entry = (await pgQuery<{ id: number }>(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
-       VALUES ($1, to_char(now(),'YYYY-MM-DD'), $2, $3, 'posted', $4, $5, ${NOW}, ${NOW}) RETURNING id`,
-      [entryNo, `Inventory revaluation product #${d.productId}`, `REVAL-${d.productId}`, Math.abs(valueDelta), userId ?? null]))[0]
-    let ln = 0
-    for (const l of glLines) {
-      await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
-    }
-    glEntryId = entry.id
-  }
+  const glLines = valueDelta !== 0 ? inventoryAdjustmentPostingLines(valueDelta) : []
+  const idOf = glLines.length ? await accountIdsByCodes(glLines.map(l => l.accountCode)) : new Map<string, number>()
+  // ERPFIX-1: the cost change and its GL entry commit together; the entry goes
+  // through the single entry point, so a closed period refuses BOTH (the old
+  // path changed the cost and wrote a posted entry with no period check).
+  const glEntryId = await withTransaction(async query => {
+    await query(`UPDATE inv_products SET cost=$2, updated_at=${NOW} WHERE id=$1`, [d.productId, d.newUnitCost])
+    if (!glLines.length) return null
+    const entry = await insertPostedEntry(query, today(), `Inventory revaluation product #${d.productId}`, `REVAL-${d.productId}`, userId,
+      glLines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })), { legacyPrefix: 'JV' })
+    return entry.id
+  })
   return { valueDelta, glEntryId }
 }

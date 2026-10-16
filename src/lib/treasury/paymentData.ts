@@ -34,7 +34,8 @@ import type { AdminUser } from '@/lib/admin/auth'
 import { canTransitionPayment, paymentGlLines, glBalanced, allocateReceipt, type PaymentType, type PaymentStatus, type GlLine } from './payments'
 import { createApprovalRequest } from '@/lib/erp/approvalData'
 import { nextNumber } from '@/lib/numbering/integrate'
-import { insertPostedEntry, accountIdByCode, reverseEntry } from '@/lib/erp/glPosting'
+import { insertPostedEntry, accountIdByCode, reverseEntry, loadPayrollExpenseCode } from '@/lib/erp/glPosting'
+import { COA } from '@/lib/erp/coaContract'
 import { invoiceStatus } from '@/lib/erp/sales'
 import { runOnce } from '@/lib/api/idempotency'
 
@@ -45,11 +46,13 @@ const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
  * numbering, real account resolution) rather than a local reimplementation. */
 async function postGl(query: TxQuery, lines: GlLine[], memo: string, reference: string, date: string, userId: string): Promise<number> {
   if (!glBalanced(lines)) throw new Error('GL lines are not balanced')
+  // ERPFIX-1: the salary leg follows the configured payroll-expense account.
+  const payrollCode = await loadPayrollExpenseCode(query)
+  lines = lines.map(l => l.accountCode === COA.payrollExpense ? { ...l, accountCode: payrollCode } : l)
   const codes = [...new Set(lines.map(l => l.accountCode))]
   const idOf = new Map<string, number>()
   for (const c of codes) idOf.set(c, await accountIdByCode(c, query))
-  const total = lines.reduce((s, l) => s + l.debit, 0)
-  const entry = await insertPostedEntry(query, date, memo, reference, total, userId,
+  const entry = await insertPostedEntry(query, date, memo, reference, userId,
     lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo ?? null })))
   return entry.id
 }

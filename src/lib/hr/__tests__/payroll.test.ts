@@ -526,7 +526,9 @@ describe('GL posting', () => {
 
   it('debits the gross as expense and the employer share separately', () => {
     const lines = payrollPostingLines(totals)
-    expect(lines.find(l => l.accountCode === '6100')?.debit).toBe(1_000_000_000)
+    // ERPFIX-1 (BUG-ERP-10, contract-changes.md): salaries → 6000 «Salaries Expense», not 6100 «Rent Expense».
+    expect(lines.find(l => l.accountCode === '6000')?.debit).toBe(1_000_000_000)
+    expect(lines.some(l => l.accountCode === '6100')).toBe(false)
     expect(lines.find(l => l.accountCode === '6110')?.debit).toBe(230_000_000)
   })
 

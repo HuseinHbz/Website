@@ -22,6 +22,11 @@ const one = async <T>(sql: string, p: unknown[] = []) => (await pgQuery<T>(sql, 
 async function main() {
   await runMigrations()
   await seedDatabase()
+  // ERPFIX-1 (contract-changes.md): this fixture defines a single closed period
+  // and then posts at dates outside it. Under the new default
+  // gl_require_period='strict' those dates would be refused as "outside every
+  // period"; the suite asserts closed-period behaviour, which 'off' leaves intact.
+  await pgQuery(`UPDATE erp_settings SET value='off' WHERE key='gl_require_period'`)
   const ADMIN = (await one<{ id: string }>(`SELECT id FROM users ORDER BY created_at LIMIT 1`)).id
   const adminUser = (await one<{ id: string; role: string; name: string; email: string }>(`SELECT id, role, name, email FROM users WHERE id=$1`, [ADMIN]))
   const today = new Date().toISOString().slice(0, 10)

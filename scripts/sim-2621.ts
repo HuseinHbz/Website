@@ -7,7 +7,8 @@
  */
 import { runMigrations } from '@/lib/db/migrate'
 import { seedDatabase } from '@/lib/db/seed'
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
+import { insertPostedEntry } from '@/lib/erp/glPosting'
 import { documentTotals, invoiceStatus, salesInvoicePostingLines } from '@/lib/erp/sales'
 import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
 import {
@@ -57,21 +58,15 @@ async function loadChart() {
   for (const a of await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts`)) acct.set(a.code, a.id)
 }
 
-/** Balanced adjustment/accrual journal entry (mirrors the finance journal route: period-checked, posted). */
+/** Balanced adjustment/accrual journal entry — ERPFIX-1: through the production
+ * single GL entry point (period gate, balance check, numbering, atomic). The old
+ * helper wrote the header and each line as separate auto-committed statements,
+ * which the deferred balance trigger now (rightly) rejects. Data prep only. */
 async function bookEntry(date: string, memo: string, reference: string, lines: { code: string; debit: number; credit: number }[]): Promise<number> {
   const gate = await assertPostable(date)
   if (!gate.ok) throw new Error(`Not postable ${date}: ${gate.error}`)
-  const dr = lines.reduce((s, l) => s + l.debit, 0), cr = lines.reduce((s, l) => s + l.credit, 0)
-  if (Math.abs(dr - cr) > 0.001) throw new Error(`Unbalanced entry: ${memo}`)
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
-  const e = await one<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no,date,memo,reference,status,total,currency,exchange_rate,created_by,period_id,posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, dr, ADMIN, gate.periodId ?? null])
-  let i = 0
-  for (const l of lines)
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id,account_id,debit,credit,line_no) VALUES ($1,$2,$3,$4,$5)`,
-      [e.id, acct.get(l.code)!, l.debit, l.credit, i++])
+  const e = await withTransaction(q => insertPostedEntry(q, date, memo, reference, ADMIN,
+    lines.map(l => ({ accountId: acct.get(l.code)!, debit: l.debit, credit: l.credit }))))
   return e.id
 }
 
@@ -284,7 +279,7 @@ async function main() {
     await addPetty({ kind: 'expense', date: date(15), amount: 3_000_000 + Math.floor(rnd() * 4_000_000), category: 'office', note: 'consumables' }, ADMIN)
     // Payroll accrual (HR boundary → booked as a real balanced journal).
     await bookEntry(date(27), `Payroll ${year}-${mm}`, 'payroll', [
-      { code: '6100', debit: Math.round(90_000_000 * growth), credit: 0 },
+      { code: '6000', debit: Math.round(90_000_000 * growth), credit: 0 }, // ERPFIX-1: salaries → 6000 (6100 is rent)
       { code: '1010', debit: 0, credit: Math.round(90_000_000 * growth) },
     ])
     // Monthly straight-line depreciation (truck 3.0B/6y + server 0.8B/4y ≈ 58.3M/mo).

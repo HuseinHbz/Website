@@ -8,7 +8,7 @@ import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
-import { loadGlMap, applyGlMap } from './glPosting'
+import { loadGlMap, applyGlMap, insertPostedEntry } from './glPosting'
 
 export interface CustomerWithCredit {
   id: number; code: string; name: string; email: string | null; phone: string | null
@@ -161,9 +161,11 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
   // Post ON THE DOCUMENT DATE (26.21 audit fix): dating the entry now() shifted
   // revenue out of its fiscal period, so year-end closing missed it entirely.
   const glDate = (d.date ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10)
+  // ERPFIX-1: the period gate, balance check and numbering run inside
+  // insertPostedEntry (the single GL entry point); this pre-check only keeps
+  // the early, lock-free failure for an obviously closed period.
   const gate = await assertPostable(glDate)
   if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this document date')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JV' })
   const memo = `${kind === 'credit_note' ? 'Sales credit note' : 'Sales invoice'} ${d.doc_no ?? docId}`
   // Full-remediation RULE-001/RULE-006: header insert, every line insert and
   // the source-document gl_entry_id link now commit as ONE transaction — the
@@ -183,15 +185,9 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_doc_gl_post:${docId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_documents WHERE id=$1`, [docId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
-    const entry = (await query<{ id: number }>(
-      `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-       VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, ${NOW_SQL}, ${NOW_SQL}) RETURNING id`,
-      [entryNo, glDate, memo, `SAL-${docId}`, num(d.total), d.currency ?? 'IRR', num(d.exchange_rate) || 1, userId ?? null, gate.periodId ?? null]))[0]
-    let ln = 0
-    for (const l of lines) {
-      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
-    }
+    const entry = await insertPostedEntry(query, glDate, memo, `SAL-${docId}`, userId,
+      lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })),
+      { currency: d.currency ?? 'IRR', exchangeRate: num(d.exchange_rate) || 1, legacyPrefix: 'JV' })
     await query(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
     return { entryId: entry.id, alreadyPosted: false }
   })

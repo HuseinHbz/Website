@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
 import { getAdminUser, canDo, type AdminUser } from '@/lib/admin/auth'
+import { BusinessErrorException, toApiResponse } from '@/lib/errors'
 
 // Generic 500 — never leak internal error messages to the client. The real
 // error is logged server-side (visible in /admin/logs-monitoring).
@@ -17,6 +18,9 @@ function fieldName(col: string): string { return col.replace(/_/g, ' ') }
  */
 export function apiError(e: unknown, message = 'Internal server error', status = 500) {
   if (e instanceof BodyError) return NextResponse.json({ error: e.message }, { status: 400 })
+  // ERPFIX-1: a catalog business error thrown from the data layer → its own
+  // bilingual 4xx shape (never a generic 500).
+  if (e instanceof BusinessErrorException) return toApiResponse(e.built)
   const cause = (e as { cause?: unknown })?.cause ?? e
   const pg = cause as { code?: string; column?: string; detail?: string; constraint?: string }
   if (pg?.code === '23502') {

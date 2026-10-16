@@ -9,8 +9,12 @@
  * module only feeds them the mapped accounts and adds the missing pieces.
  */
 import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
-import { nextNumber } from '@/lib/numbering/integrate'
-import { assertPostable } from './accountingData'
+import { nextNumberInTx } from '@/lib/numbering/integrate'
+import { assertPostable, throwPostableError } from './accountingData'
+import { isValidPostingDate } from './accountingCore'
+import { entryBalanced } from './ledger'
+import { throwBusinessError } from '@/lib/errors'
+import { COA } from './coaContract'
 import type { PostingLine } from './sales'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -36,6 +40,19 @@ export async function loadGlMap(): Promise<GlMap> {
   } catch { return DEFAULT_MAP }
 }
 
+/**
+ * ERPFIX-1 (BUG-ERP-10): the payroll-expense account as configured
+ * (erp_settings.gl_map_payroll_expense), defaulting to the contract's
+ * «Salaries Expense». Used by every path that expenses salaries outside the
+ * HR module (treasury salary payments) so no module posts salaries by literal.
+ */
+export async function loadPayrollExpenseCode(query: TxQuery = pgQuery): Promise<string> {
+  try {
+    const r = (await query<{ value: string }>(`SELECT value FROM erp_settings WHERE key='gl_map_payroll_expense'`))[0]
+    return r?.value || COA.payrollExpense
+  } catch { return COA.payrollExpense }
+}
+
 /** Pure: translate the engine's default account codes through the map. */
 export function applyGlMap(lines: PostingLine[], map: GlMap): PostingLine[] {
   const translate: Record<string, string> = {
@@ -56,41 +73,83 @@ export async function accountIdByCode(code: string, query: TxQuery = pgQuery): P
   return r.id
 }
 
+/** Resolve several account codes at once; throws naming the first missing one. */
+export async function accountIdsByCodes(codes: string[], query: TxQuery = pgQuery): Promise<Map<string, number>> {
+  const uniq = [...new Set(codes)]
+  const rows = await query<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [uniq])
+  const byCode = new Map(rows.map(r => [r.code, r.id]))
+  for (const c of uniq) if (!byCode.has(c)) throw new Error(`GL account ${c} is missing from the chart`)
+  return byCode
+}
+
+export interface PostedLineInput { accountId: number; debit: number; credit: number; memo?: string | null; costCenterId?: number | null }
+export interface PostedEntryOptions {
+  companyId?: number | null
+  currency?: string
+  exchangeRate?: number
+  /** Default cost center stamped on every line that does not carry its own. */
+  costCenterId?: number | null
+  /** Year-end closing / opening balance ONLY: a closed period is postable, a locked one never. */
+  allowClosedPeriod?: boolean
+  /** Pre-minted number (import job numbers its groups up-front). Otherwise minted here. */
+  entryNo?: string
+  /** Numbering Engine doc type; 'journal' by default. */
+  docType?: string
+  legacyPrefix?: string
+}
+
 /**
- * Full-remediation RULE-001/RULE-006: financial posting must be atomic and
- * never leave a partial entry. This used to insert the journal header then
- * loop-insert lines with bare pgQuery — no transaction — so a failure on
- * any line insert (network blip, constraint violation) left a POSTED,
- * UNBALANCED journal entry on the books. `query` lets a caller compose
- * this insert into a larger transaction (e.g. together with the
- * gl_entry_id update on the source payment row, closing the same
- * failure mode one level up) — always inside withTransaction, header
- * and every line commit together or none do.
+ * ERPFIX-1 (BUG-ERP-08/21) — THE single place a POSTED journal entry is
+ * written. Every automatic and manual posting path in src/ goes through here
+ * (enforced by `npm run audit:gl-writes`). In order:
+ *   1. the date is a real YYYY-MM-DD calendar date
+ *   2. the lines balance (ledger.entryBalanced: ≥2 lines, no negative amount,
+ *      no two-sided line, Dr = Cr > 0)
+ *   3. the fiscal-period gate (assertPostable) — closed/locked periods and, once
+ *      periods exist, dates outside every period are refused. The period row is
+ *      re-read FOR SHARE inside the caller's transaction so a concurrent close
+ *      cannot slip in between the check and the insert.
+ *   4. the number comes from the Numbering Engine (never Date.now())
+ *   5./6. header + every line, inside the caller's transaction
+ * `query` MUST be a transaction-bound TxQuery (withTransaction) — callers that
+ * also link the entry back to a source row do so in the same transaction.
+ * The DB backs this up: a deferred constraint trigger rejects any posted entry
+ * that does not balance at commit, and entry_no is unique per company.
  *
- * Known boundary: `nextNumber` mints its own number via its own dedicated
- * transaction/advisory-lock (numbering/service.ts) BEFORE this function's
- * transaction opens — if this transaction then rolls back, that specific
- * number is never reused (burned, not duplicated). This matches the
- * numbering engine's own documented reserve/release tradeoff and is safe
- * (gaps in a sequence are acceptable; duplicates are not) — not a new gap
- * introduced here.
+ * The number is minted on the caller's own connection inside its transaction
+ * (nextNumberInTx): no second pool connection is needed while one is held
+ * (that starved the pool under concurrency and fell back to Date.now()
+ * numbers), and a rolled-back posting rolls its number back too.
  */
 export async function insertPostedEntry(
   query: TxQuery,
-  date: string, memo: string, reference: string, total: number, userId: string | undefined,
-  lines: { accountId: number; debit: number; credit: number; memo?: string | null }[],
-): Promise<{ id: number; entryNo: string }> {
-  const gate = await assertPostable(date)
-  if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this date')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JE' })
+  date: string, memo: string, reference: string, userId: string | undefined | null,
+  lines: PostedLineInput[],
+  options: PostedEntryOptions = {},
+): Promise<{ id: number; entryNo: string; total: number }> {
+  if (!isValidPostingDate(date)) throwBusinessError('ERP-FINANCE-INVALID-DATE', { date: String(date) })
+  const check = entryBalanced(lines.map(l => ({ accountId: l.accountId, debit: num(l.debit), credit: num(l.credit) })))
+  if (!check.ok) throwBusinessError('ERP-FINANCE-JOURNAL-UNBALANCED', { reason: check.reason ?? '' })
+  const gate = await assertPostable(date, { allowClosedPeriod: options.allowClosedPeriod, query })
+  if (!gate.ok) throwPostableError(date, gate)
+  if (gate.periodId != null) {
+    const p = (await query<{ status: string; name: string }>(`SELECT status, name FROM gl_fiscal_periods WHERE id=$1 FOR SHARE`, [gate.periodId]))[0]
+    if (p && !(p.status === 'open' || (p.status === 'closed' && options.allowClosedPeriod))) {
+      throwBusinessError('ERP-FINANCE-PERIOD-CLOSED', { name: p.name, status: p.status })
+    }
+  }
+  const entryNo = options.entryNo ?? await nextNumberInTx(query, options.docType ?? 'journal', { legacyPrefix: options.legacyPrefix ?? 'JE', userId: userId ?? null })
   const e = (await query<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW},${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, total, userId ?? null, gate.periodId ?? null]))[0]
-  for (let i = 0; i < lines.length; i++)
-    await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [e.id, lines[i].accountId, num(lines[i].debit), num(lines[i].credit), lines[i].memo ?? null, i])
-  return { id: e.id, entryNo }
+    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, company_id, created_at, posted_at)
+     VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,$8,$9,$10,${NOW},${NOW}) RETURNING id`,
+    [entryNo, date, memo, reference, check.totalDebit, options.currency ?? 'IRR', num(options.exchangeRate) || 1,
+      userId ?? null, gate.periodId ?? null, options.companyId ?? null]))[0]
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i]
+    await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [e.id, l.accountId, num(l.debit), num(l.credit), l.memo ?? null, i, l.costCenterId ?? options.costCenterId ?? null])
+  }
+  return { id: e.id, entryNo, total: check.totalDebit }
 }
 
 /**
@@ -110,7 +169,7 @@ export async function postSalesPaymentToGl(paymentId: number, userId?: string): 
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_payment_gl_post:${paymentId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_payments WHERE id=$1`, [paymentId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
-    const e = await insertPostedEntry(query, p.date, `Customer receipt${p.customer ? ` — ${p.customer}` : ''}`, `SPAY-${paymentId}`, num(p.amount), userId,
+    const e = await insertPostedEntry(query, p.date, `Customer receipt${p.customer ? ` — ${p.customer}` : ''}`, `SPAY-${paymentId}`, userId,
       [{ accountId: bank, debit: num(p.amount), credit: 0 }, { accountId: ar, debit: 0, credit: num(p.amount) }])
     await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
     return { entryId: e.id, alreadyPosted: false }
@@ -136,7 +195,7 @@ export async function postCustomerRefundToGl(paymentId: number, userId?: string)
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_payment_gl_post:${paymentId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_payments WHERE id=$1`, [paymentId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
-    const e = await insertPostedEntry(query, p.date, `Customer refund${p.customer ? ` — ${p.customer}` : ''}`, `SREF-${paymentId}`, amt, userId,
+    const e = await insertPostedEntry(query, p.date, `Customer refund${p.customer ? ` — ${p.customer}` : ''}`, `SREF-${paymentId}`, userId,
       [{ accountId: ar, debit: amt, credit: 0 }, { accountId: bank, debit: 0, credit: amt }])
     await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
     return { entryId: e.id, alreadyPosted: false }
@@ -156,7 +215,7 @@ export async function postPurchasePaymentToGl(paymentId: number, userId?: string
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_payment_gl_post:${paymentId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM purchase_payments WHERE id=$1`, [paymentId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
-    const e = await insertPostedEntry(query, p.date, `Supplier payment${p.vendor ? ` — ${p.vendor}` : ''}`, `PPAY-${paymentId}`, num(p.amount), userId,
+    const e = await insertPostedEntry(query, p.date, `Supplier payment${p.vendor ? ` — ${p.vendor}` : ''}`, `PPAY-${paymentId}`, userId,
       [{ accountId: ap, debit: num(p.amount), credit: 0 }, { accountId: bank, debit: 0, credit: num(p.amount) }])
     await query(`UPDATE purchase_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
     return { entryId: e.id, alreadyPosted: false }
@@ -180,12 +239,18 @@ export async function postEntryById(id: number): Promise<{ ok: boolean; error?: 
     if (!e) return { ok: false, error: 'Not found' }
     if (e.status === 'posted') return { ok: true, alreadyPosted: true }
     if (e.status !== 'draft') return { ok: false, error: 'Only draft entries can be posted' }
-    const lines = await query<{ debit: number; credit: number }>(
-      `SELECT debit::float AS debit, credit::float AS credit FROM gl_journal_lines WHERE entry_id=$1`, [id])
-    const dr = lines.reduce((s, l) => s + num(l.debit), 0), cr = lines.reduce((s, l) => s + num(l.credit), 0)
-    if (lines.length < 2 || Math.abs(dr - cr) > 0.001) return { ok: false, error: 'Entry is not balanced' }
-    const gate = await assertPostable(e.date)
+    const lines = await query<{ account_id: number; debit: number; credit: number }>(
+      `SELECT account_id, debit::float AS debit, credit::float AS credit FROM gl_journal_lines WHERE entry_id=$1`, [id])
+    // ERPFIX-1: the same validation as insertPostedEntry (no negative or
+    // two-sided line, Dr = Cr), not just a sum comparison.
+    const check = entryBalanced(lines.map(l => ({ accountId: l.account_id, debit: num(l.debit), credit: num(l.credit) })))
+    if (!check.ok) return { ok: false, error: 'Entry is not balanced' }
+    const gate = await assertPostable(e.date, { query })
     if (!gate.ok) return { ok: false, error: gate.error }
+    if (gate.periodId != null) {
+      const p = (await query<{ status: string; name: string }>(`SELECT status, name FROM gl_fiscal_periods WHERE id=$1 FOR SHARE`, [gate.periodId]))[0]
+      if (p && p.status !== 'open') return { ok: false, error: `Fiscal period "${p.name}" is ${p.status}; postings are not allowed.` }
+    }
     await query(`UPDATE gl_journal_entries SET status='posted', posted_at=${NOW}, period_id=COALESCE(period_id,$2) WHERE id=$1`, [id, gate.periodId ?? null])
     return { ok: true, alreadyPosted: false }
   })
@@ -225,7 +290,7 @@ export async function reverseEntry(entryId: number, userId?: string, asOf?: stri
     if (e.status !== 'posted') throw new Error('Only posted entries can be reversed')
     const lines = await query<{ account_id: number; debit: number; credit: number; memo: string | null }>(
       `SELECT account_id, debit::float AS debit, credit::float AS credit, memo FROM gl_journal_lines WHERE entry_id=$1 ORDER BY line_no, id`, [entryId])
-    const rev = await insertPostedEntry(query, date, `Reversal of ${e.entry_no}`, `REV-${entryId}`, num(e.total), userId,
+    const rev = await insertPostedEntry(query, date, `Reversal of ${e.entry_no}`, `REV-${entryId}`, userId,
       reversalLines(lines.map(l => ({ accountId: l.account_id, debit: l.debit, credit: l.credit, memo: l.memo }))))
     await query(`UPDATE gl_journal_entries SET reversal_of=$2 WHERE id=$1`, [rev.id, entryId])
     // 26.26b BUG-020: a reversing entry must KEEP the original posted so the two

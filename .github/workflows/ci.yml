@@ -27,7 +27,7 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm run test
-      - name: Governance audits (9)
+      - name: Governance audits (incl. ERPFIX-1 gl-writes + coa)
         run: npm run audit
       - name: Security audit — fail on High/Critical
         run: npm audit --audit-level=high --omit=dev

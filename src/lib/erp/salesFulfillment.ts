@@ -123,7 +123,7 @@ export async function deliverSalesOrder(orderId: number, lines: { lineId: number
     if (cogsTotal > 0) {
       const map = await loadGlMap()
       const [cogsAcc, invAcc] = await Promise.all([accountIdByCode('5000', query), accountIdByCode(map.inventory, query)])
-      const entry = await insertPostedEntry(query, today(), `COGS — sales order ${orderId} delivery`, `SHP-COGS-${ship.id}`, cogsTotal, userId,
+      const entry = await insertPostedEntry(query, today(), `COGS — sales order ${orderId} delivery`, `SHP-COGS-${ship.id}`, userId,
         [{ accountId: cogsAcc, debit: cogsTotal, credit: 0 }, { accountId: invAcc, debit: 0, credit: cogsTotal }])
       await query(`UPDATE inv_shipments SET gl_entry_id=$2 WHERE id=$1`, [ship.id, entry.id])
       cogsEntryId = entry.id

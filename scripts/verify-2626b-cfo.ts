@@ -44,6 +44,11 @@ const arOf = async (cid: number): Promise<number> => {
 
 async function main() {
   await runMigrations(); await seedDatabase()
+  // ERPFIX-1 (contract-changes.md): this fixture defines a single closed period
+  // and then posts at dates outside it. Under the new default
+  // gl_require_period='strict' those dates would be refused as "outside every
+  // period"; the suite asserts closed-period behaviour, which 'off' leaves intact.
+  await pgQuery(`UPDATE erp_settings SET value='off' WHERE key='gl_require_period'`)
 
   const cust = await one<{ id: number }>(
     `INSERT INTO sales_customers (code,name,kind,updated_at) VALUES ('CFO-1','آزمون CFO','company',${NOW}) RETURNING id`)

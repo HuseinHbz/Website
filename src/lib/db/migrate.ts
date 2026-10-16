@@ -2274,8 +2274,11 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_currency_exp_asof ON currency_exposures(as_of, currency);
 
-    -- Salaries expense account for payment GL posting (idempotent).
-    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES ('6100','Salaries','حقوق و دستمزد','expense') ON CONFLICT (code) DO NOTHING;
+    -- ERPFIX-1 (BUG-ERP-10): a no-op INSERT of 6100 «Salaries» used to sit here.
+    -- 6100 is already seeded as «Rent Expense» above, so ON CONFLICT made it
+    -- silently do nothing while payroll + treasury posted salaries to 6100 —
+    -- reported as RENT. Salaries post to the existing 6000 «Salaries Expense»
+    -- (src/lib/erp/coaContract.ts; enforced by npm run audit:coa).
     -- Payment approval matrix (M4): <100M finance_manager, ≤1B cfo, >1B ceo (Toman tiers).
     INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, max_amount, levels) VALUES
       ('payment_request','Payment ≤ 100M','پرداخت تا ۱۰۰م',0,100000000,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"finance_manager"}]}]'),
@@ -3633,7 +3636,7 @@ export async function runMigrations() {
 
     INSERT INTO erp_settings (key, value)
     SELECT * FROM (VALUES
-      ('gl_map_payroll_expense','6100'),
+      ('gl_map_payroll_expense','6000'),
       ('gl_map_payroll_employer_insurance_expense','6110'),
       ('gl_map_payroll_payable','2300'),
       ('gl_map_payroll_insurance_payable','2310'),
@@ -5072,5 +5075,173 @@ export async function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
     CREATE INDEX IF NOT EXISTS idx_service_requests_status ON erp_service_requests(status);
+  `)
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ERPFIX-1 — GL core invariants (BUG-ERP-08 / 21 / 10). Idempotent; every
+  // constraint first COUNTS existing data and never fails boot: a violation is
+  // reported (business_alert + server log) and the constraint is left NOT
+  // VALID / non-unique instead. Rollback: deploy/postgres/rollback-erpfix-1.sql
+  // ═══════════════════════════════════════════════════════════════════════
+  await pgQuery(`
+    SELECT pg_advisory_xact_lock(hashtextextended('erpfix1_migration', 0));
+
+    -- Numbering Engine formats for the system entries that used to be
+    -- numbered with a Date.now() suffix (OB-/YEC-/IC-/FXR-).
+    INSERT INTO numbering_formats (doc_type, name_en, name_fa, pattern, prefix, reset_policy, padding, start_number) VALUES
+      ('gl_opening','GL · Opening balance','سند افتتاحیه','{PREFIX}-{YEAR}-{COUNTER}','OB','yearly',5,1),
+      ('gl_year_end','GL · Year-end closing','سند بستن حساب‌ها','{PREFIX}-{YEAR}-{COUNTER}','YEC','yearly',5,1),
+      ('gl_intercompany','GL · Intercompany','سند بین‌شرکتی','{PREFIX}-{YEAR}-{COUNTER}','IC','yearly',5,1),
+      ('gl_revaluation','GL · FX revaluation','سند تسعیر ارز','{PREFIX}-{YEAR}-{COUNTER}','FXR','yearly',5,1)
+    ON CONFLICT (doc_type) DO NOTHING;
+
+    -- BUG-ERP-10 remediation trail: which posted source entry was corrected by
+    -- which corrective entry (a re-run never corrects the same entry twice).
+    CREATE TABLE IF NOT EXISTS gl_remediation_links (
+      id SERIAL PRIMARY KEY,
+      source_entry_id INTEGER NOT NULL REFERENCES gl_journal_entries(id),
+      remediation_entry_id INTEGER NOT NULL REFERENCES gl_journal_entries(id),
+      kind TEXT NOT NULL,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (to_char(now(),'YYYY-MM-DD HH24:MI:SS')),
+      UNIQUE (source_entry_id, kind)
+    );
+
+    -- 'strict': once any fiscal period exists, a date outside every period is
+    -- refused. 'off' restores the legacy "ungoverned date is postable" rule.
+    INSERT INTO erp_settings (key, value)
+      SELECT 'gl_require_period', 'strict'
+      WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='gl_require_period');
+
+    -- BUG-ERP-10: salaries → 6000. Only flips the map while it still points at
+    -- the seeded «Rent Expense» 6100 (never an account an operator renamed or
+    -- chose deliberately), so it is idempotent and non-destructive.
+    UPDATE erp_settings SET value='6000'
+     WHERE key='gl_map_payroll_expense' AND value='6100'
+       AND EXISTS (SELECT 1 FROM gl_accounts WHERE code='6100' AND name_en='Rent Expense')
+       AND EXISTS (SELECT 1 FROM gl_accounts WHERE code='6000' AND type='expense');
+
+    -- A posted entry dated in a closed period → one closing per fiscal period
+    -- (and company) — backs the advisory-locked check in runYearEndClosing.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_gl_entries_year_end_once
+      ON gl_journal_entries ((COALESCE(company_id, 0)), reference)
+      WHERE reference LIKE 'year-end-close:%' AND status = 'posted' AND reversed_by IS NULL;
+
+    -- Line amounts: never negative, never both sides. NOT VALID first; only
+    -- VALIDATEd when no existing row violates it.
+    DO $erpfix1$
+    DECLARE bad INTEGER; dups INTEGER; unbal INTEGER;
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_gl_lines_amounts') THEN
+        ALTER TABLE gl_journal_lines ADD CONSTRAINT chk_gl_lines_amounts
+          CHECK (debit >= 0 AND credit >= 0 AND NOT (debit > 0 AND credit > 0)) NOT VALID;
+      END IF;
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_gl_lines_amounts' AND NOT convalidated) THEN
+        SELECT COUNT(*) INTO bad FROM gl_journal_lines WHERE NOT (debit >= 0 AND credit >= 0 AND NOT (debit > 0 AND credit > 0));
+        IF bad = 0 THEN
+          ALTER TABLE gl_journal_lines VALIDATE CONSTRAINT chk_gl_lines_amounts;
+        ELSE
+          RAISE WARNING 'ERPFIX-1: % gl_journal_lines rows are negative or two-sided; chk_gl_lines_amounts left NOT VALID', bad;
+          INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, metric_value, fingerprint)
+          VALUES ('gl_invalid_lines', 'financial', 'critical',
+                  'GL lines with a negative or two-sided amount exist',
+                  'سطرهای دفتر کل با مبلغ منفی یا دوطرفه وجود دارد',
+                  'The CHECK constraint chk_gl_lines_amounts was left NOT VALID. Review the rows; do not edit posted entries — correct them with reversals.',
+                  bad, 'erpfix1:gl_invalid_lines')
+          ON CONFLICT (fingerprint) DO UPDATE SET metric_value = EXCLUDED.metric_value, status = 'open', updated_at = to_char(now(),'YYYY-MM-DD HH24:MI:SS');
+        END IF;
+      END IF;
+
+      -- entry_no is unique per company. Existing duplicates are REPORTED, never
+      -- renumbered; the unique index is created on the first boot they are gone.
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_gl_entries_entry_no_unique') THEN
+        SELECT COUNT(*) INTO dups FROM (
+          SELECT 1 FROM gl_journal_entries WHERE entry_no IS NOT NULL
+          GROUP BY COALESCE(company_id, 0), entry_no HAVING COUNT(*) > 1) d;
+        IF dups = 0 THEN
+          CREATE UNIQUE INDEX idx_gl_entries_entry_no_unique ON gl_journal_entries ((COALESCE(company_id, 0)), entry_no);
+          DROP INDEX IF EXISTS idx_gl_entries_entry_no;
+          UPDATE business_alerts SET status = 'resolved', updated_at = to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+           WHERE fingerprint = 'erpfix1:gl_duplicate_entry_no' AND status <> 'resolved';
+        ELSE
+          CREATE INDEX IF NOT EXISTS idx_gl_entries_entry_no ON gl_journal_entries ((COALESCE(company_id, 0)), entry_no);
+          RAISE WARNING 'ERPFIX-1: % duplicate gl_journal_entries.entry_no groups; unique index NOT created — see business_alerts', dups;
+          INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, metric_value, fingerprint)
+          VALUES ('gl_duplicate_entry_no', 'financial', 'critical',
+                  'Duplicate journal entry numbers exist',
+                  'شمارهٔ سند تکراری در دفتر کل وجود دارد',
+                  (SELECT string_agg(entry_no || ' ×' || n, ', ') FROM (
+                     SELECT entry_no, COUNT(*) AS n FROM gl_journal_entries WHERE entry_no IS NOT NULL
+                     GROUP BY COALESCE(company_id, 0), entry_no HAVING COUNT(*) > 1 ORDER BY entry_no LIMIT 50) x),
+                  dups, 'erpfix1:gl_duplicate_entry_no')
+          ON CONFLICT (fingerprint) DO UPDATE SET metric_value = EXCLUDED.metric_value, detail = EXCLUDED.detail, status = 'open', updated_at = to_char(now(),'YYYY-MM-DD HH24:MI:SS');
+        END IF;
+      END IF;
+
+      -- Existing unbalanced POSTED entries are reported (the trigger below only
+      -- checks entries a transaction touches, so they never block boot).
+      SELECT COUNT(*) INTO unbal FROM (
+        SELECT e.id FROM gl_journal_entries e LEFT JOIN gl_journal_lines l ON l.entry_id = e.id
+        WHERE e.status = 'posted' GROUP BY e.id
+        HAVING ABS(COALESCE(SUM(l.debit),0) - COALESCE(SUM(l.credit),0)) > 0.005) u;
+      IF unbal > 0 THEN
+        RAISE WARNING 'ERPFIX-1: % posted journal entries are unbalanced — see business_alerts', unbal;
+        INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, metric_value, fingerprint)
+        VALUES ('gl_unbalanced_posted', 'financial', 'critical',
+                'Unbalanced posted journal entries exist',
+                'سند ثبت‌شدهٔ نامتوازن در دفتر کل وجود دارد',
+                'Correct with a reversal + a corrected entry; never edit a posted entry.',
+                unbal, 'erpfix1:gl_unbalanced_posted')
+        ON CONFLICT (fingerprint) DO UPDATE SET metric_value = EXCLUDED.metric_value, status = 'open', updated_at = to_char(now(),'YYYY-MM-DD HH24:MI:SS');
+      END IF;
+    END
+    $erpfix1$;
+
+    -- Deferred balance invariant: at COMMIT, every POSTED entry the
+    -- transaction touched must satisfy |ΣDr − ΣCr| ≤ 0.005. Drafts are free.
+    CREATE OR REPLACE FUNCTION gl_check_entry_balance(eid INTEGER) RETURNS void AS $fn$
+    DECLARE st TEXT; dr NUMERIC; cr NUMERIC;
+    BEGIN
+      IF eid IS NULL THEN RETURN; END IF;
+      SELECT status INTO st FROM gl_journal_entries WHERE id = eid;
+      IF st IS NULL OR st <> 'posted' THEN RETURN; END IF;
+      SELECT COALESCE(SUM(debit),0), COALESCE(SUM(credit),0) INTO dr, cr FROM gl_journal_lines WHERE entry_id = eid;
+      IF ABS(dr - cr) > 0.005 THEN
+        RAISE EXCEPTION 'GL entry % is posted but unbalanced (debit % <> credit %)', eid, dr, cr
+          USING ERRCODE = '23514', CONSTRAINT = 'gl_posted_entry_balanced';
+      END IF;
+    END
+    $fn$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION gl_assert_entry_balanced() RETURNS trigger AS $fn$
+    BEGIN
+      IF TG_TABLE_NAME = 'gl_journal_entries' THEN
+        PERFORM gl_check_entry_balance(NEW.id);
+      ELSIF TG_OP = 'DELETE' THEN
+        PERFORM gl_check_entry_balance(OLD.entry_id);
+      ELSE
+        PERFORM gl_check_entry_balance(NEW.entry_id);
+        IF TG_OP = 'UPDATE' AND OLD.entry_id IS DISTINCT FROM NEW.entry_id THEN
+          PERFORM gl_check_entry_balance(OLD.entry_id);
+        END IF;
+      END IF;
+      RETURN NULL;
+    END
+    $fn$ LANGUAGE plpgsql;
+
+    DO $erpfix1t$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_gl_lines_balanced') THEN
+        CREATE CONSTRAINT TRIGGER trg_gl_lines_balanced
+          AFTER INSERT OR UPDATE OR DELETE ON gl_journal_lines
+          DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION gl_assert_entry_balanced();
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_gl_entries_balanced') THEN
+        CREATE CONSTRAINT TRIGGER trg_gl_entries_balanced
+          AFTER INSERT OR UPDATE ON gl_journal_entries
+          DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION gl_assert_entry_balanced();
+      END IF;
+    END
+    $erpfix1t$;
   `)
 }

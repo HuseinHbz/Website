@@ -4,11 +4,13 @@
  * with posting enforcement, opening balances and year-end closing — all as
  * real posted journal entries reusing the existing GL tables.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
+import { businessError, throwBusinessError } from '@/lib/errors'
+import { insertPostedEntry } from './glPosting'
 import type { AccountType, AccountTally } from './ledger'
 import {
   buildAccountTree, canPostDate, canTransitionPeriod, openingBalanceLines,
-  yearEndClosingLines, type CoaAccount, type FiscalPeriod, type PeriodStatus,
+  yearEndClosingLines, type CoaAccount, type FiscalPeriod, type PeriodStatus, type PostDateBlock,
 } from './accountingCore'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -55,33 +57,48 @@ export async function transitionPeriod(id: number, to: PeriodStatus, userId?: st
   return { ok: true }
 }
 
-/** Enforce the fiscal-period lock on a posting date (used by the journal route). */
-export async function assertPostable(date: string): Promise<{ ok: boolean; error?: string; periodId?: number }> {
-  const periods = await listPeriods()
-  const r = canPostDate(date, periods)
-  return r.ok ? { ok: true, periodId: r.period?.id } : { ok: false, error: r.reason }
+/** erp_settings.gl_require_period: 'strict' (default) | 'off'. */
+export async function requirePeriodSetting(query: TxQuery = pgQuery): Promise<boolean> {
+  try {
+    const r = (await query<{ value: string }>(`SELECT value FROM erp_settings WHERE key='gl_require_period'`))[0]
+    return (r?.value ?? 'strict') !== 'off'
+  } catch { return true }
 }
 
-// ── Posted-entry helper ──────────────────────────────────────────────────────
-async function postEntry(entryNo: string, date: string, memo: string, reference: string, lines: { accountId: number; debit: number; credit: number }[], userId?: string): Promise<number> {
-  const total = lines.reduce((s, l) => s + l.debit, 0)
-  const periodId = (await assertPostable(date)).periodId ?? null
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, currency, exchange_rate, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,'IRR',1,${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, total, userId ?? null, periodId]))[0]
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, line_no) VALUES ($1,$2,$3,$4,$5)`,
-      [entry.id, l.accountId, l.debit, l.credit, i])
-  }
-  return entry.id
+export interface AssertPostableResult { ok: boolean; error?: string; periodId?: number; block?: PostDateBlock; periodName?: string; periodStatus?: string }
+
+/**
+ * Enforce the fiscal-period lock on a posting date. ERPFIX-1: also rejects a
+ * malformed date and — once any period is defined — a date outside every
+ * period (gl_require_period='strict'). `allowClosedPeriod` is for year-end
+ * closing / opening balance only; a locked period is never postable.
+ */
+export async function assertPostable(date: string, opts: { allowClosedPeriod?: boolean; query?: TxQuery } = {}): Promise<AssertPostableResult> {
+  const query = opts.query ?? pgQuery
+  const periods = (await query(
+    `SELECT id, name, start_date AS "startDate", end_date AS "endDate", status, kind, parent_id AS "parentId"
+     FROM gl_fiscal_periods ORDER BY start_date, kind`)) as unknown as FiscalPeriod[]
+  const r = canPostDate(date, periods, { requirePeriod: await requirePeriodSetting(query), allowClosedPeriod: opts.allowClosedPeriod })
+  return r.ok
+    ? { ok: true, periodId: r.period?.id }
+    : { ok: false, error: r.reason, block: r.block, periodName: r.period?.name, periodStatus: r.period?.status }
+}
+
+/** Throw the matching bilingual catalog error for a failed gate. */
+export function throwPostableError(date: string, gate: AssertPostableResult): never {
+  if (gate.block === 'invalid_date') throwBusinessError('ERP-FINANCE-INVALID-DATE', { date: String(date) })
+  if (gate.block === 'outside_periods') throwBusinessError('ERP-FINANCE-DATE-OUTSIDE-PERIODS', { date })
+  throwBusinessError('ERP-FINANCE-PERIOD-CLOSED', { name: gate.periodName ?? '', status: gate.periodStatus ?? 'closed' })
 }
 
 // ── Opening balance ──────────────────────────────────────────────────────────
-export async function postOpeningBalance(input: { date: string; entries: { accountId: number; amount: number }[] }, userId?: string): Promise<{ entryId: number }> {
-  const post = await assertPostable(input.date)
-  if (!post.ok) throw new Error(post.error)
+/**
+ * ERPFIX-1: posted through the single GL entry point (insertPostedEntry) —
+ * atomic, balance-checked, numbered by the Numbering Engine (OB-{YEAR}-…)
+ * instead of the old Date.now() suffix. Explicitly allowed in a CLOSED period
+ * (never a locked one); the route gates it with erp.finance:close_period.
+ */
+export async function postOpeningBalance(input: { date: string; entries: { accountId: number; amount: number }[] }, userId?: string, opts: { query?: TxQuery; entryNo?: string } = {}): Promise<{ entryId: number; entryNo: string }> {
   // Resolve each account's type for normal-side placement.
   const ids = input.entries.map(e => e.accountId)
   const accs = await pgQuery<{ id: number; type: AccountType }>(`SELECT id, type FROM gl_accounts WHERE id = ANY($1)`, [ids])
@@ -92,39 +109,82 @@ export async function postOpeningBalance(input: { date: string; entries: { accou
     return { accountId: e.accountId, type, amount: e.amount }
   }))
   if (lines.length < 2) throw new Error('An opening balance needs at least two accounts')
-  const entryId = await postEntry(`OB-${input.date.slice(0, 4)}-${Date.now().toString().slice(-6)}`, input.date, 'Opening balance', 'opening', lines, userId)
-  return { entryId }
+  const post = (query: TxQuery) => insertPostedEntry(query, input.date, 'Opening balance', 'opening', userId, lines,
+    { allowClosedPeriod: true, docType: 'gl_opening', legacyPrefix: 'OB', entryNo: opts.entryNo })
+  // A caller with its own transaction (the import job) composes the posting into it.
+  const r = opts.query ? await post(opts.query) : await withTransaction(post)
+  return { entryId: r.id, entryNo: r.entryNo }
 }
 
 // ── Year-end closing ─────────────────────────────────────────────────────────
-/** Date-bounded revenue/expense tally for the fiscal year (posted only). */
-async function closingTallies(startDate: string, endDate: string): Promise<AccountTally[]> {
-  return (await pgQuery(
+/** Structured idempotency key for one fiscal period's closing entry. */
+export const yearEndReference = (fiscalPeriodId: number) => `year-end-close:${fiscalPeriodId}`
+
+/**
+ * Date-bounded revenue/expense tally for the fiscal year (posted only),
+ * scoped to ONE company (NULL company_id = the default company, same rule as
+ * loadTallies). Prior closing entries (legacy 'year-end-close' and the new
+ * 'year-end-close:<id>') are excluded so a re-close never closes a closing.
+ */
+async function closingTallies(query: TxQuery, startDate: string, endDate: string, companyId: number | null): Promise<AccountTally[]> {
+  return (await query(
     `SELECT a.id, a.code, a.name_en AS "nameEn", a.name_fa AS "nameFa", a.type,
-            COALESCE(SUM(CASE WHEN e.status='posted' AND e.date BETWEEN $1 AND $2 THEN l.debit ELSE 0 END),0)::float AS debit,
-            COALESCE(SUM(CASE WHEN e.status='posted' AND e.date BETWEEN $1 AND $2 THEN l.credit ELSE 0 END),0)::float AS credit
+            COALESCE(SUM(l.debit),0)::float AS debit, COALESCE(SUM(l.credit),0)::float AS credit
      FROM gl_accounts a
-     LEFT JOIN gl_journal_lines l ON l.account_id=a.id
-     LEFT JOIN gl_journal_entries e ON e.id=l.entry_id
-     WHERE a.type IN ('revenue','expense') AND e.reference IS DISTINCT FROM 'year-end-close'
-     GROUP BY a.id, a.code, a.name_en, a.name_fa, a.type`, [startDate, endDate])) as unknown as AccountTally[]
+     JOIN gl_journal_lines l ON l.account_id=a.id
+     JOIN gl_journal_entries e ON e.id=l.entry_id
+     WHERE a.type IN ('revenue','expense')
+       AND e.status='posted' AND e.date BETWEEN $1 AND $2
+       AND (e.reference IS NULL OR e.reference NOT LIKE 'year-end-close%')
+       AND (CASE WHEN $3::int IS NULL THEN TRUE
+                 ELSE (e.company_id = $3::int OR (e.company_id IS NULL AND EXISTS (SELECT 1 FROM erp_companies dc WHERE dc.id = $3::int AND dc.is_default))) END)
+     GROUP BY a.id, a.code, a.name_en, a.name_fa, a.type`, [startDate, endDate, companyId])) as unknown as AccountTally[]
 }
 
-export async function runYearEndClosing(fiscalPeriodId: number, userId?: string): Promise<{ ok: boolean; error?: string; entryId?: number; netIncome?: number }> {
+/**
+ * Close a fiscal year: revenue/expense → retained earnings (3900), dated the
+ * period's end date. ERPFIX-1:
+ *  - posted through insertPostedEntry with allowClosedPeriod (a closed period
+ *    may be closed; a LOCKED one is refused) — the old path ignored the gate
+ *  - idempotent on a structured reference 'year-end-close:<fiscal_period_id>'
+ *    backed by a partial unique index, re-checked under an advisory lock, so
+ *    two concurrent runs book exactly one entry and «25» never blocks «2025»
+ *    (the old check was memo LIKE '%name%')
+ *  - scoped to one company (default company when none is given)
+ */
+export async function runYearEndClosing(fiscalPeriodId: number, userId?: string, companyId?: number): Promise<{ ok: boolean; error?: string; errorFa?: string; code?: string; entryId?: number; netIncome?: number }> {
   const fy = (await pgQuery<{ name: string; start_date: string; end_date: string; status: string }>(
     `SELECT name, start_date, end_date, status FROM gl_fiscal_periods WHERE id=$1`, [fiscalPeriodId]))[0]
   if (!fy) return { ok: false, error: 'Fiscal period not found' }
   const re = (await pgQuery<{ id: number }>(`SELECT id FROM gl_accounts WHERE code='3900' LIMIT 1`))[0]
   if (!re) return { ok: false, error: 'Retained Earnings account (3900) is missing — run migrations' }
-  // Idempotent: don't double-close a period.
-  const already = (await pgQuery<{ id: number }>(
-    `SELECT id FROM gl_journal_entries WHERE reference='year-end-close' AND memo LIKE $1 AND status='posted' LIMIT 1`, [`%${fy.name}%`]))[0]
-  if (already) return { ok: false, error: `Year ${fy.name} is already closed (entry #${already.id})` }
-  const tallies = await closingTallies(fy.start_date, fy.end_date)
-  const closing = yearEndClosingLines(tallies, re.id)
-  if (!closing.lines.length) return { ok: false, error: 'No revenue or expense activity to close in this period' }
-  const entryId = await postEntry(`YEC-${fy.name}-${Date.now().toString().slice(-4)}`, fy.end_date, `Year-end closing ${fy.name}`, 'year-end-close', closing.lines, userId)
-  return { ok: true, entryId, netIncome: closing.netIncome }
+  const defaultCo = (await pgQuery<{ id: number }>(`SELECT id FROM erp_companies WHERE is_default LIMIT 1`))[0]?.id ?? null
+  const company = companyId ?? defaultCo
+  const isDefault = company === defaultCo
+  const reference = yearEndReference(fiscalPeriodId)
+  return withTransaction(async query => {
+    await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`${reference}:${company ?? 0}`])
+    // Structured key first; the legacy scheme (reference 'year-end-close' +
+    // memo) is matched EXACTLY so a year closed before this fix is still seen.
+    // NULL company_id belongs to the default company (loadTallies rule).
+    const already = (await query<{ id: number }>(
+      `SELECT id FROM gl_journal_entries
+       WHERE status='posted' AND reversed_by IS NULL
+         AND (reference=$1 OR (reference='year-end-close' AND memo=$2))
+         AND (company_id IS NOT DISTINCT FROM $3::int OR (company_id IS NULL AND $4::boolean))
+       LIMIT 1`,
+      [reference, `Year-end closing ${fy.name}`, company, isDefault]))[0]
+    if (already) {
+      const be = businessError('ERP-FINANCE-YEAR-ALREADY-CLOSED', { name: fy.name, entryId: already.id })
+      return { ok: false, error: be.en, errorFa: be.fa, code: be.code }
+    }
+    const tallies = await closingTallies(query, fy.start_date, fy.end_date, company)
+    const closing = yearEndClosingLines(tallies, re.id)
+    if (!closing.lines.length) return { ok: false, error: 'No revenue or expense activity to close in this period' }
+    const e = await insertPostedEntry(query, fy.end_date, `Year-end closing ${fy.name}`, reference, userId, closing.lines,
+      { allowClosedPeriod: true, companyId: company, docType: 'gl_year_end', legacyPrefix: 'YEC' })
+    return { ok: true, entryId: e.id, netIncome: closing.netIncome }
+  })
 }
 
 // ── Account statement (general ledger for one account) ───────────────────────

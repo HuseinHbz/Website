@@ -81,61 +81,91 @@ async function loadFormat(docType: string): Promise<FormatRow | null> {
  * Atomically mint the next number for a document type. Concurrency-safe.
  * Throws on unknown/inactive format or counter overflow (both audited as failed).
  */
-export async function generateDocumentNumber(opts: GenerateOptions): Promise<GeneratedNumber> {
+type Q = <T = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<T[]>
+
+/**
+ * The counter increment itself, on whatever connection/transaction `q` is
+ * bound to. Shared by generateDocumentNumber (its own short transaction) and
+ * generateDocumentNumberInTx (the CALLER's transaction — ERPFIX-1).
+ */
+async function mintOn(q: Q, opts: GenerateOptions): Promise<GeneratedNumber> {
   const { docType, scope, context, module, source = 'api', userId = null, ip = null } = opts
   const date = opts.date ?? new Date()
   const skey = scopeKeyOf(scope)
+  const fr = (await q<FormatRow>('SELECT * FROM numbering_formats WHERE doc_type=$1', [docType]))[0]
+  if (!fr || !fr.active) throw new Error(`No active numbering format for "${docType}"`)
+  const fmt = toFormat(fr)
+  const pkey = periodKey(fmt.resetPolicy, date, fmt.fiscalStartMonth)
+
+  // Serialise this (format, scope, period) bucket across sessions.
+  await q('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`${fr.id}:${skey}:${pkey}`])
+
+  // First number in a bucket = start_number; subsequent = current + increment.
+  const up = await q<{ current_value: string }>(
+    `INSERT INTO numbering_counters (format_id, scope_key, period_key, current_value)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (format_id, scope_key, period_key)
+     DO UPDATE SET current_value = numbering_counters.current_value + $5,
+                   updated_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+     RETURNING current_value`,
+    [fr.id, skey, pkey, fmt.startNumber, fmt.increment],
+  )
+  const counter = Number(up[0].current_value)
+  if (fmt.maxNumber != null && counter > fmt.maxNumber) {
+    throw new Error(`Counter overflow for "${docType}" (${counter} > ${fmt.maxNumber})`)
+  }
+  const number = renderNumber(fmt, counter, date, withGenerated(fmt, context ?? {}))
+
+  await q(
+    `UPDATE numbering_counters SET last_number=$1 WHERE format_id=$2 AND scope_key=$3 AND period_key=$4`,
+    [number, fr.id, skey, pkey],
+  )
+  await q(
+    `INSERT INTO numbering_audit (format_id, doc_type, number, scope_key, period_key, counter_value, module, source, status, user_id, ip)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [fr.id, docType, number, skey, pkey, counter, module ?? null, source, 'generated', userId, ip],
+  )
+  return { number, counter, formatId: fr.id, docType, scopeKey: skey, periodKey: pkey }
+}
+
+export async function generateDocumentNumber(opts: GenerateOptions): Promise<GeneratedNumber> {
   const client = await getPool().connect()
+  const q: Q = async (text, params = []) => (await client.query(text, params as never[])).rows as never[]
   try {
     await client.query('BEGIN')
-    const fr = (await client.query<FormatRow>('SELECT * FROM numbering_formats WHERE doc_type=$1', [docType])).rows[0]
-    if (!fr || !fr.active) throw new Error(`No active numbering format for "${docType}"`)
-    const fmt = toFormat(fr)
-    const pkey = periodKey(fmt.resetPolicy, date, fmt.fiscalStartMonth)
-
-    // Serialise this (format, scope, period) bucket across sessions.
-    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`${fr.id}:${skey}:${pkey}`])
-
-    // First number in a bucket = start_number; subsequent = current + increment.
-    const up = await client.query<{ current_value: string }>(
-      `INSERT INTO numbering_counters (format_id, scope_key, period_key, current_value)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (format_id, scope_key, period_key)
-       DO UPDATE SET current_value = numbering_counters.current_value + $5,
-                     updated_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
-       RETURNING current_value`,
-      [fr.id, skey, pkey, fmt.startNumber, fmt.increment],
-    )
-    const counter = Number(up.rows[0].current_value)
-    if (fmt.maxNumber != null && counter > fmt.maxNumber) {
-      throw new Error(`Counter overflow for "${docType}" (${counter} > ${fmt.maxNumber})`)
-    }
-    const number = renderNumber(fmt, counter, date, withGenerated(fmt, context ?? {}))
-
-    await client.query(
-      `UPDATE numbering_counters SET last_number=$1 WHERE format_id=$2 AND scope_key=$3 AND period_key=$4`,
-      [number, fr.id, skey, pkey],
-    )
-    await client.query(
-      `INSERT INTO numbering_audit (format_id, doc_type, number, scope_key, period_key, counter_value, module, source, status, user_id, ip)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [fr.id, docType, number, skey, pkey, counter, module ?? null, source, 'generated', userId, ip],
-    )
+    const g = await mintOn(q, opts)
     await client.query('COMMIT')
-    return { number, counter, formatId: fr.id, docType, scopeKey: skey, periodKey: pkey }
+    return g
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})
     // Best-effort failure audit (outside the rolled-back txn).
     await pgQuery(
       `INSERT INTO numbering_audit (doc_type, number, scope_key, module, source, status, user_id, ip)
        VALUES ($1,$2,$3,$4,$5,'failed',$6,$7)`,
-      [docType, '', skey, module ?? null, source, userId, ip],
+      [opts.docType, '', scopeKeyOf(opts.scope), opts.module ?? null, opts.source ?? 'api', opts.userId ?? null, opts.ip ?? null],
     ).catch(() => {})
-    logger.error('numbering.generate.failed', { docType, error: e instanceof Error ? e : String(e) })
+    logger.error('numbering.generate.failed', { docType: opts.docType, error: e instanceof Error ? e : String(e) })
     throw e
   } finally {
     client.release()
   }
+}
+
+/**
+ * ERPFIX-1 — mint inside the CALLER's transaction, on the caller's own
+ * connection. The posting core uses this so (1) a posting never needs a
+ * second pool connection while it already holds one (under concurrency the
+ * pool starved, nextNumber timed out and fell back to a Date.now() number),
+ * and (2) a rolled-back posting rolls its number back too (no gap). The
+ * bucket's advisory lock is then held until the caller commits, which
+ * serialises postings of the same type — intended for the GL.
+ * Returns null (without running a failing statement, so the caller's
+ * transaction stays usable) when no active format exists for `docType`.
+ */
+export async function generateDocumentNumberInTx(q: Q, opts: GenerateOptions): Promise<GeneratedNumber | null> {
+  const fr = (await q<{ active: number | boolean }>('SELECT active FROM numbering_formats WHERE doc_type=$1', [opts.docType]))[0]
+  if (!fr || !fr.active) return null
+  return mintOn(q, opts)
 }
 
 /** Reserve a number (consumes a counter value; audited as `reserved`). */

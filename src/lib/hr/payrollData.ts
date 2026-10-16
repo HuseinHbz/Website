@@ -20,6 +20,7 @@ import {
   type PayrollParameter, type TaxBracket, type EarningType, type WorkedTime,
   type SlipResult, type PeriodStatus,
 } from './payroll'
+import { COA } from '@/lib/erp/coaContract'
 
 const NOW = `to_char(now(), 'YYYY-MM-DD HH24:MI:SS')`
 const iso = (y: number, m: number, d: number) =>
@@ -632,7 +633,7 @@ async function payrollGlMap(): Promise<Record<string, string>> {
   const m: Record<string, string> = {}
   for (const r of rows) m[r.key] = r.value
   return {
-    '6100': m['gl_map_payroll_expense'] ?? '6100',
+    [COA.payrollExpense]: m['gl_map_payroll_expense'] ?? COA.payrollExpense,
     '6110': m['gl_map_payroll_employer_insurance_expense'] ?? '6110',
     '2300': m['gl_map_payroll_payable'] ?? '2300',
     '2310': m['gl_map_payroll_insurance_payable'] ?? '2310',
@@ -701,33 +702,32 @@ export async function postPeriodToGl(
     return { ok: false, error: 'سند حقوق تراز نیست — ثبت انجام نشد' }
   }
 
-  const { assertPostable } = await import('@/lib/erp/accountingData')
-  const gate = await assertPostable(period.endDate)
-  if (!gate.ok) return { ok: false, error: gate.error ?? 'دورهٔ مالی بسته است' }
-
-  const { nextNumber } = await import('@/lib/numbering/integrate')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JE' })
-  const total = lines.reduce((s, l) => s + l.debit, 0)
-
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW},${NOW}) RETURNING id`,
-    [entryNo, period.endDate,
-      `حقوق و دستمزد ${period.jalaliYear}/${String(period.jalaliMonth).padStart(2, '0')}`,
-      `payroll:${periodId}`, total, userId, gate.periodId ?? null]))[0]
-
-  for (let i = 0; i < lines.length; i++) {
-    const acc = (await pgQuery<{ id: number }>(
-      `SELECT id FROM gl_accounts WHERE code=$1 LIMIT 1`, [lines[i].accountCode]))[0]
-    if (!acc) return { ok: false, error: `حساب ${lines[i].accountCode} در کدینگ وجود ندارد` }
-    await pgQuery(
-      `INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, acc.id, lines[i].debit, lines[i].credit, lines[i].memo, i])
+  // ERPFIX-1: through the single GL entry point — atomic (the old path wrote
+  // the header and each line as separate statements and could leave a posted
+  // half-entry), period-gated, balance-checked; the gl_entry_id link commits
+  // in the same transaction under a per-period lock (no double posting).
+  const { insertPostedEntry, accountIdsByCodes } = await import('@/lib/erp/glPosting')
+  const { BusinessErrorException } = await import('@/lib/errors')
+  let ids: Map<string, number>
+  try { ids = await accountIdsByCodes(lines.map(l => l.accountCode)) } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'حساب در کدینگ وجود ندارد' }
   }
-
-  await pgQuery(`UPDATE payroll_periods SET gl_entry_id=$2 WHERE id=$1`, [periodId, entry.id])
-  return { ok: true, entryId: entry.id }
+  try {
+    return await withTransaction(async query => {
+      await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`payroll_period_gl_post:${periodId}`])
+      const cur = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM payroll_periods WHERE id=$1`, [periodId]))[0]
+      if (cur?.gl_entry_id) return { ok: true, entryId: cur.gl_entry_id, alreadyPosted: true }
+      const entry = await insertPostedEntry(query, period.endDate,
+        `حقوق و دستمزد ${period.jalaliYear}/${String(period.jalaliMonth).padStart(2, '0')}`,
+        `payroll:${periodId}`, userId,
+        lines.map(l => ({ accountId: ids.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })))
+      await query(`UPDATE payroll_periods SET gl_entry_id=$2 WHERE id=$1`, [periodId, entry.id])
+      return { ok: true, entryId: entry.id }
+    })
+  } catch (e) {
+    if (e instanceof BusinessErrorException) return { ok: false, error: e.built.fa }
+    throw e
+  }
 }
 
 /**

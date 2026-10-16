@@ -195,3 +195,78 @@ guaranteed, what the new one guarantees, why, and who approved it.
   unaffected `e.status !== 'draft'` pre-check for a genuinely *manual*
   re-post attempt by a user who can see the entry is already posted —
   only the internal race between two concurrent calls is now idempotent.
+
+## CC-009 · ERPFIX-1 BUG-ERP-10 — payroll expense assertions: 6100 → 6000
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-1 · **Suites:** `scripts/verify-28-3-payroll.ts`
+  (checks «payroll expense is debited with the gross» + «posting twice does NOT double
+  the payroll expense»), `src/lib/hr/__tests__/payroll.test.ts` («debits the gross as
+  expense …»)
+- **Old assertion:** the payroll gross lands on account **6100**.
+- **New assertion:** the payroll gross lands on account **6000** «Salaries Expense»;
+  the unit test additionally asserts **no** line targets 6100.
+- **What the old version guaranteed that the new one no longer does:** that salaries
+  post to 6100. That guarantee WAS the bug: 6100 is seeded as «Rent Expense»
+  (`migrate.ts`), and a later `INSERT … ('6100','Salaries') ON CONFLICT DO NOTHING`
+  was a silent no-op, so every payroll run was reported as RENT on the income
+  statement (reproduced live: 352,000,000 under «Rent Expense», 0 under «Salaries
+  Expense»). The balances asserted (gross, 2300/2310/2320) are unchanged.
+- **Reason:** BUG-ERP-10. **Approved by:** maintainer, ERPFIX-1 decision gate
+  (answered "6000 (Recommended)" in-session, 2026-10-16).
+
+## CC-010 · ERPFIX-1 BUG-ERP-08 — strict fiscal periods (behaviour change + fixture setting)
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-1 · **Behaviour:** `assertPostable` /
+  `canPostDate` / `insertPostedEntry`
+- **Old behaviour:** a date inside NO defined fiscal period was always postable.
+- **New behaviour:** `erp_settings.gl_require_period` (seeded **'strict'**): once at
+  least one fiscal period exists, a date outside every period is refused with
+  `ERP-FINANCE-DATE-OUTSIDE-PERIODS`. A fresh install with no period at all still
+  posts. `'off'` restores the old rule. A malformed date (`'abc'`, `'2025-02-30'`) is
+  now refused (`ERP-FINANCE-INVALID-DATE`) — it used to fall through as "in no
+  period" and was accepted.
+- **Fixtures (no assertion edited):** five suites define ONE closed period (e.g.
+  2018) and then post at other dates — `verify-2626b-cfo.ts`, `verify-phase8-finance.ts`,
+  `verify-phase11-…`, `verify-phase12-…`, `verify-phase17-financial-controls.ts`. Each
+  now sets `gl_require_period='off'` right after seeding, with a comment. What they
+  assert (closed-period rejection) is unaffected by the setting.
+- **What is no longer guaranteed:** that an operator who defined periods for one year
+  can keep posting into an undefined year without defining it. **Operator action on
+  upgrade:** if production has periods defined but not for the current year, define
+  the current year (Finance → Accounting) or set `gl_require_period` to `off`.
+- **Reason:** BUG-ERP-08. **Approved by:** ERPFIX-1 prompt (required_changes, item 4).
+
+## CC-011 · ERPFIX-1 — year-end closing / opening balance and the period gate
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-1
+- **Old behaviour:** `runYearEndClosing` ignored the period gate entirely (it posted
+  into a LOCKED year — reproduced live) and de-duplicated with `memo LIKE '%name%'`
+  (closing «2025» blocked closing «25»; 5 concurrent runs booked 2 entries with the
+  SAME number `YEC-2027-1945`). `postOpeningBalance` refused a closed period.
+- **New behaviour:** both post through `insertPostedEntry` with an explicit
+  `allowClosedPeriod` — a CLOSED period is allowed, a LOCKED one never. Closing is
+  idempotent on `reference='year-end-close:<fiscal_period_id>'` (advisory lock + a
+  partial unique index), scoped to one company. Both route actions now require
+  `requireOp('erp.finance:close_period')`; a refused closing is audit-logged. An
+  already-closed year returns `ERP-FINANCE-YEAR-ALREADY-CLOSED` (bilingual).
+- **What is no longer guaranteed:** that a non-holder of `erp.finance:close_period`
+  (but with `manage_settings`) can post an opening balance; that a closing entry
+  dated in a locked year can be booked.
+- **sim-2621 helper:** its `bookEntry` data-prep helper wrote the header and each
+  line as separate auto-committed statements, which the new deferred balance trigger
+  correctly rejects; it now posts through `insertPostedEntry`, and its monthly payroll
+  accrual uses 6000. No assertion changed.
+- **Reason:** BUG-ERP-08 / BUG-ERP-21. **Approved by:** ERPFIX-1 prompt.
+
+## CC-012 · ERPFIX-1 — numbering of posted entries is minted inside the posting transaction
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-1
+- **Old behaviour:** `nextNumber` minted on a second pool connection. Inside a
+  posting transaction (which already holds a connection) the pool starved under
+  load: in the ERPFIX-1 proof, 20 concurrent postings → 10 `numbering.fallback`
+  timeouts → `Date.now()` numbers, and 7 postings failed.
+- **New behaviour:** `insertPostedEntry` mints via `nextNumberInTx` on the caller's
+  connection. A rolled-back posting now rolls its number back (no gap); same-type
+  postings serialise on the counter's advisory lock until commit. System entries
+  (opening / year-end / intercompany / FX revaluation) use their own formats
+  `OB-/YEC-/IC-/FXR-{YEAR}-{COUNTER}` instead of a `Date.now()` suffix.
+- **Also:** an opening-balance IMPORT run as a **dry run** used to really post the
+  entry (it ran before `BEGIN`, on its own connection); it now runs inside the job's
+  transaction and is rolled back with it.
+- **Reason:** BUG-ERP-21. **Approved by:** ERPFIX-1 prompt.

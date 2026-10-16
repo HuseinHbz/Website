@@ -1,0 +1,18 @@
+══ ERPFIX-1 RED @ HEAD — today=2026-10-16 ══
+  🔴 BUG-REPRODUCED — BUG-ERP-10 payroll lands on 6100: entry #1; income statement expense 6100 «Rent Expense» = 352000000; 6000 «Salaries Expense» = 0
+     gl_accounts 6100 = «Rent Expense»; map gl_map_payroll_expense = 6100
+  period RED-CLOSED (2026-10-01..31) is closed; assertPostable(today).ok=false
+  🔴 BUG-REPRODUCED — BUG-ERP-08 intercompany posts into a CLOSED period: +2 posted entries (posted entries now dated inside the closed period: 2)
+  🔴 BUG-REPRODUCED — BUG-ERP-08 fx revaluation posts into a CLOSED period: +1 posted entry (posted entries now dated inside the closed period: 3)
+  🔴 BUG-REPRODUCED — BUG-ERP-08 journal import posts into a CLOSED period: +1 posted entry (posted entries now dated inside the closed period: 4)
+  🔴 BUG-REPRODUCED — BUG-ERP-08 cycle-count adjustment posts into a CLOSED period: +1 posted entry (posted entries now dated inside the closed period: 5)
+  🔴 BUG-REPRODUCED — BUG-ERP-08 inventory revaluation posts into a CLOSED period: +1 posted entry (posted entries now dated inside the closed period: 6)
+  🔴 BUG-REPRODUCED — BUG-ERP-08 date 'abc' is postable: {"ok":true}
+  🔴 BUG-REPRODUCED — BUG-ERP-08 date outside every defined period is postable: {"ok":true}
+  🔴 BUG-REPRODUCED — BUG-ERP-08 year-end closing posts into a LOCKED period: {"ok":true,"entryId":8,"netIncome":-332960400}
+  🔴 BUG-REPRODUCED — BUG-ERP-21 raw unbalanced posted entry commits: rows=1 
+  🔴 BUG-REPRODUCED — BUG-ERP-21 duplicate entry_no accepted: rows=2 
+  🔴 BUG-REPRODUCED — BUG-ERP-21 negative line amount accepted: debit=-5 stored
+  🔴 BUG-REPRODUCED — BUG-ERP-21 concurrent year-end closing books more than one entry: 2 closing entries for 2027 from 5 concurrent calls (2 reported ok)
+     system entry numbers minted from Date.now(): IC-2026-6242141, IC-2026-6242152, FXR-2026-624221, YEC-RED-FY2026-4262, YEC-2027-4273, YEC-2027-4278
+  🔴 BUG-REPRODUCED — BUG-ERP-21 closing «2025» wrongly blocks closing «25»: 2025: {"ok":true,"entryId":16,"netIncome":10} · 25: {"ok":false,"error":"Year 25 is already closed (entry #16)"}

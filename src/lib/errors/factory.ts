@@ -39,3 +39,24 @@ export function businessError<C extends ErrorCode>(code: C, params: ParamsOf<C>)
     fa: (def.fa as (p: unknown) => string)(params),
   }
 }
+
+/**
+ * ERPFIX-1 — a throwable carrier for a catalog error. Data-layer code (the GL
+ * posting core) has no NextResponse to return, so it throws this; `apiError`
+ * recognises it and answers with the full bilingual `toApiResponse` shape.
+ * `message` stays the catalog's English text so existing callers that read
+ * `e.message` keep working unchanged.
+ */
+export class BusinessErrorException extends Error {
+  readonly built: BuiltError
+  constructor(built: BuiltError) {
+    super(built.en)
+    this.name = 'BusinessErrorException'
+    this.built = built
+  }
+}
+
+/** Shorthand: build + throw a catalog error. */
+export function throwBusinessError<C extends ErrorCode>(code: C, params: ParamsOf<C>): never {
+  throw new BusinessErrorException(businessError(code, params))
+}

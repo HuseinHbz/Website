@@ -4,6 +4,7 @@
  * routing is delegated to the 26.12 approval platform (payment_request doc type);
  * GL posting reuses the existing journal — no second accounting engine here.
  */
+import { COA } from '@/lib/erp/coaContract'
 
 export const PAYMENT_TYPES = ['supplier_payment', 'customer_refund', 'internal_transfer', 'salary_payment', 'tax_payment', 'foreign_payment'] as const
 export type PaymentType = (typeof PAYMENT_TYPES)[number]
@@ -37,7 +38,7 @@ export function paymentGlLines(type: PaymentType | 'customer_receipt', amount: n
     case 'supplier_payment': return [{ accountCode: '2000', debit: a, credit: 0, memo: 'AP settled' }, { accountCode: bankCode, debit: 0, credit: a, memo: 'Bank out' }]
     case 'foreign_payment': return [{ accountCode: '2000', debit: a, credit: 0 }, { accountCode: bankCode, debit: 0, credit: a }]
     case 'tax_payment': return [{ accountCode: '2100', debit: a, credit: 0, memo: 'Taxes payable' }, { accountCode: bankCode, debit: 0, credit: a }]
-    case 'salary_payment': return [{ accountCode: '6100', debit: a, credit: 0, memo: 'Salaries' }, { accountCode: bankCode, debit: 0, credit: a }]
+    case 'salary_payment': return [{ accountCode: COA.payrollExpense, debit: a, credit: 0, memo: 'Salaries' }, { accountCode: bankCode, debit: 0, credit: a }]
     case 'customer_refund': return [{ accountCode: '1100', debit: a, credit: 0, memo: 'AR contra' }, { accountCode: bankCode, debit: 0, credit: a }]
     case 'internal_transfer': return [{ accountCode: bankCode, debit: a, credit: 0, memo: 'Transfer in' }, { accountCode: '1010', debit: 0, credit: a, memo: 'Transfer out' }]
     case 'customer_receipt': return [{ accountCode: bankCode, debit: a, credit: 0, memo: 'Bank in' }, { accountCode: '1100', debit: 0, credit: a, memo: 'AR settled' }]

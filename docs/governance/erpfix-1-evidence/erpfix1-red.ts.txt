@@ -1,0 +1,129 @@
+/**
+ * ERPFIX-1 RED — run against UNMODIFIED HEAD 84e4204 (old API signatures).
+ * Prints BUG-REPRODUCED for each defect the audit reported, with real numbers.
+ */
+import { runMigrations } from '@/lib/db/migrate'
+import { seedDatabase } from '@/lib/db/seed'
+import { pgQuery, withTransaction } from '@/lib/db'
+import { createPeriod, transitionPeriod, assertPostable, runYearEndClosing } from '@/lib/erp/accountingData'
+import { bookIntercompany, loadTallies } from '@/lib/erp/ledgerData'
+import { bookRevaluation } from '@/lib/erp/revaluationData'
+import { setRate } from '@/lib/erp/currencyData'
+import { createJob, saveJobMapping, validateJob, approveJob, executeJob } from '@/lib/import/importData'
+import { createCount, enterCount, transitionCount, postCount, revalueInventory } from '@/lib/inventory/inventoryOpsData'
+import { createEmployee, addEmploymentRecord } from '@/lib/hr/employeeData'
+import { openPeriod, calculatePeriod, approvePeriod, postPeriodToGl } from '@/lib/hr/payrollData'
+import { incomeStatement } from '@/lib/erp/ledger'
+
+const say = (bug: boolean, label: string, detail: string) => console.log(`  ${bug ? '🔴 BUG-REPRODUCED' : '⚪ not reproduced'} — ${label}: ${detail}`)
+const one = async <T,>(sql: string, p: unknown[] = []) => (await pgQuery<T>(sql, p))[0]
+const today = new Date().toISOString().slice(0, 10)
+const cnt = async () => (await one<{ n: number }>(`SELECT COUNT(*)::int AS n FROM gl_journal_entries`))!.n
+
+async function main() {
+  await runMigrations(); await seedDatabase()
+  const ADMIN = (await one<{ id: string }>(`SELECT id FROM users LIMIT 1`))!.id
+  console.log(`\n══ ERPFIX-1 RED @ HEAD — today=${today} ══`)
+
+  // ── BUG-ERP-10 first (fresh DB): one payroll run ───────────────────────────
+  const approver = (await one<{ id: string }>(`INSERT INTO users (id,email,name,password_hash,role,active,created_at) VALUES ('red-approver','ra@t.l','RA','x','administrator',true,to_char(now(),'YYYY-MM-DD HH24:MI:SS')) RETURNING id`))!.id
+  const emp = await createEmployee({ firstName: 'حقوق', lastName: 'قرمز', hireDate: '2024-01-01', status: 'active', maritalStatus: 'single', childrenCount: 0 }, ADMIN)
+  await addEmploymentRecord(emp, { startDate: '2024-01-01', baseSalary: 300_000_000, contractType: 'permanent' }, ADMIN)
+  const per = await openPeriod(1405, 5, ADMIN); await calculatePeriod(per.id!, ADMIN); await approvePeriod(per.id!, approver)
+  const posted = await postPeriodToGl(per.id!, approver)
+  const is = incomeStatement(await loadTallies())
+  const rentLine = is.expenses.find(r => r.code === '6100')
+  say(!!rentLine && rentLine.amount > 0 && /rent/i.test(rentLine.nameEn), 'BUG-ERP-10 payroll lands on 6100', `entry #${posted.entryId}; income statement expense 6100 «${rentLine?.nameEn}» = ${rentLine?.amount}; 6000 «Salaries Expense» = ${is.expenses.find(r => r.code === '6000')?.amount ?? 0}`)
+  const seed6100 = await pgQuery<{ name_en: string }>(`SELECT name_en FROM gl_accounts WHERE code='6100'`)
+  console.log(`     gl_accounts 6100 = «${seed6100[0]?.name_en}»; map gl_map_payroll_expense = ${(await one<{ value: string }>(`SELECT value FROM erp_settings WHERE key='gl_map_payroll_expense'`))?.value}`)
+
+  // ── BUG-ERP-08 fixtures (before closing) ───────────────────────────────────
+  const co2 = (await one<{ id: number }>(`INSERT INTO erp_companies (code,name_en,name_fa) VALUES ('RED2','Red Two','قرمز دو') RETURNING id`))!.id
+  const co1 = (await one<{ id: number }>(`SELECT id FROM erp_companies WHERE is_default`))!.id
+  await pgQuery(`INSERT INTO assets (name, currency, purchase_price, exchange_rate, status) VALUES ('Red USD server','USD',1000,500000,'active')`)
+  await setRate('USD', today, 600000, ADMIN)
+  const wh = (await one<{ id: number }>(`INSERT INTO inv_warehouses (code,name_en) VALUES ('RED-WH','Red WH') RETURNING id`))!.id
+  const prod = (await one<{ id: number }>(`INSERT INTO inv_products (sku,name_en,cost) VALUES ('RED-SKU','Red product',1000) RETURNING id`))!.id
+  await pgQuery(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_at) VALUES ($1,$2,'receipt',10,1000,'red',to_char(now(),'YYYY-MM-DD HH24:MI:SS'))`, [prod, wh])
+  const count = await createCount(wh, ADMIN)
+  await enterCount(count.id, [{ productId: prod, countedQty: 8 }])
+  await transitionCount(count.id, 'submitted', ADMIN); await transitionCount(count.id, 'approved', ADMIN)
+  const csv = `ref,date,account,debit,credit,memo\nRV1,${today},1010,500,0,red\nRV1,${today},3000,0,500,red\n`
+  const job = await createJob({ entityType: 'journal', name: 'red.csv', fileName: 'red.csv', content: csv }, ADMIN)
+  await saveJobMapping(job.id, job.suggested, 'skip'); await validateJob(job.id); await approveJob(job.id, { id: ADMIN, role: 'super_admin' })
+
+  // Close a period that covers today.
+  const pid = await createPeriod({ name: 'RED-CLOSED', startDate: today.slice(0, 4) + '-10-01', endDate: today.slice(0, 4) + '-10-31', kind: 'period' })
+  await transitionPeriod(pid, 'closed', ADMIN)
+  console.log(`  period RED-CLOSED (${today.slice(0, 4)}-10-01..31) is closed; assertPostable(today).ok=${(await assertPostable(today)).ok}`)
+  const paths: [string, () => Promise<unknown>][] = [
+    ['intercompany', () => bookIntercompany({ kind: 'transfer', fromCompanyId: co1, toCompanyId: co2, amount: 1000, date: today }, ADMIN)],
+    ['fx revaluation', () => bookRevaluation(ADMIN)],
+    ['journal import', () => executeJob(job.id, ADMIN)],
+    ['cycle-count adjustment', () => postCount(count.id, ADMIN)],
+    ['inventory revaluation', () => revalueInventory({ productId: prod, warehouseId: wh, newUnitCost: 1200 }, ADMIN)],
+  ]
+  for (const [name, fn] of paths) {
+    const before = await cnt()
+    let err = ''
+    try { await fn() } catch (e) { err = e instanceof Error ? e.message : String(e) }
+    const inClosed = (await one<{ n: number }>(`SELECT COUNT(*)::int AS n FROM gl_journal_entries WHERE status='posted' AND date BETWEEN $1 AND $2 AND id > 0`, [today.slice(0, 4) + '-10-01', today.slice(0, 4) + '-10-31']))!.n
+    const after = await cnt()
+    say(after > before, `BUG-ERP-08 ${name} posts into a CLOSED period`, `+${after - before} posted entr${after - before === 1 ? 'y' : 'ies'} (posted entries now dated inside the closed period: ${inClosed})${err ? ` err=${err}` : ''}`)
+  }
+  const bad = await assertPostable('abc')
+  say(bad.ok, "BUG-ERP-08 date 'abc' is postable", JSON.stringify(bad))
+  const outside = await assertPostable('2031-03-03')
+  say(outside.ok, 'BUG-ERP-08 date outside every defined period is postable', JSON.stringify(outside))
+  // year-end in a LOCKED period
+  const fy = await createPeriod({ name: 'RED-FY2026', startDate: '2026-01-01', endDate: '2026-12-31', kind: 'year' })
+  await transitionPeriod(fy, 'closed', ADMIN); await transitionPeriod(fy, 'locked', ADMIN)
+  const lockedClose = await runYearEndClosing(fy, ADMIN)
+  say(lockedClose.ok === true, 'BUG-ERP-08 year-end closing posts into a LOCKED period', JSON.stringify(lockedClose))
+
+  // ── BUG-ERP-21 ─────────────────────────────────────────────────────────────
+  const acc = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code IN ('1010','3000') ORDER BY code`)
+  let rawErr = ''
+  try {
+    await withTransaction(async q => {
+      const e = (await q<{ id: number }>(`INSERT INTO gl_journal_entries (entry_no,date,memo,status,total) VALUES ('RED-UNBAL','2026-11-05','raw','posted',100) RETURNING id`))[0]
+      await q(`INSERT INTO gl_journal_lines (entry_id,account_id,debit,credit,line_no) VALUES ($1,$2,100,0,0)`, [e.id, acc[0].id])
+    })
+  } catch (e) { rawErr = String(e) }
+  const unbal = await one<{ n: number }>(`SELECT COUNT(*)::int AS n FROM gl_journal_entries WHERE entry_no='RED-UNBAL'`)
+  say(unbal!.n === 1, 'BUG-ERP-21 raw unbalanced posted entry commits', `rows=${unbal!.n} ${rawErr}`)
+  let dupErr = ''
+  try {
+    await pgQuery(`INSERT INTO gl_journal_entries (entry_no,date,memo,status,total) VALUES ('RED-DUP','2026-11-05','a','draft',0),('RED-DUP','2026-11-05','b','draft',0)`)
+  } catch (e) { dupErr = String(e) }
+  const dup = await one<{ n: number }>(`SELECT COUNT(*)::int AS n FROM gl_journal_entries WHERE entry_no='RED-DUP'`)
+  say(dup!.n === 2, 'BUG-ERP-21 duplicate entry_no accepted', `rows=${dup!.n} ${dupErr}`)
+  const negLine = await one<{ n: number }>(`SELECT 1 AS n`)
+  try { await pgQuery(`INSERT INTO gl_journal_lines (entry_id,account_id,debit,credit,line_no) VALUES ((SELECT id FROM gl_journal_entries WHERE entry_no='RED-DUP' LIMIT 1),$1,-5,0,9)`, [acc[0].id]); say(true, 'BUG-ERP-21 negative line amount accepted', 'debit=-5 stored') } catch (e) { say(false, 'negative line', String(e)) }
+  void negLine
+  // concurrent year-end closing on an OPEN 2027 year with activity
+  const fy27 = await createPeriod({ name: '2027', startDate: '2027-01-01', endDate: '2027-12-31', kind: 'year' })
+  await pgQuery(`INSERT INTO gl_journal_entries (entry_no,date,memo,status,total) VALUES ('RED-REV27','2027-03-03','rev','posted',1000)`)
+  const e27 = (await one<{ id: number }>(`SELECT id FROM gl_journal_entries WHERE entry_no='RED-REV27'`))!.id
+  const a4000 = (await one<{ id: number }>(`SELECT id FROM gl_accounts WHERE code='4000'`))!.id
+  await pgQuery(`INSERT INTO gl_journal_lines (entry_id,account_id,debit,credit,line_no) VALUES ($1,$2,1000,0,0),($1,$3,0,1000,1)`, [e27, acc[0].id, a4000])
+  const conc = await Promise.allSettled(Array.from({ length: 5 }, () => runYearEndClosing(fy27, ADMIN)))
+  const closings = (await one<{ n: number }>(`SELECT COUNT(*)::int AS n FROM gl_journal_entries WHERE reference='year-end-close' AND memo='Year-end closing 2027'`))!.n
+  say(closings > 1, 'BUG-ERP-21 concurrent year-end closing books more than one entry', `${closings} closing entries for 2027 from 5 concurrent calls (${conc.filter(c => c.status === 'fulfilled' && (c.value as { ok: boolean }).ok).length} reported ok)`)
+  const nos = await pgQuery<{ entry_no: string }>(`SELECT entry_no FROM gl_journal_entries WHERE reference IN ('year-end-close','opening') OR reference LIKE 'intercompany%' OR reference LIKE 'fx-reval%' ORDER BY id`)
+  console.log(`     system entry numbers minted from Date.now(): ${nos.map(n => n.entry_no).join(', ')}`)
+  // "25" blocked by "2025"
+  const p2025 = await createPeriod({ name: '2025', startDate: '2025-01-01', endDate: '2025-12-31', kind: 'year' })
+  await pgQuery(`INSERT INTO gl_journal_entries (entry_no,date,memo,status,total) VALUES ('RED-REV25','2025-03-03','rev','posted',10)`)
+  const e25 = (await one<{ id: number }>(`SELECT id FROM gl_journal_entries WHERE entry_no='RED-REV25'`))!.id
+  await pgQuery(`INSERT INTO gl_journal_lines (entry_id,account_id,debit,credit,line_no) VALUES ($1,$2,10,0,0),($1,$3,0,10,1)`, [e25, acc[0].id, a4000])
+  const c2025 = await runYearEndClosing(p2025, ADMIN)
+  const p25 = await createPeriod({ name: '25', startDate: '2028-01-01', endDate: '2028-12-31', kind: 'year' })
+  await pgQuery(`INSERT INTO gl_journal_entries (entry_no,date,memo,status,total) VALUES ('RED-REV28','2028-03-03','rev','posted',10)`)
+  const e28 = (await one<{ id: number }>(`SELECT id FROM gl_journal_entries WHERE entry_no='RED-REV28'`))!.id
+  await pgQuery(`INSERT INTO gl_journal_lines (entry_id,account_id,debit,credit,line_no) VALUES ($1,$2,10,0,0),($1,$3,0,10,1)`, [e28, acc[0].id, a4000])
+  const c25 = await runYearEndClosing(p25, ADMIN)
+  say(c2025.ok && !c25.ok, 'BUG-ERP-21 closing «2025» wrongly blocks closing «25»', `2025: ${JSON.stringify(c2025)} · 25: ${JSON.stringify(c25)}`)
+  process.exit(0)
+}
+main().catch(e => { console.error(e); process.exit(1) })

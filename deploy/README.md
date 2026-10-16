@@ -92,6 +92,8 @@ origin/…` دوباره درستش می‌کرد، ولی گمراه‌کنند
 | `nginx/render-nginx.sh` | تولید conf از قالب با دامنهٔ اصلی + ریدایرکت‌ها؛ با `--install`: نصب + `nginx -t` + reload **(اجرا روی سرور)** | نصب اولیه/تغییر دامنه | روت برای `--install` |
 | `reset-erp-data.ts` | پاک‌کردن دادهٔ ERP (dry-run پیش‌فرض) — `npx tsx deploy/reset-erp-data.ts` از ریشه | شروع دوبارهٔ ثبت داده | بکاپ |
 | `fix-bug020-data.ts` | ترمیم دادهٔ BUG-020 — `npx tsx deploy/fix-bug020-data.ts` از ریشه | فقط دادهٔ قبل از فیکس 26.26b | بکاپ |
+| `erp-coa-audit.ts` | ممیزی **فقط‌خواندنی** کدینگ (ERPFIX-1): تصادم seed، مغایرت `gl_accounts` با `coaContract.ts`، و ثبت‌های روی ۶۱۰۰ به تفکیک منشأ (حقوق/تسویه/پرداخت حقوق خزانه/اجاره) — `npx tsx deploy/erp-coa-audit.ts` از ریشه | بعد از آپدیت ERPFIX-1، پیش از هر اصلاح داده | — |
+| `erp-remediate-salary-account.ts` | انتقال حقوقِ ثبت‌شده روی ۶۱۰۰ «اجاره» به حساب حقوق (۶۰۰۰) با **سند اصلاحی جدید** — سند posted قبلی دست نمی‌خورد؛ دورهٔ بسته/قفل فقط گزارش؛ idempotent. پیش‌فرض dry-run؛ نوشتن واقعی فقط با `--apply --confirm` | **فقط پس از تأیید حسابدار** روی خروجی dry-run | بکاپ |
 | `start.sh` / `pm2.config.js` | فایل‌های generated توسط fix-pm2 — دستی ویرایش نکنید | — | — |
 
 ## postgres/
@@ -106,6 +108,7 @@ origin/…` دوباره درستش می‌کرد، ولی گمراه‌کنند
 | `restore-postgresql.sh` | بازگردانی `pg_dump`/`pg_restore` |
 | `rollback-to-sqlite.sh` | برگشت اضطراری به snapshot SQLite (فقط legacy) |
 | `rollback-phase26.1[1-4].sql` | رول‌بک schema فازهای 26.11–26.14 |
+| `rollback-erpfix-1.sql` | رول‌بک invariantهای دفتر کل ERPFIX-1 (trigger تراز، CHECK سطرها، یکتایی entry_no، ایندکس بستن سال) — **فقط همراه با برگرداندن کد**؛ سندهای posted و نگاشت حقوق برنمی‌گردند |
 
 ## مهاجرت flatten (26.26d)
 

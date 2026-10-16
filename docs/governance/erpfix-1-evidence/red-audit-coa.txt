@@ -1,0 +1,8 @@
+  ✗ (b) 6100: account-code literal is not in COA_CONTRACT (src/lib/erp/coaContract.ts)
+        src/lib/hr/payroll.ts:684  { accountCode: '6100', debit: round2(totals.gross), credit: 0, memo: 'هزینهٔ حقوق و دستمزد' },
+  ✗ (b) 6100: account-code literal is not in COA_CONTRACT (src/lib/erp/coaContract.ts)
+        src/lib/hr/payrollData.ts:635  '6100': m['gl_map_payroll_expense'] ?? '6100',
+  ✗ (b) 6100: account-code literal is not in COA_CONTRACT (src/lib/erp/coaContract.ts)
+        src/lib/treasury/payments.ts:40  case 'salary_payment': return [{ accountCode: '6100', debit: a, credit: 0, memo: 'Salaries' }, { accountCode: bankCode, debit: 0, credit: a }]
+
+✗ 1 seed conflict(s), 5 contract problem(s)

@@ -7,10 +7,11 @@
  * and `postOpeningBalance` (26.9) for financial migration — no duplicate engines.
  */
 import { createHash } from 'crypto'
-import { pgQuery, getPool } from '@/lib/db'
+import { pgQuery, getPool, type TxQuery } from '@/lib/db'
 import { parseCsv } from '@/lib/admin/dataTableExport'
 import { normalizeKey } from '@/lib/masterdata/quality'
 import { postOpeningBalance } from '@/lib/erp/accountingData'
+import { insertPostedEntry } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { isXlsx, xlsxToMatrix } from './xlsx'
 import { cleanseRecord } from './cleanse'
@@ -261,6 +262,7 @@ export async function executeJob(jobId: number, userId?: string, opts: { dryRun?
   const pool = getPool()
   const client = await pool.connect()
   let imported = 0, skipped = 0
+  let openingEntryId: number | null = null
   const log = async (table: string, recordId: number, op = 'insert') =>
     client.query(`INSERT INTO migration_transactions (job_id, entity_type, table_name, record_id, op, created_at) VALUES ($1,$2,$3,$4,$5,${NOW})`, [jobId, job.entityType, table, recordId, op])
   const markRow = (rowId: number, status: string) => client.query(`UPDATE import_job_rows SET status=$2 WHERE id=$1`, [rowId, status])
@@ -274,23 +276,23 @@ export async function executeJob(jobId: number, userId?: string, opts: { dryRun?
       const refs = [...new Set(recs.map(x => String(x.rec.ref)))]
       for (const ref of refs) journalNos.set(ref, dryRun ? `DRY-${jobId}-${ref}` : await nextNumber('journal', { legacyPrefix: 'JV' }))
     }
-    // Opening balance goes through the 26.9 engine (self-balancing + audited entry).
+    await client.query('BEGIN')
+    // Opening balance goes through the 26.9 engine (self-balancing + audited
+    // entry). ERPFIX-1: now on the import's own transaction — it used to run
+    // BEFORE `BEGIN` and through its own connection, so a DRY RUN of an
+    // opening-balance job really posted the entry (and burned its number).
     if (job.entityType === 'opening_balance') {
       const codes = recs.map(x => String(x.rec.account))
       const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE lower(code) = ANY($1)`, [codes.map(c => c.toLowerCase())])
       const idOf = new Map(accs.map(a => [a.code.toLowerCase(), a.id]))
       const entries = recs.map(x => ({ accountId: idOf.get(String(x.rec.account).toLowerCase())!, amount: Number(x.rec.amount ?? 0) }))
-      const { entryId } = await postOpeningBalance({ date: new Date().toISOString().slice(0, 10), entries }, userId)
-      await pgQuery(`INSERT INTO migration_transactions (job_id, entity_type, table_name, record_id, op, created_at) VALUES ($1,'opening_balance','gl_journal_entries',$2,'insert',${NOW})`, [jobId, entryId])
-      for (const x of recs) await pgQuery(`UPDATE import_job_rows SET status='imported' WHERE id=$1`, [x.rowId])
-      imported = recs.length
-      await pgQuery(`UPDATE import_jobs SET status='completed', imported_rows=$2, completed_at=${NOW}, updated_at=${NOW} WHERE id=$1`, [jobId, imported])
-      await history(jobId, 'executed', userId, { imported, entryId })
-      return { imported, skipped }
-    }
-
-    await client.query('BEGIN')
-    if (job.entityType === 'customer' || job.entityType === 'supplier' || job.entityType === 'product' || job.entityType === 'warehouse' || job.entityType === 'category') {
+      const txq: TxQuery = async (text, params = []) => (await client.query(text, params as never[])).rows as never[]
+      const { entryId } = await postOpeningBalance({ date: new Date().toISOString().slice(0, 10), entries }, userId,
+        { query: txq, entryNo: dryRun ? `DRY-${jobId}-OB` : undefined })
+      openingEntryId = entryId
+      await log('gl_journal_entries', entryId, 'insert')
+      for (const x of recs) { await markRow(x.rowId, 'imported'); imported++ }
+    } else if (job.entityType === 'customer' || job.entityType === 'supplier' || job.entityType === 'product' || job.entityType === 'warehouse' || job.entityType === 'category') {
       for (const { rowId, rec } of recs) {
         if (rec.__conflict && resolution === 'skip') { await markRow(rowId, 'skipped'); skipped++; continue }
         let res: { rows: { id: number; inserted: boolean }[] }
@@ -357,19 +359,17 @@ export async function executeJob(jobId: number, userId?: string, opts: { dryRun?
       const codes = [...new Set(recs.map(x => String(x.rec.account).toLowerCase()))]
       const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE lower(code) = ANY($1)`, [codes])
       const aOf = new Map(accs.map(a => [a.code.toLowerCase(), a.id]))
+      // ERPFIX-1: each voucher goes through the single GL entry point on the
+      // import's own transaction — period gate (an imported voucher dated in a
+      // closed period now fails the job instead of posting), balance check and
+      // DB invariants. The number was minted up-front (DRY-… on a dry run).
+      const txq: TxQuery = async (text, params = []) => (await client.query(text, params as never[])).rows as never[]
       for (const [ref, g] of groups) {
-        const total = g.recs.reduce((s, r) => s + Number(r.debit ?? 0), 0)
         const date = String(g.recs[0].date || new Date().toISOString().slice(0, 10))
-        const entry = await client.query(
-          `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
-           VALUES ($1,$2,$3,$4,'posted',$5,$6,${NOW},${NOW}) RETURNING id`,
-          [journalNos!.get(ref), date, `Imported entry ${ref}`, `IMP-${jobId}`, total, userId ?? null])
-        let ln = 0
-        for (const r of g.recs) {
-          await client.query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-            [entry.rows[0].id, aOf.get(String(r.account).toLowerCase()), Number(r.debit ?? 0), Number(r.credit ?? 0), r.memo ?? null, ln++])
-        }
-        await log('gl_journal_entries', entry.rows[0].id, 'insert')
+        const entry = await insertPostedEntry(txq, date, `Imported entry ${ref}`, `IMP-${jobId}`, userId,
+          g.recs.map(r => ({ accountId: aOf.get(String(r.account).toLowerCase())!, debit: Number(r.debit ?? 0), credit: Number(r.credit ?? 0), memo: (r.memo as string | undefined) ?? null })),
+          { entryNo: journalNos!.get(ref) })
+        await log('gl_journal_entries', entry.id, 'insert')
         for (const rowId of g.rowIds) { await markRow(rowId, 'imported'); imported++ }
       }
     } else {
@@ -393,7 +393,7 @@ export async function executeJob(jobId: number, userId?: string, opts: { dryRun?
     return { imported, skipped, dryRun: true }
   }
   await pgQuery(`UPDATE import_jobs SET status='completed', imported_rows=$2, completed_at=${NOW}, updated_at=${NOW} WHERE id=$1`, [jobId, imported])
-  await history(jobId, 'executed', userId, { imported, skipped })
+  await history(jobId, 'executed', userId, openingEntryId != null ? { imported, entryId: openingEntryId } : { imported, skipped })
   return { imported, skipped }
 }
 

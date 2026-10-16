@@ -20,5 +20,5 @@
  */
 export { ERROR_CODES, type ErrorCode } from './codes'
 export { CATALOG, type ErrorDefinition, type Severity } from './catalog'
-export { businessError, type BuiltError } from './factory'
+export { businessError, BusinessErrorException, throwBusinessError, type BuiltError } from './factory'
 export { toApiResponse } from './formatter'

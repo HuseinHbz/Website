@@ -1,0 +1,16 @@
+  ✗ src/lib/hr/payrollData.ts:724 [line_insert] `INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no)
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+  ✗ src/lib/import/importData.ts:364 [entry_insert] `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+  ✗ src/lib/import/importData.ts:369 [line_insert] await client.query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+  ✗ src/lib/inventory/inventoryOpsData.ts:236 [entry_insert] `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+  ✗ src/lib/inventory/inventoryOpsData.ts:462 [entry_insert] `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+  ✗ src/lib/inventory/inventoryOpsData.ts:241 [line_insert] await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+  ✗ src/lib/inventory/inventoryOpsData.ts:467 [line_insert] await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
+      → write the entry through insertPostedEntry (src/lib/erp/glPosting.ts)
+
+✗ 20 GL write(s) bypass insertPostedEntry

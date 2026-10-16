@@ -330,6 +330,29 @@
    from hardcoded literal SQL fragments — the real value always travels
    through `$n`. A genuine false positive gets a documented one-line
    reason in the script's `ALLOWLIST`, never a silent pass.)
+56. **A posted journal entry is written ONLY by `insertPostedEntry`; a system
+   account code comes ONLY from `coaContract.ts` — both enforced by CI gates
+   (ERPFIX-1).** `insertPostedEntry` (`src/lib/erp/glPosting.ts`) is the single
+   entry point: real YYYY-MM-DD date → `entryBalanced` (≥2 lines, no negative or
+   two-sided line, Dr=Cr) → `assertPostable` (closed/locked period refused; once
+   any period exists a date outside every period is refused — `erp_settings.
+   gl_require_period` 'strict'|'off') → number minted IN the caller's transaction
+   (`nextNumberInTx`) → header + lines, atomic. Only year-end closing and opening
+   balance pass `allowClosedPeriod` (closed yes, locked never) and both need
+   `requireOp('erp.finance:close_period')`. The DB backs it up: a deferred
+   constraint trigger rejects a posted entry that does not balance at COMMIT,
+   `chk_gl_lines_amounts` rejects negative/two-sided lines, `entry_no` is unique
+   per company. `npm run audit:gl-writes` fails on any other `INSERT INTO
+   gl_journal_entries/lines` or raw `status='posted'` flip in src/ or deploy/
+   (the journal route may insert DRAFTS only). `npm run audit:coa` fails when a
+   code is seeded twice with a different name/type, or when an account-code
+   literal in an account context is missing from `COA_CONTRACT` / disagrees with
+   the seed — the class that let 6100 be «Rent Expense» while payroll posted
+   salaries to it. Salaries post to the role `COA.payrollExpense` (6000, live
+   value `gl_map_payroll_expense`). Before seeding a new account code, check it is
+   unused, seed with `WHERE NOT EXISTS` + explicit name/type, add it to the
+   contract. (سند posted فقط از insertPostedEntry؛ کد حساب سیستمی فقط از
+   coaContract.ts؛ هر دو با گیت CI.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of
@@ -1947,6 +1970,7 @@ and a full admin CMS. Data lives in **PostgreSQL** (async `pg` pool via Drizzle)
   informationally. Micro sizes are on-scale via `4xs` (9px)/`3xs` (10px)/`2xs`
   (11px). Complements `audit:tokens` (colour). Report:
   `docs/governance/phase24-quality-platform.md`.
+- `audit:gl-writes` + `audit:coa` (ERPFIX-1) — single GL write path + chart-of-accounts contract (see rule 56).
 - `tokens`, `content`, `deps`, `links`, `i18n`, `ui`, `tenancy` and `theme` audits gate CI (GitHub Actions `.github/workflows/ci.yml` + the ESLint job). `audit:tenancy` (26.24) fails on a transactional table without `company_id`; `audit:theme` (26.24) fails on hardcoded white/black on neutral admin surfaces.
 
 ## CI (`.github/workflows/ci.yml`)

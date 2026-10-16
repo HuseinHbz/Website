@@ -10,7 +10,7 @@
  * MONTHLY earning; severance is a TERMINATION benefit. Nothing in this file
  * reads one where it means the other.
  */
-import { pgQuery } from '@/lib/db'
+import { pgQuery, withTransaction } from '@/lib/db'
 import { toGregorian } from '@/lib/erp/jalali'
 import { employmentOn } from './employees'
 import { progressiveTax } from './payroll'
@@ -25,6 +25,7 @@ import {
   type ExportColumn, type AnnualPostingLine, type BankLineInput,
 } from './annual'
 import { parametersOf, bracketsOf, rulesetFor, periodById } from './payrollData'
+import { COA } from '@/lib/erp/coaContract'
 
 const NOW = `to_char(now(), 'YYYY-MM-DD HH24:MI:SS')`
 const iso = (y: number, m: number, d: number) =>
@@ -41,18 +42,12 @@ export function jalaliYearBounds(jYear: number): { from: string; to: string; day
   return { from, to, days: serviceDaysBetween(from, to) }
 }
 
-async function glAccountId(code: string): Promise<number> {
-  const r = (await pgQuery<{ id: number }>(`SELECT id FROM gl_accounts WHERE code=$1 LIMIT 1`, [code]))[0]
-  if (!r) throw new Error(`GL account ${code} is missing from the chart`)
-  return r.id
-}
-
 async function annualGlMap(): Promise<Record<string, string>> {
   const rows = await pgQuery<{ key: string; value: string }>(
     `SELECT key, value FROM erp_settings WHERE key LIKE 'gl_map_payroll_%'`)
   const m = new Map(rows.map(r => [r.key, r.value]))
   return {
-    '6100': m.get('gl_map_payroll_expense') ?? '6100',
+    [COA.payrollExpense]: m.get('gl_map_payroll_expense') ?? COA.payrollExpense,
     '2300': m.get('gl_map_payroll_payable') ?? '2300',
     '2320': m.get('gl_map_payroll_tax_payable') ?? '2320',
     '1160': m.get('gl_map_payroll_loan') ?? '1160',
@@ -73,26 +68,19 @@ async function postAnnualEntry(
   const mapped = lines.map(l => ({ ...l, accountCode: map[l.accountCode] ?? l.accountCode }))
   if (!annualPostingBalanced(mapped)) return { ok: false, error: 'سند تراز نیست — ثبت انجام نشد' }
 
-  const { assertPostable } = await import('@/lib/erp/accountingData')
-  const gate = await assertPostable(date)
-  if (!gate.ok) return { ok: false, error: gate.error ?? 'دورهٔ مالی بسته است' }
-
-  const { nextNumber } = await import('@/lib/numbering/integrate')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JE' })
-  const total = mapped.reduce((s, l) => s + l.debit, 0)
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW},${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, total, userId, gate.periodId ?? null]))[0]
-
-  for (let i = 0; i < mapped.length; i++) {
-    await pgQuery(
-      `INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, await glAccountId(mapped[i].accountCode),
-        mapped[i].debit, mapped[i].credit, mapped[i].memo, i])
+  // ERPFIX-1: through the single GL entry point — atomic, period-gated and
+  // balance-checked (the old path wrote header + lines as separate statements).
+  const { insertPostedEntry, accountIdsByCodes } = await import('@/lib/erp/glPosting')
+  const { BusinessErrorException } = await import('@/lib/errors')
+  try {
+    const ids = await accountIdsByCodes(mapped.map(l => l.accountCode))
+    const entry = await withTransaction(query => insertPostedEntry(query, date, memo, reference, userId,
+      mapped.map(l => ({ accountId: ids.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo }))))
+    return { ok: true, entryId: entry.id }
+  } catch (e) {
+    if (e instanceof BusinessErrorException) return { ok: false, error: e.built.fa }
+    throw e
   }
-  return { ok: true, entryId: entry.id }
 }
 
 // ── bases read from the 28.3-الف flags ──────────────────────────────────────
