@@ -180,4 +180,4 @@ deferred. حذف `INSERT … ('6100','Salaries')` بی‌اثر. پیش‌فرض
 | Build (`npm run build`) | موفق |
 | `npm run audit` (۱۵ گیت: tokens، content، reuse، deps، links، i18n، ui، tenancy، theme، nav، shell، rbac 171/12/0، sql، **gl-writes**، **coa**) | همه سبز؛ `audit:pgcompat` سبز |
 | i18n | کلید ادمین جدیدی لازم نشد (UI تغییری نکرد)؛ پیام‌های جدید در کاتالوگ خطا دوزبانه‌اند |
-| Regressions (`npm run regressions`) | اجرای کامل ۲: **37/38** — تنها شکست Phase 14 سناریو L (ناپایداری از قبل؛ HEAD دست‌نخورده 7/8، این فاز 8/8 در اجرای مجزا — یافتهٔ ۸). اجرای کامل ۳: در جریان هنگام commit؛ نتیجه در commit بعدی ثبت می‌شود. ERPFIX-1: 71/71 |
+| Regressions (`npm run regressions`) | اجرای کامل ۲: **37/38** — تنها شکست Phase 14 سناریو L (ناپایداری از قبل؛ HEAD دست‌نخورده 7/8، این فاز 8/8 در اجرای مجزا — یافتهٔ ۸). اجرای کامل ۳ (پس از آخرین ویرایش): **38/38 سبز**. ERPFIX-1: 71/71 |
