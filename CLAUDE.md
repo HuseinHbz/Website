@@ -357,6 +357,34 @@
    Every approval/budget/credit threshold compares `base_total`, never the
    document's raw `total` — a 1,000 USD request must not slip under a
    Rial-denominated limit meant for 1,000 Rial.)
+58. گذار وضعیت سند از جدول خالص؛ سندی که ثبت دفتری دارد فقط با void+reversal
+   از زیرحساب خارج می‌شود، نه با DELETE؛ تبدیل سند همهٔ ستون‌های مالی را
+   کپی می‌کند (تست قرارداد).
+   (ERPFIX-3, BUG-ERP-05/06/04 — `salesDocTransition` (`src/lib/erp/
+   sales.ts`) is the ONE table a send/confirm/void op is checked against
+   before it runs; a disallowed transition (confirming a paid/void invoice,
+   sending a void one) is a 409 `ERP-SALES-INVALID-TRANSITION`, never a
+   silent no-op. `postSalesInvoiceToGl` takes an optional `externalQuery` so
+   a route's status write and its GL post commit or roll back in ONE
+   transaction — a closed-period GL failure must never leave a confirmed
+   status with no ledger entry behind it; it also refuses to treat a
+   REVERSED entry's document as "already posted". DELETE on a sales
+   document only succeeds for a real draft with no `gl_entry_id` — anything
+   with a ledger effect goes through void (the balanced reversal this phase
+   already requires), never a bare `status='void'` UPDATE that leaves the
+   posted entry behind. `convertDocument`/quote→order→invoice conversion
+   copies currency/exchange_rate/base_total/company_id/cost_center_id/
+   department/budget/priority — never hardcodes `'IRR'` or drops them — and
+   a purchase conversion's remaining-quantity guard (summed over every
+   non-void downstream line via `po_line_id`/`receipt_line_id`) rejects a
+   second full conversion of an already-fully-converted document. The
+   purchase status guard is a DENY-list for order→receipt/invoice and
+   receipt→invoice (blocks only void/rejected/an un-received draft receipt)
+   — an ALLOW-list requiring a separate "order approval" status was tried
+   first and broke 4 already-verified live suites (26.21's two-year
+   simulation among them) because this codebase's real lifecycle has no
+   such status; only `request→order/rfq/quotation` genuinely requires
+   `approved`, confirmed by every real procurement cycle in this repo.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

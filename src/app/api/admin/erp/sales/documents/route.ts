@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery, withTransaction } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
-import { DOC_TYPES, documentTotals, lineTotals } from '@/lib/erp/sales'
+import { DOC_TYPES, documentTotals, lineTotals, salesDocTransition } from '@/lib/erp/sales'
 import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid } from '@/lib/erp/salesData'
 import { reverseEntry } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
@@ -198,6 +198,10 @@ export async function PUT(req: NextRequest) {
   try {
     const src = (await pgQuery(`SELECT * FROM sales_documents WHERE id=$1`, [id]))[0] as Record<string, unknown> | undefined
     if (!src) return badRequest('Not found')
+    // ERPFIX-3 (BUG-ERP-05): set by the atomic confirm branches (invoice/
+    // credit_note) below, where the GL post now commits in the SAME
+    // transaction as the status write.
+    let entryIdFromAtomicConfirm: number | null = null
     if (op === 'convert') {
       if (!toType) return badRequest('toType required')
       // 26.26 بند ۲ (CFO hunt): a source may not be converted to the same target
@@ -214,16 +218,40 @@ export async function PUT(req: NextRequest) {
       // while the source stayed un-confirmed. Both fixed: copies product_id,
       // and warehouse_id (a quote's chosen fulfillment warehouse carries
       // forward to the order it becomes), atomically.
+      // ERPFIX-3 (BUG-ERP-04): the status GUARD on the SOURCE — a quote may
+      // convert to an order from draft/sent/confirmed; an order may convert
+      // to an invoice ONLY once it is itself 'confirmed' (reservation/credit
+      // already happened at order-confirm time — converting an unconfirmed
+      // order would skip that gate entirely).
+      const srcStatus = String(src.status)
+      if (String(src.doc_type) === 'order' && toType === 'invoice' && srcStatus !== 'confirmed') {
+        return toApiResponse(businessError('ERP-SALES-INVALID-TRANSITION', { reason: `order must be confirmed before converting to invoice (current: ${srcStatus})` }))
+      }
+      if (String(src.doc_type) === 'quote' && toType === 'order' && !['draft', 'sent', 'confirmed'].includes(srcStatus)) {
+        return toApiResponse(businessError('ERP-SALES-INVALID-TRANSITION', { reason: `quote in status "${srcStatus}" cannot convert to an order` }))
+      }
       const newDoc = await withTransaction(async query => {
+        // ERPFIX-3 (BUG-ERP-04): the full set of financial/organizational
+        // columns now travels with the conversion — a USD quote used to
+        // become an IRR order with the SAME numeric total (a 5,000 USD quote
+        // silently became a 5,000 Rial order). exchange_rate defaults to 1
+        // (never 0), so `??` is safe there too.
         const row = (await query(
-          `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, warehouse_id, updated_at)
-           VALUES ($1,$2,$3,to_char(now(),'YYYY-MM-DD'),$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12,${NOW}) RETURNING id`,
-          [toType, docNo, src.customer_id, src.due_date ?? null, src.subtotal, src.discount_total, src.tax_total, src.total, id, src.notes ?? null, auth.user.id, src.warehouse_id ?? null]))[0] as { id: number }
+          `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, due_date, status, subtotal, discount_total, tax_total, total, source_id, notes, created_by, warehouse_id,
+                                         currency, exchange_rate, base_total, company_id, cost_center_id, updated_at)
+           VALUES ($1,$2,$3,to_char(now(),'YYYY-MM-DD'),$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,${NOW}) RETURNING id`,
+          [toType, docNo, src.customer_id, src.due_date ?? null, src.subtotal, src.discount_total, src.tax_total, src.total, id, src.notes ?? null, auth.user.id, src.warehouse_id ?? null,
+           src.currency ?? 'IRR', src.exchange_rate ?? 1, src.base_total ?? src.total, src.company_id ?? null, src.cost_center_id ?? null]))[0] as { id: number }
         await query(
           `INSERT INTO sales_document_lines (document_id, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id)
            SELECT $1, description, qty, unit_price, discount_pct, tax_pct, line_total, line_no, product_id FROM sales_document_lines WHERE document_id=$2`,
           [row.id, id])
-        await query(`UPDATE sales_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [id])
+        // ERPFIX-3 (BUG-ERP-04): only a QUOTE's own status advances to
+        // 'confirmed' on conversion (accepting the quote) — an ORDER source
+        // is converting to an invoice precisely BECAUSE it is already
+        // confirmed; blanket-resetting it to 'confirmed' again was a no-op
+        // that masked the missing status guard above.
+        if (String(src.doc_type) === 'quote') await query(`UPDATE sales_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [id])
         return row
       })
       await logAction(auth.user, 'sales.doc.convert', 'sales_document', id, null, { toType, newId: newDoc.id })
@@ -271,6 +299,23 @@ export async function PUT(req: NextRequest) {
     if (op === 'void') { const deny = await requireOp(auth.user, 'erp.sales:void', 'edit'); if (deny) return deny }
     const status = op === 'send' ? 'sent' : op === 'confirm' ? 'confirmed' : 'void'
 
+    // ERPFIX-3 (BUG-ERP-05): the ONE state machine for send/confirm/void —
+    // confirming an already-paid/void invoice, or re-sending a confirmed
+    // one, previously "succeeded" with a status write that had zero real
+    // effect (the GL-post is idempotent and masked it). A disallowed
+    // transition is now a loud 409, not a silent no-op.
+    if (['send', 'confirm', 'void'].includes(op)) {
+      const t = salesDocTransition(op as 'send' | 'confirm' | 'void', String(src.status))
+      if (!t.ok) return toApiResponse(businessError('ERP-SALES-INVALID-TRANSITION', { reason: t.reason ?? 'invalid transition' }))
+    }
+    // ERPFIX-3 (BUG-ERP-05): a sales ORDER with an active (non-returned/
+    // cancelled) shipment may not be voided directly — the physical goods
+    // already moved; voiding here would silently orphan a real shipment.
+    if (op === 'void' && String(src.doc_type) === 'order') {
+      const activeShip = (await pgQuery(`SELECT 1 FROM inv_shipments WHERE sales_document_id=$1 AND status NOT IN ('returned','cancelled') LIMIT 1`, [id]))[0]
+      if (activeShip) return toApiResponse(businessError('ERP-SALES-VOID-DELIVERED', undefined))
+    }
+
     if (op === 'confirm' && String(src.doc_type) === 'invoice') {
       // Phase-3 sales audit finding: evaluateCredit() read the live AR
       // balance, then the status UPDATE ran as a separate, unlocked
@@ -284,6 +329,16 @@ export async function PUT(req: NextRequest) {
       // the now-updated balance. 26.25 بند ۱.۳: block mode rejects an
       // over-limit confirm; warn mode allows it and raises an alert; no
       // limit (0) never blocks (backward compatible).
+      // ERPFIX-3 (BUG-ERP-05): the credit check, the status write AND the
+      // GL post now commit as ONE transaction. Previously the GL post ran
+      // as its own separate transaction AFTER this one committed — a GL
+      // failure (e.g. a closed fiscal period) then "rolled back" the
+      // status with a second, independent UPDATE, which is not atomic: a
+      // crash between the two UPDATEs left the document confirmed with NO
+      // ledger entry, invisible to every balance report. Now a GL failure
+      // throws out of this transaction and the WHOLE confirm rolls back —
+      // status is never flipped unless the GL post inside it succeeded.
+      let glEntryId: number | null = null
       const blocked = await withTransaction(async query => {
         await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_customer_credit:${src.customer_id}`])
         // ERPFIX-2 (BUG-ERP-03): credit limit is Rial-denominated — compare base_total,
@@ -293,11 +348,23 @@ export async function PUT(req: NextRequest) {
         if (decision.exceeded && decision.mode === 'block') return decision
         await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
         if (decision.exceeded) await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
+        glEntryId = (await postSalesInvoiceToGl(id, auth.user.id, query)).entryId
         return null
       })
       if (blocked) return toApiResponse(businessError('ERP-SALES-CREDIT-LIMIT-EXCEEDED', {
         limit: blocked.limit.toLocaleString(), projected: blocked.projected.toLocaleString(),
       }))
+      entryIdFromAtomicConfirm = glEntryId
+    } else if (op === 'confirm' && String(src.doc_type) === 'credit_note') {
+      // ERPFIX-3 (BUG-ERP-05): same atomicity fix as the invoice branch —
+      // status write + GL post in one transaction (no credit check applies
+      // to a credit note).
+      let glEntryId: number | null = null
+      await withTransaction(async query => {
+        await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
+        glEntryId = (await postSalesInvoiceToGl(id, auth.user.id, query)).entryId
+      })
+      entryIdFromAtomicConfirm = glEntryId
     } else if (op === 'confirm' && String(src.doc_type) === 'order' && src.status !== 'confirmed' && src.warehouse_id) {
       // Phase 6: confirming a sales ORDER reserves its product lines against
       // the order's fulfillment warehouse — "Draft → Pending Approval →
@@ -333,14 +400,13 @@ export async function PUT(req: NextRequest) {
     }
     // 26.23 (بند ۱.۱): confirming an invoice/credit note auto-posts it to the GL
     // (idempotent — gl_entry_id guard). A closed fiscal period fails loudly.
-    let entryId: number | null = null
+    // ERPFIX-3 (BUG-ERP-05): the GL post itself now happens ATOMICALLY with
+    // the status write, inside the confirm branches above — `entryId` here
+    // is just that already-committed result. Only the BEST-EFFORT follow-up
+    // side effects (return settlement, unapplied-cash consumption) still run
+    // here, after commit, exactly as before.
+    let entryId: number | null = entryIdFromAtomicConfirm
     if (op === 'confirm' && ['invoice', 'credit_note'].includes(String(src.doc_type))) {
-      try {
-        entryId = (await postSalesInvoiceToGl(id, auth.user.id)).entryId
-      } catch (err) {
-        await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, src.status])
-        return badRequest(`Confirmed but not postable: ${err instanceof Error ? err.message : 'GL posting failed'}`)
-      }
       // BUG-013 (26.26): confirming a RETURN credit note against a PAID invoice
       // must settle it (refund → AR back to 0, or explicit customer credit + alert)
       // — otherwise AR is left silently negative.
@@ -387,8 +453,21 @@ export async function DELETE(req: NextRequest) {
   const parsed = await readJson(req, z.object({ id: z.number().int().positive(), reason: z.string().max(500).optional() }))
   if ('error' in parsed) return parsed.error
   try {
+    // ERPFIX-3 (BUG-ERP-06): DELETE previously only checked for payments —
+    // a CONFIRMED, GL-POSTED invoice with zero payments could still be
+    // "deleted" (status='void'), leaving its posted revenue/AR entry fully
+    // intact in the ledger: the document disappeared from every list while
+    // the books still showed the sale. DELETE is now ONLY for a draft (no
+    // ledger, no inventory, no payment effect yet) — anything else goes
+    // through void, which books the balanced reversal this phase requires.
+    const doc = (await pgQuery<{ status: string; gl_entry_id: number | null }>(
+      `SELECT status, gl_entry_id FROM sales_documents WHERE id=$1 AND deleted_at IS NULL`, [parsed.data.id]))[0]
+    if (!doc) return badRequest('Not found or already deleted')
+    if (doc.status !== 'draft' || doc.gl_entry_id) {
+      return toApiResponse(businessError('ERP-SALES-DELETE-NOT-DRAFT', undefined))
+    }
     const paid = (await pgQuery(`SELECT 1 FROM sales_payments WHERE document_id=$1 LIMIT 1`, [parsed.data.id]))[0]
-    if (paid) return badRequest('Document has payments; void it instead')
+    if (paid) return toApiResponse(businessError('ERP-SALES-DELETE-NOT-DRAFT', undefined))
     const row = (await pgQuery(
       `UPDATE sales_documents SET deleted_at=${NOW}, deleted_by=$2, delete_reason=$3, status='void', updated_at=${NOW}
        WHERE id=$1 AND deleted_at IS NULL RETURNING id`,

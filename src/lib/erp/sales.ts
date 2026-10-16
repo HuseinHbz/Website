@@ -16,6 +16,26 @@ export type DocType = (typeof DOC_TYPES)[number]
 export const DOC_STATUSES = ['draft', 'sent', 'confirmed', 'partial', 'paid', 'void'] as const
 export type DocStatus = (typeof DOC_STATUSES)[number]
 
+// ── ERPFIX-3 (BUG-ERP-05) — the one state machine for a sales document's
+// lifecycle op. `send`/`confirm` only move a document FORWARD out of
+// draft/sent — never re-run on a partial/paid/void document (confirming a
+// voided or already-paid invoice previously silently "succeeded" with zero
+// real effect, since the GL-posting step is itself idempotent and masked
+// the invalid transition). `void` is terminal: once void, never again.
+export type SalesLifecycleOp = 'send' | 'confirm' | 'void'
+const SALES_TRANSITIONS: Record<SalesLifecycleOp, readonly DocStatus[]> = {
+  send: ['draft', 'sent'],
+  confirm: ['draft', 'sent'],
+  void: ['draft', 'sent', 'confirmed', 'partial'],
+}
+
+export function salesDocTransition(op: SalesLifecycleOp, from: string): { ok: boolean; reason?: string } {
+  const allowed = SALES_TRANSITIONS[op]
+  if (!allowed) return { ok: false, reason: `Unknown lifecycle operation "${op}"` }
+  if (!allowed.includes(from as DocStatus)) return { ok: false, reason: `Cannot ${op} a document in status "${from}"` }
+  return { ok: true }
+}
+
 export interface LineInput {
   qty: number
   unitPrice: number

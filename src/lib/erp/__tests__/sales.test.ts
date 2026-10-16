@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced, isInvoiceReturnable, remainingReturnable, validateReturnRequest, canVoidInvoice, validatePayment } from '../sales'
+import { lineTotals, documentTotals, customerCredit, invoiceStatus, salesKpis, salesInvoicePostingLines, postingBalanced, isInvoiceReturnable, remainingReturnable, validateReturnRequest, canVoidInvoice, validatePayment, salesDocTransition, DOC_STATUSES } from '../sales'
 
 describe('sales line & document totals', () => {
   it('computes a line: qty×price, then discount, then tax on discounted net', () => {
@@ -139,5 +139,23 @@ describe('payment guard (26.26 بند ۲, CFO hunt)', () => {
   })
   it('accepts a normal partial payment', () => {
     expect(validatePayment({ status: 'confirmed', invoiceTotal: 1000, alreadyPaid: 0, amount: 400 }).ok).toBe(true)
+  })
+})
+
+describe('salesDocTransition (ERPFIX-3, BUG-ERP-05) — exhaustive over every (op, status) pair', () => {
+  const expected: Record<string, Record<string, boolean>> = {
+    send: { draft: true, sent: true, confirmed: false, partial: false, paid: false, void: false },
+    confirm: { draft: true, sent: true, confirmed: false, partial: false, paid: false, void: false },
+    void: { draft: true, sent: true, confirmed: true, partial: true, paid: false, void: false },
+  }
+  for (const op of ['send', 'confirm', 'void'] as const) {
+    for (const status of DOC_STATUSES) {
+      it(`${op} from ${status} is ${expected[op][status] ? 'allowed' : 'rejected'}`, () => {
+        expect(salesDocTransition(op, status).ok).toBe(expected[op][status])
+      })
+    }
+  }
+  it('rejects an unknown operation', () => {
+    expect(salesDocTransition('nonsense' as never, 'draft').ok).toBe(false)
   })
 })

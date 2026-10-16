@@ -105,7 +105,7 @@ export async function vendorPosition(vendorId: number) {
 }
 
 // ── Documents ────────────────────────────────────────────────────────────────
-interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number; gl_entry_id: number | null; priority: string }
+interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number; gl_entry_id: number | null; priority: string; currency: string; exchange_rate: number; department: string | null; cost_center_id: number | null; company_id: number | null }
 export async function listDocuments(docType?: PurchaseDocType) {
   const rows = await pgQuery<DocRow & { vendor_name: string | null }>(
     `SELECT d.*, v.name AS vendor_name FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id=d.vendor_id
@@ -132,27 +132,36 @@ export async function getDocument(id: number) {
 export async function saveDocument(input: {
   id?: number; docType: PurchaseDocType; vendorId?: number; date: string; currency?: string
   department?: string; budget?: number; sourceId?: number; note?: string; priority?: string; lines: LineRow[]
+  // ERPFIX-3 (BUG-ERP-04): costCenterId/companyId/exchangeRate are additive —
+  // a caller (e.g. convertDocument) can now carry these through a
+  // conversion instead of a document silently losing them. exchangeRate is
+  // an EXPLICIT override (used when copying a source document's own
+  // registered rate verbatim); otherwise it's resolved live via rialRateFor.
+  costCenterId?: number | null; companyId?: number | null; exchangeRate?: number
 }, userId?: string, externalQuery?: TxQuery): Promise<number> {
   const totals = documentTotals(input.lines)
-  const rate = (await rialRateFor(input.currency ?? 'IRR')) ?? 1
+  const rate = input.exchangeRate ?? (await rialRateFor(input.currency ?? 'IRR')) ?? 1
   const baseTotal = Math.round(totals.total * rate * 100) / 100
   const run = async (query: TxQuery) => {
     if (input.id) {
       await query(
         `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
-          note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), exchange_rate=$13, base_total=$14, updated_at=${NOW} WHERE id=$1`,
+          note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), exchange_rate=$13, base_total=$14,
+          cost_center_id=COALESCE($15,cost_center_id), company_id=COALESCE($16,company_id), updated_at=${NOW} WHERE id=$1`,
         [input.id, input.vendorId ?? null, input.date, input.currency ?? null, input.department ?? null, input.budget ?? 0,
-         input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null, rate, baseTotal])
+         input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? null, rate, baseTotal,
+         input.costCenterId ?? null, input.companyId ?? null])
       await query(`DELETE FROM purchase_document_lines WHERE document_id=$1`, [input.id])
       await insertLines(query, input.id, input.lines)
       return input.id
     }
     const docNo = await nextNumber(`purchase_${input.docType}`, { legacyPrefix: input.docType.toUpperCase().slice(0, 3) })
     const row = (await query<{ id: number }>(
-      `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,exchange_rate,base_total,created_at,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,${NOW},${NOW}) RETURNING id`,
+      `INSERT INTO purchase_documents (doc_no,doc_type,vendor_id,date,currency,department,budget,source_id,note,subtotal,discount_total,tax_total,total,priority,created_by,exchange_rate,base_total,cost_center_id,company_id,created_at,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,${NOW},${NOW}) RETURNING id`,
       [docNo, input.docType, input.vendorId ?? null, input.date, input.currency ?? 'IRR', input.department ?? null, input.budget ?? 0,
-       input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null, rate, baseTotal]))[0]
+       input.sourceId ?? null, input.note ?? null, totals.subtotal, totals.discountTotal, totals.taxTotal, totals.total, input.priority ?? 'normal', userId ?? null, rate, baseTotal,
+       input.costCenterId ?? null, input.companyId ?? null]))[0]
     await insertLines(query, row.id, input.lines)
     return row.id
   }
@@ -559,20 +568,98 @@ async function raiseMismatchAlert(invoiceId: number, reasons: string[]) {
  * transaction locked per source invoice id, via saveDocument's
  * externalQuery parameter.
  */
+// ERPFIX-3 (BUG-ERP-04): the status GUARD a conversion's SOURCE must be in.
+// `request->order/rfq/quotation` genuinely requires the request's own
+// approval (live-proven: every real procurement cycle approves the PR
+// before converting it — see verify-erpfix-3.ts and sim-2621.ts).
+// `order->receipt`/`order->invoice`/`receipt->invoice` do NOT have a
+// separate "order approval" status in this codebase's real lifecycle — an
+// order created by converting an already-approved request stays `draft`
+// and is received/invoiced directly from there (confirmed live against
+// sim-2621.ts, the 24-month CFO simulation, per the master prompt's own
+// stop_condition: a guard that breaks an already-verified real workflow is
+// a guess, not a fact, and must not ship). Those three only exclude the
+// terminal bad states a conversion must never start from.
+const PURCHASE_CONVERT_STATUS_GUARD: Record<string, readonly string[]> = {
+  'request->order': ['approved'],
+  'request->rfq': ['approved'],
+  'request->quotation': ['approved'],
+}
+const PURCHASE_CONVERT_DENY_STATUS: Record<string, readonly string[]> = {
+  'order->receipt': ['void', 'rejected'],
+  'order->invoice': ['void', 'rejected'],
+  'receipt->invoice': ['void', 'rejected', 'draft'],
+}
+// Which source-line column downstream lines reference, for the value-based
+// duplicate-conversion guard below (BUG-ERP-04) — only the three relations
+// that already exist on purchase_document_lines.
+const PURCHASE_CONVERT_RELATION: Record<string, 'po_line_id' | 'receipt_line_id'> = {
+  'order->receipt': 'po_line_id',
+  'order->invoice': 'po_line_id',
+  'receipt->invoice': 'receipt_line_id',
+}
+/** Thrown by convertDocument for a caller-facing business rule (not a bug) —
+ * the route maps this prefix to a proper bilingual 409, exactly like the
+ * existing THREE_WAY_MATCH_FAILED convention on the payment path. */
+export class PurchaseConvertError extends Error {
+  constructor(message: string) { super(`PURCHASE_CONVERT_BLOCKED: ${message}`) }
+}
+
 export async function convertDocument(sourceId: number, toType: PurchaseDocType, userId?: string): Promise<number> {
   const src = await getDocument(sourceId)
   if (!src) throw new Error('Source not found')
   const isReturn = (toType === 'credit_note' || toType === 'return') && src.doc_type === 'invoice'
+  const guardKey = `${src.doc_type}->${toType}`
+  const allowedStatuses = PURCHASE_CONVERT_STATUS_GUARD[guardKey]
+  if (allowedStatuses && !allowedStatuses.includes(String(src.status))) {
+    throw new PurchaseConvertError(`a ${src.doc_type} in status "${src.status}" cannot convert to ${toType}`)
+  }
+  const deniedStatuses = PURCHASE_CONVERT_DENY_STATUS[guardKey]
+  if (deniedStatuses && deniedStatuses.includes(String(src.status))) {
+    throw new PurchaseConvertError(`a ${src.doc_type} in status "${src.status}" cannot convert to ${toType}`)
+  }
   const srcLines = src.lines as unknown as (LineRow & { id: number })[]
-  const lines = srcLines.map(l => {
-    const row: LineRow = { description: l.description, qty: num(l.qty), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }
-    if (toType === 'receipt' && src.doc_type === 'order') row.poLineId = l.id
-    else if (toType === 'invoice' && src.doc_type === 'receipt') { row.receiptLineId = l.id; row.poLineId = l.poLineId ?? null }
-    else if (toType === 'invoice' && src.doc_type === 'order') row.poLineId = l.id
-    return row
-  })
+  const relationCol = PURCHASE_CONVERT_RELATION[guardKey]
+  // ERPFIX-3 (BUG-ERP-04): value-based duplicate-conversion guard. For the
+  // three relations purchase_document_lines actually tracks, the qty
+  // already converted downstream (summed over every non-void child line
+  // referencing this source line) is subtracted — a second FULL conversion
+  // of an already-fully-converted line now carries ZERO remaining qty
+  // instead of silently duplicating the whole line again (the exact shape
+  // of "a PO converted to invoice twice = two invoices").
+  const remainingByLineId = new Map<number, number>()
+  if (relationCol) {
+    for (const l of srcLines) {
+      const already = num((await pgQuery<{ s: number }>(
+        `SELECT COALESCE(SUM(pl.qty),0)::float AS s FROM purchase_document_lines pl
+         JOIN purchase_documents d ON d.id = pl.document_id
+         WHERE pl.${relationCol} = $1 AND d.status <> 'void'`, [l.id]))[0]?.s)
+      remainingByLineId.set(l.id, Math.max(0, num(l.qty) - already))
+    }
+  }
+  const lines = srcLines
+    .map(l => {
+      const qty = relationCol ? (remainingByLineId.get(l.id) ?? num(l.qty)) : num(l.qty)
+      const row: LineRow = { description: l.description, qty, unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxPct: num(l.taxPct), productId: l.productId ?? null }
+      if (toType === 'receipt' && src.doc_type === 'order') row.poLineId = l.id
+      else if (toType === 'invoice' && src.doc_type === 'receipt') { row.receiptLineId = l.id; row.poLineId = l.poLineId ?? null }
+      else if (toType === 'invoice' && src.doc_type === 'order') row.poLineId = l.id
+      return row
+    })
+    .filter(l => l.qty > 0.0001)
+  if (relationCol && lines.length === 0) {
+    throw new PurchaseConvertError('this document has already been fully converted — no remaining quantity')
+  }
   if (!isReturn) {
-    return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId)
+    // ERPFIX-3 (BUG-ERP-04): the full set of financial/organizational
+    // columns now travels with the conversion — a USD purchase order used
+    // to become an IRR receipt/invoice with the SAME numeric total.
+    return saveDocument({
+      docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10),
+      currency: src.currency ?? 'IRR', exchangeRate: num(src.exchange_rate) || 1, department: src.department ?? undefined,
+      budget: num(src.budget) || undefined, priority: src.priority ?? undefined,
+      costCenterId: src.cost_center_id ?? null, companyId: src.company_id ?? null, sourceId, lines,
+    }, userId)
   }
   // BUG-013 sibling (26.26): a purchase return/credit_note against an invoice must
   // be guarded exactly like the sales side — only a confirmed/posted invoice, and
@@ -585,7 +672,11 @@ export async function convertDocument(sourceId: number, toType: PurchaseDocType,
     const prior = num((await query<{ s: number }>(
       `SELECT COALESCE(SUM(total),0)::float AS s FROM purchase_documents WHERE source_id=$1 AND doc_type IN ('credit_note','return') AND status<>'void'`, [sourceId]))[0]?.s)
     if (prior > 0.001) throw new Error('This invoice has already been returned')
-    return saveDocument({ docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10), currency: 'IRR', sourceId, lines }, userId, query)
+    return saveDocument({
+      docType: toType, vendorId: src.vendor_id ?? undefined, date: new Date().toISOString().slice(0, 10),
+      currency: src.currency ?? 'IRR', exchangeRate: num(src.exchange_rate) || 1, costCenterId: src.cost_center_id ?? null,
+      companyId: src.company_id ?? null, sourceId, lines,
+    }, userId, query)
   })
   // If the invoice was already paid, the vendor owes us back — flag until settled.
   // Best-effort, after commit (never blocks the return itself).

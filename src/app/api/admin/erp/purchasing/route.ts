@@ -109,7 +109,23 @@ export async function POST(req: NextRequest) {
         await logAction(auth.user, 'erp.purchase.approve', 'purchase_documents', String(d.id), { level: d.level }, { decision: d.decision, status: r.status }, ip)
         return NextResponse.json({ ok: true, status: r.status })
       }
-      case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }
+      case 'doc.convert': {
+        // ERPFIX-3 (BUG-ERP-04): convertDocument throws a PURCHASE_CONVERT_BLOCKED-
+        // prefixed error for an invalid-status or already-fully-converted source —
+        // mapped to a proper bilingual 409, mirroring THREE_WAY_MATCH_FAILED above.
+        let id: number
+        try { id = await convertDocument(d.sourceId, d.toType, uid) }
+        catch (err) {
+          const msg = err instanceof Error ? err.message : 'Conversion failed'
+          if (msg.startsWith('PURCHASE_CONVERT_BLOCKED: ')) {
+            const reason = msg.slice('PURCHASE_CONVERT_BLOCKED: '.length)
+            return toApiResponse(reason.includes('already') ? businessError('ERP-PURCHASING-NOTHING-TO-CONVERT', undefined) : businessError('ERP-PURCHASING-INVALID-TRANSITION', { reason }))
+          }
+          throw err
+        }
+        await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType })
+        return NextResponse.json({ id })
+      }
       case 'doc.payment': {
         const r = await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid)
         if (!r.ok) {

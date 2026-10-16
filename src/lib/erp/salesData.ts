@@ -138,12 +138,26 @@ export async function customerStatement(customerId: number) {
 // journal entry (Dr AR / Cr Revenue / Cr VAT) so revenue actually reaches the
 // income statement + trial balance. Idempotent — a second call returns the same
 // entry. Mirrors purchasing's postPurchaseInvoiceToGl (same primitives).
-export async function postSalesInvoiceToGl(docId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const d = (await pgQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null; currency: string | null; exchange_rate: number | null; date: string | null }>(
+export async function postSalesInvoiceToGl(docId: number, userId?: string, externalQuery?: TxQuery): Promise<{ entryId: number; alreadyPosted: boolean }> {
+  // ERPFIX-3 (BUG-ERP-05): an optional caller-supplied query lets a route
+  // join THIS function's gl_entry_id write into its own already-open
+  // transaction (mirrors purchasingData.saveDocument's externalQuery) — so
+  // a confirm's status write and its GL post commit or roll back together,
+  // never a status flip that silently never reached the ledger.
+  const readQuery = externalQuery ?? pgQuery
+  const d = (await readQuery<{ doc_type: string; status: string; subtotal: number; discount_total: number; tax_total: number; total: number; gl_entry_id: number | null; doc_no: string | null; currency: string | null; exchange_rate: number | null; date: string | null }>(
     `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no, currency, exchange_rate, date
        FROM sales_documents WHERE id=$1 AND deleted_at IS NULL`, [docId]))[0]
   if (!d) throw new Error('Document not found')
-  if (d.gl_entry_id) return { entryId: d.gl_entry_id, alreadyPosted: true }
+  if (d.gl_entry_id) {
+    // Defense in depth (BUG-ERP-05): a gl_entry_id that has since been
+    // REVERSED (the document was voided) must never read back as "still
+    // posted" — that would silently skip re-posting after a confirm→void→
+    // confirm cycle while the ledger has zero net effect.
+    const rev = (await readQuery<{ reversed_by: number | null }>(`SELECT reversed_by FROM gl_journal_entries WHERE id=$1`, [d.gl_entry_id]))[0]
+    if (rev?.reversed_by) throw new Error('This document\'s posted entry was reversed — it is not "already posted", reconfirm from a valid status')
+    return { entryId: d.gl_entry_id, alreadyPosted: true }
+  }
   if (d.doc_type !== 'invoice' && d.doc_type !== 'credit_note') throw new Error('Only invoices and credit notes post to the GL')
   if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the document before posting')
 
@@ -194,7 +208,10 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
   // re-verified the SAME check inside the transaction, after an advisory lock
   // keyed per document, so a second concurrent caller blocking on the lock
   // correctly sees the now-populated gl_entry_id once the first commits.
-  const result = await withTransaction(async query => {
+  const doInsert = async (query: TxQuery) => {
+    // The advisory lock only matters for a caller running its OWN transaction
+    // (no externalQuery) — a caller passing externalQuery already holds the
+    // row lock from its own SELECT ... FOR UPDATE, so this is a harmless no-op.
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_doc_gl_post:${docId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_documents WHERE id=$1`, [docId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
@@ -210,8 +227,9 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
     }
     await query(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
     return { entryId: entry.id, alreadyPosted: false }
-  })
-  return result
+  }
+  if (externalQuery) return doInsert(externalQuery)
+  return withTransaction(doInsert)
 }
 
 // ── Sales return + settlement (Phase 26.26, BUG-013) ──────────────────────────
