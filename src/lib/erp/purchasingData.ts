@@ -7,6 +7,7 @@ import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
 import { assertPostable } from './accountingData'
 import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry } from './glPosting'
+import { toBase } from './money'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
@@ -179,22 +180,26 @@ async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
  * exact numbers. Then computes the required approval levels.
  */
 export async function submitDocument(id: number): Promise<{ ok: boolean; error?: string; budget?: ReturnType<typeof validateBudget> }> {
-  const d = (await pgQuery<{ total: number; budget: number; department: string | null; date: string }>(
-    `SELECT total, budget, department, date FROM purchase_documents WHERE id=$1`, [id]))[0]
+  // ERPFIX-2 (BUG-ERP-03): budget/approval thresholds compare base_total
+  // (Rial base) — a raw `total` read lets a 1,000 USD request slip under a
+  // Rial-denominated threshold meant for 1,000 Rial.
+  const d = (await pgQuery<{ total: number; base_total: number; budget: number; department: string | null; date: string }>(
+    `SELECT total, base_total, budget, department, date FROM purchase_documents WHERE id=$1`, [id]))[0]
   if (!d) return { ok: false, error: 'Document not found' }
+  const baseTotal = num(d.base_total) || num(d.total)
   if (num(d.budget) > 0) {
     const year = String(d.date ?? '').slice(0, 4) || String(new Date().getFullYear())
     const committed = d.department
       ? num((await pgQuery<{ t: number }>(
-          `SELECT COALESCE(SUM(total),0) AS t FROM purchase_documents
+          `SELECT COALESCE(SUM(COALESCE(base_total, total)),0) AS t FROM purchase_documents
            WHERE id<>$1 AND department=$2 AND date LIKE $3 AND status NOT IN ('draft','void','rejected')`,
           [id, d.department, `${year}%`]))[0]?.t)
       : 0
-    const budget = validateBudget({ budget: num(d.budget), committed, requested: num(d.total) })
+    const budget = validateBudget({ budget: num(d.budget), committed, requested: baseTotal })
     if (!budget.withinBudget)
-      return { ok: false, budget, error: `Over budget: available ${budget.available.toLocaleString()}, requested ${num(d.total).toLocaleString()}` }
+      return { ok: false, budget, error: `Over budget: available ${budget.available.toLocaleString()}, requested ${baseTotal.toLocaleString()}` }
   }
-  const levels = requiredApprovalLevels(num(d.total))
+  const levels = requiredApprovalLevels(baseTotal)
   await pgQuery(`UPDATE purchase_documents SET status='submitted', approval_levels=$2, updated_at=${NOW} WHERE id=$1`, [id, levels])
   return { ok: true }
 }
@@ -614,9 +619,18 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
   if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the invoice before posting')
 
   const net = num(d.subtotal) - num(d.discount_total)
+  const tax = num(d.tax_total)
+  const rate = num(d.exchange_rate) || 1
+  const fxCurrency = d.currency && d.currency !== 'IRR' ? d.currency : null
+  // ERPFIX-2 (BUG-ERP-03): GL lines are always posted in Rial base; baseTotal
+  // is derived from the converted net+tax so the entry balances exactly.
+  const baseNet = toBase(net, rate)
+  const baseTax = toBase(tax, rate)
+  const baseTotal = baseNet + baseTax
   // 26.23: account codes flow through the configurable erp_settings map.
-  const lines = applyGlMap(purchaseInvoicePostingLines(net, num(d.tax_total), num(d.total)), await loadGlMap())
+  const lines = applyGlMap(purchaseInvoicePostingLines(baseNet, baseTax, baseTotal), await loadGlMap())
   if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+  const fxByCode: Record<string, number> = fxCurrency ? { '1200': net, '2100': tax, '2000': num(d.total) } : {}
 
   // Resolve account ids by code (seeded standard chart).
   const codes = [...new Set(lines.map(l => l.accountCode))]
@@ -646,13 +660,14 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
     const entry = (await query<{ id: number }>(
       `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, company_id, currency, exchange_rate, created_at, posted_at)
        VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, $10, ${NOW}, ${NOW}) RETURNING id`,
-      [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, num(d.total), userId ?? null, gate.periodId ?? null,
-       d.company_id ?? null, d.currency ?? 'IRR', num(d.exchange_rate) || 1]))[0]
+      [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, baseTotal, userId ?? null, gate.periodId ?? null,
+       d.company_id ?? null, d.currency ?? 'IRR', rate]))[0]
     let ln = 0
     for (const l of lines) {
       // Cost-center from the document flows onto every posting line (26.11 analytics).
-      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, d.cost_center_id ?? null])
+      const fx = fxByCode[l.accountCode]
+      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id, fx_amount, fx_currency) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, d.cost_center_id ?? null, fx !== undefined ? fx : null, fx !== undefined ? fxCurrency : null])
     }
     await query(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
     return { entryId: entry.id, alreadyPosted: false }

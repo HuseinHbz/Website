@@ -343,6 +343,20 @@
    `nextNumber` + runs atomically — never a bare sequential `pgQuery`
    header-then-lines loop, which left a posted PARTIAL entry mid-loop on
    any missing-account error in more than one older posting path.)
+57. هر خط دفتر کل به ریال پایه است؛ مبلغ ارز اصلی در `fx_amount`؛ تبدیل
+   فقط با `money.ts`.
+   (ERPFIX-2, BUG-ERP-03 — `gl_journal_lines.debit/credit` is ALWAYS the
+   Rial base amount, converted ONLY via `toBase()`/`roundTo()`
+   (`src/lib/erp/money.ts`) — never the raw transaction-currency figure. The
+   original amount is preserved, never discarded, on `fx_amount`/
+   `fx_currency` (nullable, additive). A settlement whose rate differs from
+   the source document's own registered rate books a REALIZED FX gain/loss
+   on 4900/6980 (`postSalesPaymentToGl`/`postPurchasePaymentToGl`) — AR/AP is
+   always relieved at the INVOICE's rate, bank always at the SETTLEMENT
+   rate; the difference is never silently absorbed into either account.
+   Every approval/budget/credit threshold compares `base_total`, never the
+   document's raw `total` — a 1,000 USD request must not slip under a
+   Rial-denominated limit meant for 1,000 Rial.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

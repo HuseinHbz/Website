@@ -15,9 +15,17 @@ const num = (v: unknown) => Number(v ?? 0)
 
 /** Per-invoice outstanding (total − payments), with due date, for one customer. */
 async function openInvoices(customerId: number): Promise<(OpenInvoiceFact & { docNo: string | null; total: number })[]> {
+  // ERPFIX-2 (BUG-ERP-03): AR balance/aging is Rial-base. base_total already
+  // carries the invoice's own rate; a payment's base amount is amount×its own
+  // exchange_rate (it is relieved at the invoice's rate by glPosting, but the
+  // customer's open balance here is the payment's own recorded amount×rate,
+  // matching how sales_payments is populated at receipt time).
+  // base_total defaults to 0 (NOT NULL) on a row that never went through a
+  // save path computing it, so a plain COALESCE never falls back — use the
+  // raw total whenever base_total is still at its unset default.
   const rows = await pgQuery<{ id: number; doc_no: string | null; total: number; due_date: string | null; date: string; paid: number }>(
-    `SELECT d.id, d.doc_no, d.total::float AS total, d.due_date, d.date,
-            COALESCE((SELECT SUM(amount) FROM sales_payments p WHERE p.document_id=d.id),0)::float AS paid
+    `SELECT d.id, d.doc_no, (CASE WHEN d.base_total>0 THEN d.base_total ELSE d.total END)::float AS total, d.due_date, d.date,
+            COALESCE((SELECT SUM(amount*exchange_rate) FROM sales_payments p WHERE p.document_id=d.id),0)::float AS paid
      FROM sales_documents d
      WHERE d.customer_id=$1 AND d.doc_type='invoice' AND d.status NOT IN ('void','draft') AND d.deleted_at IS NULL`,
     [customerId])

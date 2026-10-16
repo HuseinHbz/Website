@@ -5160,4 +5160,19 @@ export async function runMigrations() {
       DEFERRABLE INITIALLY DEFERRED
       FOR EACH ROW EXECUTE FUNCTION erpfix1_check_gl_entry_balance();
   `)
+
+  // ── ERPFIX-2 (BUG-ERP-03) ──────────────────────────────────────────────
+  // debit/credit on gl_journal_lines are now ALWAYS the Rial base amount.
+  // fx_amount/fx_currency preserve the original transaction-currency amount
+  // on a line (AR/AP/revenue/VAT) whose source document was non-IRR — purely
+  // additive, never read by existing balance/trial-balance logic.
+  await pgQuery(`
+    ALTER TABLE gl_journal_lines ADD COLUMN IF NOT EXISTS fx_amount NUMERIC;
+    ALTER TABLE gl_journal_lines ADD COLUMN IF NOT EXISTS fx_currency TEXT;
+  `)
+  await pgQuery(`
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'fx_precision', '2', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='fx_precision');
+  `)
 }

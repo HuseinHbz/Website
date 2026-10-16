@@ -13,6 +13,7 @@ import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
 import { entryBalanced } from './ledger'
 import type { PostingLine } from './sales'
+import { toBase, roundTo } from './money'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 const num = (v: unknown) => Number(v ?? 0)
@@ -130,19 +131,38 @@ export async function insertPostedEntry(
  * gl_entry_id pre-check now re-verifies inside a per-payment advisory lock.
  */
 export async function postSalesPaymentToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null }>(
-    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer
-     FROM sales_payments p LEFT JOIN sales_customers c ON c.id=p.customer_id WHERE p.id=$1`, [paymentId]))[0]
+  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null; currency: string; exchange_rate: number; doc_rate: number | null }>(
+    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer, p.currency, p.exchange_rate::float AS exchange_rate,
+            d.exchange_rate::float AS doc_rate
+     FROM sales_payments p LEFT JOIN sales_customers c ON c.id=p.customer_id LEFT JOIN sales_documents d ON d.id=p.document_id
+     WHERE p.id=$1`, [paymentId]))[0]
   if (!p) throw new Error('Payment not found')
   if (p.gl_entry_id) return { entryId: p.gl_entry_id, alreadyPosted: true }
   const map = await loadGlMap()
+  // ERPFIX-2 (BUG-ERP-03): the bank line posts at the SETTLEMENT (payment)
+  // rate, the AR line is relieved at the INVOICE's own registered rate (the
+  // rate AR was originally booked at). A difference between the two is a
+  // REALIZED FX gain/loss, booked on 4900/6980 — never silently absorbed.
+  const settleRate = num(p.exchange_rate) || 1
+  const invoiceRate = num(p.doc_rate) || settleRate
+  const bankBase = toBase(num(p.amount), settleRate)
+  const arBase = toBase(num(p.amount), invoiceRate)
+  const fxDelta = roundTo(bankBase - arBase)
   const [bank, ar] = await Promise.all([accountIdByCode(map.bank), accountIdByCode(map.ar)])
+  const fx = fxDelta !== 0 ? await accountIdByCode(fxDelta > 0 ? '4900' : '6980') : null
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_payment_gl_post:${paymentId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_payments WHERE id=$1`, [paymentId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
-    const e = await insertPostedEntry(query, p.date, `Customer receipt${p.customer ? ` — ${p.customer}` : ''}`, `SPAY-${paymentId}`, num(p.amount), userId,
-      [{ accountId: bank, debit: num(p.amount), credit: 0 }, { accountId: ar, debit: 0, credit: num(p.amount) }])
+    const lines = [
+      { accountId: bank, debit: bankBase, credit: 0, memo: 'Bank receipt' },
+      { accountId: ar, debit: 0, credit: arBase, memo: 'AR settled at invoice rate' },
+      ...(fx ? (fxDelta > 0
+        ? [{ accountId: fx, debit: 0, credit: fxDelta, memo: 'Realized FX gain' }]
+        : [{ accountId: fx, debit: -fxDelta, credit: 0, memo: 'Realized FX loss' }]) : []),
+    ]
+    const e = await insertPostedEntry(query, p.date, `Customer receipt${p.customer ? ` — ${p.customer}` : ''}`, `SPAY-${paymentId}`, bankBase, userId,
+      lines, { currency: p.currency, exchangeRate: settleRate })
     await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
     return { entryId: e.id, alreadyPosted: false }
   })
@@ -155,12 +175,15 @@ export async function postSalesPaymentToGl(paymentId: number, userId?: string): 
  * post its GL. Idempotent per payment via gl_entry_id.
  */
 export async function postCustomerRefundToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null }>(
-    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer
+  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null; currency: string; exchange_rate: number }>(
+    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer, p.currency, p.exchange_rate::float AS exchange_rate
      FROM sales_payments p LEFT JOIN sales_customers c ON c.id=p.customer_id WHERE p.id=$1`, [paymentId]))[0]
   if (!p) throw new Error('Payment not found')
   if (p.gl_entry_id) return { entryId: p.gl_entry_id, alreadyPosted: true }
-  const amt = Math.abs(num(p.amount))
+  // ERPFIX-2 (BUG-ERP-03): a refund's own rate equals the rate the original
+  // credit note was created at (createSalesReturn copies it) — no separate
+  // settlement rate exists here, so the base amount is a plain conversion.
+  const amt = toBase(Math.abs(num(p.amount)), num(p.exchange_rate) || 1)
   const map = await loadGlMap()
   const [ar, bank] = await Promise.all([accountIdByCode(map.ar), accountIdByCode(map.bank)])
   return withTransaction(async query => {
@@ -168,7 +191,7 @@ export async function postCustomerRefundToGl(paymentId: number, userId?: string)
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_payments WHERE id=$1`, [paymentId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     const e = await insertPostedEntry(query, p.date, `Customer refund${p.customer ? ` — ${p.customer}` : ''}`, `SREF-${paymentId}`, amt, userId,
-      [{ accountId: ar, debit: amt, credit: 0 }, { accountId: bank, debit: 0, credit: amt }])
+      [{ accountId: ar, debit: amt, credit: 0 }, { accountId: bank, debit: 0, credit: amt }], { currency: p.currency, exchangeRate: num(p.exchange_rate) || 1 })
     await query(`UPDATE sales_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
     return { entryId: e.id, alreadyPosted: false }
   })
@@ -176,19 +199,38 @@ export async function postCustomerRefundToGl(paymentId: number, userId?: string)
 
 /** Purchase payment → Dr AP / Cr Bank (idempotent per payment). */
 export async function postPurchasePaymentToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; vendor: string | null }>(
-    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, v.name AS vendor
-     FROM purchase_payments p LEFT JOIN purchase_vendors v ON v.id=p.vendor_id WHERE p.id=$1`, [paymentId]))[0]
+  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; vendor: string | null; currency: string; exchange_rate: number; doc_rate: number | null }>(
+    `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, v.name AS vendor, p.currency, p.exchange_rate::float AS exchange_rate,
+            d.exchange_rate::float AS doc_rate
+     FROM purchase_payments p LEFT JOIN purchase_vendors v ON v.id=p.vendor_id LEFT JOIN purchase_documents d ON d.id=p.document_id
+     WHERE p.id=$1`, [paymentId]))[0]
   if (!p) throw new Error('Payment not found')
   if (p.gl_entry_id) return { entryId: p.gl_entry_id, alreadyPosted: true }
   const map = await loadGlMap()
+  // ERPFIX-2 (BUG-ERP-03): mirror of the sales-receipt fix. Bank posts at the
+  // settlement rate; AP is relieved at the invoice's own registered rate; the
+  // difference is a realized FX gain/loss (a MORE expensive settlement than
+  // the invoice's registered rate is a LOSS here — inverted vs the AR side).
+  const settleRate = num(p.exchange_rate) || 1
+  const invoiceRate = num(p.doc_rate) || settleRate
+  const bankBase = toBase(num(p.amount), settleRate)
+  const apBase = toBase(num(p.amount), invoiceRate)
+  const fxDelta = roundTo(apBase - bankBase)
   const [ap, bank] = await Promise.all([accountIdByCode(map.ap), accountIdByCode(map.bank)])
+  const fx = fxDelta !== 0 ? await accountIdByCode(fxDelta > 0 ? '4900' : '6980') : null
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_payment_gl_post:${paymentId}`])
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM purchase_payments WHERE id=$1`, [paymentId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
-    const e = await insertPostedEntry(query, p.date, `Supplier payment${p.vendor ? ` — ${p.vendor}` : ''}`, `PPAY-${paymentId}`, num(p.amount), userId,
-      [{ accountId: ap, debit: num(p.amount), credit: 0 }, { accountId: bank, debit: 0, credit: num(p.amount) }])
+    const lines = [
+      { accountId: ap, debit: apBase, credit: 0, memo: 'AP settled at invoice rate' },
+      { accountId: bank, debit: 0, credit: bankBase, memo: 'Bank payment' },
+      ...(fx ? (fxDelta > 0
+        ? [{ accountId: fx, debit: 0, credit: fxDelta, memo: 'Realized FX gain' }]
+        : [{ accountId: fx, debit: -fxDelta, credit: 0, memo: 'Realized FX loss' }]) : []),
+    ]
+    const e = await insertPostedEntry(query, p.date, `Supplier payment${p.vendor ? ` — ${p.vendor}` : ''}`, `PPAY-${paymentId}`, apBase, userId,
+      lines, { currency: p.currency, exchangeRate: settleRate })
     await query(`UPDATE purchase_payments SET gl_entry_id=$2 WHERE id=$1`, [paymentId, e.id])
     return { entryId: e.id, alreadyPosted: false }
   })

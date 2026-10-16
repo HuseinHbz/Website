@@ -286,7 +286,10 @@ export async function PUT(req: NextRequest) {
       // limit (0) never blocks (backward compatible).
       const blocked = await withTransaction(async query => {
         await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_customer_credit:${src.customer_id}`])
-        const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
+        // ERPFIX-2 (BUG-ERP-03): credit limit is Rial-denominated — compare base_total,
+        // not raw total. base_total is NOT NULL DEFAULT 0, so a plain `??` never falls
+        // back on an unset row — use `||` so 0/unset correctly falls back to raw total.
+        const decision = await evaluateCredit(Number(src.customer_id), Number(src.base_total) || Number(src.total))
         if (decision.exceeded && decision.mode === 'block') return decision
         await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
         if (decision.exceeded) await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)

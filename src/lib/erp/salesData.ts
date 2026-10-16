@@ -9,6 +9,7 @@ import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } 
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
 import { loadGlMap, applyGlMap } from './glPosting'
+import { toBase } from './money'
 
 export interface CustomerWithCredit {
   id: number; code: string; name: string; email: string | null; phone: string | null
@@ -148,10 +149,24 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
 
   const num = (n: number | null | undefined) => Number(n ?? 0)
   const net = num(d.subtotal) - num(d.discount_total)
+  const tax = num(d.tax_total)
   const kind = d.doc_type === 'credit_note' ? 'credit_note' : 'invoice'
+  const fxCurrency = d.currency && d.currency !== 'IRR' ? d.currency : null
+  const rate = num(d.exchange_rate) || 1
+  // ERPFIX-2 (BUG-ERP-03): GL lines are always posted in the Rial BASE
+  // amount. `net`/`tax` above stay the ORIGINAL transaction-currency figures
+  // (the document itself is never touched — 26.8 discipline); baseTotal is
+  // derived from the converted net+tax so the entry balances exactly with no
+  // separate rounding residual to chase.
+  const baseNet = toBase(net, rate)
+  const baseTax = toBase(tax, rate)
+  const baseTotal = baseNet + baseTax
   // 26.23: account codes flow through the configurable erp_settings map.
-  const lines = applyGlMap(salesInvoicePostingLines(net, num(d.tax_total), num(d.total), kind), await loadGlMap())
+  const lines = applyGlMap(salesInvoicePostingLines(baseNet, baseTax, baseTotal, kind), await loadGlMap())
   if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+  // Preserve the original transaction-currency amount per line (fx_amount)
+  // when the document was non-IRR — purely additive, never read by trialBalance.
+  const fxByCode: Record<string, number> = fxCurrency ? { '1100': num(d.total), '4000': net, '2100': tax } : {}
 
   const codes = [...new Set(lines.map(l => l.accountCode))]
   const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
@@ -186,11 +201,12 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
     const entry = (await query<{ id: number }>(
       `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
        VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, ${NOW_SQL}, ${NOW_SQL}) RETURNING id`,
-      [entryNo, glDate, memo, `SAL-${docId}`, num(d.total), d.currency ?? 'IRR', num(d.exchange_rate) || 1, userId ?? null, gate.periodId ?? null]))[0]
+      [entryNo, glDate, memo, `SAL-${docId}`, baseTotal, d.currency ?? 'IRR', rate, userId ?? null, gate.periodId ?? null]))[0]
     let ln = 0
     for (const l of lines) {
-      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++])
+      const fx = fxByCode[l.accountCode]
+      await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, fx_amount, fx_currency) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [entry.id, idOf.get(l.accountCode), l.debit, l.credit, l.memo, ln++, fx !== undefined ? fx : null, fx !== undefined ? fxCurrency : null])
     }
     await query(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
     return { entryId: entry.id, alreadyPosted: false }
