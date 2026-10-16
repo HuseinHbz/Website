@@ -53,4 +53,7 @@ export const COA_CONTRACT: Record<string, CoaContractEntry> = {
  */
 export const COA = {
   payrollExpense: '6000',
+  /** ERPFIX-2: realized exchange gain/loss on foreign-currency settlement (the same accounts the 26.8 revaluation uses). */
+  fxGain: '4900',
+  fxLoss: '6980',
 } as const

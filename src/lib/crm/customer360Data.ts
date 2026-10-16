@@ -14,19 +14,25 @@ import { customerLoyalty } from './loyaltyData'
 const num = (v: unknown) => Number(v ?? 0)
 
 /** Per-invoice outstanding (total − payments), with due date, for one customer. */
-async function openInvoices(customerId: number): Promise<(OpenInvoiceFact & { docNo: string | null; total: number })[]> {
-  const rows = await pgQuery<{ id: number; doc_no: string | null; total: number; due_date: string | null; date: string; paid: number }>(
-    `SELECT d.id, d.doc_no, d.total::float AS total, d.due_date, d.date,
+async function openInvoices(customerId: number): Promise<(OpenInvoiceFact & { docNo: string | null; total: number; currency: string; outstandingForeign: number })[]> {
+  const rows = await pgQuery<{ id: number; doc_no: string | null; total: number; due_date: string | null; date: string; paid: number; currency: string | null; exchange_rate: number | null }>(
+    `SELECT d.id, d.doc_no, d.total::float AS total, d.due_date, d.date, d.currency, d.exchange_rate::float AS exchange_rate,
             COALESCE((SELECT SUM(amount) FROM sales_payments p WHERE p.document_id=d.id),0)::float AS paid
      FROM sales_documents d
      WHERE d.customer_id=$1 AND d.doc_type='invoice' AND d.status NOT IN ('void','draft') AND d.deleted_at IS NULL`,
     [customerId])
+  // ERPFIX-2: `outstanding` is in BASE currency (Rial, at the invoice's booked
+  // rate) so balances, aging and the Rial credit limit never mix currencies;
+  // the invoice-currency figure stays available as outstandingForeign.
   return rows
-    .map(r => ({ outstanding: Math.round((num(r.total) - num(r.paid)) * 100) / 100, dueDate: (r.due_date || r.date || '').slice(0, 10), docNo: r.doc_no, total: num(r.total) }))
-    .filter(r => r.outstanding > 0.001)
+    .map(r => {
+      const foreign = Math.round((num(r.total) - num(r.paid)) * 100) / 100
+      return { outstanding: Math.round(foreign * (num(r.exchange_rate) || 1) * 100) / 100, outstandingForeign: foreign, currency: r.currency ?? 'IRR', dueDate: (r.due_date || r.date || '').slice(0, 10), docNo: r.doc_no, total: num(r.total) }
+    })
+    .filter(r => r.outstandingForeign > 0.001)
 }
 
-/** Live AR balance = Σ outstanding on open invoices. */
+/** Live AR balance (base currency) = Σ outstanding on open invoices. */
 export async function customerArBalance(customerId: number): Promise<number> {
   const open = await openInvoices(customerId)
   return Math.round(open.reduce((s, i) => s + i.outstanding, 0) * 100) / 100
@@ -41,6 +47,8 @@ export async function creditGuardMode(): Promise<CreditGuardMode> {
 /**
  * Credit guard for a new sales amount on a customer (بند ۱.۳). Reads the
  * customer's limit + live balance + configured mode; returns the pure decision.
+ * ERPFIX-2: `newAmount` and the balance are BASE (Rial) amounts — the limit is
+ * in Rial, so a 100 USD invoice is 100 × rate, not 100.
  */
 export async function evaluateCredit(customerId: number, newAmount: number) {
   const c = (await pgQuery<{ credit_limit: number }>(`SELECT credit_limit::float AS credit_limit FROM sales_customers WHERE id=$1`, [customerId]))[0]

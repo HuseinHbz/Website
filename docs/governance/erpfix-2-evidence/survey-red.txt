@@ -1,0 +1,19 @@
+  ERPFIX-2 foreign-currency survey (read-only)
+  1) foreign-currency rows: 
+     · gl_journal_entries   USD      2 rows   raw 1,100   base —
+     · payment_orders       USD      1 rows   raw 1,000   base —
+     · purchase_documents   EUR      1 rows   raw 10   base 10
+     · purchase_documents   USD      1 rows   raw 1,000   base 600,000,000
+     · sales_documents      USD      1 rows   raw 100   base 60,000,000
+     · sales_payments       USD      1 rows   raw 40   base 26,000,000
+  2) documents with base_total = 0 or rate ≤ 0 (listed, not fixed): 0
+  3) legacy GL entries in a foreign currency without fx_amount: 3
+     · JE-2026-00001 2026-10-16 SAL-1 USD @ 600000 total 100 → RESTATE
+     · JE-2026-00002 2026-10-16 SPAY-1 USD @ 650000 total 40 → RESTATE
+     · JE-2026-00003 2026-10-16 PUR-1 USD @ 600000 total 1,000 → RESTATE
+     distortion per account (base − raw):
+       1010 Bank                         raw                 40  base           26,000,000  distortion 25,999,960
+       1100 Accounts Receivable          raw                 60  base           34,000,000  distortion 33,999,940
+       1200 Inventory                    raw              1,000  base          600,000,000  distortion 599,999,000
+       2000 Accounts Payable             raw             -1,000  base         -600,000,000  distortion -599,999,000
+       4000 Sales Revenue                raw               -100  base          -60,000,000  distortion -59,999,900

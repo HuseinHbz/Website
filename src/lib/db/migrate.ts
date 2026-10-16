@@ -5197,6 +5197,12 @@ export async function runMigrations() {
     END
     $erpfix1$;
 
+    -- ERPFIX-2 (BUG-ERP-03): every GL line is in BASE currency (Rial); the
+    -- original transaction-currency amount stays on the line. Nullable, added
+    -- without touching existing rows.
+    ALTER TABLE gl_journal_lines ADD COLUMN IF NOT EXISTS fx_amount NUMERIC;
+    ALTER TABLE gl_journal_lines ADD COLUMN IF NOT EXISTS fx_currency TEXT;
+
     -- Deferred balance invariant: at COMMIT, every POSTED entry the
     -- transaction touched must satisfy |ΣDr − ΣCr| ≤ 0.005. Drafts are free.
     CREATE OR REPLACE FUNCTION gl_check_entry_balance(eid INTEGER) RETURNS void AS $fn$

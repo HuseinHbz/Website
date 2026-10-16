@@ -270,3 +270,50 @@ guaranteed, what the new one guarantees, why, and who approved it.
   entry (it ran before `BEGIN`, on its own connection); it now runs inside the job's
   transaction and is rolled back with it.
 - **Reason:** BUG-ERP-21. **Approved by:** ERPFIX-1 prompt.
+
+## CC-013 · ERPFIX-2 BUG-ERP-03 — GL lines are in BASE currency (structural behaviour change)
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-2 · **No existing regression assertion was edited.**
+- **Old behaviour:** a foreign-currency document posted its raw transaction-currency
+  amounts as GL debits/credits (100 USD → AR 100), under a header that named the
+  currency; payment posters wrote an IRR / rate-1 header over raw USD lines. Every
+  account mixed USD, EUR, IRT and IRR while the trial balance still "balanced".
+- **New behaviour:** every line is converted by `src/lib/erp/money.ts` (`toBase` /
+  `linesToBase`) at the document's booked rate — conversions rounded to
+  `erp_settings.decimal_precision` (default 0), the rounding residue on the AR/AP
+  line so the entry balances exactly; the foreign amount is kept on the line
+  (`gl_journal_lines.fx_amount` / `fx_currency`). A settlement posts the bank at the
+  payment-day rate, the control account at the booked rate (proportional to the
+  share settled), and the difference to realized FX gain 4900 / loss 6980.
+  Treasury posts its cash entry at the payment rate and a separate FX true-up
+  entry (`TRZPAY-FX-<id>`, `TRZRCP-FX-<id>`, `AP-/AR-CONSUME-FX:<src>`), reversed
+  together with the payment. `reverseEntry` now carries the original's currency,
+  rate, company, cost centers and foreign amounts.
+- **What is no longer guaranteed:** that a GL line amount equals the document's own
+  `total` for a non-IRR document (it equals `base`), and that a reversal is booked
+  in the default company / IRR regardless of the original.
+- **Reason:** BUG-ERP-03. **Approved by:** ERPFIX-2 prompt.
+
+## CC-014 · ERPFIX-2 — payments, thresholds and allocation on base / same currency
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-2
+- **Payments:** a payment applied to a document is stored in the DOCUMENT's
+  currency. Omitting `currency` now means "the invoice's currency" (was IRR); a
+  different currency is refused (`ERP-FINANCE-PAYMENT-CURRENCY-MISMATCH`) unless an
+  explicit `conversionRate` is given. The rate is the one dated on/before the
+  payment date (`rialRateOn`) or an explicit `exchangeRate` — it used to be the
+  latest rate regardless of date, or silently 1 when none existed; now a missing
+  rate is refused (`ERP-FINANCE-NO-EXCHANGE-RATE`). Same rule for a purchase
+  document in a currency with no rate (it was booked at rate 1).
+- **Thresholds:** purchase approval tiers, department budget, customer credit limit
+  and the Treasury payment approval matrix compare the BASE amount (`base_total`,
+  or `total × exchange_rate` for legacy rows with `base_total = 0`). 1,000 USD now
+  needs the 3-level approval a 600,000,000-Rial document needs (was 1 level).
+- **Customer 360:** balance and aging are in base currency (`outstandingForeign`
+  keeps the invoice-currency figure).
+- **Allocation:** Treasury supplier payments / customer receipts and the Phase 12 /
+  Phase 17 unapplied-cash consumption allocate only to documents in the SAME
+  currency (they used to compare a USD amount against an IRR balance). For IRR-only
+  data nothing changes.
+- **What is no longer guaranteed:** that an IRR Treasury payment is allocated
+  against a foreign-currency invoice; that a foreign document can be created
+  without a configured rate.
+- **Reason:** BUG-ERP-03. **Approved by:** ERPFIX-2 prompt.

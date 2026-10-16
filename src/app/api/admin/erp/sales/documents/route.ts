@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { documentBase } from '@/lib/erp/money'
 import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery, withTransaction } from '@/lib/db'
@@ -286,7 +287,7 @@ export async function PUT(req: NextRequest) {
       // limit (0) never blocks (backward compatible).
       const blocked = await withTransaction(async query => {
         await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_customer_credit:${src.customer_id}`])
-        const decision = await evaluateCredit(Number(src.customer_id), Number(src.total))
+        const decision = await evaluateCredit(Number(src.customer_id), documentBase({ total: Number(src.total), exchangeRate: Number(src.exchange_rate), baseTotal: Number(src.base_total) }))
         if (decision.exceeded && decision.mode === 'block') return decision
         await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
         if (decision.exceeded) await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)

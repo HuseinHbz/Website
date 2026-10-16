@@ -1,0 +1,5 @@
+  ERPFIX-2 FX restatement — DRY-RUN (pass --apply --confirm to write)
+  · JE-2026-00001 2026-10-16 sales_invoice    USD @ 600000 → RESTATE
+  · JE-2026-00002 2026-10-16 sales_payment    USD @ 650000 → RESTATE
+  · JE-2026-00003 2026-10-16 purchase_invoice USD @ 600000 → RESTATE
+  key balances BEFORE: {"1010":40,"1100":60,"2000":-1000,"2100":0,"4000":-100,"4900":0,"6980":0}

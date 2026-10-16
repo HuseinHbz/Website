@@ -8,7 +8,8 @@ import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
-import { loadGlMap, applyGlMap, insertPostedEntry } from './glPosting'
+import { loadGlMap, applyGlMap, insertPostedEntry, basePrecision } from './glPosting'
+import { linesToBase } from './money'
 
 export interface CustomerWithCredit {
   id: number; code: string; name: string; email: string | null; phone: string | null
@@ -150,8 +151,14 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
   const net = num(d.subtotal) - num(d.discount_total)
   const kind = d.doc_type === 'credit_note' ? 'credit_note' : 'invoice'
   // 26.23: account codes flow through the configurable erp_settings map.
-  const lines = applyGlMap(salesInvoicePostingLines(net, num(d.tax_total), num(d.total), kind), await loadGlMap())
-  if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+  const map = await loadGlMap()
+  const docLines = applyGlMap(salesInvoicePostingLines(net, num(d.tax_total), num(d.total), kind), map)
+  if (!postingBalanced(docLines)) throw new Error('Posting does not balance')
+  // ERPFIX-2 (BUG-ERP-03): every GL line in BASE currency at the document's
+  // booked rate; AR absorbs the rounding residue; the USD/EUR/IRT amount stays
+  // on the line (fx_amount). Document columns are never touched.
+  const docRate = num(d.exchange_rate) || 1
+  const lines = linesToBase(docLines, docRate, d.currency ?? 'IRR', map.ar, await basePrecision())
 
   const codes = [...new Set(lines.map(l => l.accountCode))]
   const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
@@ -186,8 +193,8 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string): Prom
     const already = (await query<{ gl_entry_id: number | null }>(`SELECT gl_entry_id FROM sales_documents WHERE id=$1`, [docId]))[0]
     if (already?.gl_entry_id) return { entryId: already.gl_entry_id, alreadyPosted: true }
     const entry = await insertPostedEntry(query, glDate, memo, `SAL-${docId}`, userId,
-      lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })),
-      { currency: d.currency ?? 'IRR', exchangeRate: num(d.exchange_rate) || 1, legacyPrefix: 'JV' })
+      lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo, fxAmount: l.fxAmount, fxCurrency: l.fxCurrency })),
+      { currency: d.currency ?? 'IRR', exchangeRate: docRate, legacyPrefix: 'JV' })
     await query(`UPDATE sales_documents SET gl_entry_id=$2, updated_at=${NOW_SQL} WHERE id=$1`, [docId, entry.id])
     return { entryId: entry.id, alreadyPosted: false }
   })

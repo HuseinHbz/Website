@@ -34,7 +34,10 @@ import type { AdminUser } from '@/lib/admin/auth'
 import { canTransitionPayment, paymentGlLines, glBalanced, allocateReceipt, type PaymentType, type PaymentStatus, type GlLine } from './payments'
 import { createApprovalRequest } from '@/lib/erp/approvalData'
 import { nextNumber } from '@/lib/numbering/integrate'
-import { insertPostedEntry, accountIdByCode, reverseEntry, loadPayrollExpenseCode } from '@/lib/erp/glPosting'
+import { insertPostedEntry, accountIdByCode, reverseEntry, loadPayrollExpenseCode, basePrecision, loadGlMap } from '@/lib/erp/glPosting'
+import { toBase, documentControlBase, proportionalRelief, fxTrueUpLines } from '@/lib/erp/money'
+import { rialRateOn } from '@/lib/erp/currencyData'
+import { throwBusinessError } from '@/lib/errors'
 import { COA } from '@/lib/erp/coaContract'
 import { invoiceStatus } from '@/lib/erp/sales'
 import { runOnce } from '@/lib/api/idempotency'
@@ -43,18 +46,63 @@ const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 
 /** Post a balanced set of GL lines as a POSTED journal entry, inside the
  * caller's own transaction — reuses the shared posting primitives (real
- * numbering, real account resolution) rather than a local reimplementation. */
-async function postGl(query: TxQuery, lines: GlLine[], memo: string, reference: string, date: string, userId: string): Promise<number> {
+ * numbering, real account resolution) rather than a local reimplementation.
+ * ERPFIX-2: `lines` are in the transaction currency; every line is converted
+ * to BASE (Rial) at `fx.rate` and keeps its original amount in fx_amount. */
+async function postGl(query: TxQuery, lines: GlLine[], memo: string, reference: string, date: string, userId: string, fx: { currency: string; rate: number } = { currency: 'IRR', rate: 1 }): Promise<number> {
   if (!glBalanced(lines)) throw new Error('GL lines are not balanced')
   // ERPFIX-1: the salary leg follows the configured payroll-expense account.
   const payrollCode = await loadPayrollExpenseCode(query)
   lines = lines.map(l => l.accountCode === COA.payrollExpense ? { ...l, accountCode: payrollCode } : l)
+  const precision = await basePrecision()
+  const isFx = fx.currency !== 'IRR'
+  const based = lines.map(l => ({
+    ...l,
+    debit: l.debit > 0 ? toBase(l.debit, fx.rate, precision) : 0,
+    credit: l.credit > 0 ? toBase(l.credit, fx.rate, precision) : 0,
+    fxAmount: isFx ? (l.debit > 0 ? l.debit : l.credit) : null,
+    fxCurrency: isFx ? fx.currency : null,
+  }))
+  return postBaseLines(query, based, memo, reference, date, userId, fx)
+}
+
+/** Post lines that are ALREADY in base currency (FX true-ups). */
+async function postBaseLines(query: TxQuery, lines: { accountCode: string; debit: number; credit: number; memo?: string | null; fxAmount?: number | null; fxCurrency?: string | null }[], memo: string, reference: string, date: string, userId: string, fx: { currency: string; rate: number }): Promise<number> {
   const codes = [...new Set(lines.map(l => l.accountCode))]
   const idOf = new Map<string, number>()
   for (const c of codes) idOf.set(c, await accountIdByCode(c, query))
   const entry = await insertPostedEntry(query, date, memo, reference, userId,
-    lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo ?? null })))
+    lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo ?? null, fxAmount: l.fxAmount ?? null, fxCurrency: l.fxCurrency ?? null })),
+    { currency: fx.currency, exchangeRate: fx.rate })
   return entry.id
+}
+
+/** ERPFIX-2: Rial rate of a Treasury transaction on its own date; a foreign currency with no rate is refused. */
+async function treasuryRate(currency: string | null, date: string): Promise<number> {
+  const c = currency ?? 'IRR'
+  const r = await rialRateOn(c, date)
+  if (r == null) throwBusinessError('ERP-FINANCE-NO-EXCHANGE-RATE', { currency: c })
+  return r
+}
+
+/** ERPFIX-2: reverse every consumption FX true-up booked for the unapplied rows of one settlement entry. */
+async function reverseConsumptionFx(side: 'purchase' | 'sales', glEntryId: number, userId: string): Promise<void> {
+  const refs = await pgQuery<{ id: number }>(
+    side === 'purchase'
+      ? `SELECT e.id FROM gl_journal_entries e WHERE e.status='posted' AND e.reversal_of IS NULL AND e.reversed_by IS NULL
+           AND e.reference IN (SELECT 'AP-CONSUME-FX:'||s.id FROM purchase_payments s WHERE s.gl_entry_id=$1 AND s.document_id IS NULL AND s.amount > 0)`
+      : `SELECT e.id FROM gl_journal_entries e WHERE e.status='posted' AND e.reversal_of IS NULL AND e.reversed_by IS NULL
+           AND e.reference IN (SELECT 'AR-CONSUME-FX:'||s.id FROM sales_payments s WHERE s.gl_entry_id=$1 AND s.document_id IS NULL AND s.amount > 0)`,
+    [glEntryId])
+  for (const r of refs) await reverseEntry(r.id, userId)
+}
+
+/** Reverse an ERPFIX-2 FX true-up entry (if one was booked) together with its settlement. */
+async function reverseFxTrueUp(reference: string, userId: string): Promise<number | null> {
+  const fx = (await pgQuery<{ id: number }>(
+    `SELECT id FROM gl_journal_entries WHERE reference=$1 AND status='posted' AND reversal_of IS NULL ORDER BY id LIMIT 1`, [reference]))[0]
+  if (!fx) return null
+  return (await reverseEntry(fx.id, userId)).reversalId
 }
 
 // ── Payment orders (M4) ──────────────────────────────────────────────────────
@@ -91,10 +139,12 @@ export async function listPayments(status?: string) {
 
 /** Submit for approval (M4): routes through the 26.12 approval platform. */
 export async function submitPayment(id: number, userId: string): Promise<{ approvalRequestId: number; levels: number }> {
-  const p = (await pgQuery<{ status: string; payment_type: string; amount: number; party: string | null }>(`SELECT status, payment_type, amount::float AS amount, party FROM payment_orders WHERE id=$1`, [id]))[0]
+  const p = (await pgQuery<{ status: string; payment_type: string; amount: number; party: string | null; currency: string | null; date: string }>(`SELECT status, payment_type, amount::float AS amount, party, currency, date FROM payment_orders WHERE id=$1`, [id]))[0]
   if (!p) throw new Error('Payment not found')
   if (!canTransitionPayment(p.status as PaymentStatus, 'pending_approval')) throw new Error(`Cannot submit a ${p.status} payment`)
-  const req = await createApprovalRequest({ docType: 'payment_request', refType: 'payment_orders', refId: id, title: `${p.payment_type} ${p.party ?? ''}`.trim(), amount: Number(p.amount) }, userId)
+  // ERPFIX-2: the approval matrix tiers are Rial amounts — route on the BASE amount.
+  const baseAmount = toBase(Number(p.amount), await treasuryRate(p.currency, p.date), await basePrecision())
+  const req = await createApprovalRequest({ docType: 'payment_request', refType: 'payment_orders', refId: id, title: `${p.payment_type} ${p.party ?? ''}`.trim(), amount: baseAmount }, userId)
   await pgQuery(`UPDATE payment_orders SET status=CASE WHEN $2 THEN 'approved' ELSE 'pending_approval' END, approval_request_id=$3, updated_at=${NOW} WHERE id=$1`, [id, req.autoApproved, req.id])
   return { approvalRequestId: req.id, levels: req.levels }
 }
@@ -128,8 +178,8 @@ export async function submitPayment(id: number, userId: string): Promise<{ appro
 export async function processPayment(id: number, user: AdminUser): Promise<{ glEntryId: number; alreadyProcessed: boolean; apAllocations: { invoiceId: number; amount: number }[]; unappliedAmount: number }> {
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_payment_process:${id}`])
-    const p = (await query<{ status: string; payment_type: PaymentType; amount: number; date: string; party: string | null; party_ref: string | null; gl_entry_id: number | null }>(
-      `SELECT status, payment_type, amount::float AS amount, date, party, party_ref, gl_entry_id FROM payment_orders WHERE id=$1`, [id]))[0]
+    const p = (await query<{ status: string; payment_type: PaymentType; amount: number; date: string; party: string | null; party_ref: string | null; gl_entry_id: number | null; currency: string | null }>(
+      `SELECT status, payment_type, amount::float AS amount, date, party, party_ref, gl_entry_id, currency FROM payment_orders WHERE id=$1`, [id]))[0]
     if (!p) throw new Error('Payment not found')
     if (p.status === 'completed') {
       const unapplied = (await query<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE reference=$1 AND document_id IS NULL`, [`TRZPAY-${id}`]))[0]
@@ -145,7 +195,12 @@ export async function processPayment(id: number, user: AdminUser): Promise<{ glE
     // later run on one of these rows and post a SECOND, duplicate GL entry
     // for money this Treasury payment already booked (the exact
     // cross-module double-post class closed for receipts in Phase 8).
-    const glId = await postGl(query, paymentGlLines(p.payment_type, Number(p.amount)), `Payment ${p.payment_type} ${p.party ?? ''}`.trim(), `TRZPAY-${id}`, p.date, user.id)
+    // ERPFIX-2: base currency at the payment-day rate.
+    const payCurrency = p.currency ?? 'IRR'
+    const payRate = await treasuryRate(payCurrency, p.date)
+    const precision = await basePrecision()
+    const glId = await postGl(query, paymentGlLines(p.payment_type, Number(p.amount)), `Payment ${p.payment_type} ${p.party ?? ''}`.trim(), `TRZPAY-${id}`, p.date, user.id, { currency: payCurrency, rate: payRate })
+    let reliefAtPayRate = 0, reliefAtBooked = 0
 
     let apAllocations: { invoiceId: number; amount: number }[] = []
     let unappliedAmount = 0
@@ -177,17 +232,23 @@ export async function processPayment(id: number, user: AdminUser): Promise<{ glE
         // than each invoice's real outstanding balance (paid_total-aware,
         // so this is exact, not the receipt side's "no partial tracking"
         // approximation).
+        // ERPFIX-2: only invoices in the PAYMENT's currency are allocated
+        // (amounts are compared in one currency, never USD against IRR).
         const invs = await query<{ id: number; open: number }>(
           `SELECT id, (total - paid_total)::float AS open FROM purchase_documents
            WHERE vendor_id=$1 AND doc_type='invoice' AND status IN ('confirmed','partial') AND (total - paid_total) > 0.001
-           ORDER BY date`, [vendorId])
+             AND COALESCE(currency,'IRR') = $2
+           ORDER BY date`, [vendorId, payCurrency])
         const alloc = allocateReceipt(Number(p.amount), invs.map(i => ({ id: i.id, open: Number(i.open) })))
         apAllocations = alloc.allocations
         for (const a of apAllocations) {
           await query(
-            `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,${NOW})`,
-            [vendorId, a.invoiceId, p.date, a.amount, `TRZPAY-${id}`, user.id, glId])
-          const inv = (await query<{ total: number; paid_total: number }>(`SELECT total::float AS total, paid_total::float AS "paid_total" FROM purchase_documents WHERE id=$1`, [a.invoiceId]))[0]
+            `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,${NOW})`,
+            [vendorId, a.invoiceId, p.date, a.amount, `TRZPAY-${id}`, user.id, glId, payCurrency, payRate])
+          const inv = (await query<{ total: number; paid_total: number; subtotal: number; discount_total: number; tax_total: number; exchange_rate: number }>(
+            `SELECT total::float AS total, paid_total::float AS "paid_total", subtotal::float AS subtotal, discount_total::float AS discount_total, tax_total::float AS tax_total, exchange_rate::float AS exchange_rate FROM purchase_documents WHERE id=$1`, [a.invoiceId]))[0]
+          reliefAtPayRate += toBase(a.amount, payRate, precision)
+          reliefAtBooked += proportionalRelief(documentControlBase(Number(inv.subtotal) - Number(inv.discount_total), Number(inv.tax_total), Number(inv.exchange_rate) || 1, precision), Number(inv.total), Number(inv.paid_total), a.amount, precision)
           const paid = Number(inv.paid_total) + a.amount
           const status = paid + 0.001 >= Number(inv.total) ? 'paid' : 'partial'
           await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [a.invoiceId, paid, status])
@@ -215,10 +276,18 @@ export async function processPayment(id: number, user: AdminUser): Promise<{ glE
         if (alloc.advance > 0.001) {
           unappliedAmount = alloc.advance
           await query(
-            `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
-            [vendorId, p.date, alloc.advance, `TRZPAY-${id}`, user.id, glId, 'Unapplied supplier payment (exceeds open AP at processing time)'])
+            `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,$8,$9,${NOW})`,
+            [vendorId, p.date, alloc.advance, `TRZPAY-${id}`, user.id, glId, 'Unapplied supplier payment (exceeds open AP at processing time)', payCurrency, payRate])
         }
       }
+    }
+    // ERPFIX-2: the main entry relieved AP at the PAYMENT rate; move the
+    // allocated part to each invoice's BOOKED rate, the difference to realized
+    // FX gain/loss (nothing for an IRR payment).
+    {
+      const map = await loadGlMap()
+      const trueUp = fxTrueUpLines('payable', reliefAtPayRate, reliefAtBooked, { control: map.ap, gain: COA.fxGain, loss: COA.fxLoss })
+      if (trueUp.length) await postBaseLines(query, trueUp, `FX settlement — payment ${id}`, `TRZPAY-FX-${id}`, p.date, user.id, { currency: payCurrency, rate: payRate })
     }
 
     await query(`UPDATE payment_orders SET status='completed', gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [id, glId])
@@ -276,45 +345,57 @@ export async function consumeUnappliedForVendor(vendorId: number, userId: string
     // Every still-open unapplied SOURCE row, oldest first, with its remaining
     // (unconsumed) balance derived from the append-only ledger — never a
     // stored/mutated counter.
-    const sources = await query<{ id: number; amount: number; gl_entry_id: number | null; consumed: number }>(
-      `SELECT s.id, s.amount::float AS amount, s.gl_entry_id,
+    const sources = await query<{ id: number; amount: number; gl_entry_id: number | null; consumed: number; currency: string | null; exchange_rate: number | null }>(
+      `SELECT s.id, s.amount::float AS amount, s.gl_entry_id, s.currency, s.exchange_rate::float AS exchange_rate,
               COALESCE((SELECT SUM(-c.amount) FROM purchase_payments c
                         WHERE c.document_id IS NULL AND c.reference = 'AP-CONSUME:'||s.id), 0)::float AS consumed
        FROM purchase_payments s
        WHERE s.vendor_id = $1 AND s.document_id IS NULL AND s.amount > 0
        ORDER BY s.date, s.id`, [vendorId])
 
-    const invRows = await query<{ id: number; open: number }>(
-      `SELECT id, (total - paid_total)::float AS open FROM purchase_documents
+    const invRows = await query<{ id: number; open: number; currency: string | null }>(
+      `SELECT id, (total - paid_total)::float AS open, currency FROM purchase_documents
        WHERE vendor_id=$1 AND doc_type='invoice' AND status IN ('confirmed','partial') AND (total - paid_total) > 0.001
        ORDER BY date, id`, [vendorId])
-    const invoicePool = invRows.map(r => ({ id: r.id, open: Math.round(Number(r.open) * 100) / 100 }))
+    const invoicePool = invRows.map(r => ({ id: r.id, open: Math.round(Number(r.open) * 100) / 100, currency: r.currency ?? 'IRR' }))
+    const precision = await basePrecision()
+    const map = await loadGlMap()
 
     const details: ConsumptionDetail[] = []
     let totalConsumed = 0
     for (const src of sources) {
       const remaining = Math.round((Number(src.amount) - Number(src.consumed)) * 100) / 100
       if (remaining <= 0.001) continue
-      if (!invoicePool.some(i => i.open > 0.001)) break
+      // ERPFIX-2: unapplied cash is only consumed against invoices in its OWN currency.
+      const srcCurrency = src.currency ?? 'IRR', srcRate = Number(src.exchange_rate) || 1
+      const pool = invoicePool.filter(i => i.currency === srcCurrency)
+      if (!pool.some(i => i.open > 0.001)) continue
 
-      const { allocations } = allocateReceipt(remaining, invoicePool)
+      const { allocations } = allocateReceipt(remaining, pool)
       for (const a of allocations) {
         await query(
-          `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
-          [vendorId, today, -a.amount, `AP-CONSUME:${src.id}`, userId, src.gl_entry_id, `Unapplied payment #${src.id} consumed against invoice #${a.invoiceId}`])
+          `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,$8,$9,${NOW})`,
+          [vendorId, today, -a.amount, `AP-CONSUME:${src.id}`, userId, src.gl_entry_id, `Unapplied payment #${src.id} consumed against invoice #${a.invoiceId}`, srcCurrency, srcRate])
         await query(
-          `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
-          [vendorId, a.invoiceId, today, a.amount, `AP-CONSUME:${src.id}`, userId, src.gl_entry_id, `Settled from unapplied payment #${src.id}`])
+          `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,$10,${NOW})`,
+          [vendorId, a.invoiceId, today, a.amount, `AP-CONSUME:${src.id}`, userId, src.gl_entry_id, `Settled from unapplied payment #${src.id}`, srcCurrency, srcRate])
 
-        const inv = (await query<{ total: number; paid_total: number }>(`SELECT total::float AS total, paid_total::float AS "paid_total" FROM purchase_documents WHERE id=$1`, [a.invoiceId]))[0]
+        const inv = (await query<{ total: number; paid_total: number; subtotal: number; discount_total: number; tax_total: number; exchange_rate: number }>(
+          `SELECT total::float AS total, paid_total::float AS "paid_total", subtotal::float AS subtotal, discount_total::float AS discount_total, tax_total::float AS tax_total, exchange_rate::float AS exchange_rate FROM purchase_documents WHERE id=$1`, [a.invoiceId]))[0]
+        // ERPFIX-2: the cash already relieved AP at its own (payment) rate;
+        // true it up to this invoice's booked rate.
+        const trueUp = fxTrueUpLines('payable', toBase(a.amount, srcRate, precision),
+          proportionalRelief(documentControlBase(Number(inv.subtotal) - Number(inv.discount_total), Number(inv.tax_total), Number(inv.exchange_rate) || 1, precision), Number(inv.total), Number(inv.paid_total), a.amount, precision),
+          { control: map.ap, gain: COA.fxGain, loss: COA.fxLoss })
+        if (trueUp.length) await postBaseLines(query, trueUp, `FX settlement — unapplied #${src.id} → invoice #${a.invoiceId}`, `AP-CONSUME-FX:${src.id}`, today, userId, { currency: srcCurrency, rate: srcRate })
         const paid = Math.round((Number(inv.paid_total) + a.amount) * 100) / 100
         const status = paid + 0.001 >= Number(inv.total) ? 'paid' : 'partial'
         await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [a.invoiceId, paid, status])
 
         details.push({ sourceId: src.id, invoiceId: a.invoiceId, amount: a.amount })
         totalConsumed = Math.round((totalConsumed + a.amount) * 100) / 100
-        const pool = invoicePool.find(i => i.id === a.invoiceId)!
-        pool.open = Math.round((pool.open - a.amount) * 100) / 100
+        const slot = invoicePool.find(i => i.id === a.invoiceId)!
+        slot.open = Math.round((slot.open - a.amount) * 100) / 100
       }
     }
     return { totalConsumed, details }
@@ -371,6 +452,8 @@ export async function reversePayment(id: number, userId: string): Promise<{ reve
   if (!p.gl_entry_id) throw new Error('Payment has no posted GL entry to reverse')
 
   const rev = await reverseEntry(p.gl_entry_id, userId)
+  await reverseFxTrueUp(`TRZPAY-FX-${id}`, userId) // ERPFIX-2
+  await reverseConsumptionFx('purchase', p.gl_entry_id, userId)
   const glEntryId = p.gl_entry_id
   const vendorId = vendorIdFromPartyRef(p.party_ref)
   const today = new Date().toISOString().slice(0, 10)
@@ -380,8 +463,8 @@ export async function reversePayment(id: number, userId: string): Promise<{ reve
     // 'TRZPAY-REVERSE:%') — without this, a reversal row (also tagged with
     // the same glEntryId, by design) would be picked up as "still needing
     // reversal" on the very next call and get reversed again, forever.
-    const rows = await query<{ id: number; document_id: number | null; amount: number }>(
-      `SELECT p.id, p.document_id, p.amount::float AS amount FROM purchase_payments p
+    const rows = await query<{ id: number; document_id: number | null; amount: number; currency: string | null; exchange_rate: number | null }>(
+      `SELECT p.id, p.document_id, p.amount::float AS amount, p.currency, p.exchange_rate::float AS exchange_rate FROM purchase_payments p
        WHERE p.gl_entry_id = $1
          AND p.reference NOT LIKE 'TRZPAY-REVERSE:%'
          AND NOT EXISTS (SELECT 1 FROM purchase_payments r WHERE r.reference = 'TRZPAY-REVERSE:'||p.id)
@@ -392,8 +475,8 @@ export async function reversePayment(id: number, userId: string): Promise<{ reve
     for (const row of rows) {
       const amt = Math.round(Number(row.amount) * 100) / 100
       await query(
-        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
-        [vendorId, row.document_id, today, -amt, `TRZPAY-REVERSE:${row.id}`, userId, glEntryId, `Reversed on Treasury payment #${id} reversal (source row #${row.id})`])
+        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,$10,${NOW})`,
+        [vendorId, row.document_id, today, -amt, `TRZPAY-REVERSE:${row.id}`, userId, glEntryId, `Reversed on Treasury payment #${id} reversal (source row #${row.id})`, row.currency ?? 'IRR', row.exchange_rate ?? 1])
       if (row.document_id != null) affectedInvoices.add(row.document_id)
     }
     // Recompute BOTH paid_total and status — a partial reversal (this
@@ -476,10 +559,15 @@ export async function createReceipt(input: ReceiptInput, userId: string): Promis
     let allocations: { invoiceId: number; amount: number }[] = []
     let advance = input.amount
     const openById = new Map<number, number>()
+    // ERPFIX-2: base currency at the receipt-day rate; only invoices in the
+    // receipt's currency are allocated.
+    const rcCurrency = input.currency ?? 'IRR'
+    const rcRate = await treasuryRate(rcCurrency, date)
+    const precision = await basePrecision()
     if (input.customerId) {
       const invs = await query<{ id: number; open: number }>(
-        `SELECT id, total::float AS open FROM sales_documents WHERE customer_id=$1 AND doc_type='invoice' AND status IN ('sent','confirmed','partial') ${input.invoiceIds?.length ? 'AND id = ANY($2)' : ''} ORDER BY date`,
-        input.invoiceIds?.length ? [input.customerId, input.invoiceIds] : [input.customerId])
+        `SELECT id, total::float AS open FROM sales_documents WHERE customer_id=$1 AND doc_type='invoice' AND status IN ('sent','confirmed','partial') AND COALESCE(currency,'IRR') = $2 ${input.invoiceIds?.length ? 'AND id = ANY($3)' : ''} ORDER BY date`,
+        input.invoiceIds?.length ? [input.customerId, rcCurrency, input.invoiceIds] : [input.customerId, rcCurrency])
       const res = allocateReceipt(input.amount, invs.map(i => ({ id: i.id, open: Number(i.open) })))
       allocations = res.allocations; advance = res.advance
       for (const i of invs) openById.set(i.id, Number(i.open))
@@ -494,21 +582,34 @@ export async function createReceipt(input: ReceiptInput, userId: string): Promis
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
       [number, input.receiptType ?? 'customer_receipt', input.customerId ?? null, input.amount, input.currency ?? 'IRR', input.bankAccountId ?? null, date, JSON.stringify(allocations), advance, userId]))[0]
 
-    const glId = await postGl(query, paymentGlLines('customer_receipt', input.amount), 'Customer receipt', `TRZRCP-${r.id}`, date, userId)
+    const glId = await postGl(query, paymentGlLines('customer_receipt', input.amount), 'Customer receipt', `TRZRCP-${r.id}`, date, userId, { currency: rcCurrency, rate: rcRate })
     await query(`UPDATE receipt_transactions SET gl_entry_id=$2 WHERE id=$1`, [r.id, glId])
 
+    let reliefAtPayRate = 0, reliefAtBooked = 0
     if (input.customerId) {
       for (const a of allocations) {
+        const inv = (await query<{ total: number; subtotal: number; discount_total: number; tax_total: number; exchange_rate: number; paid: number }>(
+          `SELECT total::float AS total, subtotal::float AS subtotal, discount_total::float AS discount_total, tax_total::float AS tax_total, exchange_rate::float AS exchange_rate,
+                  COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=$1),0)::float AS paid
+           FROM sales_documents WHERE id=$1`, [a.invoiceId]))[0]
+        reliefAtPayRate += toBase(a.amount, rcRate, precision)
+        reliefAtBooked += proportionalRelief(documentControlBase(Number(inv.subtotal) - Number(inv.discount_total), Number(inv.tax_total), Number(inv.exchange_rate) || 1, precision), Number(inv.total), Number(inv.paid), a.amount, precision)
         await query(`UPDATE sales_documents SET status = CASE WHEN $2 >= $3 THEN 'paid' ELSE 'partial' END WHERE id=$1`, [a.invoiceId, a.amount, openById.get(a.invoiceId) ?? a.amount])
         await query(
-          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,${NOW})`,
-          [input.customerId, a.invoiceId, date, a.amount, `TRZRCP-${r.id}`, userId, glId])
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,${NOW})`,
+          [input.customerId, a.invoiceId, date, a.amount, `TRZRCP-${r.id}`, userId, glId, rcCurrency, rcRate])
       }
       if (advance > 0.001) {
         await query(
-          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by, gl_entry_id, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
-          [input.customerId, date, advance, `TRZRCP-${r.id}`, 'Unapplied customer receipt (exceeds open AR at receipt time)', userId, glId])
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by, gl_entry_id, currency, exchange_rate, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,$8,$9,${NOW})`,
+          [input.customerId, date, advance, `TRZRCP-${r.id}`, 'Unapplied customer receipt (exceeds open AR at receipt time)', userId, glId, rcCurrency, rcRate])
       }
+    }
+    // ERPFIX-2: AR from the receipt-rate relief to each invoice's booked rate.
+    {
+      const map = await loadGlMap()
+      const trueUp = fxTrueUpLines('receivable', reliefAtPayRate, reliefAtBooked, { control: map.ar, gain: COA.fxGain, loss: COA.fxLoss })
+      if (trueUp.length) await postBaseLines(query, trueUp, `FX settlement — receipt ${r.id}`, `TRZRCP-FX-${r.id}`, date, userId, { currency: rcCurrency, rate: rcRate })
     }
     return { id: r.id, allocations, advance, glEntryId: glId }
   })
@@ -542,6 +643,8 @@ export async function reverseCustomerReceipt(receiptId: number, userId: string):
   if (!r.gl_entry_id) throw new Error('Receipt has no posted GL entry to reverse')
 
   const rev = await reverseEntry(r.gl_entry_id, userId)
+  await reverseFxTrueUp(`TRZRCP-FX-${receiptId}`, userId) // ERPFIX-2
+  await reverseConsumptionFx('sales', r.gl_entry_id, userId)
   const glEntryId = r.gl_entry_id
   const customerId = r.customer_id
   const today = new Date().toISOString().slice(0, 10)
@@ -549,8 +652,8 @@ export async function reverseCustomerReceipt(receiptId: number, userId: string):
 
   const amountReversed = await withTransaction(async query => {
     if (customerId != null) await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_receipt_customer:${customerId}`])
-    const rows = await query<{ id: number; document_id: number | null; amount: number; customer_id: number }>(
-      `SELECT p.id, p.document_id, p.amount::float AS amount, p.customer_id FROM sales_payments p
+    const rows = await query<{ id: number; document_id: number | null; amount: number; customer_id: number; currency: string | null; exchange_rate: number | null }>(
+      `SELECT p.id, p.document_id, p.amount::float AS amount, p.customer_id, p.currency, p.exchange_rate::float AS exchange_rate FROM sales_payments p
        WHERE p.gl_entry_id = $1
          AND p.reference NOT LIKE 'TRZRCP-REVERSE:%'
          AND NOT EXISTS (SELECT 1 FROM sales_payments x WHERE x.reference = $2||p.id)
@@ -562,8 +665,8 @@ export async function reverseCustomerReceipt(receiptId: number, userId: string):
     for (const row of rows) {
       const amt = Math.round(Number(row.amount) * 100) / 100
       await query(
-        `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
-        [row.customer_id, row.document_id, today, -amt, `${revReference}${row.id}`, userId, glEntryId, `Reversed on receipt #${receiptId} reversal (source payment #${row.id})`])
+        `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,$10,${NOW})`,
+        [row.customer_id, row.document_id, today, -amt, `${revReference}${row.id}`, userId, glEntryId, `Reversed on receipt #${receiptId} reversal (source payment #${row.id})`, row.currency ?? 'IRR', row.exchange_rate ?? 1])
       total = Math.round((total + Math.abs(amt)) * 100) / 100
       if (row.document_id != null) affectedInvoices.add(row.document_id)
     }
@@ -661,8 +764,8 @@ export async function consumeUnappliedForCustomer(customerId: number, userId: st
     // (unconsumed) balance derived from the append-only ledger — never a
     // stored/mutated counter. Only already-GL-posted sources are consumable
     // (see the function doc above).
-    const sources = await query<{ id: number; amount: number; gl_entry_id: number; consumed: number }>(
-      `SELECT s.id, s.amount::float AS amount, s.gl_entry_id,
+    const sources = await query<{ id: number; amount: number; gl_entry_id: number; consumed: number; currency: string | null; exchange_rate: number | null }>(
+      `SELECT s.id, s.amount::float AS amount, s.gl_entry_id, s.currency, s.exchange_rate::float AS exchange_rate,
               COALESCE((SELECT SUM(-c.amount) FROM sales_payments c
                         WHERE c.document_id IS NULL AND c.reference = 'AR-CONSUME:'||s.id), 0)::float AS consumed
        FROM sales_payments s
@@ -671,30 +774,44 @@ export async function consumeUnappliedForCustomer(customerId: number, userId: st
 
     // "open" is DERIVED (total minus real payments), not `total` alone —
     // see the function doc for why `createReceipt`'s shortcut is not reused.
-    const invRows = await query<{ id: number; open: number }>(
-      `SELECT d.id, (d.total - COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=d.id), 0))::float AS open
+    const invRows = await query<{ id: number; open: number; currency: string | null; total: number; subtotal: number; discount_total: number; tax_total: number; exchange_rate: number }>(
+      `SELECT d.id, (d.total - COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=d.id), 0))::float AS open, d.currency,
+              d.total::float AS total, d.subtotal::float AS subtotal, d.discount_total::float AS discount_total, d.tax_total::float AS tax_total, d.exchange_rate::float AS exchange_rate
        FROM sales_documents d
        WHERE d.customer_id=$1 AND d.doc_type='invoice' AND d.status IN ('sent','confirmed','partial') AND d.deleted_at IS NULL
        ORDER BY d.date, d.id`, [customerId])
     const invoicePool = invRows
-      .map(r => ({ id: r.id, open: Math.round(Number(r.open) * 100) / 100 }))
+      .map(r => ({ id: r.id, open: Math.round(Number(r.open) * 100) / 100, currency: r.currency ?? 'IRR' }))
       .filter(r => r.open > 0.001)
+    const invById = new Map(invRows.map(r => [r.id, r]))
+    const precision = await basePrecision()
+    const map = await loadGlMap()
 
     const details: ArConsumptionDetail[] = []
     let totalConsumed = 0
     for (const src of sources) {
       const remaining = Math.round((Number(src.amount) - Number(src.consumed)) * 100) / 100
       if (remaining <= 0.001) continue
-      if (!invoicePool.some(i => i.open > 0.001)) break
+      // ERPFIX-2: unapplied cash is only consumed against invoices in its OWN currency.
+      const srcCurrency = src.currency ?? 'IRR', srcRate = Number(src.exchange_rate) || 1
+      const pool = invoicePool.filter(i => i.currency === srcCurrency)
+      if (!pool.some(i => i.open > 0.001)) continue
 
-      const { allocations } = allocateReceipt(remaining, invoicePool)
+      const { allocations } = allocateReceipt(remaining, pool)
       for (const a of allocations) {
+        const invRow = invById.get(a.invoiceId)!
+        const paidBefore = Number(invRow.total) - (pool.find(i => i.id === a.invoiceId)?.open ?? 0)
         await query(
-          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
-          [customerId, today, -a.amount, `AR-CONSUME:${src.id}`, userId, src.gl_entry_id, `Unapplied receipt #${src.id} consumed against invoice #${a.invoiceId}`])
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,$8,$9,${NOW})`,
+          [customerId, today, -a.amount, `AR-CONSUME:${src.id}`, userId, src.gl_entry_id, `Unapplied receipt #${src.id} consumed against invoice #${a.invoiceId}`, srcCurrency, srcRate])
         await query(
-          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
-          [customerId, a.invoiceId, today, a.amount, `AR-CONSUME:${src.id}`, userId, src.gl_entry_id, `Settled from unapplied receipt #${src.id}`])
+          `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,$10,${NOW})`,
+          [customerId, a.invoiceId, today, a.amount, `AR-CONSUME:${src.id}`, userId, src.gl_entry_id, `Settled from unapplied receipt #${src.id}`, srcCurrency, srcRate])
+        // ERPFIX-2: true the AR relief up from the receipt's rate to the invoice's booked rate.
+        const trueUp = fxTrueUpLines('receivable', toBase(a.amount, srcRate, precision),
+          proportionalRelief(documentControlBase(Number(invRow.subtotal) - Number(invRow.discount_total), Number(invRow.tax_total), Number(invRow.exchange_rate) || 1, precision), Number(invRow.total), paidBefore, a.amount, precision),
+          { control: map.ar, gain: COA.fxGain, loss: COA.fxLoss })
+        if (trueUp.length) await postBaseLines(query, trueUp, `FX settlement — unapplied #${src.id} → invoice #${a.invoiceId}`, `AR-CONSUME-FX:${src.id}`, today, userId, { currency: srcCurrency, rate: srcRate })
 
         const inv = (await query<{ total: number; paidSum: number }>(
           `SELECT total::float AS total, COALESCE((SELECT SUM(amount) FROM sales_payments WHERE document_id=$1),0)::float AS "paidSum" FROM sales_documents WHERE id=$1`, [a.invoiceId]))[0]
@@ -703,8 +820,8 @@ export async function consumeUnappliedForCustomer(customerId: number, userId: st
 
         details.push({ sourceId: src.id, invoiceId: a.invoiceId, amount: a.amount })
         totalConsumed = Math.round((totalConsumed + a.amount) * 100) / 100
-        const pool = invoicePool.find(i => i.id === a.invoiceId)!
-        pool.open = Math.round((pool.open - a.amount) * 100) / 100
+        const slot = invoicePool.find(i => i.id === a.invoiceId)!
+        slot.open = Math.round((slot.open - a.amount) * 100) / 100
       }
     }
     return { totalConsumed, details }

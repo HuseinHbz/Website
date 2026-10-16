@@ -1,0 +1,5 @@
+  ERPFIX-2 foreign-currency survey (read-only)
+  1) foreign-currency rows: none
+  2) documents with base_total = 0 or rate ≤ 0 (listed, not fixed): 0
+  3) legacy GL entries in a foreign currency without fx_amount: 0
+  No foreign-currency data: nothing to remediate (the structural fix still applies to all future postings).

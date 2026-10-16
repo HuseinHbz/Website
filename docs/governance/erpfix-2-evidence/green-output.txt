@@ -1,0 +1,64 @@
+══ ERPFIX-2 — currency in the general ledger (live PostgreSQL) ══
+  ✅ gl_journal_lines carries fx_amount + fx_currency
+— sales invoice 100 USD @ 600,000 —
+  ✅ 🔴 AR 1100 = 60,000,000 (was 100) — 60,000,000
+  ✅ revenue 4000 = −60,000,000 at base — -60,000,000
+  ✅ the AR line keeps fx_amount = 100 USD
+  ✅ header USD @ 600,000; entry balanced — 60,000,000 = 60,000,000
+  ✅ the document is untouched (total / rate / base_total)
+— receipt 40 USD @ 650,000 (realized FX) —
+  ✅ 🔴 bank 1010 = 26,000,000 (40 × 650,000) — 26,000,000
+  ✅ 🔴 AR relieved at the BOOKED rate → 36,000,000 remains — 36,000,000
+  ✅ 🔴 realized FX gain 2,000,000 on 4900 — -2,000,000
+  ✅ receipt entry header USD @ 650,000, balanced
+— revaluation: no double counting —
+  ✅ unrealized on the open 60 USD = 60 × 50,000 = 3,000,000 — 3,000,000
+  ✅ a second revaluation run books nothing
+  ✅ second receipt 20 USD: AR 24,000,000; realized now 3,000,000 (+3,000,000 unrealized) — 24,000,000 / -6,000,000
+  ✅ 🔴 revaluation releases only the settled part: 40 × 50,000 − 3,000,000 = −1,000,000 — -1,000,000
+  ✅ net FX = 3,000,000 realized + 2,000,000 unrealized = 5,000,000 (= 100 USD × 50,000) — 4900 -6,000,000 · 6980 1,000,000 · 1190 2,000,000
+  ✅ nothing left to revalue
+— odd rate, IRT, EUR: exactly balanced —
+  ✅ 🔴 rate 600,001.7: Dr = Cr to the Rial (no EPS), whole Rials — 21,798,062 = 21,798,062
+  ✅ AR absorbs the rounding residue
+  ✅ IRT 1,090 @ 10 → AR 10,900 — 10,900
+  ✅ EUR 273.05 @ 700,000.3 balanced, fx kept — 191,135,082
+— purchasing: base thresholds, AP at base, partial payment FX —
+  ✅ 🔴 1,000 USD (600M base) needs 3 approval levels; 1,000 IRR needs 1 — [{"id":1,"approval_levels":3},{"id":2,"approval_levels":1}]
+  ✅ 🔴 a currency with no rate is refused (was silently rate 1)
+  ✅ 🔴 budget compares the base amount: 100 USD = 60,000,000 > 50,000,000 — Over budget: available 50,000,000, requested 60,000,000
+  ✅ 🔴 AP 2000 credited 600,000,000 at base (was 1,000; the IRR invoice is not confirmed) — -600,000,000
+  ✅ partial payment 400 USD (currency defaults to the invoice currency, rate of the payment day)
+  ✅ 🔴 bank −248,000,000 (400 × 620,000) — -248,000,000
+  ✅ 🔴 AP relieved at the booked rate: 240,000,000 → 360,000,000 left on the USD invoice — -360,000,000
+  ✅ 🔴 realized FX loss 8,000,000 on 6980 — 8,000,000
+  ✅ 🔴 a EUR payment on a USD invoice is refused without a conversion rate — This invoice is in USD but the payment is in EUR; give an explicit conversion rate or pay in USD.
+  ✅ with conversionRate 1.1 the 10 EUR is stored as 11 USD against the invoice
+  ✅ bank leg still 10 EUR × 700,000.3 = 7,000,003 — -7,000,003
+— credit guard on the base amount —
+  ✅ 🔴 a 100 USD invoice (60,000,000) exceeds a 50,000,000 Rial limit — {"allowed":true,"exceeded":true,"limit":50000000,"currentBalance":0,"projected":60000000,"available":50000000,"mode":"warn"}
+  ✅ a 1,000 IRR invoice does not
+— Treasury: approval on base amount, base GL, booked-rate true-up —
+  ✅ 🔴 approval request on 300 × 620,000 = 186,000,000 → 2 levels (100M–1B tier) — 186000000 / 2
+  ✅ the USD payment allocates to the USD invoice only — [{"invoiceId":1,"amount":300}]
+  ✅ bank −186,000,000 at the payment rate — -186,000,000
+  ✅ 🔴 AP relieved at the BOOKED rate (180,000,000), not 186,000,000 — 180,000,000
+  ✅ 🔴 FX loss 6,000,000 via the true-up entry — 6,000,000
+  ✅ true-up entry TRZPAY-FX-<id> booked
+  ✅ reversing the payment also reverses the FX true-up (bank, AP, 6980 back) — -216,000,003 / -353,400,000 / 9,400,003
+— legacy data: survey → dry-run → reversal + base re-post —
+  ✅ survey finds both legacy shapes (USD header AND IRR-header receipt) — JE-2026-00014:sales_invoice, JE-2026-00015:sales_payment
+  ✅ survey reports the raw distortion on AR — {"code":"1100","nameEn":"Accounts Receivable","rawNet":6,"baseNet":3400000,"distortion":3399994}
+  ✅ no document with base_total = 0 or rate ≤ 0 (stop condition)
+  ✅ dry-run lists both and writes nothing
+  ✅ apply restates both — [{"entryId":16,"reversalId":18,"newEntryId":19,"newEntryNo":"JE-2026-00017"},{"entryId":17,"reversalId":20,"newEntryId":21,"newEntryNo":"JE-2026-00019"}]
+  ✅ 🔴 the legacy invoice now carries AR 3,600,000 at base (6,000,000 − 4 USD at booked) — 3,599,994
+  ✅ bank: 4 USD × 650,000 instead of 4 — 2,599,996
+  ✅ realized gain 200,000 reconstructed — -200,000
+  ✅ original stays posted + reversed; the document now points at the restated entry
+  ✅ a second apply restates nothing (idempotent)
+  ✅ 🔴 revaluation unaffected by the restatement (no double counting) — -12,133,462 → -12,133,462
+— books —
+  ✅ trial balance balanced — 851,944,047 = 851,944,047
+  ✅ every converted foreign line carries its fx_amount (FX difference lines excepted) — 0
+  53/53 assertions passed.

@@ -353,6 +353,24 @@
    unused, seed with `WHERE NOT EXISTS` + explicit name/type, add it to the
    contract. (سند posted فقط از insertPostedEntry؛ کد حساب سیستمی فقط از
    coaContract.ts؛ هر دو با گیت CI.)
+57. **Every GL line is in BASE currency (Rial); the original foreign amount
+   lives in `fx_amount`; conversion happens ONLY through `money.ts` (ERPFIX-2).**
+   `toBase(amount, rate, precision)` rounds a conversion to
+   `erp_settings.decimal_precision` (default 0) and never re-rounds a base (rate 1)
+   amount; `linesToBase` puts the rounding residue on the control line (AR/AP) so
+   an entry balances EXACTLY. A settlement relieves AR/AP at the document's BOOKED
+   rate, proportional to the share settled (cumulative rounding — a fully settled
+   document relieves exactly what it posted); the bank leg uses the payment-day
+   rate (`rialRateOn`); the difference is realized FX on `COA.fxGain` 4900 /
+   `COA.fxLoss` 6980. A payment applied to a document is stored in the document's
+   currency (`normalizePayment`; a different currency needs an explicit
+   `conversionRate`). Every threshold (approval tier, budget, credit limit,
+   Treasury matrix) compares `documentBase` / `BASE_TOTAL_SQL`, never a raw
+   `total`. A foreign currency with no rate is REFUSED, never booked at 1. Document
+   columns `total`/`exchange_rate`/`base_total` are immutable (26.8). Legacy
+   foreign entries: `deploy/erp-fx-survey.ts` (read-only) and
+   `deploy/erp-fx-remediate.ts` (reversal + base re-post, dry-run by default).
+   (هر خط دفتر کل به ریال پایه است؛ مبلغ ارز اصلی در fx_amount؛ تبدیل فقط با money.ts.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

@@ -57,6 +57,19 @@ export async function setRate(code: string, rateDate: string, baseRate: number, 
  * rate. Returns null when no rate exists so callers can reject honestly
  * instead of silently booking a 1:1 conversion.
  */
+/**
+ * ERPFIX-2: the Rial rate in force ON a date — the latest rate dated on or
+ * before it (payment-day rate for settlements). null when none exists, so a
+ * caller can refuse instead of silently using 1.
+ */
+export async function rialRateOn(code: string, date: string): Promise<number | null> {
+  if (code === 'IRR') return 1
+  if (code === 'IRT') return 10
+  const row = (await pgQuery<{ base_rate: number }>(
+    `SELECT base_rate FROM erp_exchange_rates WHERE code=$1 AND rate_date <= $2 ORDER BY rate_date DESC LIMIT 1`, [code, date]))[0]
+  return row ? Number(row.base_rate) : null
+}
+
 export async function rialRateFor(code: string): Promise<number | null> {
   if (code === 'IRR') return 1
   if (code === 'IRT') return 10

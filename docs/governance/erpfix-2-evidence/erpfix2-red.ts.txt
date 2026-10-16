@@ -1,0 +1,64 @@
+/**
+ * ERPFIX-2 RED — run against commit 95f0b95 (ERPFIX-1, before ERPFIX-2).
+ * Every number is read back through production functions (loadTallies →
+ * trialBalance, submitDocument, evaluateCredit, submitPayment).
+ */
+import { runMigrations } from '@/lib/db/migrate'
+import { seedDatabase } from '@/lib/db/seed'
+import { pgQuery } from '@/lib/db'
+import { setRate } from '@/lib/erp/currencyData'
+import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
+import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
+import { saveDocument, submitDocument, postPurchaseInvoiceToGl } from '@/lib/erp/purchasingData'
+import { evaluateCredit } from '@/lib/crm/customer360Data'
+import { createPayment, submitPayment } from '@/lib/treasury/paymentData'
+import { loadTallies } from '@/lib/erp/ledgerData'
+import { trialBalance } from '@/lib/erp/ledger'
+
+const say = (bug: boolean, label: string, detail: string) => console.log(`  ${bug ? '🔴 BUG-REPRODUCED' : '⚪ not reproduced'} — ${label}: ${detail}`)
+const one = async <T,>(sql: string, p: unknown[] = []) => (await pgQuery<T>(sql, p))[0]
+async function bal(code: string) { const r = trialBalance(await loadTallies()).rows.find(x => x.code === code); return r ? Math.round((r.debit - r.credit) * 100) / 100 : 0 }
+
+async function main() {
+  await runMigrations(); await seedDatabase()
+  const ADMIN = (await one<{ id: string }>(`SELECT id FROM users LIMIT 1`))!.id
+  const today = new Date().toISOString().slice(0, 10)
+  await setRate('USD', today, 600000, ADMIN)
+  console.log('\n══ ERPFIX-2 RED @ 95f0b95 ══')
+  const cust = (await one<{ id: number }>(`INSERT INTO sales_customers (code,name,credit_limit) VALUES ('FX-RED','FX red',50000000) RETURNING id`))!.id
+  const inv = (await one<{ id: number }>(
+    `INSERT INTO sales_documents (doc_type, doc_no, customer_id, date, status, subtotal, discount_total, tax_total, total, currency, exchange_rate, base_total, updated_at)
+     VALUES ('invoice','FXR-INV-1',$1,$2,'confirmed',100,0,0,100,'USD',600000,60000000,to_char(now(),'YYYY-MM-DD HH24:MI:SS')) RETURNING id`, [cust, today]))!.id
+  await postSalesInvoiceToGl(inv, ADMIN)
+  say(await bal('1100') === 100, 'invoice 100 USD @ 600,000 → AR 1100', `trialBalance 1100 = ${await bal('1100')} (should be 60,000,000); 4000 = ${await bal('4000')}`)
+  const line = await one<{ c: number }>(`SELECT COUNT(*)::int AS c FROM information_schema.columns WHERE table_name='gl_journal_lines' AND column_name='fx_amount'`)
+  say(line!.c === 0, 'original foreign amount kept on the GL line', `gl_journal_lines.fx_amount column exists: ${line!.c === 1}`)
+  const hdr = await one<{ currency: string; exchange_rate: string }>(`SELECT currency, exchange_rate FROM gl_journal_entries WHERE reference=$1`, [`SAL-${inv}`])
+  console.log(`     entry header currency=${hdr?.currency} rate=${hdr?.exchange_rate} — lines carry the raw USD amounts`)
+  await setRate('USD', today, 650000, ADMIN)
+  const pay = (await one<{ id: number }>(`INSERT INTO sales_payments (customer_id, document_id, date, amount, method, currency, exchange_rate) VALUES ($1,$2,$3,40,'bank','USD',650000) RETURNING id`, [cust, inv, today]))!.id
+  await postSalesPaymentToGl(pay, ADMIN)
+  say(await bal('1010') === 40 && await bal('4900') === 0, 'receipt 40 USD @ 650,000 → bank / realized FX', `bank 1010 = ${await bal('1010')} (should be 26,000,000); AR 1100 = ${await bal('1100')} (should be 36,000,000); FX gain 4900 = ${await bal('4900')} (should be −2,000,000)`)
+  const credit = await evaluateCredit(cust, 100)
+  say(!credit.exceeded, 'credit guard compares the raw 100 USD against a 50,000,000 IRR limit', JSON.stringify(credit))
+  await setRate('USD', today, 600000, ADMIN)
+  const vend = (await one<{ id: number }>(`INSERT INTO purchase_vendors (code,name) VALUES ('FXV','FX vendor') RETURNING id`))!.id
+  const po = await saveDocument({ docType: 'invoice', vendorId: vend, date: today, currency: 'USD', lines: [{ description: 'server', qty: 1, unitPrice: 1000, discountPct: 0, taxPct: 0 }] }, ADMIN)
+  const s = await submitDocument(po)
+  const lv = await one<{ approval_levels: number; base_total: string }>(`SELECT approval_levels, base_total FROM purchase_documents WHERE id=$1`, [po])
+  say(lv!.approval_levels === 1, 'purchase approval tier uses the raw total', `1,000 USD (base ${Number(lv!.base_total).toLocaleString('en-US')}) → ${lv!.approval_levels} level(s); a 600M IRR doc needs 3 (≤50M→1, ≤500M→2, above→3) ${JSON.stringify(s)}`)
+  await pgQuery(`UPDATE purchase_documents SET status='confirmed' WHERE id=$1`, [po])
+  await postPurchaseInvoiceToGl(po, ADMIN)
+  say(await bal('2000') === -1000, 'purchase invoice 1,000 USD → AP 2000', `AP = ${await bal('2000')} (should be −600,000,000)`)
+  const pay2 = await createPayment({ paymentType: 'supplier_payment', amount: 1000, currency: 'USD', date: today }, ADMIN)
+  const sp = await submitPayment(pay2.id, ADMIN)
+  const req = await one<{ amount: string }>(`SELECT amount FROM approval_requests WHERE id=$1`, [sp.approvalRequestId])
+  say(Number(req!.amount) === 1000, 'treasury payment approval matrix reads the raw amount', `approval request amount = ${req!.amount}, levels = ${sp.levels} (base is 600,000,000 → the >100M tier)`)
+  const noRate = await saveDocument({ docType: 'invoice', vendorId: vend, date: today, currency: 'EUR', lines: [{ description: 'x', qty: 1, unitPrice: 10, discountPct: 0, taxPct: 0 }] }, ADMIN)
+  const nr = await one<{ exchange_rate: string; base_total: string }>(`SELECT exchange_rate, base_total FROM purchase_documents WHERE id=$1`, [noRate])
+  say(Number(nr!.exchange_rate) === 1, 'purchase doc in EUR with NO rate configured is silently booked at rate 1', `exchange_rate=${nr!.exchange_rate} base_total=${nr!.base_total}`)
+  const tb = trialBalance(await loadTallies())
+  console.log(`     trial balance "balanced"=${tb.balanced} (Dr ${tb.totalDebit} = Cr ${tb.totalCredit}) — balanced, yet every account mixes USD and IRR`)
+  process.exit(0)
+}
+main().catch(e => { console.error(e); process.exit(1) })

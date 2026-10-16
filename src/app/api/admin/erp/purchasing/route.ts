@@ -51,7 +51,7 @@ const docSave = z.object({ action: z.literal('doc.save'), id: z.number().int().o
 const docSubmit = z.object({ action: z.literal('doc.submit'), id: z.number().int() })
 const docApprove = z.object({ action: z.literal('doc.approve'), id: z.number().int(), level: z.number().int().min(1).max(3), decision: z.enum(['approved', 'rejected']), comment: z.string().max(500).optional() })
 const docConvert = z.object({ action: z.literal('doc.convert'), sourceId: z.number().int(), toType: z.enum(DOC_TYPES) })
-const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional() })
+const docPayment = z.object({ action: z.literal('doc.payment'), documentId: z.number().int(), vendorId: z.number().int(), amount: z.number().positive(), method: z.enum(['cash', 'bank', 'card', 'cheque', 'other']), date: z.string().max(20), reference: z.string().max(80).optional(), currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).optional(), exchangeRate: z.number().positive().optional(), conversionRate: z.number().positive().optional() })
 const docPaymentReverse = z.object({ action: z.literal('doc.paymentReverse'), paymentId: z.number().int() })
 const docPost = z.object({ action: z.literal('doc.post'), id: z.number().int() })
 const docConfirm = z.object({ action: z.literal('doc.confirm'), id: z.number().int(), warehouseId: z.number().int().optional() })
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       }
       case 'doc.convert': { const id = await convertDocument(d.sourceId, d.toType, uid); await logAction(auth.user, 'erp.purchase.convert', 'purchase_documents', String(id), { from: d.sourceId, to: d.toType }); return NextResponse.json({ id }) }
       case 'doc.payment': {
-        const r = await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid)
+        const r = await recordPayment(d.documentId, d.vendorId, d.amount, d.method, d.date, d.reference, uid, d.currency, { exchangeRate: d.exchangeRate, conversionRate: d.conversionRate })
         if (!r.ok) {
           // Phase-5 three-way match block: recordPayment signals this class
           // with a stable prefix (not a generic string) so the route can
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
           // about NextResponse/the error catalog.
           if (r.error?.startsWith('THREE_WAY_MATCH_FAILED: '))
             return toApiResponse(businessError('ERP-PURCHASING-PAYMENT-BLOCKED-MISMATCH', { reasons: r.error.slice('THREE_WAY_MATCH_FAILED: '.length) }))
-          return NextResponse.json({ error: r.error }, { status: 400 })
+          return NextResponse.json({ error: r.error, ...(r.code ? { code: r.code } : {}) }, { status: 400 })
         }
         await logAction(auth.user, 'erp.purchase.payment', 'purchase_documents', String(d.documentId), { amount: d.amount })
         return NextResponse.json({ ok: true })

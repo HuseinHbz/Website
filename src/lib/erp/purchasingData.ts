@@ -4,9 +4,11 @@
  */
 import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
-import { rialRateFor } from './currencyData'
+import { rialRateFor, rialRateOn } from './currencyData'
+import { throwBusinessError, businessError } from '@/lib/errors'
 import { assertPostable } from './accountingData'
-import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry, insertPostedEntry } from './glPosting'
+import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry, insertPostedEntry, basePrecision } from './glPosting'
+import { linesToBase, BASE_TOTAL_SQL, documentBase, normalizePayment } from './money'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
   purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
@@ -133,7 +135,12 @@ export async function saveDocument(input: {
   department?: string; budget?: number; sourceId?: number; note?: string; priority?: string; lines: LineRow[]
 }, userId?: string, externalQuery?: TxQuery): Promise<number> {
   const totals = documentTotals(input.lines)
-  const rate = (await rialRateFor(input.currency ?? 'IRR')) ?? 1
+  // ERPFIX-2: a foreign-currency document with no configured rate is refused —
+  // it used to be booked silently at rate 1 (1,000 EUR = 1,000 Rial).
+  const currency = input.currency ?? 'IRR'
+  const foundRate = await rialRateFor(currency)
+  if (foundRate == null) throwBusinessError('ERP-FINANCE-NO-EXCHANGE-RATE', { currency })
+  const rate = foundRate
   const baseTotal = Math.round(totals.total * rate * 100) / 100
   const run = async (query: TxQuery) => {
     if (input.id) {
@@ -179,22 +186,25 @@ async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
  * exact numbers. Then computes the required approval levels.
  */
 export async function submitDocument(id: number): Promise<{ ok: boolean; error?: string; budget?: ReturnType<typeof validateBudget> }> {
-  const d = (await pgQuery<{ total: number; budget: number; department: string | null; date: string }>(
-    `SELECT total, budget, department, date FROM purchase_documents WHERE id=$1`, [id]))[0]
+  const d = (await pgQuery<{ total: number; budget: number; department: string | null; date: string; exchange_rate: number; base_total: number }>(
+    `SELECT total, budget, department, date, exchange_rate, base_total FROM purchase_documents WHERE id=$1`, [id]))[0]
   if (!d) return { ok: false, error: 'Document not found' }
+  // ERPFIX-2: every threshold compares the BASE (Rial) amount — 1,000 USD used
+  // to be checked as 1,000 against Rial budgets and the Rial approval tiers.
+  const requested = documentBase({ total: num(d.total), exchangeRate: num(d.exchange_rate), baseTotal: num(d.base_total) })
   if (num(d.budget) > 0) {
     const year = String(d.date ?? '').slice(0, 4) || String(new Date().getFullYear())
     const committed = d.department
       ? num((await pgQuery<{ t: number }>(
-          `SELECT COALESCE(SUM(total),0) AS t FROM purchase_documents
+          `SELECT COALESCE(SUM(${BASE_TOTAL_SQL}),0) AS t FROM purchase_documents
            WHERE id<>$1 AND department=$2 AND date LIKE $3 AND status NOT IN ('draft','void','rejected')`,
           [id, d.department, `${year}%`]))[0]?.t)
       : 0
-    const budget = validateBudget({ budget: num(d.budget), committed, requested: num(d.total) })
+    const budget = validateBudget({ budget: num(d.budget), committed, requested })
     if (!budget.withinBudget)
-      return { ok: false, budget, error: `Over budget: available ${budget.available.toLocaleString()}, requested ${num(d.total).toLocaleString()}` }
+      return { ok: false, budget, error: `Over budget: available ${budget.available.toLocaleString()}, requested ${requested.toLocaleString()}` }
   }
-  const levels = requiredApprovalLevels(num(d.total))
+  const levels = requiredApprovalLevels(requested)
   await pgQuery(`UPDATE purchase_documents SET status='submitted', approval_levels=$2, updated_at=${NOW} WHERE id=$1`, [id, levels])
   return { ok: true }
 }
@@ -308,7 +318,7 @@ export async function compareQuotes(rfqId: number) {
 export async function decideApproval(id: number, level: number, decision: 'approved' | 'rejected', approverId?: string, comment?: string): Promise<{ ok: boolean; error?: string; status?: PurchaseStatus }> {
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_approval:${id}`])
-    const d = (await query<{ total: number; created_by: string | null; status: string }>(`SELECT total, created_by, status FROM purchase_documents WHERE id=$1`, [id]))[0]
+    const d = (await query<{ total: number; created_by: string | null; status: string; exchange_rate: number; base_total: number }>(`SELECT total, created_by, status, exchange_rate, base_total FROM purchase_documents WHERE id=$1`, [id]))[0]
     if (!d) return { ok: false, error: 'Document not found' }
     if (approverId && d.created_by && approverId === d.created_by)
       return { ok: false, error: 'The creator of this document cannot approve or reject it (separation of duties)' }
@@ -321,7 +331,7 @@ export async function decideApproval(id: number, level: number, decision: 'appro
       return { ok: true, status: 'rejected' }
     }
     const approved = (await query<{ level: number }>(`SELECT DISTINCT level FROM purchase_approvals WHERE document_id=$1 AND decision='approved'`, [id])).map(r => r.level)
-    if (isFullyApproved(num(d.total), approved)) {
+    if (isFullyApproved(documentBase({ total: num(d.total), exchangeRate: num(d.exchange_rate), baseTotal: num(d.base_total) }), approved)) {
       await query(`UPDATE purchase_documents SET status='approved', updated_at=${NOW} WHERE id=$1`, [id])
       return { ok: true, status: 'approved' }
     }
@@ -345,14 +355,26 @@ export async function decideApproval(id: number, level: number, decision: 'appro
  * (no second money-validation implementation) inside one transaction,
  * serialized per document via pg_advisory_xact_lock.
  */
-export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR'): Promise<{ ok: boolean; error?: string; paymentId?: number }> {
-  const rate = (await rialRateFor(currency)) ?? 1
+export async function recordPayment(documentId: number, vendorId: number, amountIn: number, method: string, date: string, reference?: string, userId?: string, currencyIn?: string, fx: { exchangeRate?: number; conversionRate?: number } = {}): Promise<{ ok: boolean; error?: string; paymentId?: number; code?: string }> {
   let mismatchReasons: string[] | null = null
   const result = await withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_invoice_payment:${documentId}`])
-    const d = (await query<{ total: number; status: string; doc_type: string; match_override: boolean }>(
-      `SELECT total::float AS total, status, doc_type, match_override FROM purchase_documents WHERE id=$1`, [documentId]))[0]
+    const d = (await query<{ total: number; status: string; doc_type: string; match_override: boolean; currency: string | null }>(
+      `SELECT total::float AS total, status, doc_type, match_override, currency FROM purchase_documents WHERE id=$1`, [documentId]))[0]
     if (!d) return { ok: false, error: 'Document not found' } as const
+    // ERPFIX-2: the payment is stored in the INVOICE currency at the
+    // payment-day rate (no currency given → the invoice's). A different
+    // currency is refused unless an explicit conversion rate is given; a
+    // foreign currency with no rate on/before the payment date is refused.
+    const currency = currencyIn ?? d.currency ?? 'IRR'
+    const payRate = fx.exchangeRate ?? await rialRateOn(currency, date)
+    if (payRate == null) { const be = businessError('ERP-FINANCE-NO-EXCHANGE-RATE', { currency }); return { ok: false, error: be.en, code: be.code } as const }
+    const norm = normalizePayment({ docCurrency: d.currency ?? 'IRR', currency, amount: amountIn, paymentRate: payRate, conversionRate: fx.conversionRate })
+    if (!norm.ok) {
+      const be = businessError('ERP-FINANCE-PAYMENT-CURRENCY-MISMATCH', { invoiceCurrency: d.currency ?? 'IRR', paymentCurrency: currency })
+      return { ok: false, error: be.en, code: be.code } as const
+    }
+    const amount = norm.amount, rate = norm.rate
     const already = num((await query<{ t: number }>(`SELECT COALESCE(SUM(amount),0)::float AS t FROM purchase_payments WHERE document_id=$1`, [documentId]))[0]?.t)
     const v = validatePayment({ status: d.status, invoiceTotal: num(d.total), alreadyPaid: already, amount })
     if (!v.ok) return { ok: false, error: v.error === 'cannot pay a void/draft invoice' ? 'Cannot record a payment against a void/draft invoice' : `Overpayment: invoice total ${d.total}, already paid ${already}, this ${amount}` } as const
@@ -376,7 +398,7 @@ export async function recordPayment(documentId: number, vendorId: number, amount
       }
     }
     const pay = (await query<{ id: number }>(`INSERT INTO purchase_payments (vendor_id,document_id,date,amount,method,reference,created_by,currency,exchange_rate,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,${NOW}) RETURNING id`,
-      [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, currency, rate]))[0]
+      [vendorId, documentId, date, amount, method, reference ?? null, userId ?? null, norm.currency, rate]))[0]
     const paid = already + amount
     const status = purchaseInvoiceStatus(num(d.total), paid)
     await query(`UPDATE purchase_documents SET paid_total=$2, status=$3, updated_at=${NOW} WHERE id=$1`, [documentId, paid, status])
@@ -428,8 +450,8 @@ export async function recordPayment(documentId: number, vendorId: number, amount
  * the same vendor.
  */
 export async function reverseDirectPayment(paymentId: number, userId?: string): Promise<{ reversalId: number | null; alreadyReversed: boolean; amountReversed: number }> {
-  const p = (await pgQuery<{ vendor_id: number; document_id: number | null; amount: number; gl_entry_id: number | null; reference: string | null }>(
-    `SELECT vendor_id, document_id, amount::float AS amount, gl_entry_id, reference FROM purchase_payments WHERE id=$1`, [paymentId]))[0]
+  const p = (await pgQuery<{ vendor_id: number; document_id: number | null; amount: number; gl_entry_id: number | null; reference: string | null; currency: string | null; exchange_rate: number | null }>(
+    `SELECT vendor_id, document_id, amount::float AS amount, gl_entry_id, reference, currency, exchange_rate::float AS exchange_rate FROM purchase_payments WHERE id=$1`, [paymentId]))[0]
   if (!p) throw new Error('Payment not found')
   if (p.document_id == null) throw new Error('Not a direct AP payment against an invoice — nothing to reverse this way')
   const ref = p.reference ?? ''
@@ -458,8 +480,8 @@ export async function reverseDirectPayment(paymentId: number, userId?: string): 
 
     const amt = Math.round(Number(p.amount) * 100) / 100
     await query(
-      `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
-      [vendorId, invId, today, -amt, revReference, userId ?? null, p.gl_entry_id, `Reversed direct AP payment #${paymentId}`])
+      `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,$10,${NOW})`,
+      [vendorId, invId, today, -amt, revReference, userId ?? null, p.gl_entry_id, `Reversed direct AP payment #${paymentId}`, p.currency ?? 'IRR', p.exchange_rate ?? 1])
 
     const row = (await query<{ s: number; total: number; status: string }>(
       `SELECT COALESCE((SELECT SUM(amount) FROM purchase_payments WHERE document_id=$1),0)::float AS s, total::float AS total, status
@@ -615,8 +637,12 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
 
   const net = num(d.subtotal) - num(d.discount_total)
   // 26.23: account codes flow through the configurable erp_settings map.
-  const lines = applyGlMap(purchaseInvoicePostingLines(net, num(d.tax_total), num(d.total)), await loadGlMap())
-  if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+  const map = await loadGlMap()
+  const docLines = applyGlMap(purchaseInvoicePostingLines(net, num(d.tax_total), num(d.total)), map)
+  if (!postingBalanced(docLines)) throw new Error('Posting does not balance')
+  // ERPFIX-2 (BUG-ERP-03): base currency at the booked rate; AP absorbs rounding.
+  const docRate = num(d.exchange_rate) || 1
+  const lines = linesToBase(docLines, docRate, d.currency ?? 'IRR', map.ap, await basePrecision())
 
   // Resolve account ids by code (seeded standard chart).
   const codes = [...new Set(lines.map(l => l.accountCode))]
@@ -646,8 +672,8 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
     // Carry the document's company + currency + cost center onto the entry
     // (tenancy + multi-currency + 26.11 analytics).
     const entry = await insertPostedEntry(query, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, userId,
-      lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })),
-      { companyId: d.company_id ?? null, currency: d.currency ?? 'IRR', exchangeRate: num(d.exchange_rate) || 1, costCenterId: d.cost_center_id ?? null, legacyPrefix: 'JV' })
+      lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo, fxAmount: l.fxAmount, fxCurrency: l.fxCurrency })),
+      { companyId: d.company_id ?? null, currency: d.currency ?? 'IRR', exchangeRate: docRate, costCenterId: d.cost_center_id ?? null, legacyPrefix: 'JV' })
     await query(`UPDATE purchase_documents SET gl_entry_id=$2, updated_at=${NOW} WHERE id=$1`, [docId, entry.id])
     return { entryId: entry.id, alreadyPosted: false }
   })
@@ -786,8 +812,8 @@ export async function reversePurchaseInvoicePaymentAllocations(docId: number, us
   const today = new Date().toISOString().slice(0, 10)
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`treasury_ap_allocate:vendor:${vendorId}`])
-    const rows = await query<{ id: number; amount: number; gl_entry_id: number | null }>(
-      `SELECT p.id, p.amount::float AS amount, p.gl_entry_id
+    const rows = await query<{ id: number; amount: number; gl_entry_id: number | null; currency: string | null; exchange_rate: number | null }>(
+      `SELECT p.id, p.amount::float AS amount, p.gl_entry_id, p.currency, p.exchange_rate::float AS exchange_rate
        FROM purchase_payments p
        WHERE p.document_id = $1 AND p.amount > 0
          AND NOT EXISTS (SELECT 1 FROM purchase_payments r WHERE r.reference = 'AP-VOID:'||p.id)
@@ -798,11 +824,11 @@ export async function reversePurchaseInvoicePaymentAllocations(docId: number, us
     for (const r of rows) {
       const amt = Math.round(Number(r.amount) * 100) / 100
       await query(
-        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,${NOW})`,
-        [vendorId, docId, today, -amt, `AP-VOID:${r.id}`, userId ?? null, r.gl_entry_id, `Reversed on invoice #${docId} void (source payment #${r.id})`])
+        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,$2,$3,$4,'bank',$5,$6,$7,$8,$9,$10,${NOW})`,
+        [vendorId, docId, today, -amt, `AP-VOID:${r.id}`, userId ?? null, r.gl_entry_id, `Reversed on invoice #${docId} void (source payment #${r.id})`, r.currency ?? 'IRR', r.exchange_rate ?? 1])
       await query(
-        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,${NOW})`,
-        [vendorId, today, amt, `AP-VOID:${r.id}`, userId ?? null, r.gl_entry_id, `Returned to unapplied balance — invoice #${docId} voided`])
+        `INSERT INTO purchase_payments (vendor_id, document_id, date, amount, method, reference, created_by, gl_entry_id, note, currency, exchange_rate, created_at) VALUES ($1,NULL,$2,$3,'bank',$4,$5,$6,$7,$8,$9,${NOW})`,
+        [vendorId, today, amt, `AP-VOID:${r.id}`, userId ?? null, r.gl_entry_id, `Returned to unapplied balance — invoice #${docId} voided`, r.currency ?? 'IRR', r.exchange_rate ?? 1])
       details.push({ sourceRowId: r.id, amount: amt })
       totalReversed = Math.round((totalReversed + amt) * 100) / 100
     }

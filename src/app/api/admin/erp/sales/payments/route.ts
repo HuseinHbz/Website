@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery, withTransaction } from '@/lib/db'
-import { rialRateFor } from '@/lib/erp/currencyData'
+import { rialRateOn } from '@/lib/erp/currencyData'
+import { normalizePayment } from '@/lib/erp/money'
+import { businessError, toApiResponse } from '@/lib/errors'
 import { logAction } from '@/lib/admin/audit'
 import { invoiceStatus, validatePayment } from '@/lib/erp/sales'
 import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
@@ -35,7 +37,12 @@ const schema = z.object({
   method: z.enum(['cash', 'bank', 'card', 'cheque', 'gateway', 'other']).default('cash'),
   reference: z.string().max(120).optional(),
   note: z.string().max(500).optional(),
-  currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).default('IRR'),
+  /** ERPFIX-2: omitted → the invoice's currency (or IRR with no invoice). */
+  currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).optional(),
+  /** Rial per 1 unit of `currency` on the payment day; omitted → the rate dated on/before `date`. */
+  exchangeRate: z.number().positive().optional(),
+  /** Invoice-currency units per 1 unit of `currency` — required when they differ. */
+  conversionRate: z.number().positive().optional(),
 })
 
 // POST — record a payment. If it targets an invoice, recompute its paid status.
@@ -47,7 +54,15 @@ export async function POST(req: NextRequest) {
   if ('error' in parsed) return parsed.error
   const d = parsed.data
   try {
-    const rate = (await rialRateFor(d.currency)) ?? 1
+    // ERPFIX-2: stored in the INVOICE currency at the payment-day rate.
+    let docCurrency: string | null = null
+    if (d.documentId) docCurrency = ((await pgQuery<{ currency: string | null }>(`SELECT currency FROM sales_documents WHERE id=$1`, [d.documentId]))[0]?.currency) ?? 'IRR'
+    const currency = d.currency ?? docCurrency ?? 'IRR'
+    const payRate = d.exchangeRate ?? await rialRateOn(currency, d.date)
+    if (payRate == null) return toApiResponse(businessError('ERP-FINANCE-NO-EXCHANGE-RATE', { currency }))
+    const norm = normalizePayment({ docCurrency, currency, amount: d.amount, paymentRate: payRate, conversionRate: d.conversionRate })
+    if (!norm.ok) return toApiResponse(businessError('ERP-FINANCE-PAYMENT-CURRENCY-MISMATCH', { invoiceCurrency: docCurrency ?? 'IRR', paymentCurrency: currency }))
+    const amount = norm.amount, rate = norm.rate
     // Phase-3 sales audit finding: the overpayment guard read alreadyPaid,
     // then INSERTed the payment, then re-read paid to set invoice status —
     // three separate unlocked statements. Two genuinely concurrent payment
@@ -69,15 +84,15 @@ export async function POST(req: NextRequest) {
         const inv = (await query(`SELECT total::float AS total, status, doc_type AS "docType" FROM sales_documents WHERE id=$1`, [d.documentId]))[0] as { total: number; status: string; docType: string } | undefined
         if (inv?.docType === 'invoice') {
           const already = (await query(`SELECT COALESCE(SUM(amount),0)::float AS s FROM sales_payments WHERE document_id=$1`, [d.documentId]))[0] as { s: number }
-          const v = validatePayment({ status: inv.status, invoiceTotal: Number(inv.total), alreadyPaid: Number(already.s), amount: d.amount })
-          if (!v.ok) throw new Error(v.error === 'cannot pay a void/draft invoice' ? 'Cannot record a payment against a void/draft invoice' : `Overpayment: invoice total ${inv.total}, already paid ${already.s}, this ${d.amount}`)
+          const v = validatePayment({ status: inv.status, invoiceTotal: Number(inv.total), alreadyPaid: Number(already.s), amount })
+          if (!v.ok) throw new Error(v.error === 'cannot pay a void/draft invoice' ? 'Cannot record a payment against a void/draft invoice' : `Overpayment: invoice total ${inv.total}, already paid ${already.s}, this ${amount}`)
           invForStatus = inv
         }
       }
       const row = (await query(
         `INSERT INTO sales_payments (customer_id, document_id, date, amount, method, reference, note, created_by, currency, exchange_rate)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-        [d.customerId, d.documentId ?? null, d.date, d.amount, d.method, d.reference ?? null, d.note ?? null, auth.user.id, d.currency, rate]))[0] as { id: number }
+        [d.customerId, d.documentId ?? null, d.date, amount, d.method, d.reference ?? null, d.note ?? null, auth.user.id, norm.currency, rate]))[0] as { id: number }
       if (d.documentId && invForStatus) {
         const paid = (await query(`SELECT COALESCE(SUM(amount),0)::float AS paid FROM sales_payments WHERE document_id=$1`, [d.documentId]))[0] as { paid: number }
         await query(`UPDATE sales_documents SET status=$2, updated_at=to_char(now(),'YYYY-MM-DD HH24:MI:SS') WHERE id=$1`, [d.documentId, invoiceStatus(invForStatus.total, paid.paid)])
@@ -99,7 +114,7 @@ export async function POST(req: NextRequest) {
     // a closed period leaves the payment recorded — self-heal can post later).
     let entryId: number | null = null
     try { entryId = (await postSalesPaymentToGl(row.id, auth.user.id)).entryId } catch { /* stays unposted */ }
-    await logAction(auth.user, 'sales.payment.create', 'sales_payment', row.id, null, { amount: d.amount, entryId })
+    await logAction(auth.user, 'sales.payment.create', 'sales_payment', row.id, null, { amount, currency: norm.currency, rate, entryId })
     return NextResponse.json({ id: row.id, entryId })
   } catch (e) { return apiError(e, 'Failed to record payment') }
 }

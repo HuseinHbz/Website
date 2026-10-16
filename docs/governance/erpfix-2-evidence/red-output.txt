@@ -1,0 +1,11 @@
+══ ERPFIX-2 RED @ 95f0b95 ══
+  🔴 BUG-REPRODUCED — invoice 100 USD @ 600,000 → AR 1100: trialBalance 1100 = 100 (should be 60,000,000); 4000 = -100
+  🔴 BUG-REPRODUCED — original foreign amount kept on the GL line: gl_journal_lines.fx_amount column exists: false
+     entry header currency=USD rate=600000 — lines carry the raw USD amounts
+  🔴 BUG-REPRODUCED — receipt 40 USD @ 650,000 → bank / realized FX: bank 1010 = 40 (should be 26,000,000); AR 1100 = 60 (should be 36,000,000); FX gain 4900 = 0 (should be −2,000,000)
+  🔴 BUG-REPRODUCED — credit guard compares the raw 100 USD against a 50,000,000 IRR limit: {"allowed":true,"exceeded":false,"limit":50000000,"currentBalance":60,"projected":160,"available":49999940,"mode":"warn"}
+  🔴 BUG-REPRODUCED — purchase approval tier uses the raw total: 1,000 USD (base 600,000,000) → 1 level(s); a 600M IRR doc needs 3 (≤50M→1, ≤500M→2, above→3) {"ok":true}
+  🔴 BUG-REPRODUCED — purchase invoice 1,000 USD → AP 2000: AP = -1000 (should be −600,000,000)
+  🔴 BUG-REPRODUCED — treasury payment approval matrix reads the raw amount: approval request amount = 1000, levels = 1 (base is 600,000,000 → the >100M tier)
+  🔴 BUG-REPRODUCED — purchase doc in EUR with NO rate configured is silently booked at rate 1: exchange_rate=1 base_total=10
+     trial balance "balanced"=true (Dr 1100 = Cr 1100) — balanced, yet every account mixes USD and IRR
