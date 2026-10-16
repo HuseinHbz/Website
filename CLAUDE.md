@@ -330,6 +330,19 @@
    from hardcoded literal SQL fragments — the real value always travels
    through `$n`. A genuine false positive gets a documented one-line
    reason in the script's `ALLOWLIST`, never a silent pass.)
+56. سند `posted` فقط از `insertPostedEntry` نوشته می‌شود؛ کد حساب سیستمی
+   فقط از `coaContract.ts`؛ هر دو با گیت CI اعمال می‌شود.
+   (ERPFIX-1 — `npm run audit:gl-writes` fails any `INSERT INTO
+   gl_journal_entries` outside `src/lib/erp/glPosting.ts#insertPostedEntry`
+   unless written-reason-allowlisted; `npm run audit:coa` fails any
+   `gl_accounts` seed code defined with 2+ distinct name/type pairs — the
+   exact shape of BUG-ERP-10, where `'6100'` was seeded once as "Rent
+   Expense" and once, silently no-op'd, as "Salaries", so every payroll
+   run quietly expensed itself as rent. `insertPostedEntry` is also the
+   ONE place that gates on `assertPostable` + `entryBalanced` + mints via
+   `nextNumber` + runs atomically — never a bare sequential `pgQuery`
+   header-then-lines loop, which left a posted PARTIAL entry mid-loop on
+   any missing-account error in more than one older posting path.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

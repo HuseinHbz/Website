@@ -36,9 +36,9 @@ const SCAN_DIRS = ['src/lib', 'src/app/api']
 // a one-line reason, never to make a real finding disappear.
 const ALLOWLIST = new Map([
   ['[src/lib/ai/sync.ts:65]', 'source.table / source.where come from the closed, module-level SOURCES array literal (src/lib/ai/sync.ts) iterated via for-of — never derived from request input.'],
-  ['[src/lib/erp/revaluationData.ts:94]', 'REVAL_ACCOUNTS is a closed hardcoded const object ({ adjustment, gain, loss }, erp/revaluation.ts) — never request-derived.'],
-  ['[src/lib/erp/revaluationData.ts:95]', 'Same as above (REVAL_ACCOUNTS.loss).'],
-  ['[src/lib/import/importData.ts:100]', '`values` is chunk.map((_,j)=>`($1,$${j*2+2},$${j*2+3})`).join(\',\') — j is a loop index over the fixed chunk size, producing only $n placeholder text; the real row data always travels through `params`.'],
+  ['[src/lib/erp/revaluationData.ts:85]', 'REVAL_ACCOUNTS is a closed hardcoded const object ({ adjustment, gain, loss }, erp/revaluation.ts) — never request-derived.'],
+  ['[src/lib/erp/revaluationData.ts:86]', 'Same as above (REVAL_ACCOUNTS.loss).'],
+  ['[src/lib/import/importData.ts:101]', '`values` is chunk.map((_,j)=>`($1,$${j*2+2},$${j*2+3})`).join(\',\') — j is a loop index over the fixed chunk size, producing only $n placeholder text; the real row data always travels through `params`.'],
   ['[src/lib/import/importData.ts:415]', 't.table_name is read from migration_transactions (our own tracked data) but is re-validated against the closed ROLLBACK_TABLES set (`if (... || !ROLLBACK_TABLES.has(t.table_name))`) immediately before being used — never spliced unchecked.'],
   ['[src/app/api/admin/crm/leads/route.ts:59]', 'sc.clause comes from the shared rowScopeSql() helper (src/lib/rbac/data.ts): its own SQL is $n-parametrized and `ownerExpr` is always a hardcoded literal column reference passed by the calling route, never request-derived.'],
   ['[src/app/api/admin/erp/sales/documents/route.ts:69]', 'Same as above — rowScopeSql() usage.'],

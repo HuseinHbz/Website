@@ -195,3 +195,66 @@ guaranteed, what the new one guarantees, why, and who approved it.
   unaffected `e.status !== 'draft'` pre-check for a genuinely *manual*
   re-post attempt by a user who can see the entry is already posted —
   only the internal race between two concurrent calls is now idempotent.
+
+## CC-009 · ERPFIX-1 BUG-ERP-08 — `canPostDate`: "no period covers date" allowed → rejected by default
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-1 (GL core) · **Suites:**
+  `src/lib/erp/__tests__/accountingCore.test.ts` ("fiscal period lifecycle"),
+  `scripts/verify-phase17-financial-controls.ts` (fixture, see below).
+- **Old assertion:** `canPostDate(date, periods)` returned `{ok:true}` for
+  ANY date that fell outside every defined fiscal period, unconditionally
+  — the one gap the period lock never actually covered.
+- **New assertion:** once at least one fiscal period is defined, a date
+  outside all of them now returns `{ok:false}` by default
+  (`requirePeriod` parameter, backed by `erp_settings.gl_require_period`,
+  default `'strict'`). The old behavior is still reachable via
+  `canPostDate(date, periods, false)` / `gl_require_period='off'`. A
+  brand-new install with zero periods defined is unaffected either way.
+- **What the old version guaranteed that the new one no longer does:**
+  that a posting dated outside the operator's own fiscal-period coverage
+  would never be blocked by the period lock. That was BUG-ERP-08's core
+  finding: an operator who defines periods for (say) last year but
+  forgets to create one for the current year would have every "closed
+  books" intent silently bypassed for untracked dates — the period lock
+  existed in name only for those dates.
+- **Reason:** ERPFIX-1 master prompt, BUG-ERP-08 required_changes
+  ("یک گیت جدید... اگر دست‌کم یک دورهٔ مالی تعریف شده و تاریخ در هیچ‌کدام
+  نیست → رد با پیام روشن... قابل‌تنظیم با erp_settings.gl_require_period").
+- **Approved by:** ERPFIX-1 master-prompt scope (explicit required_change,
+  with the `'off'` escape hatch for an install that doesn't want this).
+- **Collateral fixture fix (not an assertion change):**
+  `scripts/verify-phase17-financial-controls.ts` defines one narrow,
+  historical closed period (2018) for its own dedicated closed-period
+  scenario; under the new strict default this started rejecting every
+  OTHER unrelated scenario's `today()`-dated posting too (since any period
+  existing at all now requires every date to be covered). Fixed by adding
+  a wide-covering 2020–2035 open period at the top of the suite's `main()`
+  — the suite's own 77 assertions are unchanged, only its fixture setup
+  gained one more period so unrelated scenarios keep posting normally.
+  The same fixture fix (one wide-covering period added at the top of
+  `main()`, before any narrow closed/locked period the suite defines for
+  its own scenario) was applied to `verify-2626b-cfo.ts`,
+  `verify-phase8-finance.ts`, `verify-phase11-financial-controls.ts`, and
+  `verify-phase12-financial-controls.ts` — all failed the same way for the
+  same reason when the regression suite was re-run against ERPFIX-1.
+
+## CC-010 · ERPFIX-1 BUG-ERP-10 — payroll GL assertion: account 6100 → 6000
+- **Date:** 2026-10-16 · **Phase:** ERPFIX-1 (GL core) · **Suite:**
+  `scripts/verify-28-3-payroll.ts`
+- **Old assertion:** `accountBalance('6100')` equals the payroll run's
+  gross amount after posting to the GL.
+- **New assertion:** `accountBalance('6000')` equals the payroll run's
+  gross amount; 6100 is not checked for this (it's Rent Expense and is
+  never touched by payroll).
+- **What the old version guaranteed that the new one no longer does:**
+  that payroll posts to account 6100. That was BUG-ERP-10 itself — 6100 is
+  seeded as "Rent Expense"; a second, no-op seed statement tried to also
+  make it "Salaries" and silently failed (`ON CONFLICT DO NOTHING` against
+  the already-existing Rent row), so every payroll run was quietly
+  expensing itself as rent on the income statement. The existing, unused
+  account 6000 ("Salaries Expense") is the correct destination and is now
+  wired via `erp_settings.gl_map_payroll_expense` (default `'6000'`).
+- **Reason:** ERPFIX-1 master prompt, BUG-ERP-10 decision_gate — the
+  maintainer picked "use existing 6000" as the lowest-change fix over
+  renaming 6100.
+- **Approved by:** maintainer (ERPFIX-1 BUG-ERP-10 decision_gate answer:
+  "Use existing 6000 (Salaries Expense)").

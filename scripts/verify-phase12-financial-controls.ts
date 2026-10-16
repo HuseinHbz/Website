@@ -36,6 +36,11 @@ async function main() {
   const ADMIN = (await one<{ id: string }>(`SELECT id FROM users ORDER BY created_at LIMIT 1`)).id
   const adminUser = (await one<{ id: string; role: string; name: string; email: string }>(`SELECT id, role, name, email FROM users WHERE id=$1`, [ADMIN]))
   const today = new Date().toISOString().slice(0, 10)
+  // ERPFIX-1 BUG-ERP-08: a date outside EVERY defined period is now
+  // rejected by default once any period exists — this suite later defines
+  // a narrow closed period (P12 closed 2018) for its own scenario, which
+  // would otherwise block every OTHER scenario's `today()` posting.
+  await createPeriod({ name: 'P12 wide coverage', startDate: '2020-01-01', endDate: '2035-12-31', kind: 'year' })
 
   console.log('— Scenario A: one unapplied payment -> one future invoice (auto-consumed on confirm) —')
   {

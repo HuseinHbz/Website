@@ -11,6 +11,7 @@
 import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
+import { entryBalanced } from './ledger'
 import type { PostingLine } from './sales'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -75,21 +76,51 @@ export async function accountIdByCode(code: string, query: TxQuery = pgQuery): P
  * (gaps in a sequence are acceptable; duplicates are not) — not a new gap
  * introduced here.
  */
+export interface InsertPostedEntryOptions {
+  companyId?: number | null
+  currency?: string
+  exchangeRate?: number
+  costCenterId?: number | null
+  /** A CLOSED (never LOCKED) period may still accept this posting — year-end
+   * closing ONLY. The caller route must separately gate this with
+   * `requireOp('erp.finance:close_period')`. */
+  allowClosedPeriod?: boolean
+  /** Reuse an already-minted number (e.g. importData mints one per journal
+   * group before this is called) instead of minting a new one. */
+  entryNo?: string
+  /** Which seeded `numbering_formats` doc type to mint from when `entryNo`
+   * is not given (default: 'journal' / JE-). Opening balance and year-end
+   * closing use their own seeded formats (OB-/YEC-) instead of Date.now(). */
+  docType?: string
+}
+
+/**
+ * ERPFIX-1 — the ONE place a `status='posted'` journal entry is written.
+ * Every other call site (accountingData opening-balance/year-end,
+ * ledgerData intercompany, revaluationData, importData journal rows,
+ * inventoryOpsData count-post/revalue) now routes through this function
+ * instead of its own bare INSERT loop, closing both BUG-ERP-08 (several of
+ * those paths never checked the fiscal-period lock at all) and BUG-ERP-21
+ * (several ran as bare, non-atomic pgQuery loops with no balance check).
+ */
 export async function insertPostedEntry(
   query: TxQuery,
   date: string, memo: string, reference: string, total: number, userId: string | undefined,
   lines: { accountId: number; debit: number; credit: number; memo?: string | null }[],
+  options: InsertPostedEntryOptions = {},
 ): Promise<{ id: number; entryNo: string }> {
-  const gate = await assertPostable(date)
+  const balance = entryBalanced(lines)
+  if (!balance.ok) throw new Error(`Journal entry does not balance: ${balance.reason} (Dr ${balance.totalDebit} / Cr ${balance.totalCredit})`)
+  const gate = await assertPostable(date, { allowClosedPeriod: options.allowClosedPeriod })
   if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this date')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JE' })
+  const entryNo = options.entryNo ?? await nextNumber(options.docType ?? 'journal', { legacyPrefix: 'JE' })
   const e = (await query<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW},${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, total, userId ?? null, gate.periodId ?? null]))[0]
+    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, company_id, created_at, posted_at)
+     VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,$8,$9,$10,${NOW},${NOW}) RETURNING id`,
+    [entryNo, date, memo, reference, total, options.currency ?? 'IRR', options.exchangeRate ?? 1, userId ?? null, gate.periodId ?? null, options.companyId ?? null]))[0]
   for (let i = 0; i < lines.length; i++)
-    await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [e.id, lines[i].accountId, num(lines[i].debit), num(lines[i].credit), lines[i].memo ?? null, i])
+    await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no, cost_center_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [e.id, lines[i].accountId, num(lines[i].debit), num(lines[i].credit), lines[i].memo ?? null, i, options.costCenterId ?? null])
   return { id: e.id, entryNo }
 }
 

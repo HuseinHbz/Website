@@ -104,9 +104,24 @@ export function periodForDate(date: string, periods: FiscalPeriod[]): FiscalPeri
  * allowed (ungoverned/backward-compatible); a date inside a closed or locked
  * period is rejected.
  */
-export function canPostDate(date: string, periods: FiscalPeriod[]): { ok: boolean; period: FiscalPeriod | null; reason?: string } {
+/**
+ * ERPFIX-1 BUG-ERP-08 — a date outside every defined fiscal period used to
+ * be silently ALLOWED (`!period → ok:true`), the one gap the period lock
+ * never actually covered. `requirePeriod` (erp_settings.gl_require_period,
+ * default 'strict') closes it: once at least one period exists, a date
+ * that falls in none of them is rejected — the operator is evidently
+ * tracking periods, so an untracked date is almost always a typo, not an
+ * intentional pre-period entry. A brand-new install with zero periods
+ * defined still posts freely either way (nothing to violate yet).
+ */
+export function canPostDate(date: string, periods: FiscalPeriod[], requirePeriod: boolean = true): { ok: boolean; period: FiscalPeriod | null; reason?: string } {
   const period = periodForDate(date, periods)
-  if (!period) return { ok: true, period: null }
+  if (!period) {
+    if (requirePeriod && periods.length > 0) {
+      return { ok: false, period: null, reason: `Date ${date} falls outside every defined fiscal period; postings are not allowed.` }
+    }
+    return { ok: true, period: null }
+  }
   if (period.status === 'open') return { ok: true, period }
   return { ok: false, period, reason: `Fiscal period "${period.name}" is ${period.status}; postings are not allowed.` }
 }

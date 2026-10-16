@@ -24,6 +24,11 @@ async function main() {
   const ADMIN = (await one<{ id: string }>(`SELECT id, name FROM users ORDER BY created_at LIMIT 1`)).id
   const adminUser = (await one<{ id: string; role: string; name: string; email: string }>(`SELECT id, role, name, email FROM users WHERE id=$1`, [ADMIN]))
   const today = new Date().toISOString().slice(0, 10)
+  // ERPFIX-1 BUG-ERP-08: a date outside EVERY defined period is now
+  // rejected by default once any period exists — this suite later defines
+  // a narrow closed period (P8-Closed, 2020) for its own بند۱۲ scenario,
+  // which would otherwise block every OTHER scenario's `today()` posting.
+  await pgQuery(`INSERT INTO gl_fiscal_periods (name, start_date, end_date, status, kind) VALUES ('P8 wide coverage','2021-01-01','2035-12-31','open','year') ON CONFLICT (name) DO NOTHING`)
 
   console.log('— بند ۳: Treasury duplicate PAYMENT (outgoing) — 5 concurrent identical requests —')
   {

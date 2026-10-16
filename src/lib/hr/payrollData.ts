@@ -701,33 +701,31 @@ export async function postPeriodToGl(
     return { ok: false, error: 'سند حقوق تراز نیست — ثبت انجام نشد' }
   }
 
-  const { assertPostable } = await import('@/lib/erp/accountingData')
-  const gate = await assertPostable(period.endDate)
-  if (!gate.ok) return { ok: false, error: gate.error ?? 'دورهٔ مالی بسته است' }
-
-  const { nextNumber } = await import('@/lib/numbering/integrate')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JE' })
+  // ERPFIX-1 BUG-ERP-21 (new finding, same defect class) — this used to
+  // INSERT the header first, THEN resolve each line's account_id one at a
+  // time, erroring out mid-loop on a missing account: a posted, PARTIAL
+  // entry with fewer lines than its own `total` already committed. Every
+  // account is now resolved BEFORE anything is written, and the whole
+  // write (gate + header + lines + the period's gl_entry_id stamp) is one
+  // transaction via the shared `insertPostedEntry`.
+  const codes = [...new Set(lines.map(l => l.accountCode))]
+  const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE code = ANY($1)`, [codes])
+  const idOf = new Map(accs.map(a => [a.code, a.id]))
+  for (const code of codes) if (!idOf.has(code)) return { ok: false, error: `حساب ${code} در کدینگ وجود ندارد` }
   const total = lines.reduce((s, l) => s + l.debit, 0)
-
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW},${NOW}) RETURNING id`,
-    [entryNo, period.endDate,
-      `حقوق و دستمزد ${period.jalaliYear}/${String(period.jalaliMonth).padStart(2, '0')}`,
-      `payroll:${periodId}`, total, userId, gate.periodId ?? null]))[0]
-
-  for (let i = 0; i < lines.length; i++) {
-    const acc = (await pgQuery<{ id: number }>(
-      `SELECT id FROM gl_accounts WHERE code=$1 LIMIT 1`, [lines[i].accountCode]))[0]
-    if (!acc) return { ok: false, error: `حساب ${lines[i].accountCode} در کدینگ وجود ندارد` }
-    await pgQuery(
-      `INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, acc.id, lines[i].debit, lines[i].credit, lines[i].memo, i])
-  }
-
-  await pgQuery(`UPDATE payroll_periods SET gl_entry_id=$2 WHERE id=$1`, [periodId, entry.id])
-  return { ok: true, entryId: entry.id }
+  const { withTransaction } = await import('@/lib/db')
+  const { insertPostedEntry } = await import('@/lib/erp/glPosting')
+  try {
+    const posted = await withTransaction(async query => {
+      const e = await insertPostedEntry(query, period.endDate,
+        `حقوق و دستمزد ${period.jalaliYear}/${String(period.jalaliMonth).padStart(2, '0')}`,
+        `payroll:${periodId}`, total, userId,
+        lines.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo })))
+      await query(`UPDATE payroll_periods SET gl_entry_id=$2 WHERE id=$1`, [periodId, e.id])
+      return e
+    })
+    return { ok: true, entryId: posted.id }
+  } catch (e) { return { ok: false, error: e instanceof Error ? e.message : 'دورهٔ مالی بسته است' } }
 }
 
 /**

@@ -47,10 +47,25 @@ describe('fiscal period lifecycle (26.9)', () => {
     expect(periodForDate('2025-05-01', periods)!.id).toBe(3)
     expect(periodForDate('2030-01-01', periods)).toBeNull()
   })
-  it('rejects posting into a closed period; allows open and ungoverned dates', () => {
+  it('rejects posting into a closed period; allows open dates', () => {
     expect(canPostDate('2025-04-01', periods).ok).toBe(false) // month closed
     expect(canPostDate('2025-05-01', periods).ok).toBe(true)  // month open
-    expect(canPostDate('2030-01-01', periods).ok).toBe(true)  // no period → allowed
+  })
+  // ERPFIX-1 BUG-ERP-08: a date outside EVERY defined period used to be
+  // silently allowed unconditionally — the one gap the period lock never
+  // covered. `requirePeriod` (erp_settings.gl_require_period, default
+  // 'strict') now closes it once at least one period exists; `false`
+  // restores the old (bypassable) behavior for an install that opts out.
+  it('rejects an ungoverned date once periods exist and requirePeriod is true (the new default)', () => {
+    expect(canPostDate('2030-01-01', periods, true).ok).toBe(false)
+    expect(canPostDate('2030-01-01', periods).ok).toBe(false) // true is the default
+  })
+  it('still allows an ungoverned date when requirePeriod is explicitly false', () => {
+    expect(canPostDate('2030-01-01', periods, false).ok).toBe(true)
+  })
+  it('allows any date freely on a brand-new install with zero periods defined, regardless of requirePeriod', () => {
+    expect(canPostDate('2030-01-01', []).ok).toBe(true)
+    expect(canPostDate('2030-01-01', [], false).ok).toBe(true)
   })
   it('governs status transitions (locked is terminal)', () => {
     expect(canTransitionPeriod('open', 'closed')).toBe(true)

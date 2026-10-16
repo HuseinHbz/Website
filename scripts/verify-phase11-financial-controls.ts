@@ -25,6 +25,11 @@ async function main() {
   const ADMIN = (await one<{ id: string }>(`SELECT id FROM users ORDER BY created_at LIMIT 1`)).id
   const adminUser = (await one<{ id: string; role: string; name: string; email: string }>(`SELECT id, role, name, email FROM users WHERE id=$1`, [ADMIN]))
   const today = new Date().toISOString().slice(0, 10)
+  // ERPFIX-1 BUG-ERP-08: a date outside EVERY defined period is now
+  // rejected by default once any period exists — this suite later defines
+  // a narrow closed period (P11 closed 2019) for its own scenario, which
+  // would otherwise block every OTHER scenario's `today()` posting.
+  await createPeriod({ name: 'P11 wide coverage', startDate: '2020-01-01', endDate: '2035-12-31', kind: 'year' })
 
   console.log('— overpayment: single invoice, excess becomes unapplied cash —')
   let vendorId = 0
@@ -169,10 +174,18 @@ async function main() {
 
   console.log('— ROLLBACK: forced failure mid-processPayment (simulated via a locked-period rejection) leaves ZERO partial state, including zero unapplied row —')
   {
+    // ERPFIX-1 BUG-ERP-08: a 'year'-kind period and the suite's own wide-
+    // coverage period are the same granularity, so periodForDate's
+    // narrowest-wins tie-break can't disambiguate two overlapping
+    // year-kind ranges (a pre-existing limitation of periodForDate's span
+    // comparison, out of ERPFIX-1's scope). Avoided by creating THIS
+    // scenario's 2019 period OPEN first (so the confirm below posts
+    // through it, not the wide one), then closing it right after — the
+    // date is covered by exactly one period at every step, never two.
     const v = await createVendor({ name: 'P11 Vendor H', kind: 'company' }, ADMIN)
+    const periodId = await createPeriod({ name: 'P11 closed 2019', startDate: '2019-01-01', endDate: '2019-12-31', kind: 'year' })
     const invId = await savePurchaseDoc({ docType: 'invoice', vendorId: v, date: '2019-06-15', lines: [{ description: 'closed-period', qty: 1, unitPrice: 100_000, discountPct: 0, taxPct: 0 }] }, ADMIN)
     await confirmPurchaseInvoice(invId, ADMIN)
-    const periodId = await createPeriod({ name: 'P11 closed 2019', startDate: '2019-01-01', endDate: '2019-12-31', kind: 'year' })
     await transitionPeriod(periodId, 'closed', ADMIN)
 
     const pay = await createPayment({ paymentType: 'supplier_payment', party: 'P11 Vendor H', partyRef: `vendor:${v}`, amount: 150_000, date: '2019-06-15' }, ADMIN)

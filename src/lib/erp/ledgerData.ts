@@ -71,6 +71,7 @@ export async function financeOverview() {
 
 // ── Intercompany (Phase 26.5) ────────────────────────────────────────────────
 import { intercompanyEntries, icBalanced, type IcTransferInput } from './intercompany'
+import { insertPostedEntry } from './glPosting'
 
 /**
  * Book a mirrored intercompany transfer/settlement: two POSTED company-scoped
@@ -88,30 +89,20 @@ export async function bookIntercompany(input: IcTransferInput & { date: string }
   const companies = await pgQuery<{ id: number }>(`SELECT id FROM erp_companies WHERE id = ANY($1)`, [[input.fromCompanyId, input.toCompanyId]])
   if (companies.length !== 2) throw new Error('Both companies must exist')
 
-  const NOW_SQL = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
-  // Full-remediation RULE-001/RULE-006: BOTH companies' entries (and every
-  // line of each) now commit as ONE transaction. This function's own
-  // contract is "both books stay balanced" — the old bare-pgQuery loop
-  // could post company A's complete entry, then fail on company B's header
-  // or lines, leaving one side of the intercompany transfer posted and the
-  // other missing (an unbalanced pair spanning two separate companies'
-  // books, the worst version of this defect class).
+  // ERPFIX-1 BUG-ERP-08/BUG-ERP-21 — this used to bare-pgQuery an entry_no
+  // built from Date.now() with NO fiscal-period-lock check at all (one of
+  // the 5 bypass paths). Both companies' entries now go through the one
+  // shared `insertPostedEntry` (gate + real numbering + atomic insert),
+  // still inside ONE transaction so neither side can post without the
+  // other.
   const { entryIds, entryNos } = await withTransaction(async query => {
     const ids: number[] = []
     const nos: string[] = []
     for (const e of pair) {
       const total = e.lines.reduce((s, l) => s + l.debit, 0)
-      const entryNo = `IC-${input.date.slice(0, 4)}-${Date.now().toString().slice(-6)}${e.companyId}`
-      const row = (await query<{ id: number }>(
-        `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, company_id, posted_at)
-         VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,${NOW_SQL}) RETURNING id`,
-        [entryNo, input.date, e.memo, `intercompany:${input.kind}`, total, userId ?? null, e.companyId]))[0]
-      for (let i = 0; i < e.lines.length; i++) {
-        const l = e.lines[i]
-        await query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-          [row.id, byCode.get(l.accountCode), l.debit, l.credit, l.memo, i])
-      }
-      ids.push(row.id); nos.push(entryNo)
+      const lines = e.lines.map(l => ({ accountId: byCode.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo }))
+      const posted = await insertPostedEntry(query, input.date, e.memo, `intercompany:${input.kind}`, total, userId, lines, { companyId: e.companyId })
+      ids.push(posted.id); nos.push(posted.entryNo)
     }
     return { entryIds: ids, entryNos: nos }
   })

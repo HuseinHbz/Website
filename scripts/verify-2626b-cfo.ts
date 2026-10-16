@@ -44,6 +44,11 @@ const arOf = async (cid: number): Promise<number> => {
 
 async function main() {
   await runMigrations(); await seedDatabase()
+  // ERPFIX-1 BUG-ERP-08: a date outside EVERY defined period is now
+  // rejected by default once any period exists — this suite later defines
+  // a narrow closed period (CFO-2027-06) for its own S7 scenario, which
+  // would otherwise block every OTHER scenario's unrelated dated posting.
+  await createPeriod({ name: 'CFO wide coverage', startDate: '2020-01-01', endDate: '2030-12-31', kind: 'year' })
 
   const cust = await one<{ id: number }>(
     `INSERT INTO sales_customers (code,name,kind,updated_at) VALUES ('CFO-1','آزمون CFO','company',${NOW}) RETURNING id`)

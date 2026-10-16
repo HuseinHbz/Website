@@ -73,26 +73,25 @@ async function postAnnualEntry(
   const mapped = lines.map(l => ({ ...l, accountCode: map[l.accountCode] ?? l.accountCode }))
   if (!annualPostingBalanced(mapped)) return { ok: false, error: 'سند تراز نیست — ثبت انجام نشد' }
 
-  const { assertPostable } = await import('@/lib/erp/accountingData')
-  const gate = await assertPostable(date)
-  if (!gate.ok) return { ok: false, error: gate.error ?? 'دورهٔ مالی بسته است' }
-
-  const { nextNumber } = await import('@/lib/numbering/integrate')
-  const entryNo = await nextNumber('journal', { legacyPrefix: 'JE' })
+  // ERPFIX-1 BUG-ERP-21 (new finding, same defect class) — this used to
+  // INSERT the header first, THEN resolve each line's account_id one at a
+  // time via `glAccountId` (which throws on a missing account) — a
+  // posted, PARTIAL entry with fewer lines than its own `total` could
+  // already be committed by the time that throw happened. Every account
+  // is now resolved BEFORE anything is written, and the whole write
+  // (gate + header + lines) is one transaction via the shared
+  // `insertPostedEntry`.
+  const codes = [...new Set(mapped.map(l => l.accountCode))]
+  const idOf = new Map<string, number>()
+  for (const code of codes) idOf.set(code, await glAccountId(code))
   const total = mapped.reduce((s, l) => s + l.debit, 0)
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, currency, exchange_rate, created_by, period_id, created_at, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,'IRR',1,$6,$7,${NOW},${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, total, userId, gate.periodId ?? null]))[0]
-
-  for (let i = 0; i < mapped.length; i++) {
-    await pgQuery(
-      `INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [entry.id, await glAccountId(mapped[i].accountCode),
-        mapped[i].debit, mapped[i].credit, mapped[i].memo, i])
-  }
-  return { ok: true, entryId: entry.id }
+  const { withTransaction } = await import('@/lib/db')
+  const { insertPostedEntry } = await import('@/lib/erp/glPosting')
+  try {
+    const posted = await withTransaction(query => insertPostedEntry(query, date, memo, reference, total, userId,
+      mapped.map(l => ({ accountId: idOf.get(l.accountCode)!, debit: l.debit, credit: l.credit, memo: l.memo }))))
+    return { ok: true, entryId: posted.id }
+  } catch (e) { return { ok: false, error: e instanceof Error ? e.message : 'دورهٔ مالی بسته است' } }
 }
 
 // ── bases read from the 28.3-الف flags ──────────────────────────────────────

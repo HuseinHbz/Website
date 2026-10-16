@@ -7,10 +7,11 @@
  * and `postOpeningBalance` (26.9) for financial migration — no duplicate engines.
  */
 import { createHash } from 'crypto'
-import { pgQuery, getPool } from '@/lib/db'
+import { pgQuery, getPool, type TxQuery } from '@/lib/db'
 import { parseCsv } from '@/lib/admin/dataTableExport'
 import { normalizeKey } from '@/lib/masterdata/quality'
 import { postOpeningBalance } from '@/lib/erp/accountingData'
+import { insertPostedEntry } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { isXlsx, xlsxToMatrix } from './xlsx'
 import { cleanseRecord } from './cleanse'
@@ -357,19 +358,18 @@ export async function executeJob(jobId: number, userId?: string, opts: { dryRun?
       const codes = [...new Set(recs.map(x => String(x.rec.account).toLowerCase()))]
       const accs = await pgQuery<{ id: number; code: string }>(`SELECT id, code FROM gl_accounts WHERE lower(code) = ANY($1)`, [codes])
       const aOf = new Map(accs.map(a => [a.code.toLowerCase(), a.id]))
+      // ERPFIX-1 BUG-ERP-08 — this used to bare-INSERT a 'posted' entry
+      // with NO fiscal-period-lock check at all (one of the 5 bypass
+      // paths). Now routes through the shared `insertPostedEntry`, reusing
+      // the entryNo already minted above (dry runs keep their placeholder
+      // and still exercise the gate+balance check before the ROLLBACK).
+      const txQuery: TxQuery = async (text, params = []) => (await client.query(text, params as never[])).rows as never[]
       for (const [ref, g] of groups) {
         const total = g.recs.reduce((s, r) => s + Number(r.debit ?? 0), 0)
         const date = String(g.recs[0].date || new Date().toISOString().slice(0, 10))
-        const entry = await client.query(
-          `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, created_at, posted_at)
-           VALUES ($1,$2,$3,$4,'posted',$5,$6,${NOW},${NOW}) RETURNING id`,
-          [journalNos!.get(ref), date, `Imported entry ${ref}`, `IMP-${jobId}`, total, userId ?? null])
-        let ln = 0
-        for (const r of g.recs) {
-          await client.query(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, memo, line_no) VALUES ($1,$2,$3,$4,$5,$6)`,
-            [entry.rows[0].id, aOf.get(String(r.account).toLowerCase()), Number(r.debit ?? 0), Number(r.credit ?? 0), r.memo ?? null, ln++])
-        }
-        await log('gl_journal_entries', entry.rows[0].id, 'insert')
+        const lines = g.recs.map(r => ({ accountId: aOf.get(String(r.account).toLowerCase())!, debit: Number(r.debit ?? 0), credit: Number(r.credit ?? 0), memo: r.memo != null ? String(r.memo) : null }))
+        const posted = await insertPostedEntry(txQuery, date, `Imported entry ${ref}`, `IMP-${jobId}`, total, userId, lines, { entryNo: journalNos!.get(ref) })
+        await log('gl_journal_entries', posted.id, 'insert')
         for (const rowId of g.rowIds) { await markRow(rowId, 'imported'); imported++ }
       }
     } else {

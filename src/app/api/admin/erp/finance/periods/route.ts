@@ -52,6 +52,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(r)
       }
       case 'closing.run': {
+        // ERPFIX-1 BUG-ERP-08: year-end closing can post into a CLOSED
+        // period (allowClosedPeriod) — require the same explicit op as
+        // closing a period itself, not just the generic manage_settings.
+        { const deny = await requireOp(auth.user, 'erp.finance:close_period', 'manage_settings'); if (deny) return deny }
         const r = await runYearEndClosing(d.fiscalPeriodId, auth.user.id)
         if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
         await logAction(auth.user, 'gl.yearend.close', 'gl_journal_entry', r.entryId!, null, { fiscalPeriodId: d.fiscalPeriodId, netIncome: r.netIncome }, ip)

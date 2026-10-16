@@ -631,7 +631,13 @@ export async function runMigrations() {
       ('journal','Journal Entry','سند حسابداری','{PREFIX}-{YEAR}-{COUNTER}','JE','yearly',5,1),
       ('ticket','Support Ticket','تیکت پشتیبانی','{PREFIX}-{YEAR}-{COUNTER}','TK','yearly',5,1),
       ('supply_note','Supply Note','برگ تأمین','{PREFIX}-{YEAR}-{COUNTER}','SN','yearly',5,1),
-      ('service_request','Service Request','درخواست خدمات','{PREFIX}-{YEAR}-{COUNTER}','SRQ','yearly',5,1)
+      ('service_request','Service Request','درخواست خدمات','{PREFIX}-{YEAR}-{COUNTER}','SRQ','yearly',5,1),
+      -- ERPFIX-1 BUG-ERP-21: opening-balance/year-end-closing entry numbers
+      -- used to be built from Date.now() (no uniqueness guarantee under
+      -- concurrency) — now minted through the same numbering engine as
+      -- every other document type.
+      ('opening_balance','Opening Balance','سند افتتاحیه','{PREFIX}-{YEAR}-{COUNTER}','OB','yearly',5,1),
+      ('year_end_closing','Year-End Closing','سند بستن سال مالی','{PREFIX}-{YEAR}-{COUNTER}','YEC','yearly',4,1)
     ON CONFLICT (doc_type) DO NOTHING;
 
     -- Document Generation Engine (Phase 21.5, Module 8). Catalog of generated
@@ -1088,6 +1094,10 @@ export async function runMigrations() {
       -- 26.23: maker/checker for journal posting (off = backward compatible).
       ('gl_posting_approval', 'off'),
       ('gl_posting_approval_threshold', '500000000'),
+      -- ERPFIX-1 BUG-ERP-08: 'strict' rejects a posting date that falls
+      -- outside every defined fiscal period once at least one exists;
+      -- 'off' restores the old (bypassable) behavior.
+      ('gl_require_period', 'strict'),
       -- 26.23: CRM follow-up SLA (days without activity on an open lead).
       ('crm_sla_days', '7'),
       -- 26.24: Iran compliance — مودیان + payment gateway (empty = sandbox).
@@ -2274,8 +2284,10 @@ export async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_currency_exp_asof ON currency_exposures(as_of, currency);
 
-    -- Salaries expense account for payment GL posting (idempotent).
-    INSERT INTO gl_accounts (code, name_en, name_fa, type) VALUES ('6100','Salaries','حقوق و دستمزد','expense') ON CONFLICT (code) DO NOTHING;
+    -- ERPFIX-1 BUG-ERP-10: this used to re-seed '6100' as 'Salaries' — a
+    -- no-op (ON CONFLICT DO NOTHING against the 'Rent Expense' row already
+    -- seeded above), so payroll silently posted into Rent. 6000 (Salaries
+    -- Expense) already exists for exactly this purpose and was unused.
     -- Payment approval matrix (M4): <100M finance_manager, ≤1B cfo, >1B ceo (Toman tiers).
     INSERT INTO approval_matrix (doc_type, name_en, name_fa, min_amount, max_amount, levels) VALUES
       ('payment_request','Payment ≤ 100M','پرداخت تا ۱۰۰م',0,100000000,'[{"level":1,"mode":"all","approvers":[{"type":"role","ref":"finance_manager"}]}]'),
@@ -3631,9 +3643,11 @@ export async function runMigrations() {
       ('6110','Employer Insurance Expense','هزینهٔ بیمهٔ سهم کارفرما','expense')
     ON CONFLICT (code) DO NOTHING;
 
+    -- ERPFIX-1 BUG-ERP-10: '6100' is Rent Expense (seeded above); payroll
+    -- belongs on the dedicated, previously-unused 6000 (Salaries Expense).
     INSERT INTO erp_settings (key, value)
     SELECT * FROM (VALUES
-      ('gl_map_payroll_expense','6100'),
+      ('gl_map_payroll_expense','6000'),
       ('gl_map_payroll_employer_insurance_expense','6110'),
       ('gl_map_payroll_payable','2300'),
       ('gl_map_payroll_insurance_payable','2310'),
@@ -3641,6 +3655,11 @@ export async function runMigrations() {
       ('gl_map_payroll_loan','1160')
     ) AS v(k,val)
     WHERE NOT EXISTS (SELECT 1 FROM erp_settings s WHERE s.key = v.k);
+    -- Repair an already-seeded install that picked up the old buggy default
+    -- (gl_map_payroll_expense='6100') — '6100' was never a valid choice for
+    -- payroll (it collided with Rent Expense), so this is a bug fix, not an
+    -- operator override being overwritten.
+    UPDATE erp_settings SET value='6000', updated_at=${NOW} WHERE key='gl_map_payroll_expense' AND value='6100';
 
     -- ── seed: ruleset 1405 v1 ───────────────────────────────────────────────
     -- Idempotent AND non-destructive: it only ever inserts the ruleset if that
@@ -5072,5 +5091,73 @@ export async function runMigrations() {
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
     CREATE INDEX IF NOT EXISTS idx_service_requests_status ON erp_service_requests(status);
+  `)
+
+  // ── ERPFIX-1 — GL-core DB-level invariants ──────────────────────────────
+  // BUG-ERP-21: the database itself must not accept a posted, unbalanced
+  // entry or a duplicate (entry_no, company) pair. Existing data is
+  // counted FIRST — a genuine violation is reported and the constraint is
+  // added NOT VALID (or skipped), never silently "fixed" by deleting or
+  // renumbering real rows (stop_conditions: report, don't auto-correct).
+  await pgQuery(`
+    ALTER TABLE gl_journal_lines DROP CONSTRAINT IF EXISTS gl_journal_lines_sign_check;
+    ALTER TABLE gl_journal_lines ADD CONSTRAINT gl_journal_lines_sign_check
+      CHECK (debit >= 0 AND credit >= 0 AND NOT (debit > 0 AND credit > 0)) NOT VALID;
+  `)
+  const signViolations = (await pgQuery<{ c: number }>(
+    `SELECT count(*)::int AS c FROM gl_journal_lines WHERE debit < 0 OR credit < 0 OR (debit > 0 AND credit > 0)`))[0].c
+  if (signViolations === 0) {
+    await pgQuery(`ALTER TABLE gl_journal_lines VALIDATE CONSTRAINT gl_journal_lines_sign_check;`)
+  } else {
+    console.warn(`[migrate] ERPFIX-1 BUG-ERP-21: ${signViolations} existing gl_journal_lines row(s) violate the debit/credit sign check (negative amount or both-sided). The CHECK constraint was added NOT VALID — it is NOT enforced against these existing rows, but blocks any NEW violation. Run deploy/erp-coa-audit.ts for the list; this needs manual accountant review, not an automatic fix.`)
+  }
+
+  const dupEntryNo = (await pgQuery<{ c: number }>(
+    `SELECT count(*)::int AS c FROM (
+       SELECT entry_no, COALESCE(company_id,-1) AS cid FROM gl_journal_entries
+       GROUP BY entry_no, cid HAVING count(*) > 1
+     ) d`))[0].c
+  if (dupEntryNo === 0) {
+    await pgQuery(`CREATE UNIQUE INDEX IF NOT EXISTS uq_gl_entries_entryno_company ON gl_journal_entries(entry_no, COALESCE(company_id,-1));`)
+  } else {
+    console.warn(`[migrate] ERPFIX-1 BUG-ERP-21: ${dupEntryNo} duplicate (entry_no, company_id) group(s) already exist in gl_journal_entries — the unique index was NOT created. Run deploy/erp-coa-audit.ts for the list; renumbering a real posted entry needs manual accountant review, not an automatic fix.`)
+  }
+
+  const dupYearEndClose = (await pgQuery<{ c: number }>(
+    `SELECT count(*)::int AS c FROM (
+       SELECT reference FROM gl_journal_entries
+       WHERE reference LIKE 'year-end-close:%' AND status='posted'
+       GROUP BY reference HAVING count(*) > 1
+     ) d`))[0].c
+  if (dupYearEndClose === 0) {
+    await pgQuery(`CREATE UNIQUE INDEX IF NOT EXISTS uq_gl_yearend_close_ref ON gl_journal_entries(reference) WHERE reference LIKE 'year-end-close:%' AND status='posted';`)
+  } else {
+    console.warn(`[migrate] ERPFIX-1 BUG-ERP-21: ${dupYearEndClose} fiscal period(s) already have more than one posted year-end-close entry — the partial unique index was NOT created. Run deploy/erp-coa-audit.ts for the list.`)
+  }
+
+  // BUG-ERP-21: a deferred constraint trigger — checked at COMMIT, after
+  // every line of the transaction has been written — refuses to let a
+  // 'posted' entry's debit/credit sums end up unequal, regardless of which
+  // code path wrote it. Draft entries are explicitly exempt (an in-progress
+  // edit is allowed to be unbalanced; only 'posted' is enforced).
+  await pgQuery(`
+    CREATE OR REPLACE FUNCTION erpfix1_check_gl_entry_balance() RETURNS TRIGGER AS $trg$
+    DECLARE
+      d NUMERIC; c NUMERIC; cur_status TEXT;
+    BEGIN
+      SELECT status INTO cur_status FROM gl_journal_entries WHERE id = NEW.id;
+      IF cur_status IS DISTINCT FROM 'posted' THEN RETURN NEW; END IF;
+      SELECT COALESCE(SUM(debit),0), COALESCE(SUM(credit),0) INTO d, c FROM gl_journal_lines WHERE entry_id = NEW.id;
+      IF abs(d - c) > 0.005 THEN
+        RAISE EXCEPTION 'gl_journal_entries %: unbalanced posted entry (debit=%, credit=%)', NEW.id, d, c;
+      END IF;
+      RETURN NEW;
+    END;
+    $trg$ LANGUAGE plpgsql;
+    DROP TRIGGER IF EXISTS trg_erpfix1_gl_entry_balance ON gl_journal_entries;
+    CREATE CONSTRAINT TRIGGER trg_erpfix1_gl_entry_balance
+      AFTER INSERT OR UPDATE ON gl_journal_entries
+      DEFERRABLE INITIALLY DEFERRED
+      FOR EACH ROW EXECUTE FUNCTION erpfix1_check_gl_entry_balance();
   `)
 }

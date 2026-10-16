@@ -66,6 +66,13 @@ async function main() {
   await seedDatabase()
   const ADMIN = (await one<{ id: string }>(`SELECT id FROM users ORDER BY created_at LIMIT 1`)).id
   const today = new Date().toISOString().slice(0, 10)
+  // ERPFIX-1 BUG-ERP-08: a posting date outside EVERY defined fiscal period
+  // is now rejected (gl_require_period='strict', the new default) once any
+  // period exists — this suite's dedicated 2018-closed-period scenario
+  // (below) would otherwise make every OTHER scenario's `today()`-dated
+  // posting fail too. A wide-covering open period keeps every unrelated
+  // scenario's date postable, same as a real install that tracks periods.
+  await createPeriod({ name: 'P17 wide coverage', startDate: '2020-01-01', endDate: '2035-12-31', kind: 'year' })
 
   console.log('— DISCOVERY: schema assumptions (AR-01..AR-03) —')
   {

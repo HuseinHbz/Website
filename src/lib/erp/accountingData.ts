@@ -55,27 +55,47 @@ export async function transitionPeriod(id: number, to: PeriodStatus, userId?: st
   return { ok: true }
 }
 
-/** Enforce the fiscal-period lock on a posting date (used by the journal route). */
-export async function assertPostable(date: string): Promise<{ ok: boolean; error?: string; periodId?: number }> {
+/**
+ * Enforce the fiscal-period lock on a posting date (used by the journal
+ * route and every GL-writing path via `insertPostedEntry`).
+ *
+ * ERPFIX-1 BUG-ERP-08 — `erp_settings.gl_require_period` ('strict' default
+ * | 'off') now also closes the "date outside every defined period" gap
+ * (see `canPostDate`). `allowClosedPeriod: true` lets a CLOSED (never
+ * LOCKED) period still accept a posting — used ONLY by year-end closing,
+ * which is itself gated by `requireOp('erp.finance:close_period')` at the
+ * route. Status is returned so callers can tell "closed, allowed anyway"
+ * from "open, normal" without a second query.
+ */
+export async function assertPostable(date: string, opts: { allowClosedPeriod?: boolean } = {}): Promise<{ ok: boolean; error?: string; periodId?: number; periodStatus?: PeriodStatus }> {
   const periods = await listPeriods()
-  const r = canPostDate(date, periods)
-  return r.ok ? { ok: true, periodId: r.period?.id } : { ok: false, error: r.reason }
+  const requireRow = (await pgQuery<{ value: string }>(`SELECT value FROM erp_settings WHERE key='gl_require_period'`))[0]
+  const requirePeriod = (requireRow?.value ?? 'strict') !== 'off'
+  const r = canPostDate(date, periods, requirePeriod)
+  if (r.ok) return { ok: true, periodId: r.period?.id, periodStatus: r.period?.status }
+  if (opts.allowClosedPeriod && r.period?.status === 'closed') {
+    return { ok: true, periodId: r.period.id, periodStatus: r.period.status }
+  }
+  return { ok: false, error: r.reason, periodId: r.period?.id, periodStatus: r.period?.status }
 }
 
 // ── Posted-entry helper ──────────────────────────────────────────────────────
-async function postEntry(entryNo: string, date: string, memo: string, reference: string, lines: { accountId: number; debit: number; credit: number }[], userId?: string): Promise<number> {
+/**
+ * ERPFIX-1 BUG-ERP-21 — this used to run as two bare, non-transactional
+ * pgQuery calls (header, then a line-insert loop with no ${NOW} on lines'
+ * timestamps even) — a failure mid-loop left a posted, incomplete entry.
+ * Now one transaction via the shared `insertPostedEntry` (which also adds
+ * the entryBalanced check neither opening balance nor year-end closing had
+ * before). Dynamic import avoids a circular top-level import with
+ * glPosting.ts (which itself imports `assertPostable` from this module) —
+ * the same pattern already used by payrollData.ts/annualData.ts.
+ */
+async function postEntry(docType: string, date: string, memo: string, reference: string, lines: { accountId: number; debit: number; credit: number }[], userId?: string, opts: { allowClosedPeriod?: boolean } = {}): Promise<number> {
+  const { withTransaction } = await import('@/lib/db')
+  const { insertPostedEntry } = await import('./glPosting')
   const total = lines.reduce((s, l) => s + l.debit, 0)
-  const periodId = (await assertPostable(date)).periodId ?? null
-  const entry = (await pgQuery<{ id: number }>(
-    `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, currency, exchange_rate, posted_at)
-     VALUES ($1,$2,$3,$4,'posted',$5,$6,$7,'IRR',1,${NOW}) RETURNING id`,
-    [entryNo, date, memo, reference, total, userId ?? null, periodId]))[0]
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]
-    await pgQuery(`INSERT INTO gl_journal_lines (entry_id, account_id, debit, credit, line_no) VALUES ($1,$2,$3,$4,$5)`,
-      [entry.id, l.accountId, l.debit, l.credit, i])
-  }
-  return entry.id
+  const posted = await withTransaction(query => insertPostedEntry(query, date, memo, reference, total, userId, lines, { docType, allowClosedPeriod: opts.allowClosedPeriod }))
+  return posted.id
 }
 
 // ── Opening balance ──────────────────────────────────────────────────────────
@@ -92,7 +112,7 @@ export async function postOpeningBalance(input: { date: string; entries: { accou
     return { accountId: e.accountId, type, amount: e.amount }
   }))
   if (lines.length < 2) throw new Error('An opening balance needs at least two accounts')
-  const entryId = await postEntry(`OB-${input.date.slice(0, 4)}-${Date.now().toString().slice(-6)}`, input.date, 'Opening balance', 'opening', lines, userId)
+  const entryId = await postEntry('opening_balance', input.date, 'Opening balance', 'opening', lines, userId)
   return { entryId }
 }
 
@@ -106,7 +126,7 @@ async function closingTallies(startDate: string, endDate: string): Promise<Accou
      FROM gl_accounts a
      LEFT JOIN gl_journal_lines l ON l.account_id=a.id
      LEFT JOIN gl_journal_entries e ON e.id=l.entry_id
-     WHERE a.type IN ('revenue','expense') AND e.reference IS DISTINCT FROM 'year-end-close'
+     WHERE a.type IN ('revenue','expense') AND (e.reference IS NULL OR e.reference NOT LIKE 'year-end-close:%')
      GROUP BY a.id, a.code, a.name_en, a.name_fa, a.type`, [startDate, endDate])) as unknown as AccountTally[]
 }
 
@@ -116,14 +136,24 @@ export async function runYearEndClosing(fiscalPeriodId: number, userId?: string)
   if (!fy) return { ok: false, error: 'Fiscal period not found' }
   const re = (await pgQuery<{ id: number }>(`SELECT id FROM gl_accounts WHERE code='3900' LIMIT 1`))[0]
   if (!re) return { ok: false, error: 'Retained Earnings account (3900) is missing — run migrations' }
-  // Idempotent: don't double-close a period.
+  // ERPFIX-1 BUG-ERP-21: idempotency used to key off `memo LIKE '%<name>%'`
+  // — a year named "25" matched "2025" and could falsely block (or, worse,
+  // falsely NOT block two differently-named-but-overlapping years). The
+  // reference now carries the fiscal_period_id exactly, so "25" and "2025"
+  // (different ids) can never collide.
+  const reference = `year-end-close:${fiscalPeriodId}`
   const already = (await pgQuery<{ id: number }>(
-    `SELECT id FROM gl_journal_entries WHERE reference='year-end-close' AND memo LIKE $1 AND status='posted' LIMIT 1`, [`%${fy.name}%`]))[0]
+    `SELECT id FROM gl_journal_entries WHERE reference=$1 AND status='posted' LIMIT 1`, [reference]))[0]
   if (already) return { ok: false, error: `Year ${fy.name} is already closed (entry #${already.id})` }
   const tallies = await closingTallies(fy.start_date, fy.end_date)
   const closing = yearEndClosingLines(tallies, re.id)
   if (!closing.lines.length) return { ok: false, error: 'No revenue or expense activity to close in this period' }
-  const entryId = await postEntry(`YEC-${fy.name}-${Date.now().toString().slice(-4)}`, fy.end_date, `Year-end closing ${fy.name}`, 'year-end-close', closing.lines, userId)
+  // ERPFIX-1 BUG-ERP-08: this used to have NO fiscal-period-lock check at
+  // all. allowClosedPeriod lets the closing entry post even when the
+  // period being closed is already CLOSED (the normal order of
+  // operations) — never LOCKED, and gated at the route by the explicit
+  // erp.finance:close_period op.
+  const entryId = await postEntry('year_end_closing', fy.end_date, `Year-end closing ${fy.name}`, reference, closing.lines, userId, { allowClosedPeriod: true })
   return { ok: true, entryId, netIncome: closing.netIncome }
 }
 
