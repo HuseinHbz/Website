@@ -109,3 +109,10 @@ Keeper ← `receive`؛ Procurement ← `convert`+`receive`؛ CFO/Finance Special
 Finance & HR Manager/Senior Admin ← `approve`+`approve_high`+`pay`+
 `vendor_bank_change`؛ Admin ← فقط `approve` (سطح پایین‌تر، مطابق الگوی موجودش روی
 confirm/void/post).
+
+### ERPFIX-5 — op جدید مالی (erp.finance:post_depreciation)
+ثبت یک اجرای استهلاک ماهانه (`POST /api/admin/erp/finance/depreciation`) یک op
+جداست — یک grant عمومی `write` روی erp.finance آن را implicit نمی‌دهد، دقیقاً
+مثل `post`/`void`/`close_period` موجود. به همان قالب‌هایی که از قبل
+`erp.finance:post` دارند (CFO/Senior Admin/…) به‌صورت idempotent و غیرمخرب
+اضافه شد (همان الگوی ERPFIX-4). پیش‌نمایش (GET، بدون نوشتن) فقط `read` می‌خواهد.

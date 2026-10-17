@@ -5209,4 +5209,78 @@ export async function runMigrations() {
     SELECT 'direct_payment_mode', 'warn', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
     WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='direct_payment_mode');
   `)
+
+  // ── ERPFIX-5 — subledger/GL completeness ────────────────────────────────
+  // BUG-ERP-11: line classification (derived default; stable for posting +
+  // the unbilled-receipts report). Existing rows get the SAME derivation
+  // postPurchaseInvoiceToGl now applies at posting time (product_id → stock,
+  // else → expense) so historical documents classify identically to new ones.
+  await pgQuery(`
+    ALTER TABLE purchase_document_lines ADD COLUMN IF NOT EXISTS line_class TEXT;
+    UPDATE purchase_document_lines SET line_class = CASE WHEN product_id IS NOT NULL THEN 'stock' ELSE 'expense' END WHERE line_class IS NULL;
+  `)
+  // New accounts this phase needs, seeded only if the code is free (lesson
+  // of BUG-ERP-10: check gl_accounts for the code first). Both are marked
+  // "(نیازمند تأیید حسابدار)" — UNVERIFIED pending accountant sign-off, per
+  // this phase's own global_rules (statutory/accounting-policy numbers are
+  // never guessed). 6300 is a new leaf under the existing 6-group (Operating
+  // Expenses); 1590 is a new contra-asset leaf under 1 (Assets), placed next
+  // to 1500 Fixed Assets so it reads naturally on the balance sheet.
+  await pgQuery(`
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '6300', 'Purchased Services Expense (unverified — accountant sign-off pending)', 'هزینهٔ خدمات خریداری‌شده (نیازمند تأیید حسابدار)', 'expense', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='6300');
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '1590', 'Accumulated Depreciation (unverified — accountant sign-off pending)', 'استهلاک انباشته (نیازمند تأیید حسابدار)', 'asset', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='1590');
+  `)
+  await pgQuery(`
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'gl_map_service_expense', '6300', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='gl_map_service_expense');
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'gl_map_fixed_assets', '1500', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='gl_map_fixed_assets');
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'gl_map_acc_depreciation', '1590', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='gl_map_acc_depreciation');
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'gl_map_depreciation_expense', '6900', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='gl_map_depreciation_expense');
+  `)
+  // BUG-ERP-14: cash (drawer) vs bank settlement — decision_gate answered:
+  // only cash/bank are mapped this phase; a dedicated cheque-in-transit
+  // account is deferred (see docs/governance/erpfix-5-report.md).
+  await pgQuery(`
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'gl_map_cash', '1000', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='gl_map_cash');
+  `)
+
+  // BUG-ERP-09: monthly depreciation posting trail — one row per
+  // asset×calendar-month, UNIQUE so a retried/duplicate run posts nothing
+  // twice (idempotent, mirrors every other posting-trail table in this
+  // codebase: sales/purchase gl_entry_id, numbering_audit, etc.).
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS asset_depreciation_postings (
+      id SERIAL PRIMARY KEY,
+      asset_id INTEGER NOT NULL REFERENCES assets(id),
+      period_key TEXT NOT NULL,
+      entry_id INTEGER REFERENCES gl_journal_entries(id),
+      amount NUMERIC NOT NULL,
+      company_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_asset_depr_posting ON asset_depreciation_postings(asset_id, period_key);
+  `)
+
+  // BUG-ERP-09: grant the new erp.finance:post_depreciation op to the SAME
+  // system role templates that already hold erp.finance:post — idempotent,
+  // non-destructive (never overwrites an operator-edited row), identical
+  // pattern to the ERPFIX-4 role-template additions above.
+  await pgQuery(`
+    UPDATE rbac_role_templates SET ops = (ops::jsonb || '{"erp.finance:post_depreciation":true}'::jsonb)::text
+    WHERE is_system=true AND (ops::jsonb->>'erp.finance:post')::boolean IS TRUE
+      AND NOT (ops::jsonb ? 'erp.finance:post_depreciation');
+  `)
 }

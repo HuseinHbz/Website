@@ -18,8 +18,19 @@ import { toBase, roundTo } from './money'
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 const num = (v: unknown) => Number(v ?? 0)
 
-export interface GlMap { ar: string; revenue: string; vat: string; ap: string; inventory: string; bank: string }
-const DEFAULT_MAP: GlMap = { ar: '1100', revenue: '4000', vat: '2100', ap: '2000', inventory: '1200', bank: '1010' }
+export interface GlMap {
+  ar: string; revenue: string; vat: string; ap: string; inventory: string; bank: string
+  // ERPFIX-5 (BUG-ERP-11/09/14): cash (vs bank) settlement account, the
+  // purchased-services expense account (service lines no longer post to
+  // inventory), and the accumulated-depreciation contra + its expense
+  // account. All four are marked unverified in the seeded chart pending
+  // accountant sign-off (see docs/governance/erpfix-5-report.md).
+  cash: string; serviceExpense: string; accDepreciation: string; depreciationExpense: string
+}
+const DEFAULT_MAP: GlMap = {
+  ar: '1100', revenue: '4000', vat: '2100', ap: '2000', inventory: '1200', bank: '1010',
+  cash: '1000', serviceExpense: '6300', accDepreciation: '1590', depreciationExpense: '6900',
+}
 
 /** Load the configurable posting map (falls back to the seeded chart codes). */
 export async function loadGlMap(): Promise<GlMap> {
@@ -34,6 +45,10 @@ export async function loadGlMap(): Promise<GlMap> {
       ap: byKey.get('gl_map_ap') || DEFAULT_MAP.ap,
       inventory: byKey.get('gl_map_inventory') || DEFAULT_MAP.inventory,
       bank: byKey.get('gl_map_bank') || DEFAULT_MAP.bank,
+      cash: byKey.get('gl_map_cash') || DEFAULT_MAP.cash,
+      serviceExpense: byKey.get('gl_map_service_expense') || DEFAULT_MAP.serviceExpense,
+      accDepreciation: byKey.get('gl_map_acc_depreciation') || DEFAULT_MAP.accDepreciation,
+      depreciationExpense: byKey.get('gl_map_depreciation_expense') || DEFAULT_MAP.depreciationExpense,
     }
   } catch { return DEFAULT_MAP }
 }
@@ -43,8 +58,48 @@ export function applyGlMap(lines: PostingLine[], map: GlMap): PostingLine[] {
   const translate: Record<string, string> = {
     [DEFAULT_MAP.ar]: map.ar, [DEFAULT_MAP.revenue]: map.revenue, [DEFAULT_MAP.vat]: map.vat,
     [DEFAULT_MAP.ap]: map.ap, [DEFAULT_MAP.inventory]: map.inventory, [DEFAULT_MAP.bank]: map.bank,
+    [DEFAULT_MAP.serviceExpense]: map.serviceExpense, [DEFAULT_MAP.accDepreciation]: map.accDepreciation,
+    [DEFAULT_MAP.depreciationExpense]: map.depreciationExpense,
   }
   return lines.map(l => ({ ...l, accountCode: translate[l.accountCode] ?? l.accountCode }))
+}
+
+/**
+ * ERPFIX-5 (BUG-ERP-14): a payment GL post can fail (closed fiscal period,
+ * missing account, etc.) — the payment itself must stay recorded (by
+ * design: cash moved regardless), but the failure must never be silently
+ * swallowed. Every `try { postXPaymentToGl(...) } catch {}` call site now
+ * calls this instead of an empty catch — it raises a visible
+ * `business_alert` (idempotent by fingerprint) so an operator/accountant
+ * sees it, and the Self-Healing Engine's `sales_payment_unposted`/
+ * `purchase_payment_unposted` checks (selfheal.ts) post it automatically
+ * once the underlying cause (e.g. the period) is resolved.
+ */
+export async function raisePaymentUnpostedAlert(ledger: 'sales' | 'purchase', paymentId: number, err: unknown): Promise<void> {
+  try {
+    const reason = err instanceof Error ? err.message : String(err)
+    await pgQuery(
+      `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, fingerprint, updated_at)
+       VALUES ($1,'financial','warning',$2,$3,$4,$5,$6,$7,${NOW})
+       ON CONFLICT (fingerprint) DO UPDATE SET updated_at=${NOW}, detail=$4, status='open'`,
+      [
+        `${ledger}_payment_unposted`,
+        ledger === 'sales' ? 'A customer receipt was not posted to the GL' : 'A vendor payment was not posted to the GL',
+        ledger === 'sales' ? 'یک دریافت از مشتری در دفتر کل ثبت نشد' : 'یک پرداخت به تأمین‌کننده در دفتر کل ثبت نشد',
+        reason,
+        ledger === 'sales' ? 'sales_payments' : 'purchase_payments',
+        paymentId,
+        `${ledger}_payment_unposted:${paymentId}`,
+      ])
+  } catch { /* alert itself is best-effort — never block the caller */ }
+}
+
+/** Which bank-side account a payment/receipt method should post to
+ * (BUG-ERP-14): 'cash' goes to the cash drawer account, everything else
+ * (bank/card/gateway/cheque/other) goes to the bank account — unchanged
+ * from before this fix for every non-cash method. */
+export function settlementAccountFor(method: string | null | undefined, map: GlMap): string {
+  return method === 'cash' ? map.cash : map.bank
 }
 
 /** Pure: mirror an entry's lines (debit↔credit) for a reversal. */
@@ -131,9 +186,9 @@ export async function insertPostedEntry(
  * gl_entry_id pre-check now re-verifies inside a per-payment advisory lock.
  */
 export async function postSalesPaymentToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null; currency: string; exchange_rate: number; doc_rate: number | null }>(
+  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; customer: string | null; currency: string; exchange_rate: number; doc_rate: number | null; method: string | null }>(
     `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, c.name AS customer, p.currency, p.exchange_rate::float AS exchange_rate,
-            d.exchange_rate::float AS doc_rate
+            d.exchange_rate::float AS doc_rate, p.method
      FROM sales_payments p LEFT JOIN sales_customers c ON c.id=p.customer_id LEFT JOIN sales_documents d ON d.id=p.document_id
      WHERE p.id=$1`, [paymentId]))[0]
   if (!p) throw new Error('Payment not found')
@@ -148,7 +203,9 @@ export async function postSalesPaymentToGl(paymentId: number, userId?: string): 
   const bankBase = toBase(num(p.amount), settleRate)
   const arBase = toBase(num(p.amount), invoiceRate)
   const fxDelta = roundTo(bankBase - arBase)
-  const [bank, ar] = await Promise.all([accountIdByCode(map.bank), accountIdByCode(map.ar)])
+  // ERPFIX-5 (BUG-ERP-14): a cash receipt posts to the cash drawer account
+  // (1000), not the bank account — every other method is unchanged.
+  const [bank, ar] = await Promise.all([accountIdByCode(settlementAccountFor(p.method, map)), accountIdByCode(map.ar)])
   const fx = fxDelta !== 0 ? await accountIdByCode(fxDelta > 0 ? '4900' : '6980') : null
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_payment_gl_post:${paymentId}`])
@@ -199,9 +256,9 @@ export async function postCustomerRefundToGl(paymentId: number, userId?: string)
 
 /** Purchase payment → Dr AP / Cr Bank (idempotent per payment). */
 export async function postPurchasePaymentToGl(paymentId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
-  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; vendor: string | null; currency: string; exchange_rate: number; doc_rate: number | null }>(
+  const p = (await pgQuery<{ amount: number; date: string; gl_entry_id: number | null; vendor: string | null; currency: string; exchange_rate: number; doc_rate: number | null; method: string | null }>(
     `SELECT p.amount::float AS amount, p.date, p.gl_entry_id, v.name AS vendor, p.currency, p.exchange_rate::float AS exchange_rate,
-            d.exchange_rate::float AS doc_rate
+            d.exchange_rate::float AS doc_rate, p.method
      FROM purchase_payments p LEFT JOIN purchase_vendors v ON v.id=p.vendor_id LEFT JOIN purchase_documents d ON d.id=p.document_id
      WHERE p.id=$1`, [paymentId]))[0]
   if (!p) throw new Error('Payment not found')
@@ -216,7 +273,9 @@ export async function postPurchasePaymentToGl(paymentId: number, userId?: string
   const bankBase = toBase(num(p.amount), settleRate)
   const apBase = toBase(num(p.amount), invoiceRate)
   const fxDelta = roundTo(apBase - bankBase)
-  const [ap, bank] = await Promise.all([accountIdByCode(map.ap), accountIdByCode(map.bank)])
+  // ERPFIX-5 (BUG-ERP-14): a cash disbursement posts to the cash drawer
+  // account (1000), not the bank account.
+  const [ap, bank] = await Promise.all([accountIdByCode(map.ap), accountIdByCode(settlementAccountFor(p.method, map))])
   const fx = fxDelta !== 0 ? await accountIdByCode(fxDelta > 0 ? '4900' : '6980') : null
   return withTransaction(async query => {
     await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`purchase_payment_gl_post:${paymentId}`])

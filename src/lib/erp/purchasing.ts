@@ -121,6 +121,45 @@ export function purchaseInvoicePostingLines(net: number, tax: number, total: num
   lines.push({ accountCode: '2000', debit: 0, credit: round2(total), memo: 'Accounts payable' })
   return lines
 }
+// ERPFIX-5 (BUG-ERP-11): a purchase invoice's lines are no longer always
+// debited to Inventory (1200). Each line carries a `lineClass` — 'stock'
+// (has a product_id, as before), 'expense' (a service line — no product),
+// or 'fixed_asset' (an asset acquisition, explicitly marked) — and is routed
+// to the matching account. The AP credit is computed from the SUM of the
+// actual debit lines (not a separately-passed total) so the entry balances
+// exactly even with per-class rounding. Decision_gate answered: no GR/IR
+// accrual in this phase — this function only closes "services never go to
+// inventory"; the separate receipt-vs-invoice timing gap stays visible via
+// the read-only "unbilled receipts" report, not a new accrual account.
+export type PurchaseLineClass = 'stock' | 'expense' | 'fixed_asset'
+export interface ClassifiedPurchaseLine { amount: number; taxAmount: number; lineClass: PurchaseLineClass }
+const PURCHASE_LINE_CLASS_ACCOUNT: Record<PurchaseLineClass, string> = {
+  stock: '1200', expense: '6300', fixed_asset: '1500',
+}
+const PURCHASE_LINE_CLASS_MEMO: Record<PurchaseLineClass, string> = {
+  stock: 'Purchase (net) — inventory', expense: 'Purchase (net) — services', fixed_asset: 'Purchase (net) — fixed assets',
+}
+export function purchaseInvoicePostingLinesByClass(classified: ClassifiedPurchaseLine[]): PostingLine[] {
+  const byClass = new Map<PurchaseLineClass, { net: number; tax: number }>()
+  for (const l of classified) {
+    const e = byClass.get(l.lineClass) ?? { net: 0, tax: 0 }
+    e.net += l.amount; e.tax += l.taxAmount
+    byClass.set(l.lineClass, e)
+  }
+  const lines: PostingLine[] = []
+  let totalTax = 0
+  for (const [cls, v] of byClass) {
+    if (Math.abs(v.net) > 0.0001) lines.push({ accountCode: PURCHASE_LINE_CLASS_ACCOUNT[cls], debit: round2(v.net), credit: 0, memo: PURCHASE_LINE_CLASS_MEMO[cls] })
+    totalTax += v.tax
+  }
+  if (Math.abs(totalTax) > 0.0001) lines.push({ accountCode: '2100', debit: round2(totalTax), credit: 0, memo: 'VAT input' })
+  // AP is the sum of the lines actually posted above — guarantees Σdebit=Σcredit
+  // exactly, independent of any per-class rounding residue.
+  const apTotal = round2(lines.reduce((s, l) => s + l.debit, 0))
+  lines.push({ accountCode: '2000', debit: 0, credit: apTotal, memo: 'Accounts payable' })
+  return lines
+}
+
 /** Payment of a vendor invoice: Dr Accounts Payable, Cr Bank. */
 export function purchasePaymentPostingLines(amount: number): PostingLine[] {
   return [

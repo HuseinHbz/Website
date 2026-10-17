@@ -408,6 +408,48 @@
    field (`qty`/`money`/`pct`/`isoDate`/`idParam`) goes through
    `src/lib/api/financeSchemas.ts` — a bogus `?id=abc` is a 400 naming the
    field, never a `NaN` reaching PostgreSQL as a raw 500.)
+60. هر خط فاکتور خرید بر اساس line_class به حساب درست می‌رود؛ برگشت خرید
+   همیشه مالی صادر می‌شود ولی کسر انبار به اندازهٔ موجود؛ شکست ثبت پرداخت
+   هرگز بی‌صدا نیست؛ استهلاک ماهانه idempotent پست می‌شود.
+   (ERPFIX-5, BUG-ERP-11/13/14/09 — a purchase line with no `product_id`
+   stopped silently debiting Inventory (1200): `purchase_document_lines.
+   line_class` ('stock'|'expense'|'fixed_asset', derived default, operator-
+   overridable) routes `purchaseInvoicePostingLinesByClass` to 1200/6300/
+   1500 — the AP credit is the SUM of the actual debit lines, never a
+   separately-passed total, so per-class rounding can never leave the entry
+   unbalanced. A line-less legacy document (every pre-existing fixture that
+   inserts `purchase_documents` directly) still posts its whole net to 1200
+   — byte-for-byte the historical behavior. `postPurchaseInvoiceToGl` now
+   ALSO accepts `credit_note`/`return` doc types (mirrored debit/credit) —
+   a confirmed purchase return used to leave AP financially untouched on
+   the books; decision_gate answered: NO GR/IR accrual this phase (tracked
+   instead by the read-only `unbilled_receipts` report) and a return is
+   ALWAYS issued financially in FULL regardless of stock — `deductReturnedStock`
+   caps the physical deduction at whatever is actually on hand and raises
+   `insufficient_stock_for_return` (never silently dropped, never blocks the
+   document). Every `try { postXPaymentToGl(...) } catch {}` site now calls
+   `raisePaymentUnpostedAlert` (idempotent `business_alert` by fingerprint)
+   instead of an empty catch, and two new Self-Healing checks (`sales_
+   payment_unposted`/`purchase_payment_unposted`, scoped to real direct
+   receipts only — `AR-%`/`AP-%`/`TRZPAY-` reclassification markers are
+   deliberately excluded, they are never individually postable) retry the
+   SAME idempotent poster once the cause (e.g. a closed period) clears.
+   `GlMap` gained `cash`/`serviceExpense`/`accDepreciation`/
+   `depreciationExpense` (`gl_map_*` in `erp_settings`, all overridable); a
+   `method='cash'` payment/receipt now posts to the cash drawer (1000)
+   instead of bank (1010) — decision_gate answered: a dedicated cheque-in-
+   transit account stays OUT of scope this phase. `postDepreciationRun
+   (periodKey)` (`assetData.ts`) posts Dr 6900/Cr 1590 for every eligible
+   asset — decision_gate answered: reuses the EXISTING monthly `depreciate`/
+   `ageInYears` engine unchanged, the expense is the DELTA between
+   accumulated-at-period-end and accumulated-at-period-start (correct for
+   every method and for any catch-up span with no second calculation);
+   `asset_depreciation_postings` is `UNIQUE(asset_id, period_key)` so a
+   retried/duplicate run posts nothing twice; a period inside a CLOSED
+   fiscal period is rejected outright via the SAME `insertPostedEntry`/
+   `assertPostable` gate every other poster already uses — no second gate.
+   `6300`/`1590` are new seeded accounts marked «نیازمند تأیید حسابدار» —
+   UNVERIFIED pending accountant sign-off, never a guessed statutory code.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

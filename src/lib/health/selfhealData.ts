@@ -7,6 +7,7 @@
 import { pgQuery } from '@/lib/db'
 import { postSalesInvoiceToGl } from '@/lib/erp/salesData'
 import { postPurchaseInvoiceToGl } from '@/lib/erp/purchasingData'
+import { postSalesPaymentToGl, postPurchasePaymentToGl } from '@/lib/erp/glPosting'
 import { scanLedgerIntegrity } from '@/lib/erp/accountingValidationData'
 import { detectDuplicates } from '@/lib/masterdata/masterDataData'
 import {
@@ -119,6 +120,45 @@ export async function runSelfHeal(userId?: string): Promise<SelfHealResult> {
   const negMargin = await pgQuery<{ n: number }>(
     `SELECT COUNT(*)::int AS n FROM inv_products WHERE active=1 AND cost > 0 AND price > 0 AND price < cost`)
   await add('negative_margin', negMargin[0].n, 0, 'review pricing / price lists')
+
+  // 13) Customer receipts with no GL entry (a prior post attempt failed —
+  // see raisePaymentUnpostedAlert) → retry the SAME idempotent poster.
+  // Scoped to genuine direct receipts only: amount > 0, a real document, and
+  // a reference that is NOT one of the Treasury/AR reclassification markers
+  // (AR-VOID:/AR-CONSUME:/TRZPAY-) — those rows are deliberately never
+  // individually posted (26.23/Phase 11-16 design: pure subledger
+  // reclassification of already-moved cash, zero new GL events) and must
+  // not be mistaken for an unposted real receipt.
+  // Also excludes a payment dated inside a LOCKED fiscal year — that is
+  // permanent, correctly-enforced history (the SAME gate every poster uses)
+  // with nothing actionable for self-heal to retry; it stays visible via
+  // its own business_alert from raisePaymentUnpostedAlert, just not
+  // counted as an open self-heal "issue" with no possible fix.
+  const salesPayUnposted = await pgQuery<{ id: number }>(
+    `SELECT p.id FROM sales_payments p
+     WHERE p.gl_entry_id IS NULL AND p.document_id IS NOT NULL AND p.amount > 0
+       AND COALESCE(p.reference,'') NOT LIKE 'AR-%' AND COALESCE(p.reference,'') NOT LIKE 'TRZPAY-%'
+       AND NOT EXISTS (SELECT 1 FROM gl_fiscal_periods fp WHERE fp.kind='year' AND fp.status='locked' AND p.date BETWEEN fp.start_date AND fp.end_date)
+     ORDER BY p.id LIMIT ${FIX_CAP + 1}`)
+  let salesPayFixed = 0
+  for (const p of salesPayUnposted.slice(0, FIX_CAP)) {
+    try { await postSalesPaymentToGl(p.id, userId); salesPayFixed++ } catch { /* stays an alert */ }
+  }
+  await add('sales_payment_unposted', salesPayUnposted.length, salesPayFixed, `posted ${salesPayFixed}/${salesPayUnposted.length} to the GL`)
+
+  // 14) Same on the purchase side (AP-VOID:/AP-CONSUME:/TRZPAY-, and a
+  // LOCKED-fiscal-year date, all excluded — see the sales-side comment above).
+  const purPayUnposted = await pgQuery<{ id: number }>(
+    `SELECT p.id FROM purchase_payments p
+     WHERE p.gl_entry_id IS NULL AND p.document_id IS NOT NULL AND p.amount > 0
+       AND COALESCE(p.reference,'') NOT LIKE 'AP-%' AND COALESCE(p.reference,'') NOT LIKE 'TRZPAY-%'
+       AND NOT EXISTS (SELECT 1 FROM gl_fiscal_periods fp WHERE fp.kind='year' AND fp.status='locked' AND p.date BETWEEN fp.start_date AND fp.end_date)
+     ORDER BY p.id LIMIT ${FIX_CAP + 1}`)
+  let purPayFixed = 0
+  for (const p of purPayUnposted.slice(0, FIX_CAP)) {
+    try { await postPurchasePaymentToGl(p.id, userId); purPayFixed++ } catch { /* stays an alert */ }
+  }
+  await add('purchase_payment_unposted', purPayUnposted.length, purPayFixed, `posted ${purPayFixed}/${purPayUnposted.length} to the GL`)
 
   const totalIssues = findings.reduce((s, f) => s + f.count, 0)
   const totalFixed = findings.reduce((s, f) => s + f.fixed, 0)

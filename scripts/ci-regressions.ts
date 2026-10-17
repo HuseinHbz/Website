@@ -49,6 +49,7 @@ const SUITES = [
   { name: 'ERPFIX-2 currency in the GL: base-amount lines + realized FX gain/loss', script: 'verify-erpfix-2.ts', db: 'rg_erpfix2' },
   { name: 'ERPFIX-3 document lifecycle: sales state machine + safe delete + full-fidelity convert', script: 'verify-erpfix-3.ts', db: 'rg_erpfix3' },
   { name: 'ERPFIX-4 purchasing controls: edit lock + separation of duties + validation + approval unification', script: 'verify-erpfix-4.ts', db: 'rg_erpfix4' },
+  { name: 'ERPFIX-5 subledger/GL completeness: service/asset classification + purchase returns + payment visibility + depreciation', script: 'verify-erpfix-5.ts', db: 'rg_erpfix5' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

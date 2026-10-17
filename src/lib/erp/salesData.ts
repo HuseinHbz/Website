@@ -234,7 +234,7 @@ export async function postSalesInvoiceToGl(docId: number, userId?: string, exter
 
 // ── Sales return + settlement (Phase 26.26, BUG-013) ──────────────────────────
 import { validateReturnRequest, remainingReturnable } from './sales'
-import { postCustomerRefundToGl } from './glPosting'
+import { postCustomerRefundToGl, raisePaymentUnpostedAlert } from './glPosting'
 
 /** Sum of confirmed/non-void credit notes already raised against an invoice. */
 async function priorReturned(invoiceId: number, query: TxQuery = pgQuery): Promise<number> {
@@ -352,7 +352,7 @@ export async function settleReturnIfPaid(creditNoteId: number, userId?: string):
       return { settled: 'refund' as const, paymentId: pay.id, isNew: true }
     })
     if ('isNew' in result && result.isNew) {
-      try { await postCustomerRefundToGl(result.paymentId, userId) } catch { /* stays unposted; self-heal can post */ }
+      try { await postCustomerRefundToGl(result.paymentId, userId) } catch (err) { await raisePaymentUnpostedAlert('sales', result.paymentId, err) }
     }
     return { settled: result.settled, paymentId: result.paymentId }
   }

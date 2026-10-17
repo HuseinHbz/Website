@@ -6,7 +6,7 @@ import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from './currencyData'
 import { assertPostable } from './accountingData'
-import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry } from './glPosting'
+import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry, raisePaymentUnpostedAlert } from './glPosting'
 import { toBase } from './money'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
@@ -32,6 +32,12 @@ export interface LineRow extends LineInput {
    * converted from, set by convertDocument. Undefined for a hand-entered or
    * standalone document. */
   poLineId?: number | null; receiptLineId?: number | null
+  /** ERPFIX-5 (BUG-ERP-11): which GL account family this line posts to.
+   * Optional — derived if omitted: a line with a product_id defaults to
+   * 'stock' (unchanged behavior); a line with no product_id defaults to
+   * 'expense' (previously silently went to inventory too — the bug). An
+   * operator may explicitly mark a no-product line as 'fixed_asset'. */
+  lineClass?: 'stock' | 'expense' | 'fixed_asset' | null
 }
 
 // ── Vendors ──────────────────────────────────────────────────────────────────
@@ -116,7 +122,7 @@ export async function getDocument(id: number) {
   const d = (await pgQuery<DocRow>(`SELECT * FROM purchase_documents WHERE id=$1`, [id]))[0]
   if (!d) return null
   const lines = await pgQuery(`SELECT id, description, qty::float AS qty, unit_price::float AS "unitPrice", discount_pct::float AS "discountPct", tax_pct::float AS "taxPct", product_id AS "productId", received_qty::float AS "receivedQty",
-    po_line_id AS "poLineId", receipt_line_id AS "receiptLineId", match_status AS "matchStatus" FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [id])
+    po_line_id AS "poLineId", receipt_line_id AS "receiptLineId", match_status AS "matchStatus", line_class AS "lineClass" FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [id])
   const approvals = await pgQuery(`SELECT level, decision, approver_id AS "approverId", comment, created_at AS "createdAt" FROM purchase_approvals WHERE document_id=$1 ORDER BY created_at`, [id])
   return { ...d, lines, approvals }
 }
@@ -190,8 +196,12 @@ export async function saveDocument(input: {
 async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]
-    await query(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id,po_line_id,receipt_line_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i, l.productId ?? null, l.poLineId ?? null, l.receiptLineId ?? null])
+    // ERPFIX-5 (BUG-ERP-11): line_class defaults from product_id when the
+    // caller doesn't pass one explicitly — a product line is 'stock', a
+    // service line is 'expense'; 'fixed_asset' is only ever explicit.
+    const lineClass = l.lineClass ?? (l.productId != null ? 'stock' : 'expense')
+    await query(`INSERT INTO purchase_document_lines (document_id,description,qty,unit_price,discount_pct,tax_pct,sort_order,product_id,po_line_id,receipt_line_id,line_class) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [docId, l.description, l.qty, l.unitPrice, l.discountPct, l.taxPct, i, l.productId ?? null, l.poLineId ?? null, l.receiptLineId ?? null, lineClass])
   }
 }
 
@@ -484,7 +494,7 @@ export async function recordPayment(documentId: number, vendorId: number, amount
   // 26.23: every supplier payment books Dr AP / Cr Bank (idempotent, best-effort —
   // a closed period leaves the payment recorded and self-heal/manual can post
   // later). GL posting stays its own transaction, run after the payment commits.
-  try { await postPurchasePaymentToGl(result.paymentId!, userId) } catch { /* stays unposted */ }
+  try { await postPurchasePaymentToGl(result.paymentId!, userId) } catch (err) { await raisePaymentUnpostedAlert('purchase', result.paymentId!, err) }
   // Notification/event ordering (Phase-5 Section rule 17): the alert fires
   // only AFTER the payment transaction has committed, never before/during.
   if (mismatchReasons) await raiseMismatchAlert(documentId, mismatchReasons)
@@ -783,11 +793,19 @@ export async function convertDocument(sourceId: number, toType: PurchaseDocType,
 }
 
 // ── GL posting ───────────────────────────────────────────────────────────────
-import { purchaseInvoicePostingLines, postingBalanced } from './purchasing'
+import { purchaseInvoicePostingLinesByClass, postingBalanced, type ClassifiedPurchaseLine, type PurchaseLineClass } from './purchasing'
 
 /**
- * Post a confirmed purchase invoice into the double-entry GL (idempotent).
- * Dr Inventory (net) + Dr Taxes Payable (VAT) / Cr Accounts Payable (total).
+ * Post a confirmed purchase invoice — OR a purchase return/credit_note
+ * against one — into the double-entry GL (idempotent).
+ *
+ * ERPFIX-5 (BUG-ERP-11): lines are classified ('stock'→1200, 'expense'→6300,
+ * 'fixed_asset'→1500) instead of always debiting inventory — a service or
+ * fixed-asset invoice no longer silently inflates inventory value.
+ * ERPFIX-5 (BUG-ERP-13): a credit_note/return against an invoice now ALSO
+ * posts — the SAME classified lines, with debit/credit mirrored (Dr AP /
+ * Cr the original class account + Cr VAT input) — closing the gap where a
+ * confirmed purchase return left AP financially untouched on the books.
  * Returns the created journal entry id, or the existing one if already posted.
  */
 export async function postPurchaseInvoiceToGl(docId: number, userId?: string): Promise<{ entryId: number; alreadyPosted: boolean }> {
@@ -795,21 +813,39 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
     `SELECT doc_type, status, subtotal, discount_total, tax_total, total, gl_entry_id, doc_no, date, company_id, cost_center_id, currency, exchange_rate FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
   if (d.gl_entry_id) return { entryId: d.gl_entry_id, alreadyPosted: true }
-  if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices post to the GL')
-  if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the invoice before posting')
+  const isReturn = d.doc_type === 'credit_note' || d.doc_type === 'return'
+  if (d.doc_type !== 'invoice' && !isReturn) throw new Error('Only purchase invoices or credit notes/returns post to the GL')
+  if (['draft', 'void'].includes(d.status)) throw new Error('Confirm the document before posting')
 
-  const net = num(d.subtotal) - num(d.discount_total)
-  const tax = num(d.tax_total)
   const rate = num(d.exchange_rate) || 1
   const fxCurrency = d.currency && d.currency !== 'IRR' ? d.currency : null
-  // ERPFIX-2 (BUG-ERP-03): GL lines are always posted in Rial base; baseTotal
-  // is derived from the converted net+tax so the entry balances exactly.
-  const baseNet = toBase(net, rate)
-  const baseTax = toBase(tax, rate)
-  const baseTotal = baseNet + baseTax
+
+  // ERPFIX-5 (BUG-ERP-11): classify each line (defaults to the derived
+  // class saved at insertLines time — a document with NO lines at all, the
+  // shape every pre-existing fixture/regression that inserts a
+  // purchase_documents row directly uses, falls back to a single 'stock'
+  // line of the WHOLE net/tax — byte-for-byte the historical behavior, so
+  // every prior regression that never touches purchase_document_lines
+  // keeps posting to 1200 exactly as before this fix.
+  const lineRows = await pgQuery<{ qty: number; unit_price: number; discount_pct: number; tax_pct: number; line_class: PurchaseLineClass | null }>(
+    `SELECT qty::float AS qty, unit_price::float AS unit_price, discount_pct::float AS discount_pct, tax_pct::float AS tax_pct, line_class
+     FROM purchase_document_lines WHERE document_id=$1`, [docId])
+  const classified: ClassifiedPurchaseLine[] = lineRows.length
+    ? lineRows.map(l => {
+        const gross = num(l.qty) * num(l.unit_price)
+        const net = gross * (1 - num(l.discount_pct) / 100)
+        const tax = net * (num(l.tax_pct) / 100)
+        return { amount: toBase(net, rate), taxAmount: toBase(tax, rate), lineClass: l.line_class ?? 'stock' }
+      })
+    : [{ amount: toBase(num(d.subtotal) - num(d.discount_total), rate), taxAmount: toBase(num(d.tax_total), rate), lineClass: 'stock' as const }]
+
+  const baseTotal = Math.round(classified.reduce((s, c) => s + c.amount + c.taxAmount, 0) * 100) / 100
   // 26.23: account codes flow through the configurable erp_settings map.
-  const lines = applyGlMap(purchaseInvoicePostingLines(baseNet, baseTax, baseTotal), await loadGlMap())
+  let lines = applyGlMap(purchaseInvoicePostingLinesByClass(classified), await loadGlMap())
+  if (isReturn) lines = lines.map(l => ({ ...l, debit: l.credit, credit: l.debit }))
   if (!postingBalanced(lines)) throw new Error('Posting does not balance')
+  const net = num(d.subtotal) - num(d.discount_total)
+  const tax = num(d.tax_total)
   const fxByCode: Record<string, number> = fxCurrency ? { '1200': net, '2100': tax, '2000': num(d.total) } : {}
 
   // Resolve account ids by code (seeded standard chart).
@@ -840,7 +876,8 @@ export async function postPurchaseInvoiceToGl(docId: number, userId?: string): P
     const entry = (await query<{ id: number }>(
       `INSERT INTO gl_journal_entries (entry_no, date, memo, reference, status, total, created_by, period_id, company_id, currency, exchange_rate, created_at, posted_at)
        VALUES ($1, $2, $3, $4, 'posted', $5, $6, $7, $8, $9, $10, ${NOW}, ${NOW}) RETURNING id`,
-      [entryNo, glDate, `Purchase invoice ${d.doc_no ?? docId}`, `PUR-${docId}`, baseTotal, userId ?? null, gate.periodId ?? null,
+      [entryNo, glDate, isReturn ? `Purchase credit note ${d.doc_no ?? docId}` : `Purchase invoice ${d.doc_no ?? docId}`,
+       isReturn ? `PURCN-${docId}` : `PUR-${docId}`, baseTotal, userId ?? null, gate.periodId ?? null,
        d.company_id ?? null, d.currency ?? 'IRR', rate]))[0]
     let ln = 0
     for (const l of lines) {
@@ -907,22 +944,74 @@ async function stockPurchaseInvoice(docId: number, warehouseId: number | undefin
   }
 }
 
-export async function confirmPurchaseInvoice(docId: number, userId?: string, warehouseId?: number): Promise<{ status: PurchaseStatus; entryId: number | null }> {
+/**
+ * ERPFIX-5 (BUG-ERP-13, decision_gate answered): a purchase return/credit_note
+ * is ALWAYS fully recorded financially (never blocked by a stock shortfall —
+ * the warehouse keeper issues the full document regardless). Physically,
+ * each product line is returned out of stock up to whatever is actually on
+ * hand; any shortfall (the item was already sold/consumed elsewhere) is
+ * reported via a business_alert rather than silently dropped or blocking the
+ * document. A line with no product_id (a service credit) has nothing to
+ * deduct. Idempotent via the same `ref` marker pattern as stockPurchaseInvoice.
+ */
+async function deductReturnedStock(docId: number, userId?: string): Promise<{ shortfalls: { productId: number; requested: number; deducted: number }[] }> {
+  const doc = (await pgQuery<{ doc_no: string | null }>(`SELECT doc_no FROM purchase_documents WHERE id=$1`, [docId]))[0]
+  if (!doc) return { shortfalls: [] }
+  const ref = `PRET ${doc.doc_no ?? docId}`
+  const already = (await pgQuery<{ id: number }>(`SELECT id FROM inv_moves WHERE ref=$1 LIMIT 1`, [ref]))[0]
+  if (already) return { shortfalls: [] } // idempotent — a retried confirm never double-deducts
+  const lines = await pgQuery<{ qty: number; unit_price: number; product_id: number | null }>(
+    `SELECT qty::float AS qty, unit_price::float AS unit_price, product_id FROM purchase_document_lines WHERE document_id=$1 ORDER BY sort_order, id`, [docId])
+  const shortfalls: { productId: number; requested: number; deducted: number }[] = []
+  for (const l of lines) {
+    if (l.product_id == null) continue
+    const onHand = num((await pgQuery<{ s: number }>(
+      `SELECT COALESCE(SUM(qty),0)::float AS s FROM inv_moves WHERE product_id=$1`, [l.product_id]))[0]?.s)
+    const requested = num(l.qty)
+    const deducted = Math.max(0, Math.min(requested, onHand))
+    if (deducted > 0) {
+      const wh = (await pgQuery<{ id: number }>(
+        `SELECT warehouse_id AS id FROM inv_moves WHERE product_id=$1 GROUP BY warehouse_id ORDER BY SUM(qty) DESC LIMIT 1`, [l.product_id]))[0]
+      await pgQuery(
+        `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+         VALUES ($1,$2,'return',$3,$4,$5,$6,${NOW})`,
+        [l.product_id, wh?.id ?? null, -deducted, num(l.unit_price), ref, userId ?? null])
+    }
+    if (deducted < requested) shortfalls.push({ productId: l.product_id, requested, deducted })
+  }
+  if (shortfalls.length) {
+    try {
+      await pgQuery(
+        `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, fingerprint, updated_at)
+         VALUES ('insufficient_stock_for_return','operational','warning','Purchase return exceeds on-hand stock','موجودی برگشت خرید کافی نیست',$1,'purchase_documents',$2,$3,${NOW})
+         ON CONFLICT (fingerprint) DO UPDATE SET updated_at=${NOW}, detail=$1`,
+        [shortfalls.map(s => `product #${s.productId}: requested ${s.requested}, only ${s.deducted} deducted`).join('; '),
+         docId, `insufficient_stock_for_return:${docId}`])
+    } catch { /* alert is best-effort */ }
+  }
+  return { shortfalls }
+}
+
+export async function confirmPurchaseInvoice(docId: number, userId?: string, warehouseId?: number): Promise<{ status: PurchaseStatus; entryId: number | null; stockShortfalls?: { productId: number; requested: number; deducted: number }[] }> {
   const d = (await pgQuery<{ doc_type: string; status: string; vendor_id: number | null }>(`SELECT doc_type, status, vendor_id FROM purchase_documents WHERE id=$1`, [docId]))[0]
   if (!d) throw new Error('Document not found')
-  if (d.doc_type !== 'invoice') throw new Error('Only purchase invoices can be confirmed to the GL')
+  const isReturn = d.doc_type === 'credit_note' || d.doc_type === 'return'
+  if (d.doc_type !== 'invoice' && !isReturn) throw new Error('Only purchase invoices or credit notes/returns can be confirmed to the GL')
   if (d.status === 'void') throw new Error('Voided documents cannot be confirmed')
   const prev = d.status
   await pgQuery(`UPDATE purchase_documents SET status='confirmed', updated_at=${NOW} WHERE id=$1`, [docId])
   let entryId: number | null
+  let stockShortfalls: { productId: number; requested: number; deducted: number }[] | undefined
   try {
     const res = await postPurchaseInvoiceToGl(docId, userId)
     entryId = res.entryId
-    await stockPurchaseInvoice(docId, warehouseId, userId)
+    if (isReturn) stockShortfalls = (await deductReturnedStock(docId, userId)).shortfalls
+    else await stockPurchaseInvoice(docId, warehouseId, userId)
   } catch (err) {
     await pgQuery(`UPDATE purchase_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [docId, prev])
     throw err
   }
+  if (isReturn) return { status: 'confirmed', entryId, stockShortfalls }
   // Phase 12: a freshly confirmed/open invoice is exactly the "future
   // invoice" a vendor's pre-existing unapplied Treasury cash (Phase 11) was
   // waiting for — settle any of it against this vendor's now-open invoices

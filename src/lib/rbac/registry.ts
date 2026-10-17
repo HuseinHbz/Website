@@ -48,7 +48,10 @@ function tabOf(href: string): string | null {
  * (separation of duties). Keys here must be module keys from the registry.
  */
 export const SENSITIVE_OPS: Record<string, string[]> = {
-  'erp.finance': ['post', 'void', 'delete', 'close_period', 'reopen_period'],
+  // ERPFIX-5 (BUG-ERP-09): booking a depreciation run is its own gate — a
+  // plain finance `write` grant does not imply it (same separation-of-duties
+  // precedent as 'post'/'void' above).
+  'erp.finance': ['post', 'void', 'delete', 'close_period', 'reopen_period', 'post_depreciation'],
   // Phase 6: fulfilling a confirmed order (issuing real stock + posting
   // COGS) is a distinct authority from confirming/voiding the order itself
   // — a sales rep can confirm an order without being able to move physical

@@ -144,3 +144,87 @@ function groupCount<T>(rows: T[], key: (r: T) => string): { key: string; count: 
   return [...m.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count)
 }
 function round2(n: number): number { return Math.round(n * 100) / 100 }
+
+// ── ERPFIX-5 (BUG-ERP-09) — depreciation posting ────────────────────────────
+import { withTransaction } from '@/lib/db'
+import { insertPostedEntry, loadGlMap, accountIdByCode } from './glPosting'
+
+const NOW_LITERAL = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
+
+/**
+ * Post one calendar-month of depreciation for every asset whose method is
+ * not 'none' and that isn't already fully depreciated or retired/disposed.
+ * Decision_gate answered (recommended): reuses the EXISTING monthly engine
+ * (depreciate/ageInYears) unchanged — the expense for the month is the
+ * DELTA between accumulated-at-period-end and accumulated-at-period-start,
+ * so it is correct for every method (straight-line/declining/SYD) and for
+ * catch-up (any number of back months) without a second calculation.
+ * Idempotent per (asset, periodKey) via the UNIQUE index — a repeat run for
+ * an already-posted month posts nothing new for that asset.
+ */
+export async function postDepreciationRun(periodKey: string, userId?: string, dryRun = false): Promise<{
+  periodKey: string; posted: { assetId: number; amount: number }[]; skipped: { assetId: number; reason: string }[]; entryId: number | null; total: number
+}> {
+  if (!/^\d{4}-\d{2}$/.test(periodKey)) throw new Error('periodKey must be YYYY-MM')
+  const [y, m] = periodKey.split('-').map(Number)
+  const periodStart = new Date(Date.UTC(y, m - 1, 1))
+  const periodEnd = new Date(Date.UTC(y, m, 1)) // first day of NEXT month = end of this one
+  const today = new Date()
+  if (periodEnd.getTime() > today.getTime() + 86_400_000) throw new Error('Cannot post depreciation for a future period')
+
+  const rows = (await pgQuery(`${SELECT} WHERE status NOT IN ('retired','disposed') AND depreciation_method <> 'none'`, [])) as unknown as AssetRow[]
+  const already = new Set((await pgQuery<{ asset_id: number }>(
+    `SELECT asset_id FROM asset_depreciation_postings WHERE period_key=$1`, [periodKey])).map(r => r.asset_id))
+
+  const posted: { assetId: number; amount: number }[] = []
+  const skipped: { assetId: number; reason: string }[] = []
+  const lines: { accountId: number; debit: number; credit: number; memo: string | null }[] = []
+  const toApply: { assetId: number; amount: number }[] = []
+
+  const map = await loadGlMap()
+  const [expenseAcc, accDeprAcc] = await Promise.all([accountIdByCode(map.depreciationExpense), accountIdByCode(map.accDepreciation)])
+
+  for (const a of rows) {
+    if (already.has(a.id)) { skipped.push({ assetId: a.id, reason: 'already posted this period' }); continue }
+    const rate = Number(a.exchangeRate) || 1
+    const basePrice = a.purchasePrice * rate, baseResidual = a.residualValue * rate
+    const ageAtStart = ageInYears(a.purchaseDate, periodStart)
+    const ageAtEnd = ageInYears(a.purchaseDate, periodEnd)
+    const depAtStart = depreciate({ purchasePrice: basePrice, residualValue: baseResidual, usefulLifeYears: a.usefulLifeYears, method: a.depreciationMethod, ageYears: ageAtStart })
+    const depAtEnd = depreciate({ purchasePrice: basePrice, residualValue: baseResidual, usefulLifeYears: a.usefulLifeYears, method: a.depreciationMethod, ageYears: ageAtEnd })
+    const amount = round2(depAtEnd.accumulated - depAtStart.accumulated)
+    if (amount <= 0) { skipped.push({ assetId: a.id, reason: depAtEnd.fullyDepreciated ? 'fully depreciated' : 'no depreciation this period' }); continue }
+    posted.push({ assetId: a.id, amount })
+    toApply.push({ assetId: a.id, amount })
+    lines.push({ accountId: expenseAcc, debit: amount, credit: 0, memo: `Depreciation ${periodKey} — asset #${a.id}` })
+    lines.push({ accountId: accDeprAcc, debit: 0, credit: amount, memo: `Accumulated depreciation ${periodKey} — asset #${a.id}` })
+  }
+
+  const total = round2(posted.reduce((s, p) => s + p.amount, 0))
+  if (posted.length === 0 || dryRun) return { periodKey, posted, skipped, entryId: null, total }
+
+  const dateStr = `${periodKey}-01`
+  const entryId = await withTransaction(async query => {
+    const e = await insertPostedEntry(query, dateStr, `Depreciation run ${periodKey}`, `DEPR-${periodKey}`, total, userId, lines)
+    for (const p of toApply) {
+      await query(
+        `INSERT INTO asset_depreciation_postings (asset_id, period_key, entry_id, amount, created_at) VALUES ($1,$2,$3,$4,${NOW_LITERAL})`,
+        [p.assetId, periodKey, e.id, p.amount])
+    }
+    return e.id
+  })
+  return { periodKey, posted, skipped, entryId, total }
+}
+
+/** Reconcile the posting trail against assetData's own book-value math —
+ * catches any drift between the two for an accountant review. */
+export async function depreciationReconciliation(): Promise<{ assetId: number; bookEngineAccumulated: number; postedAccumulated: number; diff: number }[]> {
+  const assets = await loadAssets()
+  const posted = await pgQuery<{ asset_id: number; s: number }>(
+    `SELECT asset_id, COALESCE(SUM(amount),0)::float AS s FROM asset_depreciation_postings GROUP BY asset_id`)
+  const postedMap = new Map(posted.map(p => [p.asset_id, Number(p.s)]))
+  return assets
+    .map(a => ({ assetId: a.id, bookEngineAccumulated: a.accumulatedDepreciation, postedAccumulated: round2(postedMap.get(a.id) ?? 0) }))
+    .map(r => ({ ...r, diff: round2(r.bookEngineAccumulated - r.postedAccumulated) }))
+    .filter(r => Math.abs(r.diff) > 0.01)
+}

@@ -5,7 +5,7 @@
  */
 import { pgQuery } from '@/lib/db'
 import { getProvider } from './gateway'
-import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
+import { postSalesPaymentToGl, raisePaymentUnpostedAlert } from '@/lib/erp/glPosting'
 import { invoiceStatus } from '@/lib/erp/sales'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
@@ -64,7 +64,7 @@ export async function verifyPayment(txId: number, userId?: string): Promise<{ ok
     const doc = (await pgQuery<{ total: number }>(`SELECT total::float AS total FROM sales_documents WHERE id=$1`, [tx.document_id]))[0]
     const paid = num((await pgQuery<{ p: number }>(`SELECT COALESCE(SUM(amount),0)::float AS p FROM sales_payments WHERE document_id=$1`, [tx.document_id]))[0]?.p)
     await pgQuery(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [tx.document_id, invoiceStatus(num(doc.total), paid)])
-    try { await postSalesPaymentToGl(pay.id, userId) } catch { /* stays unposted; self-heal can post */ }
+    try { await postSalesPaymentToGl(pay.id, userId) } catch (err) { await raisePaymentUnpostedAlert('sales', pay.id, err) }
   }
   await pgQuery(`UPDATE payment_transactions SET status='verified', ref_id=$2, sales_payment_id=$3, updated_at=${NOW} WHERE id=$1`, [txId, res.refId ?? null, paymentId ?? null])
   return { ok: true, refId: res.refId, paymentId }

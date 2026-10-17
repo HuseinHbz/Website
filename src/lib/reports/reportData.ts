@@ -37,6 +37,10 @@ export const REPORTS: ReportDef[] = [
   { id: 'sales_invoices', module: 'sales', nameEn: 'Invoice Register', nameFa: 'دفتر فاکتورها', groupField: 'status', measureField: 'total' },
   { id: 'purchase_register', module: 'purchasing', nameEn: 'Purchase Register', nameFa: 'دفتر خرید', groupField: 'status', measureField: 'total' },
   { id: 'purchase_by_vendor', module: 'purchasing', nameEn: 'Spend by Vendor', nameFa: 'خرید به تفکیک تأمین‌کننده', groupField: 'vendor', measureField: 'total' },
+  // ERPFIX-5 (BUG-ERP-11, decision_gate answered — no GR/IR accrual this
+  // phase): read-only visibility into the receipt↔invoice timing gap this
+  // phase's own scope stops short of accruing.
+  { id: 'unbilled_receipts', module: 'purchasing', nameEn: 'Unbilled Receipts / Uninvoiced Receipts', nameFa: 'دریافتی‌های فاکتورنشده / فاکتورشده‌های دریافت‌نشده', groupField: 'bucket', measureField: 'total' },
   { id: 'inv_valuation', module: 'inventory', nameEn: 'Inventory Valuation', nameFa: 'ارزش‌گذاری انبار', groupField: 'category', measureField: 'value' },
   { id: 'inv_intelligence', module: 'inventory', nameEn: 'Stock Intelligence (ABC/XYZ/Aging/Turnover)', nameFa: 'هوش موجودی (ABC/XYZ/عمر/گردش)', groupField: 'abc', measureField: 'value' },
   { id: 'inv_expiry', module: 'inventory', nameEn: 'Batch Expiration Report', nameFa: 'گزارش انقضای بچ', groupField: 'status', measureField: 'qtyRemaining' },
@@ -142,6 +146,32 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         columns: [{ key: 'code', label: 'Code' }, { key: 'vendor', label: 'Vendor' }, { key: 'grade', label: 'Grade' }, { key: 'total', label: 'Committed spend' }, { key: 'outstanding', label: 'Outstanding' }],
         rows,
         summary: [{ label: 'Vendors', value: rows.length }, { label: 'Spend', value: money(rows.reduce((s, r) => s + Number(r.total), 0)) }, { label: 'Outstanding', value: money(rows.reduce((s, r) => s + Number(r.outstanding), 0)) }],
+      }
+    }
+    case 'unbilled_receipts': {
+      // Read-only visibility, no accrual: a GRN with no downstream invoice
+      // referencing it ('unbilled_receipt'), and an invoice converted
+      // directly from an order with no receipt in between ('invoiced_not_received').
+      const rows = (await pgQuery(
+        `SELECT 'unbilled_receipt' AS bucket, r.doc_no AS "docNo", COALESCE(v.name,'—') AS vendor, r.date, r.total::float AS total
+         FROM purchase_documents r LEFT JOIN purchase_vendors v ON v.id=r.vendor_id
+         WHERE r.doc_type='receipt' AND r.status NOT IN ('draft','void','rejected')
+           AND NOT EXISTS (SELECT 1 FROM purchase_documents i WHERE i.source_id=r.id AND i.doc_type='invoice' AND i.status<>'void')
+         UNION ALL
+         SELECT 'invoiced_not_received' AS bucket, i.doc_no AS "docNo", COALESCE(v.name,'—') AS vendor, i.date, i.total::float AS total
+         FROM purchase_documents i LEFT JOIN purchase_vendors v ON v.id=i.vendor_id
+         LEFT JOIN purchase_documents src ON src.id = i.source_id
+         WHERE i.doc_type='invoice' AND i.status NOT IN ('draft','void')
+           AND (src.id IS NULL OR src.doc_type <> 'receipt')
+         ORDER BY date DESC`, [])) as Row[]
+      return {
+        columns: [{ key: 'bucket', label: 'Gap type' }, { key: 'docNo', label: 'No.' }, { key: 'vendor', label: 'Vendor' }, { key: 'date', label: 'Date' }, { key: 'total', label: 'Total' }],
+        rows,
+        summary: [
+          { label: 'Unbilled receipts', value: rows.filter(r => r.bucket === 'unbilled_receipt').length },
+          { label: 'Invoiced without a receipt', value: rows.filter(r => r.bucket === 'invoiced_not_received').length },
+          { label: 'Total', value: money(rows.reduce((s, r) => s + Number(r.total), 0)) },
+        ],
       }
     }
     case 'sales_invoices': {

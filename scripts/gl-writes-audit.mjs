@@ -30,7 +30,7 @@ const ALLOWLIST = new Map([
   // risk. A genuine future gap in any of these three stays caught by their
   // OWN gate (assertPostable), not by this allowlist.
   ['[src/app/api/admin/erp/finance/journal/route.ts:135]', 'journal route create-and-post: own assertPostable gate + own transaction + runOnce idempotency, regression-tested since 26.23.'],
-  ['[src/lib/erp/purchasingData.ts:841]', 'postPurchaseInvoiceToGl: own assertPostable gate + own transaction, regression-tested since 26.24b (verify-2624b, AP non-negative proof).'],
+  ['[src/lib/erp/purchasingData.ts:877]', 'postPurchaseInvoiceToGl: own assertPostable gate + own transaction, regression-tested since 26.24b (verify-2624b, AP non-negative proof).'],
   ['[src/lib/erp/salesData.ts:219]', 'postSalesInvoiceToGl: own assertPostable gate + own transaction, regression-tested since 26.15.1 (sales auto-post to GL).'],
 ])
 

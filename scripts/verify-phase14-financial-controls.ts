@@ -217,8 +217,21 @@ async function main() {
     await pgQuery(`UPDATE payment_orders SET status='approved' WHERE id=$1`, [pay2.id])
     const [revRes, payRes] = await Promise.all([reversePayment(pay1.id, ADMIN), processPayment(pay2.id, adminUser as never)])
     const inv = await one<{ paid_total: number }>(`SELECT paid_total::float AS "paid_total" FROM purchase_documents WHERE id=$1`, [invId])
-    ok(Math.abs(inv.paid_total - 500_000) < 0.01, `invoice ends at exactly 500,000 (pay1 reversed, pay2 allocated) — never overpaid, never lost — ${inv.paid_total}`)
-    ok(revRes.ledgerRowsReversed === 1 && payRes.apAllocations.length === 1, 'both concurrent operations completed correctly, no interleaving corruption')
+    const unapplied = await one<{ s: number }>(`SELECT COALESCE(SUM(amount),0)::float AS s FROM purchase_payments WHERE vendor_id=$1 AND document_id IS NULL`, [v])
+    // Genuine race (same class as Scenario M below): the vendor-lock
+    // serializes the two invoice-mutating sections in whichever order
+    // actually wins. If the reversal's section runs FIRST, pay2 sees the
+    // invoice open again and allocates straight to it (paid_total=500,000,
+    // unapplied=0). If pay2's AP-allocation section runs FIRST, it sees the
+    // invoice still 'paid' (pay1's reversal hasn't landed yet) and correctly
+    // routes its 500,000 to the UNAPPLIED pool instead (paid_total=0,
+    // unapplied=500,000) — never lost, never double-applied. What must hold
+    // regardless of ordering is exact money conservation, not a specific
+    // row/field outcome — the same principle Scenario M already asserts.
+    ok(Math.abs(inv.paid_total + unapplied.s - 500_000) < 0.01,
+      `no lost/duplicated money: (invoice paid_total) + (unapplied) == 500,000 regardless of lock-ordering — paid_total=${inv.paid_total}, unapplied=${unapplied.s}`)
+    ok(revRes.ledgerRowsReversed === 1, 'the reversal undid exactly pay1\'s one original allocation row')
+    ok(payRes.apAllocations.length + (payRes.unappliedAmount > 0 ? 1 : 0) === 1, 'pay2 landed in EXACTLY ONE place (the invoice OR the unapplied pool), never both/neither')
   }
 
   console.log('— CONCURRENCY Scenario M: reversal vs a concurrent consumeUnappliedForVendor for the same vendor —')

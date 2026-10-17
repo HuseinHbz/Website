@@ -6,9 +6,15 @@ import {
 } from '../selfheal'
 
 describe('HEAL_CHECKS registry', () => {
-  it('has 12 unique, bilingual checks', () => {
-    expect(HEAL_CHECKS).toHaveLength(12)
-    expect(new Set(HEAL_CHECKS.map(c => c.code)).size).toBe(12)
+  // ERPFIX-5 (BUG-ERP-14): 12 → 14 — two new checks (sales/purchase_payment_
+  // unposted) close the silent-catch class on payment GL posting the SAME
+  // way the two existing *_invoice_unposted checks already do. Logged in
+  // docs/governance/contract-changes.md (CC-001): the count itself is not a
+  // financial assertion, just this registry's own size, but it is a
+  // regression-suite assertion edit per CLAUDE.md رule and is recorded there.
+  it('has 14 unique, bilingual checks', () => {
+    expect(HEAL_CHECKS).toHaveLength(14)
+    expect(new Set(HEAL_CHECKS.map(c => c.code)).size).toBe(14)
     for (const c of HEAL_CHECKS) {
       expect(c.en.length).toBeGreaterThan(0)
       expect(c.fa.length).toBeGreaterThan(0)
@@ -17,7 +23,7 @@ describe('HEAL_CHECKS registry', () => {
   })
   it('marks only the provably-safe checks auto-fixable', () => {
     const fixable = HEAL_CHECKS.filter(c => c.autoFixable).map(c => c.code)
-    expect(fixable.sort()).toEqual(['contract_expired_active', 'import_job_stuck', 'orphan_holds', 'purchase_invoice_unposted', 'sales_invoice_unposted'])
+    expect(fixable.sort()).toEqual(['contract_expired_active', 'import_job_stuck', 'orphan_holds', 'purchase_invoice_unposted', 'purchase_payment_unposted', 'sales_invoice_unposted', 'sales_payment_unposted'])
   })
   it('checkDef finds by code and returns undefined for unknown', () => {
     expect(checkDef('gl_unbalanced')?.severity).toBe('critical')

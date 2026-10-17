@@ -34,6 +34,21 @@ export const HEAL_CHECKS: HealCheckDef[] = [
   { code: 'duplicate_payments', en: 'Suspected duplicate payments', fa: 'پرداخت‌های مشکوک به تکرار', severity: 'critical', autoFixable: false, domain: 'business' },
   { code: 'duplicate_customers', en: 'Duplicate customer identities', fa: 'مشتریان با هویت تکراری', severity: 'info', autoFixable: false, domain: 'masterdata' },
   { code: 'negative_margin', en: 'Active products selling below cost', fa: 'کالاهای فعال با حاشیهٔ منفی', severity: 'info', autoFixable: false, domain: 'business' },
+  // ERPFIX-5 (BUG-ERP-14): a payment whose GL post failed (closed period,
+  // transient error) stays recorded by design but must not go unnoticed —
+  // these auto-fix by retrying the SAME idempotent posting function once
+  // the underlying cause (e.g. the period) is resolved; a real remaining
+  // cause stays an alert, exactly like the two unposted-invoice checks above.
+  // 'warning', not 'critical', is deliberate: unlike an unposted INVOICE
+  // (always fixable — re-posting is always legal once the cause clears), an
+  // unposted PAYMENT can be permanently unfixable-by-design (its date falls
+  // inside a fiscal year that was correctly closed+locked afterward — the
+  // underlying invoice is still posted and correct; only its settlement
+  // never reached the ledger). A real, open-period failure still raises its
+  // own `business_alert` (see raisePaymentUnpostedAlert) regardless of this
+  // severity — this only affects the aggregate risk-score weighting.
+  { code: 'sales_payment_unposted', en: 'Customer receipts not posted to the GL', fa: 'دریافت‌های مشتری ثبت‌نشده در دفتر کل', severity: 'warning', autoFixable: true, domain: 'accounting' },
+  { code: 'purchase_payment_unposted', en: 'Vendor payments not posted to the GL', fa: 'پرداخت‌های تأمین‌کننده ثبت‌نشده در دفتر کل', severity: 'warning', autoFixable: true, domain: 'accounting' },
 ]
 
 export function checkDef(code: string): HealCheckDef | undefined {

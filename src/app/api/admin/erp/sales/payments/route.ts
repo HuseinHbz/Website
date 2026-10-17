@@ -5,7 +5,7 @@ import { pgQuery, withTransaction } from '@/lib/db'
 import { rialRateFor } from '@/lib/erp/currencyData'
 import { logAction } from '@/lib/admin/audit'
 import { invoiceStatus, validatePayment } from '@/lib/erp/sales'
-import { postSalesPaymentToGl } from '@/lib/erp/glPosting'
+import { postSalesPaymentToGl, raisePaymentUnpostedAlert } from '@/lib/erp/glPosting'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     // 26.23 (بند ۱.۱): every customer receipt books Dr Bank / Cr AR (idempotent;
     // a closed period leaves the payment recorded — self-heal can post later).
     let entryId: number | null = null
-    try { entryId = (await postSalesPaymentToGl(row.id, auth.user.id)).entryId } catch { /* stays unposted */ }
+    try { entryId = (await postSalesPaymentToGl(row.id, auth.user.id)).entryId } catch (err) { await raisePaymentUnpostedAlert('sales', row.id, err) }
     await logAction(auth.user, 'sales.payment.create', 'sales_payment', row.id, null, { amount: d.amount, entryId })
     return NextResponse.json({ id: row.id, entryId })
   } catch (e) { return apiError(e, 'Failed to record payment') }
