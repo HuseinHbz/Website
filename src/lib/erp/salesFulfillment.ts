@@ -8,7 +8,7 @@
  * its own holds `SHP-{shipmentId}`.
  */
 import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
-import { createHold } from '@/lib/inventory/inventoryOpsData'
+import { createHold, costOfIssuing } from '@/lib/inventory/inventoryOpsData'
 import { accountIdByCode, insertPostedEntry, loadGlMap } from './glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 
@@ -96,8 +96,8 @@ export async function deliverSalesOrder(orderId: number, lines: { lineId: number
     let cogsTotal = 0
     for (const l of lines) {
       if (l.qty <= 0) return { ok: false, error: `Line ${l.lineId}: quantity must be positive` }
-      const line = (await query<{ product_id: number | null; cost: number | null }>(
-        `SELECT sl.product_id, p.cost::float AS cost FROM sales_document_lines sl LEFT JOIN inv_products p ON p.id=sl.product_id WHERE sl.id=$1 AND sl.document_id=$2`,
+      const line = (await query<{ product_id: number | null }>(
+        `SELECT sl.product_id FROM sales_document_lines sl WHERE sl.id=$1 AND sl.document_id=$2`,
         [l.lineId, orderId]))[0]
       if (!line || !line.product_id) return { ok: false, error: `Line ${l.lineId} has no linked inventory product — cannot deliver` }
       const ref = `SO-${orderId}-${l.lineId}`
@@ -112,11 +112,13 @@ export async function deliverSalesOrder(orderId: number, lines: { lineId: number
         await query(`INSERT INTO inv_reservations (product_id, warehouse_id, kind, qty, ref, status, created_by, created_at) VALUES ($1,$2,'reserve',$3,$4,'active',$5,${NOW})`,
           [line.product_id, order.warehouse_id, remainder, ref, userId ?? null])
       }
-      const cost = num(line.cost)
+      // ERPFIX-6 (BUG-ERP-12): cost comes from the SAME valuation engine COGS
+      // reads from, never the static inv_products.cost.
+      const costed = await costOfIssuing(query, line.product_id, Math.abs(l.qty))
       await query(`INSERT INTO inv_shipment_lines (shipment_id, product_id, qty) VALUES ($1,$2,$3)`, [ship.id, line.product_id, l.qty])
       await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at) VALUES ($1,$2,'issue',$3,$4,$5,$6,${NOW})`,
-        [line.product_id, order.warehouse_id, -Math.abs(l.qty), cost, `SHP-${ship.id}`, userId ?? null])
-      cogsTotal += Math.abs(l.qty) * cost
+        [line.product_id, order.warehouse_id, -Math.abs(l.qty), costed.unitCost, `SHP-${ship.id}`, userId ?? null])
+      cogsTotal += costed.totalCost
     }
 
     let cogsEntryId: number | undefined

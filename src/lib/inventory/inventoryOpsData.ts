@@ -14,6 +14,7 @@ import {
   canTransitionCount, countVariances, inventoryAdjustmentPostingLines, economicOrderQty,
   type Hold, type StockState, type ShipmentStatus, type CountStatus,
 } from './stockOps'
+import { issueCost as pureIssueCost, type ValuationMethod, type Move } from '@/lib/erp/inventory'
 import { canTransitionSerial, isValidImei, isValidSerial, warrantyStatus, batchDatesValid, type SerialStatus } from './serials'
 import {
   abcAnalysis, xyzClass, movementClass, turnoverRatio, expiryStatus, nearExpiry,
@@ -273,6 +274,28 @@ export async function countDetail(countId: number) {
  * lock (see createHold) joins the same atomic scope, closing the race for
  * real rather than just moving the pre-check earlier.
  */
+/**
+ * ERPFIX-6 (BUG-ERP-12): the ONE place every stock-issuing call site
+ * computes what issuing `qty` of a product costs RIGHT NOW — reusing the
+ * pure valuation engine (`issueCost`) over the product's OWN move history,
+ * under its OWN configured `valuation_method` (per-product, default WAVG;
+ * decision_gate answered). Replaces every call site that used to read the
+ * static `inv_products.cost` as if it were a real-time COGS figure.
+ * Reads moves through `query` so it sees the CALLER's own in-flight
+ * transaction (e.g. a move this same transaction is about to insert is
+ * correctly NOT yet counted).
+ */
+export async function costOfIssuing(query: TxQuery, productId: number, qty: number): Promise<{ totalCost: number; unitCost: number; method: ValuationMethod }> {
+  const prod = (await query<{ valuation_method: ValuationMethod }>(
+    `SELECT valuation_method FROM inv_products WHERE id=$1`, [productId]))[0]
+  const method: ValuationMethod = prod?.valuation_method ?? 'wavg'
+  const moves = await query<{ type: Move['type']; qty: number; unit_cost: number }>(
+    `SELECT type, qty::float AS qty, unit_cost::float AS unit_cost FROM inv_moves WHERE product_id=$1 ORDER BY id`, [productId])
+  const history: Move[] = moves.map(m => ({ type: m.type, qty: m.qty, unitCost: m.unit_cost }))
+  const r = pureIssueCost(history, qty, method)
+  return { ...r, method }
+}
+
 export async function createShipment(d: { warehouseId: number; customerId?: number | null; carrier?: string; ref?: string; salesDocumentId?: number | null; lines: { productId: number; qty: number; serial?: string | null }[] }, userId?: string): Promise<{ id: number; shipmentNo: string }> {
   if (d.lines.length === 0) throw new Error('A shipment needs at least one line')
   const shipmentNo = await nextNumber('shipment', { legacyPrefix: 'SHP' })
@@ -321,21 +344,26 @@ export async function advanceShipment(id: number, to: ShipmentStatus, d: { track
       `SELECT status, warehouse_id, sales_document_id, gl_entry_id FROM inv_shipments WHERE id=$1`, [id]))[0]
     if (!s) throw new Error('Shipment not found')
     if (!canTransitionShipment(s.status, to)) throw new Error(`Illegal shipment transition ${s.status} → ${to}`)
-    const lines = await query<{ product_id: number; qty: number; serial: string | null; cost: number }>(
-      `SELECT sl.product_id, sl.qty::float AS qty, sl.serial, p.cost::float AS cost FROM inv_shipment_lines sl JOIN inv_products p ON p.id=sl.product_id WHERE sl.shipment_id=$1`, [id])
+    const lines = await query<{ product_id: number; qty: number; serial: string | null }>(
+      `SELECT sl.product_id, sl.qty::float AS qty, sl.serial FROM inv_shipment_lines sl WHERE sl.shipment_id=$1`, [id])
 
     let cogsEntryId: number | undefined
     if (shipmentIssuesStock(s.status, to)) {
       // Ship: consume the reserve holds and write real issue moves.
+      // ERPFIX-6 (BUG-ERP-12): unit_cost comes from the SAME valuation
+      // engine COGS is computed from — never the static inv_products.cost.
       await query(`UPDATE inv_reservations SET status='consumed', released_at=${NOW} WHERE ref=$1 AND status='active'`, [`SHP-${id}`])
+      const lineCosts: { productId: number; qty: number; totalCost: number; unitCost: number }[] = []
       for (const l of lines) {
+        const costed = await costOfIssuing(query, l.product_id, Math.abs(l.qty))
+        lineCosts.push({ productId: l.product_id, qty: l.qty, totalCost: costed.totalCost, unitCost: costed.unitCost })
         await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, serial, ref, created_by, created_at)
           VALUES ($1,$2,'issue',$3,$4,$5,$6,$7,${NOW})`,
-          [l.product_id, s.warehouse_id, -Math.abs(l.qty), l.cost, l.serial, `SHP-${id}`, userId ?? null])
+          [l.product_id, s.warehouse_id, -Math.abs(l.qty), costed.unitCost, l.serial, `SHP-${id}`, userId ?? null])
         if (l.serial) await query(`UPDATE inv_serials SET status='sold', updated_at=${NOW} WHERE serial=$1 AND status IN ('in_stock','reserved')`, [l.serial])
       }
       if (s.sales_document_id && !s.gl_entry_id) {
-        const cogsTotal = lines.reduce((sum, l) => sum + Math.abs(l.qty) * l.cost, 0)
+        const cogsTotal = lineCosts.reduce((sum, l) => sum + l.totalCost, 0)
         if (cogsTotal > 0) {
           const map = await loadGlMap()
           const [cogsAcc, invAcc] = await Promise.all([accountIdByCode('5000', query), accountIdByCode(map.inventory, query)])
@@ -347,10 +375,17 @@ export async function advanceShipment(id: number, to: ShipmentStatus, d: { track
       }
     }
     if (shipmentReturnsStock(s.status, to)) {
+      // ERPFIX-6 (BUG-ERP-12, decision_gate answered): a return restocks at
+      // the ORIGINAL issue's own unit_cost (the exact cost this shipment's
+      // own COGS was booked at) — never a freshly recomputed issueCost,
+      // which would silently change the value of a reversal.
       for (const l of lines) {
+        const orig = (await query<{ unit_cost: number }>(
+          `SELECT unit_cost::float AS unit_cost FROM inv_moves WHERE product_id=$1 AND ref=$2 AND type='issue' ORDER BY id DESC LIMIT 1`,
+          [l.product_id, `SHP-${id}`]))[0]
         await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, serial, ref, created_by, created_at)
           VALUES ($1,$2,'return',$3,$4,$5,$6,$7,${NOW})`,
-          [l.product_id, s.warehouse_id, Math.abs(l.qty), l.cost, l.serial, `SHP-${id}-RET`, userId ?? null])
+          [l.product_id, s.warehouse_id, Math.abs(l.qty), orig?.unit_cost ?? 0, l.serial, `SHP-${id}-RET`, userId ?? null])
         if (l.serial) await query(`UPDATE inv_serials SET status='returned', updated_at=${NOW} WHERE serial=$1 AND status='sold'`, [l.serial])
       }
       // Reverse the original COGS posting (if one exists) rather than voiding it.

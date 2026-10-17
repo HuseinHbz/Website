@@ -318,3 +318,18 @@ guaranteed, what the new one guarantees, why, and who approved it.
   items is logged, and this specific assertion-correction was the
   smallest safe fix verified stable over 10 consecutive live-PG runs,
   vs. 10/10 pre-fix flaky).
+
+## CC-013 · ERPFIX-6 BUG-ERP-12 — Self-Healing registry size: 14 → 15 checks
+- **Date:** 2026-10-17 · **Phase:** ERPFIX-6 (inventory costing/COGS) ·
+  **Suite:** `src/lib/health/__tests__/selfheal.test.ts`
+- **Old assertion:** `HEAL_CHECKS` has exactly 14 unique entries.
+- **New assertion:** `HEAL_CHECKS` has exactly 15 unique entries (the new
+  `inventory_gl_drift` check).
+- **What is no longer guaranteed:** nothing financial — this is the
+  registry's own size, the same class of edit as CC-011.
+- **Reason:** ERPFIX-6 (BUG-ERP-12) added the inventory↔GL reconciliation
+  drift check the master prompt's own `required_changes` asked for
+  ("چک Health Center (inventory_gl_drift)").
+- **Approved by:** maintainer (ERPFIX-6 master prompt's own global_rule:
+  "ویرایش assertion هر رگرسیون موجود فقط با ثبت در
+  docs/governance/contract-changes.md").

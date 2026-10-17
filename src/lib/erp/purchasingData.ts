@@ -333,6 +333,11 @@ export async function receiveDocument(
         // 26.8: stock ledger costs are kept in the Rial base (line price × the
         // document's registration rate) so FIFO/LIFO/WAVG valuation is uniform.
         [l.product_id, warehouseId, take, num(l.unit_price) * (num(doc.exchange_rate) || 1), `GRN ${doc.doc_no ?? docId}`, userId ?? null])
+      // ERPFIX-6 (BUG-ERP-12): last_cost is purely informational (never a
+      // COGS source — issueCost reads inv_moves, not this column) — the
+      // most recent price actually paid, updated at the moment stock
+      // physically enters the warehouse.
+      await query(`UPDATE inv_products SET last_cost=$2, updated_at=${NOW} WHERE id=$1`, [l.product_id, num(l.unit_price) * (num(doc.exchange_rate) || 1)])
       await query(`UPDATE purchase_document_lines SET received_qty = received_qty + $2 WHERE id=$1`, [l.id, take])
       received++
     }
@@ -941,6 +946,9 @@ async function stockPurchaseInvoice(docId: number, warehouseId: number | undefin
       `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
        VALUES ($1,$2,'receipt',$3,$4,$5,$6,${NOW})`,
       [l.product_id, wh, num(l.qty), num(l.unit_price) * rate, ref, userId ?? null])
+    // ERPFIX-6 (BUG-ERP-12): informational last-price tracking — see the
+    // identical note at the GRN receive path above.
+    await pgQuery(`UPDATE inv_products SET last_cost=$2, updated_at=${NOW} WHERE id=$1`, [l.product_id, num(l.unit_price) * rate])
   }
 }
 

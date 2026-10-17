@@ -9,7 +9,7 @@
 import { pgQuery } from '@/lib/db'
 import { financeReports } from '@/lib/erp/ledgerData'
 import { loadCustomers } from '@/lib/erp/salesData'
-import { loadProductLevels } from '@/lib/erp/inventoryData'
+import { loadProductLevels, inventoryGlReconciliation } from '@/lib/erp/inventoryData'
 import { loadAssets } from '@/lib/erp/assetData'
 import { costingPortfolio } from '@/lib/erp/costingData'
 import { budgetPortfolio } from '@/lib/erp/budgetData'
@@ -41,6 +41,10 @@ export const REPORTS: ReportDef[] = [
   // phase): read-only visibility into the receipt↔invoice timing gap this
   // phase's own scope stops short of accruing.
   { id: 'unbilled_receipts', module: 'purchasing', nameEn: 'Unbilled Receipts / Uninvoiced Receipts', nameFa: 'دریافتی‌های فاکتورنشده / فاکتورشده‌های دریافت‌نشده', groupField: 'bucket', measureField: 'total' },
+  // ERPFIX-6 (BUG-ERP-12): the one place the inventory module's own
+  // valuation and the GL's 1200 balance are shown side by side, with the
+  // gap broken into its explainable components.
+  { id: 'inventory_gl_reconciliation', module: 'inventory', nameEn: 'Inventory ↔ GL Reconciliation', nameFa: 'تطبیق موجودی انبار با دفتر کل', groupField: 'component', measureField: 'value' },
   { id: 'inv_valuation', module: 'inventory', nameEn: 'Inventory Valuation', nameFa: 'ارزش‌گذاری انبار', groupField: 'category', measureField: 'value' },
   { id: 'inv_intelligence', module: 'inventory', nameEn: 'Stock Intelligence (ABC/XYZ/Aging/Turnover)', nameFa: 'هوش موجودی (ABC/XYZ/عمر/گردش)', groupField: 'abc', measureField: 'value' },
   { id: 'inv_expiry', module: 'inventory', nameEn: 'Batch Expiration Report', nameFa: 'گزارش انقضای بچ', groupField: 'status', measureField: 'qtyRemaining' },
@@ -191,6 +195,25 @@ export async function runReport(id: string): Promise<ReportOutput | null> {
         columns: [{ key: 'sku', label: 'SKU' }, { key: 'name', label: 'Product' }, { key: 'category', label: 'Category' }, { key: 'onHand', label: 'On hand' }, { key: 'avgCost', label: 'Avg cost' }, { key: 'value', label: 'Value' }, { key: 'status', label: 'Status' }],
         rows,
         summary: [{ label: 'Products', value: p.length }, { label: 'Total value', value: money(p.reduce((s, x) => s + x.value, 0)) }],
+      }
+    }
+    case 'inventory_gl_reconciliation': {
+      const r = await inventoryGlReconciliation()
+      const rows: Row[] = [
+        { component: 'Inventory valuation (module)', value: r.inventoryValue },
+        { component: 'GL 1200 balance', value: r.glBalance1200 },
+        { component: 'Unbilled receipts (explainable)', value: r.unbilledReceiptsValue },
+        { component: 'Invoiced, not received (explainable)', value: -r.invoicedNotReceivedValue },
+        { component: 'Unexplained', value: r.unexplained },
+      ]
+      return {
+        columns: [{ key: 'component', label: 'Component' }, { key: 'value', label: 'Value' }],
+        rows,
+        summary: [
+          { label: 'Inventory value', value: money(r.inventoryValue) },
+          { label: 'GL 1200', value: money(r.glBalance1200) },
+          { label: 'Unexplained', value: money(r.unexplained) },
+        ],
       }
     }
     // Phase 26.19 — stock-intelligence reports (ABC/XYZ/aging/turnover + expiry).

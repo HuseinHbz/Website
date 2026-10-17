@@ -5,7 +5,7 @@ import { pgQuery, withTransaction } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
 import { isoDate, parseIdParam } from '@/lib/api/financeSchemas'
 import { DOC_TYPES, documentTotals, lineTotals, salesDocTransition } from '@/lib/erp/sales'
-import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid } from '@/lib/erp/salesData'
+import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid, restockSalesReturn, autoIssueDirectInvoiceStock, directInvoiceStockLines } from '@/lib/erp/salesData'
 import { reverseEntry } from '@/lib/erp/glPosting'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { rialRateFor } from '@/lib/erp/currencyData'
@@ -323,6 +323,28 @@ export async function PUT(req: NextRequest) {
       if (activeShip) return toApiResponse(businessError('ERP-SALES-VOID-DELIVERED', undefined))
     }
 
+    // ERPFIX-6 (BUG-ERP-07, decision_gate answered): a DIRECT invoice (no
+    // source order — a delivered order's invoice never re-issues, per the
+    // do_not) carrying a stock line is gated by erp_settings.
+    // invoice_stock_mode ('auto_issue'|'require_delivery'|'warn', default
+    // 'warn'). 'require_delivery' rejects BEFORE the confirm transaction
+    // even opens; 'auto_issue' issues stock + COGS inside the SAME
+    // transaction as the credit check/status write/GL post below; 'warn'
+    // confirms exactly as before this fix, but now raises a visible alert
+    // instead of silently never touching inventory.
+    type InvoiceStockMode = 'auto_issue' | 'require_delivery' | 'warn'
+    let stockModeForThisInvoice: InvoiceStockMode = 'warn'
+    let directStockLines: { id: number; productId: number; qty: number }[] = []
+    if (op === 'confirm' && String(src.doc_type) === 'invoice') {
+      directStockLines = await directInvoiceStockLines(id)
+      if (directStockLines.length > 0) {
+        const modeRow = (await pgQuery<{ value: string }>(`SELECT value FROM erp_settings WHERE key='invoice_stock_mode'`))[0]
+        stockModeForThisInvoice = (modeRow?.value as InvoiceStockMode) ?? 'warn'
+        if (stockModeForThisInvoice === 'require_delivery') {
+          return toApiResponse(businessError('ERP-SALES-DIRECT-INVOICE-REQUIRES-DELIVERY', undefined))
+        }
+      }
+    }
     if (op === 'confirm' && String(src.doc_type) === 'invoice') {
       // Phase-3 sales audit finding: evaluateCredit() read the live AR
       // balance, then the status UPDATE ran as a separate, unlocked
@@ -346,6 +368,7 @@ export async function PUT(req: NextRequest) {
       // throws out of this transaction and the WHOLE confirm rolls back —
       // status is never flipped unless the GL post inside it succeeded.
       let glEntryId: number | null = null
+      let directIssueFailure: string | null = null
       const blocked = await withTransaction(async query => {
         await query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`sales_customer_credit:${src.customer_id}`])
         // ERPFIX-2 (BUG-ERP-03): credit limit is Rial-denominated — compare base_total,
@@ -353,15 +376,40 @@ export async function PUT(req: NextRequest) {
         // back on an unset row — use `||` so 0/unset correctly falls back to raw total.
         const decision = await evaluateCredit(Number(src.customer_id), Number(src.base_total) || Number(src.total))
         if (decision.exceeded && decision.mode === 'block') return decision
+        // ERPFIX-6 (BUG-ERP-07): auto_issue happens INSIDE the same
+        // transaction as the status write + GL post — insufficient stock
+        // rolls back the whole confirm, exactly like the credit-block path.
+        if (directStockLines.length > 0 && stockModeForThisInvoice === 'auto_issue') {
+          try { await autoIssueDirectInvoiceStock(query, id, auth.user.id) }
+          catch (err) { directIssueFailure = err instanceof Error ? err.message : String(err); throw err }
+        }
         await query(`UPDATE sales_documents SET status=$2, updated_at=${NOW} WHERE id=$1`, [id, status])
         if (decision.exceeded) await raiseCreditAlert(Number(src.customer_id), id, decision.limit, decision.projected)
         glEntryId = (await postSalesInvoiceToGl(id, auth.user.id, query)).entryId
         return null
+      }).catch(err => {
+        if (directIssueFailure) return null // handled below — swallow so we can map it to a clean 409
+        throw err
       })
+      if (directIssueFailure) {
+        return toApiResponse(businessError('ERP-SALES-DIRECT-INVOICE-INSUFFICIENT-STOCK', { reason: directIssueFailure }))
+      }
       if (blocked) return toApiResponse(businessError('ERP-SALES-CREDIT-LIMIT-EXCEEDED', {
         limit: blocked.limit.toLocaleString(), projected: blocked.projected.toLocaleString(),
       }))
       entryIdFromAtomicConfirm = glEntryId
+      // 'warn' mode: never issues stock, never blocks — just make the gap
+      // VISIBLE (the exact bug this phase closes: before, it was silent).
+      if (directStockLines.length > 0 && stockModeForThisInvoice === 'warn') {
+        try {
+          await pgQuery(
+            `INSERT INTO business_alerts (kind, domain, severity, title_en, title_fa, detail, ref_type, ref_id, fingerprint, updated_at)
+             VALUES ('direct_invoice_stock_not_issued','operational','warning','A direct invoice''s stock lines were not issued from inventory','خطوط کالایی فاکتور مستقیم از انبار خارج نشد',$1,'sales_documents',$2,$3,${NOW})
+             ON CONFLICT (fingerprint) DO UPDATE SET updated_at=${NOW}, status='open'`,
+            [`Invoice #${id}: ${directStockLines.length} stock line(s) confirmed with no linked order delivery — no inventory was issued, no COGS was booked.`,
+             id, `direct_invoice_stock_not_issued:${id}`])
+        } catch { /* alert is best-effort */ }
+      }
     } else if (op === 'confirm' && String(src.doc_type) === 'credit_note') {
       // ERPFIX-3 (BUG-ERP-05): same atomicity fix as the invoice branch —
       // status write + GL post in one transaction (no credit check applies
@@ -419,6 +467,11 @@ export async function PUT(req: NextRequest) {
       // — otherwise AR is left silently negative.
       if (String(src.doc_type) === 'credit_note' && src.source_id) {
         try { await settleReturnIfPaid(id, auth.user.id) } catch { /* alert/refund is best-effort; never blocks confirm */ }
+        // ERPFIX-6 (audit_first finding, decision_gate answered): restock
+        // physically, at the original issue cost — best-effort, same as
+        // the settlement above (never blocks a confirm that already
+        // committed its GL post).
+        try { await restockSalesReturn(id, auth.user.id) } catch { /* restock is best-effort; a missing original issue is not an error */ }
       }
       // Phase 17: a freshly confirmed/open invoice is exactly the "future
       // invoice" a customer's pre-existing unapplied Treasury cash (or

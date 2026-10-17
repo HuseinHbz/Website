@@ -450,6 +450,41 @@
    `assertPostable` gate every other poster already uses — no second gate.
    `6300`/`1590` are new seeded accounts marked «نیازمند تأیید حسابدار» —
    UNVERIFIED pending accountant sign-off, never a guessed statutory code.)
+61. COGS فقط با issueCost؛ تطبیق انبار با 1200 گزارش دائمی است.
+   (ERPFIX-6, BUG-ERP-12/07 — `inv_products.cost` is no longer read as a
+   COGS source ANYWHERE: `issueCost(moves, qty, method)` (`erp/inventory.ts`,
+   pure — reuses `valuate` itself, the COGS delta of "history" vs "history +
+   this issue") is the ONE function every stock-issuing call site uses
+   (`costOfIssuing` wraps it with the DB read, `inventoryOpsData.ts`), each
+   under the product's OWN `valuation_method` (per-product, default WAVG —
+   decision_gate answered). `deliverSalesOrder`/`advanceShipment` both
+   switched from the static cost; a shipment RETURN restocks at the
+   ORIGINAL issue's own `unit_cost` (read back from the matching `issue`
+   move by `ref`), never a freshly recomputed one — a reversal must not
+   silently change the value of what it reverses. `inv_products.last_cost`
+   is purely informational (most recent price paid, updated at GRN/direct-
+   invoice-receipt time) and is NEVER read for COGS. `inventoryGlReconciliation()`
+   (`erp/inventoryData.ts`) is a permanent, read-only report (Reporting
+   Center → "Inventory ↔ GL Reconciliation") AND a Self-Healing check
+   (`inventory_gl_drift`, non-auto-fixable, severity `warning`) — Σ module
+   valuation vs the GL's 1200 balance, with the gap broken into its two
+   EXPLAINABLE components (unbilled receipts / invoiced-not-received, from
+   ERPFIX-5) before anything is reported as genuinely unexplained.
+   A DIRECT invoice (no `source_id` — an invoice converted from an already-
+   delivered order NEVER re-issues, by construction) carrying a stock line
+   is gated by `erp_settings.invoice_stock_mode` (`auto_issue`|
+   `require_delivery`|`warn`, default `warn` — decision_gate answered, all
+   three built): `auto_issue` issues stock + posts COGS inside the SAME
+   transaction as the confirm (insufficient stock or no warehouse set rolls
+   the whole confirm back, never a silent partial); `require_delivery` is a
+   409 before the confirm transaction opens; `warn` confirms exactly as
+   before this fix but now raises a visible `business_alert` instead of
+   silently never touching inventory. A confirmed sales return restocks at
+   the ORIGINAL issue cost the SAME way (found live during this phase's own
+   audit_first step — `createSalesReturn` never touched `inv_moves` at all;
+   decision_gate answered — `restockSalesReturn`, idempotent per credit
+   note, skips a line with no traceable original issue rather than
+   guessing a cost).
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

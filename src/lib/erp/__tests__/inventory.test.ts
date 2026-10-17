@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { valuate, stockStatus, suggestedReorderQty, inventoryKpis, type Move } from '../inventory'
+import { valuate, issueCost, stockStatus, suggestedReorderQty, inventoryKpis, type Move } from '../inventory'
 
 // Classic worked example: buy 10@$1, buy 10@$2, sell 15.
 const MOVES: Move[] = [
@@ -46,6 +46,39 @@ describe('inventory valuation', () => {
   it('empty history yields zero value', () => {
     const v = valuate([], 'wavg')
     expect(v).toEqual({ onHand: 0, value: 0, avgCost: 0, cogs: 0 })
+  })
+})
+
+describe('issueCost (ERPFIX-6, BUG-ERP-12)', () => {
+  const history: Move[] = [
+    { type: 'receipt', qty: 10, unitCost: 100 },
+    { type: 'receipt', qty: 10, unitCost: 200 },
+  ]
+  it('FIFO: issuing 15 costs 10@100 + 5@200 = 2000, unit 133.33', () => {
+    const r = issueCost(history, 15, 'fifo')
+    expect(r.totalCost).toBe(2000)
+    expect(r.unitCost).toBeCloseTo(133.33, 2)
+  })
+  it('LIFO: issuing 15 costs 10@200 + 5@100 = 2500, unit 166.67', () => {
+    const r = issueCost(history, 15, 'lifo')
+    expect(r.totalCost).toBe(2500)
+    expect(r.unitCost).toBeCloseTo(166.67, 2)
+  })
+  it('WAVG: issuing 15 at the running average (150) costs 2250, unit 150', () => {
+    const r = issueCost(history, 15, 'wavg')
+    expect(r.totalCost).toBe(2250)
+    expect(r.unitCost).toBe(150)
+  })
+  it('a zero/negative qty costs nothing', () => {
+    expect(issueCost(history, 0, 'wavg')).toEqual({ totalCost: 0, unitCost: 0 })
+    expect(issueCost(history, -5, 'fifo')).toEqual({ totalCost: 0, unitCost: 0 })
+  })
+  it('composes with a PRIOR issue already in history (sequential issues cost correctly)', () => {
+    const afterFirstIssue: Move[] = [...history, { type: 'issue', qty: -10, unitCost: 0 }]
+    // FIFO already consumed all of the 100-layer; the next 5 come from the 200-layer.
+    const r = issueCost(afterFirstIssue, 5, 'fifo')
+    expect(r.totalCost).toBe(1000)
+    expect(r.unitCost).toBe(200)
   })
 })
 

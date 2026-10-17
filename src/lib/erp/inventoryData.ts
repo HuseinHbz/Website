@@ -76,6 +76,64 @@ export async function loadProductLevels(): Promise<ProductLevel[]> {
   })
 }
 
+/**
+ * ERPFIX-6 (BUG-ERP-12): the inventory side of the inventory↔GL
+ * reconciliation — Σ valuation across every product, each at its OWN
+ * configured method (the exact number `loadProductLevels` already
+ * computes; no second valuation pass).
+ */
+export async function totalInventoryValue(): Promise<number> {
+  const levels = await loadProductLevels()
+  return Math.round(levels.reduce((s, l) => s + l.value, 0) * 100) / 100
+}
+
+/**
+ * ERPFIX-6 (BUG-ERP-12): reconcile the inventory module's own valuation
+ * against the GL's 1200 balance, breaking the gap into the two EXPLAINABLE
+ * components ERPFIX-5 already surfaces (unbilled receipts post to
+ * inventory physically before the invoice posts them to the GL; an
+ * invoiced-not-received line is the mirror case) — anything left after
+ * subtracting both is genuinely unexplained and worth a human looking at.
+ * Read-only; never writes anything.
+ */
+export interface InventoryGlReconciliation {
+  inventoryValue: number
+  glBalance1200: number
+  unbilledReceiptsValue: number
+  invoicedNotReceivedValue: number
+  unexplained: number
+}
+export async function inventoryGlReconciliation(): Promise<InventoryGlReconciliation> {
+  const { loadTallies } = await import('./ledgerData')
+  const { trialBalance } = await import('./ledger')
+  const { loadGlMap } = await import('./glPosting')
+  const map = await loadGlMap()
+  const tb = trialBalance(await loadTallies())
+  const row = tb.rows.find(r => r.code === map.inventory)
+  const glBalance1200 = row ? Math.round((row.debit - row.credit) * 100) / 100 : 0
+  const inventoryValue = await totalInventoryValue()
+
+  // Mirrors the exact `unbilled_receipts` report query (ERPFIX-5) — read
+  // again here rather than imported, since that one lives in reportData.ts
+  // (UI-facing) and this is a server-internal reconciliation figure.
+  const rows = await pgQuery<{ bucket: string; total: number }>(
+    `SELECT 'unbilled_receipt' AS bucket, COALESCE(SUM(r.total),0)::float AS total
+     FROM purchase_documents r
+     WHERE r.doc_type='receipt' AND r.status NOT IN ('draft','void','rejected')
+       AND NOT EXISTS (SELECT 1 FROM purchase_documents i WHERE i.source_id=r.id AND i.doc_type='invoice' AND i.status<>'void')
+     UNION ALL
+     SELECT 'invoiced_not_received' AS bucket, COALESCE(SUM(i.total),0)::float AS total
+     FROM purchase_documents i LEFT JOIN purchase_documents src ON src.id = i.source_id
+     WHERE i.doc_type='invoice' AND i.status NOT IN ('draft','void')
+       AND (src.id IS NULL OR src.doc_type <> 'receipt')`, [])
+  const unbilledReceiptsValue = Math.round((rows.find(r => r.bucket === 'unbilled_receipt')?.total ?? 0) * 100) / 100
+  const invoicedNotReceivedValue = Math.round((rows.find(r => r.bucket === 'invoiced_not_received')?.total ?? 0) * 100) / 100
+
+  const diff = Math.round((inventoryValue - glBalance1200) * 100) / 100
+  const unexplained = Math.round((diff - unbilledReceiptsValue + invoicedNotReceivedValue) * 100) / 100
+  return { inventoryValue, glBalance1200, unbilledReceiptsValue, invoicedNotReceivedValue, unexplained }
+}
+
 /** Dashboard payload: KPIs + low-stock list + recent moves + per-warehouse split. */
 export async function inventoryOverview() {
   const levels = await loadProductLevels()

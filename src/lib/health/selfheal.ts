@@ -49,6 +49,13 @@ export const HEAL_CHECKS: HealCheckDef[] = [
   // severity — this only affects the aggregate risk-score weighting.
   { code: 'sales_payment_unposted', en: 'Customer receipts not posted to the GL', fa: 'دریافت‌های مشتری ثبت‌نشده در دفتر کل', severity: 'warning', autoFixable: true, domain: 'accounting' },
   { code: 'purchase_payment_unposted', en: 'Vendor payments not posted to the GL', fa: 'پرداخت‌های تأمین‌کننده ثبت‌نشده در دفتر کل', severity: 'warning', autoFixable: true, domain: 'accounting' },
+  // ERPFIX-6 (BUG-ERP-12): an UNEXPLAINED gap between the inventory
+  // module's own valuation and the GL's 1200 balance — after already
+  // subtracting the two known-explainable components (unbilled receipts /
+  // invoiced-not-received, see inventoryGlReconciliation). No safe
+  // auto-fix exists for a real drift (it means a genuine posting/data
+  // defect somewhere) — this is a pure visibility check, like gl_unbalanced.
+  { code: 'inventory_gl_drift', en: 'Unexplained gap between inventory valuation and the GL', fa: 'اختلاف غیرقابل‌توضیح بین ارزش‌گذاری انبار و دفتر کل', severity: 'warning', autoFixable: false, domain: 'inventory' },
 ]
 
 export function checkDef(code: string): HealCheckDef | undefined {

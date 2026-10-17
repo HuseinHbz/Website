@@ -97,6 +97,23 @@ function valuateLayers(moves: Move[], method: 'fifo' | 'lifo'): Valuation {
   return { onHand, value: round2(value), avgCost: onHand > 0 ? round2(value / onHand) : 0, cogs: round2(cogs) }
 }
 
+/**
+ * ERPFIX-6 (BUG-ERP-12): the cost of issuing `qty` units RIGHT NOW, given the
+ * move history so far — the ONE function every stock-issuing call site
+ * (sales delivery, shipment advance, cycle-count adjustment, sales-return
+ * restock) must use instead of a static `inv_products.cost`. Reuses
+ * `valuate` itself (no second costing algorithm): the cost of the new issue
+ * is the COGS delta between "history" and "history + this issue" under the
+ * same method — correct for FIFO/LIFO/WAVG with no duplicated layer logic.
+ */
+export function issueCost(existingMoves: Move[], qty: number, method: ValuationMethod): { totalCost: number; unitCost: number } {
+  if (qty <= 0) return { totalCost: 0, unitCost: 0 }
+  const before = valuate(existingMoves, method)
+  const after = valuate([...existingMoves, { type: 'issue', qty: -qty, unitCost: 0 }], method)
+  const totalCost = round2(after.cogs - before.cogs)
+  return { totalCost, unitCost: round2(totalCost / qty) }
+}
+
 export type StockStatus = 'out' | 'below_safety' | 'reorder' | 'ok' | 'overstock'
 
 export interface ReorderInput {

@@ -160,6 +160,12 @@ export async function runSelfHeal(userId?: string): Promise<SelfHealResult> {
   }
   await add('purchase_payment_unposted', purPayUnposted.length, purPayFixed, `posted ${purPayFixed}/${purPayUnposted.length} to the GL`)
 
+  // 15) Inventory↔GL drift (ERPFIX-6, BUG-ERP-12) — no auto-fix, pure visibility.
+  const { inventoryGlReconciliation } = await import('@/lib/erp/inventoryData')
+  const recon = await inventoryGlReconciliation()
+  const drifted = Math.abs(recon.unexplained) > 1 ? 1 : 0
+  await add('inventory_gl_drift', drifted, 0, drifted ? `unexplained ${recon.unexplained} (inventory ${recon.inventoryValue} vs GL ${recon.glBalance1200})` : 'none')
+
   const totalIssues = findings.reduce((s, f) => s + f.count, 0)
   const totalFixed = findings.reduce((s, f) => s + f.fixed, 0)
   const risk = riskScore(findings)

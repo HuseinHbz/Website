@@ -50,6 +50,7 @@ const SUITES = [
   { name: 'ERPFIX-3 document lifecycle: sales state machine + safe delete + full-fidelity convert', script: 'verify-erpfix-3.ts', db: 'rg_erpfix3' },
   { name: 'ERPFIX-4 purchasing controls: edit lock + separation of duties + validation + approval unification', script: 'verify-erpfix-4.ts', db: 'rg_erpfix4' },
   { name: 'ERPFIX-5 subledger/GL completeness: service/asset classification + purchase returns + payment visibility + depreciation', script: 'verify-erpfix-5.ts', db: 'rg_erpfix5' },
+  { name: 'ERPFIX-6 inventory costing: issueCost-driven COGS + inventory/GL reconciliation + direct-invoice stock modes + return restock', script: 'verify-erpfix-6.ts', db: 'rg_erpfix6' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'

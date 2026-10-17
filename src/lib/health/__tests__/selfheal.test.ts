@@ -12,9 +12,9 @@ describe('HEAL_CHECKS registry', () => {
   // docs/governance/contract-changes.md (CC-001): the count itself is not a
   // financial assertion, just this registry's own size, but it is a
   // regression-suite assertion edit per CLAUDE.md رule and is recorded there.
-  it('has 14 unique, bilingual checks', () => {
-    expect(HEAL_CHECKS).toHaveLength(14)
-    expect(new Set(HEAL_CHECKS.map(c => c.code)).size).toBe(14)
+  it('has 15 unique, bilingual checks', () => {
+    expect(HEAL_CHECKS).toHaveLength(15)
+    expect(new Set(HEAL_CHECKS.map(c => c.code)).size).toBe(15)
     for (const c of HEAL_CHECKS) {
       expect(c.en.length).toBeGreaterThan(0)
       expect(c.fa.length).toBeGreaterThan(0)

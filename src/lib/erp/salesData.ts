@@ -8,7 +8,8 @@ import { pgQuery, withTransaction, type TxQuery } from '@/lib/db'
 import { customerCredit, salesKpis, salesInvoicePostingLines, postingBalanced } from './sales'
 import { nextNumber } from '@/lib/numbering/integrate'
 import { assertPostable } from './accountingData'
-import { loadGlMap, applyGlMap } from './glPosting'
+import { loadGlMap, applyGlMap, accountIdByCode, insertPostedEntry } from './glPosting'
+import { costOfIssuing } from '@/lib/inventory/inventoryOpsData'
 import { toBase } from './money'
 
 export interface CustomerWithCredit {
@@ -368,6 +369,121 @@ export async function settleReturnIfPaid(creditNoteId: number, userId?: string):
     [`Return ${cn.doc_no} awaiting settlement`, `برگشت ${cn.doc_no} در انتظار تسویه`,
      `Customer credit of ${cn.total} from a paid-invoice return — issue a refund or apply to a future invoice.`, cn.total, creditNoteId, `sales_return_pending:${creditNoteId}`])
   return { settled: 'credit' }
+}
+
+/**
+ * ERPFIX-6 (audit_first finding, decision_gate answered — بله): a confirmed
+ * sales return (credit_note against an invoice) physically restocks each
+ * product line, at the EXACT unit cost the original sale was issued at —
+ * never a freshly recomputed `issueCost` (that would silently change the
+ * value of what is, by definition, a reversal). The original issue is
+ * found via its `ref` — either this invoice's own direct auto-issue
+ * (`INV-<invoiceId>-%`, see autoIssueDirectInvoiceStock) or, for an
+ * invoice converted from a delivered order, the order's shipment(s)
+ * (`SHP-<id>`). A line with no traceable original issue (it was never
+ * actually taken out of stock — e.g. a service line, or a direct invoice
+ * that only ever warned/blocked) has nothing to reverse and is skipped,
+ * not an error. Idempotent via the same `ref` marker pattern used
+ * throughout this module (a retried confirm never double-restocks).
+ */
+export async function restockSalesReturn(creditNoteId: number, userId?: string): Promise<{ restocked: { productId: number; qty: number; unitCost: number }[] }> {
+  const cn = (await pgQuery<{ id: number; doc_type: string; source_id: number | null; doc_no: string | null }>(
+    `SELECT id, doc_type, source_id, doc_no FROM sales_documents WHERE id=$1`, [creditNoteId]))[0]
+  if (!cn || cn.doc_type !== 'credit_note' || !cn.source_id) return { restocked: [] }
+  const ref = `CNRESTOCK-${cn.doc_no ?? creditNoteId}`
+  const already = (await pgQuery<{ id: number }>(`SELECT id FROM inv_moves WHERE ref=$1 LIMIT 1`, [ref]))[0]
+  if (already) return { restocked: [] } // idempotent
+
+  const invoice = (await pgQuery<{ source_id: number | null }>(`SELECT source_id FROM sales_documents WHERE id=$1`, [cn.source_id]))[0]
+  const invoiceOrderId = invoice?.source_id ?? null
+
+  const lines = await pgQuery<{ product_id: number | null; qty: number }>(
+    `SELECT product_id, qty::float AS qty FROM sales_document_lines WHERE document_id=$1`, [creditNoteId])
+  const restocked: { productId: number; qty: number; unitCost: number; warehouseId: number | null }[] = []
+  for (const l of lines) {
+    if (!l.product_id || num(l.qty) <= 0) continue
+    const direct = (await pgQuery<{ q: number; v: number; wh: number | null }>(
+      `SELECT COALESCE(SUM(qty),0)::float AS q, COALESCE(SUM(qty*unit_cost),0)::float AS v, MAX(warehouse_id) AS wh
+       FROM inv_moves WHERE product_id=$1 AND type='issue' AND ref LIKE $2`,
+      [l.product_id, `INV-${cn.source_id}-%`]))[0]
+    let qtyFound = Math.abs(num(direct?.q))
+    let valueFound = Math.abs(num(direct?.v))
+    let wh = direct?.wh ?? null
+    if (qtyFound <= 0.0001 && invoiceOrderId) {
+      const viaShip = (await pgQuery<{ q: number; v: number; wh: number | null }>(
+        `SELECT COALESCE(SUM(m.qty),0)::float AS q, COALESCE(SUM(m.qty*m.unit_cost),0)::float AS v, MAX(m.warehouse_id) AS wh
+         FROM inv_moves m JOIN inv_shipments s ON m.ref = 'SHP-'||s.id
+         WHERE m.product_id=$1 AND m.type='issue' AND s.sales_document_id=$2`,
+        [l.product_id, invoiceOrderId]))[0]
+      qtyFound = Math.abs(num(viaShip?.q))
+      valueFound = Math.abs(num(viaShip?.v))
+      wh = viaShip?.wh ?? null
+    }
+    if (qtyFound <= 0.0001 || !wh) continue // nothing was ever actually issued for this line
+    const unitCost = round2(valueFound / qtyFound)
+    const restockQty = Math.min(num(l.qty), qtyFound)
+    await pgQuery(
+      `INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at)
+       VALUES ($1,$2,'return',$3,$4,$5,$6,${NOW_SQL})`,
+      [l.product_id, wh, restockQty, unitCost, ref, userId ?? null])
+    restocked.push({ productId: l.product_id, qty: restockQty, unitCost, warehouseId: wh })
+  }
+  return { restocked }
+}
+function round2(n: number): number { return Math.round(n * 100) / 100 }
+function num(v: unknown): number { return Number(v ?? 0) }
+
+/**
+ * ERPFIX-6 (BUG-ERP-07, decision_gate answered): a DIRECT invoice (no
+ * source_id — never converted from an order that was already delivered,
+ * per `do_not`: a delivered order's invoice must never issue stock again)
+ * with at least one stock line, in `invoice_stock_mode='auto_issue'`.
+ * Issues each line via the SAME `costOfIssuing` every other issuing path
+ * uses and posts ONE Dr 5000/Cr 1200 COGS entry — the exact mirror of
+ * `deliverSalesOrder`, just keyed off the invoice directly instead of a
+ * shipment. Idempotent per line (`INV-<invoiceId>-<lineId>` ref). Throws
+ * (caller maps to a 409) when stock is insufficient or no warehouse is set
+ * — this mode must never silently go negative.
+ */
+export async function autoIssueDirectInvoiceStock(query: TxQuery, invoiceId: number, userId?: string): Promise<{ issued: boolean; cogsEntryId?: number; totalCost: number }> {
+  const lines = await query<{ id: number; productId: number; qty: number }>(
+    `SELECT sl.id, sl.product_id AS "productId", sl.qty::float AS qty FROM sales_document_lines sl
+     JOIN sales_documents d ON d.id = sl.document_id
+     WHERE sl.document_id=$1 AND sl.product_id IS NOT NULL AND d.source_id IS NULL`, [invoiceId])
+  if (lines.length === 0) return { issued: false, totalCost: 0 }
+  const doc = (await query<{ warehouse_id: number | null; doc_no: string | null }>(
+    `SELECT warehouse_id, doc_no FROM sales_documents WHERE id=$1`, [invoiceId]))[0]
+  if (!doc?.warehouse_id) throw new Error('ERP_SALES_DIRECT_ISSUE_NO_WAREHOUSE: this invoice has no fulfillment warehouse set')
+
+  let cogsTotal = 0
+  for (const l of lines) {
+    const ref = `INV-${invoiceId}-${l.id}`
+    const already = (await query<{ id: number }>(`SELECT id FROM inv_moves WHERE ref=$1 LIMIT 1`, [ref]))[0]
+    if (already) continue // idempotent — a retried confirm never double-issues
+    const onHand = num((await query<{ s: number }>(`SELECT COALESCE(SUM(qty),0)::float AS s FROM inv_moves WHERE product_id=$1`, [l.productId]))[0]?.s)
+    if (num(l.qty) > onHand + 0.0001) {
+      throw new Error(`ERP_SALES_DIRECT_ISSUE_INSUFFICIENT_STOCK: product ${l.productId} — requested ${l.qty}, only ${onHand} on hand`)
+    }
+    const costed = await costOfIssuing(query, l.productId, Math.abs(l.qty))
+    await query(`INSERT INTO inv_moves (product_id, warehouse_id, type, qty, unit_cost, ref, created_by, created_at) VALUES ($1,$2,'issue',$3,$4,$5,$6,${NOW_SQL})`,
+      [l.productId, doc.warehouse_id, -Math.abs(l.qty), costed.unitCost, ref, userId ?? null])
+    cogsTotal += costed.totalCost
+  }
+  if (cogsTotal <= 0) return { issued: true, totalCost: 0 }
+  const map = await loadGlMap()
+  const [cogsAcc, invAcc] = await Promise.all([accountIdByCode('5000', query), accountIdByCode(map.inventory, query)])
+  const entry = await insertPostedEntry(query, new Date().toISOString().slice(0, 10), `COGS — direct invoice ${doc.doc_no ?? invoiceId}`, `INV-COGS-${invoiceId}`, cogsTotal, userId,
+    [{ accountId: cogsAcc, debit: cogsTotal, credit: 0 }, { accountId: invAcc, debit: 0, credit: cogsTotal }])
+  return { issued: true, cogsEntryId: entry.id, totalCost: cogsTotal }
+}
+
+/** Direct (standalone, no source order) invoice stock lines — used by the
+ * route to decide whether invoice_stock_mode applies at all. */
+export async function directInvoiceStockLines(invoiceId: number): Promise<{ id: number; productId: number; qty: number }[]> {
+  return pgQuery<{ id: number; productId: number; qty: number }>(
+    `SELECT sl.id, sl.product_id AS "productId", sl.qty::float AS qty FROM sales_document_lines sl
+     JOIN sales_documents d ON d.id = sl.document_id
+     WHERE sl.document_id=$1 AND sl.product_id IS NOT NULL AND d.source_id IS NULL`, [invoiceId])
 }
 
 /** Returnable summary for the UI (remaining amount). */

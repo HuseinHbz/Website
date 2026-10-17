@@ -5283,4 +5283,22 @@ export async function runMigrations() {
     WHERE is_system=true AND (ops::jsonb->>'erp.finance:post')::boolean IS TRUE
       AND NOT (ops::jsonb ? 'erp.finance:post_depreciation');
   `)
+
+  // ── ERPFIX-6 — inventory costing + COGS from one reference ──────────────
+  // BUG-ERP-12: last_cost is PURELY informational (the most recent price
+  // actually paid — never a COGS source; issueCost reads inv_moves, see
+  // inventoryOpsData.ts#costOfIssuing). inv_products.cost is left exactly as
+  // it was (a standard/manual-entry cost, still used for initial pricing —
+  // never COGS, per this phase's own required_changes).
+  await pgQuery(`
+    ALTER TABLE inv_products ADD COLUMN IF NOT EXISTS last_cost NUMERIC;
+  `)
+  // BUG-ERP-07 (decision_gate answered): all three modes are built;
+  // 'warn' is the default (alert, never blocks, never auto-issues — the
+  // SAME behavior this bug started from, now at least VISIBLE).
+  await pgQuery(`
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'invoice_stock_mode', 'warn', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='invoice_stock_mode');
+  `)
 }
