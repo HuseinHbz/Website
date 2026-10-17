@@ -14,6 +14,7 @@ import { assertPostable } from './accountingData'
 import { entryBalanced } from './ledger'
 import type { PostingLine } from './sales'
 import { toBase, roundTo } from './money'
+import { exactlyBalanced, fromMinorUnits } from '@/lib/money'
 
 const NOW = "to_char(now(),'YYYY-MM-DD HH24:MI:SS')"
 const num = (v: unknown) => Number(v ?? 0)
@@ -186,6 +187,13 @@ export async function insertPostedEntry(
 ): Promise<{ id: number; entryNo: string }> {
   const balance = entryBalanced(lines)
   if (!balance.ok) throw new Error(`Journal entry does not balance: ${balance.reason} (Dr ${balance.totalDebit} / Cr ${balance.totalCredit})`)
+  // ERPFIX-8 (BUG-ERP-23): entryBalanced's EPS=0.005 tolerance exists for
+  // backward compatibility (see contract-changes.md) and can mask a genuine
+  // one-cent imbalance. Every entry through THIS single entry point also
+  // gets an EXACT, zero-tolerance check — a real discrepancy now throws
+  // loudly instead of silently posting under the epsilon.
+  const exact = exactlyBalanced(lines)
+  if (!exact.ok) throw new Error(`Journal entry does not balance EXACTLY: diff=${fromMinorUnits(exact.diffUnits)} (Dr ${fromMinorUnits(exact.totalDebitUnits)} / Cr ${fromMinorUnits(exact.totalCreditUnits)})`)
   const gate = await assertPostable(date, { allowClosedPeriod: options.allowClosedPeriod })
   if (!gate.ok) throw new Error(gate.error ?? 'Fiscal period is closed for this date')
   const entryNo = options.entryNo ?? await nextNumber(options.docType ?? 'journal', { legacyPrefix: 'JE' })

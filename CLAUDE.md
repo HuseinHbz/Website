@@ -517,6 +517,28 @@
    residual to the dedicated 2160 "VAT Settlement Payable" account
    (idempotent per period via `vat_settlements`'s UNIQUE constraint — a
    retried settlement returns the existing one, never posts twice).
+63. **Measure before you optimize; a cent-level imbalance is exact, never
+   epsilon (ERPFIX-8, BUG-ERP-22/23).** `scripts/bench-erpfix-8.ts` ran real
+   `EXPLAIN (ANALYZE, BUFFERS)` at 120k GL lines / 100k sales / 50k purchase
+   documents BEFORE anything changed — `loadTallies` (134-167ms, CASE-gated
+   not WHERE-gated) and `assertPostable`/`listPeriods` (0.03ms, a tiny
+   table) were measured and left UNCHANGED (no cache/snapshot was built for
+   either — don't build what isn't measured as slow). The two REAL,
+   measured bottlenecks were fixed: `purchasingData.listDocuments` gained
+   server-side `{limit,offset,withMeta}` pagination (was `SELECT *` with no
+   LIMIT at all — `overview()`'s own `.slice(0,8)` now has `LIMIT 8` in the
+   SQL instead), and `sales_documents`/`purchase_documents`/
+   `sales_payments`/`purchase_payments` each gained a `date` index (measured
+   39.6ms Seq Scan at 100k rows for a one-quarter filter → index scan).
+   `src/lib/money.ts` (zero-dependency BigInt exact-cent arithmetic) adds an
+   UNCONDITIONAL `exactlyBalanced` check to `insertPostedEntry` — the single
+   GL entry point — alongside the existing EPS=0.005 `entryBalanced` check:
+   a real cent-level discrepancy can never slip through under a float
+   tolerance again. `erp_exchange_rates.base_rate` moved `DOUBLE PRECISION`
+   → `NUMERIC` (non-destructive `USING ::numeric`). Proven safe against the
+   ENTIRE regression history (55/55, including every GL-posting-heavy suite
+   from 26.20 through ERPFIX-7) — the exact check rejects nothing any
+   existing production poster has ever legitimately produced.
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

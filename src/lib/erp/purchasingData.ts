@@ -112,11 +112,31 @@ export async function vendorPosition(vendorId: number) {
 
 // ── Documents ────────────────────────────────────────────────────────────────
 interface DocRow { id: number; doc_no: string | null; doc_type: string; vendor_id: number | null; status: string; date: string; total: number; paid_total: number; approval_levels: number; budget: number; gl_entry_id: number | null; priority: string; currency: string; exchange_rate: number; department: string | null; cost_center_id: number | null; company_id: number | null }
-export async function listDocuments(docType?: PurchaseDocType) {
+/**
+ * ERPFIX-8 (BUG-ERP-22): this used to run `SELECT d.*` with no LIMIT at all
+ * — on a realistic volume (measured: 50k documents) it returns every row
+ * over the wire regardless of how many the caller actually shows. Now
+ * server-side paginated (default 100, capped 500) — the return shape stays
+ * backward-compatible (a plain array) for every existing caller that never
+ * passed `opts`; `opts.withMeta` opts a caller into `{rows, total}` when it
+ * actually needs the total count for a pager UI.
+ */
+export async function listDocuments(docType?: PurchaseDocType, opts: { limit?: number; offset?: number; withMeta?: boolean } = {}) {
+  const limit = Math.min(Math.max(opts.limit ?? 100, 1), 500)
+  const offset = Math.max(opts.offset ?? 0, 0)
+  const params: unknown[] = []
+  let where = ''
+  if (docType) { params.push(docType); where = `WHERE d.doc_type=$${params.length}` }
+  params.push(limit, offset)
   const rows = await pgQuery<DocRow & { vendor_name: string | null }>(
     `SELECT d.*, v.name AS vendor_name FROM purchase_documents d LEFT JOIN purchase_vendors v ON v.id=d.vendor_id
-     ${docType ? 'WHERE d.doc_type=$1' : ''} ORDER BY d.created_at DESC`, docType ? [docType] : [])
-  return rows.map(r => ({ id: r.id, docNo: r.doc_no, docType: r.doc_type, vendorId: r.vendor_id, vendorName: r.vendor_name, status: r.status, date: r.date, total: num(r.total), paidTotal: num(r.paid_total), approvalLevels: r.approval_levels, budget: num(r.budget), glEntryId: r.gl_entry_id, priority: r.priority }))
+     ${where} ORDER BY d.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`, params)
+  const mapped = rows.map(r => ({ id: r.id, docNo: r.doc_no, docType: r.doc_type, vendorId: r.vendor_id, vendorName: r.vendor_name, status: r.status, date: r.date, total: num(r.total), paidTotal: num(r.paid_total), approvalLevels: r.approval_levels, budget: num(r.budget), glEntryId: r.gl_entry_id, priority: r.priority }))
+  if (!opts.withMeta) return mapped
+  const countParams = docType ? [docType] : []
+  const total = num((await pgQuery<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM purchase_documents d ${docType ? 'WHERE d.doc_type=$1' : ''}`, countParams))[0]?.n)
+  return { rows: mapped, total, limit, offset }
 }
 export async function getDocument(id: number) {
   const d = (await pgQuery<DocRow>(`SELECT * FROM purchase_documents WHERE id=$1`, [id]))[0]
@@ -1159,6 +1179,9 @@ export async function overview() {
   const vendors = num((await pgQuery<{ c: number }>(`SELECT COUNT(*)::int AS c FROM purchase_vendors WHERE active=true`))[0]?.c)
   const kpis = purchaseKpis({ orders, pendingApproval, payables, vendors })
   const topVendors = await pgQuery(`SELECT name, score, grade FROM purchase_vendors WHERE active=true ORDER BY score DESC LIMIT 5`)
-  const recent = await listDocuments()
-  return { kpis, topVendors, recent: recent.slice(0, 8) }
+  // ERPFIX-8 (BUG-ERP-22): used to fetch EVERY document then .slice(0,8) in
+  // JS — the LIMIT is now in the SQL itself (listDocuments defaults to a
+  // bounded page; here it only ever needs 8).
+  const recent = await listDocuments(undefined, { limit: 8 })
+  return { kpis, topVendors, recent }
 }

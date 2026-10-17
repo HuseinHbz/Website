@@ -5390,6 +5390,60 @@ export async function runMigrations() {
   `)
 
   await pgQuery(`
+    -- ── ERPFIX-8 (BUG-ERP-22) — measured date-range indexes ───────────────
+    -- EXPLAIN (ANALYZE, BUFFERS) on 100k sales_documents measured a 39.6ms
+    -- Seq Scan for a one-quarter date-range filter with NO index at all
+    -- (scripts/bench-erpfix-8.ts); these four are the exact columns the
+    -- master prompt's own evidence names.
+    CREATE INDEX IF NOT EXISTS idx_sales_docs_date ON sales_documents(date);
+    CREATE INDEX IF NOT EXISTS idx_purchase_docs_date ON purchase_documents(date);
+    CREATE INDEX IF NOT EXISTS idx_sales_payments_date ON sales_payments(date);
+    CREATE INDEX IF NOT EXISTS idx_purchase_payments_date ON purchase_payments(date);
+  `)
+  // Date-format CHECK (BUG-ERP-22 required_changes): NOT VALID first, then
+  // VALIDATE only if the existing data actually passes — never fails boot on
+  // a pre-existing bad row; a row that fails is reported, not silently
+  // tolerated forever.
+  async function addDateCheckIfClean(table: string, column: string) {
+    const constraintName = `chk_${table}_${column}_fmt`
+    await pgQuery(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '${constraintName}') THEN
+          ALTER TABLE ${table} ADD CONSTRAINT ${constraintName} CHECK (${column} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}') NOT VALID;
+        END IF;
+      END $$;
+    `)
+    const bad = (await pgQuery<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM ${table} WHERE ${column} IS NOT NULL AND ${column} !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'`))[0]?.n ?? 0
+    if (bad === 0) {
+      await pgQuery(`ALTER TABLE ${table} VALIDATE CONSTRAINT ${constraintName}`)
+    } else {
+      console.warn(`[migrate] ${table}.${column}: ${bad} row(s) fail the date-format check — constraint left NOT VALID, not enforced yet. Fix the data, then VALIDATE manually.`)
+    }
+  }
+  await addDateCheckIfClean('sales_documents', 'date')
+  await addDateCheckIfClean('purchase_documents', 'date')
+  await addDateCheckIfClean('sales_payments', 'date')
+  await addDateCheckIfClean('purchase_payments', 'date')
+
+  // ── ERPFIX-8 (BUG-ERP-23) — exact-currency base rate ─────────────────────
+  // DOUBLE PRECISION can't represent every decimal rate exactly; NUMERIC can.
+  // Non-destructive: `USING base_rate::numeric` preserves every existing
+  // value bit-for-bit (within float's own precision — this does not retro-
+  // actively fix a rate already stored imprecisely, it only stops NEW
+  // imprecision from this column going forward).
+  await pgQuery(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='erp_exchange_rates' AND column_name='base_rate' AND data_type='double precision'
+      ) THEN
+        ALTER TABLE erp_exchange_rates ALTER COLUMN base_rate TYPE NUMERIC USING base_rate::numeric;
+      END IF;
+    END $$;
+  `)
+
+  await pgQuery(`
     CREATE TABLE IF NOT EXISTS vat_settlements (
       id SERIAL PRIMARY KEY,
       period_from TEXT NOT NULL,

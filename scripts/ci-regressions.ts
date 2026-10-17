@@ -52,6 +52,7 @@ const SUITES = [
   { name: 'ERPFIX-5 subledger/GL completeness: service/asset classification + purchase returns + payment visibility + depreciation', script: 'verify-erpfix-5.ts', db: 'rg_erpfix5' },
   { name: 'ERPFIX-6 inventory costing: issueCost-driven COGS + inventory/GL reconciliation + direct-invoice stock modes + return restock', script: 'verify-erpfix-6.ts', db: 'rg_erpfix6' },
   { name: 'ERPFIX-7 standard financial statements + VAT structure: period-bounded tallies, classified balance sheet, indirect cash flow, output/input VAT split, periodic settlement', script: 'verify-erpfix-7.ts', db: 'rg_erpfix7' },
+  { name: 'ERPFIX-8 performance (measured date indexes + paginated listDocuments) + exact-decimal GL balance check', script: 'verify-erpfix-8.ts', db: 'rg_erpfix8' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'
