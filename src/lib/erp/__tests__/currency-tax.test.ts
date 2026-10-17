@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { convert, toBase, rialToToman, tomanToRial, formatMoney, exchangeDifference, dualRialToman } from '../currency'
-import { computeTaxes, extractInclusive, vatOf, IRAN_VAT, BUILTIN_TAXES } from '../tax'
+import { computeTaxes, extractInclusive, vatOf, vatRule, BUILTIN_TAXES } from '../tax'
 
 describe('currency engine', () => {
   it('Rial ↔ Toman is exact 10:1', () => {
@@ -34,20 +34,20 @@ describe('currency engine', () => {
 })
 
 describe('tax engine', () => {
-  it('applies Iran VAT 9%', () => {
-    expect(vatOf(1000)).toBe(90)
-    const r = computeTaxes(1000, [IRAN_VAT])
+  it('applies a 9% VAT rate supplied by the caller (ERPFIX-7: no built-in default)', () => {
+    expect(vatOf(1000, 9)).toBe(90)
+    const r = computeTaxes(1000, [vatRule(9)])
     expect(r.taxTotal).toBe(90); expect(r.grandTotal).toBe(1090)
   })
   it('withholding reduces the payable; VAT adds', () => {
-    const r = computeTaxes(1000, BUILTIN_TAXES)
+    const r = computeTaxes(1000, [vatRule(9), ...BUILTIN_TAXES])
     // VAT +90, WHT5 -50, WHT10 -100
     expect(r.taxTotal).toBe(90)
     expect(r.withholdingTotal).toBe(150)
     expect(r.grandTotal).toBe(940)
   })
   it('exemption zeroes all taxes', () => {
-    const r = computeTaxes(1000, [IRAN_VAT], { exempt: true })
+    const r = computeTaxes(1000, [vatRule(9)], { exempt: true })
     expect(r.taxTotal).toBe(0); expect(r.grandTotal).toBe(1000)
   })
   it('extracts VAT from an inclusive gross', () => {

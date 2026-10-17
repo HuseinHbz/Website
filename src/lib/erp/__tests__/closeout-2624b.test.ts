@@ -21,12 +21,12 @@ describe('purchase invoice → GL posting', () => {
     expect(ap?.debit).toBe(0)
     const inv = lines.find(l => l.accountCode === '1200')
     expect(inv?.debit).toBe(net)         // inventory debited net
-    const vat = lines.find(l => l.accountCode === '2100')
+    const vat = lines.find(l => l.accountCode === '2100-IN')
     expect(vat?.debit).toBe(tax)         // recoverable VAT input debited
   })
   it('omits the VAT line when tax is zero but still balances', () => {
     const lines = purchaseInvoicePostingLines(5_000_000, 0, 5_000_000)
-    expect(lines.some(l => l.accountCode === '2100')).toBe(false)
+    expect(lines.some(l => l.accountCode === '2100-IN')).toBe(false)
     expect(postingBalanced(lines)).toBe(true)
   })
 })

@@ -66,14 +66,14 @@ describe('salesInvoicePostingLines (26.15.1 Sales → GL)', () => {
     expect(postingBalanced(lines)).toBe(true)
     const ar = lines.find(l => l.accountCode === '1100')!
     const rev = lines.find(l => l.accountCode === '4000')!
-    const vat = lines.find(l => l.accountCode === '2100')!
+    const vat = lines.find(l => l.accountCode === '2100-OUT')!
     expect(ar.debit).toBe(1090)
     expect(rev.credit).toBe(1000)
     expect(vat.credit).toBe(90)
   })
   it('omits the VAT line when tax is zero', () => {
     const lines = salesInvoicePostingLines(500, 0, 500, 'invoice')
-    expect(lines.some(l => l.accountCode === '2100')).toBe(false)
+    expect(lines.some(l => l.accountCode === '2100-OUT')).toBe(false)
     expect(postingBalanced(lines)).toBe(true)
   })
   it('reverses the entry for a credit note (return)', () => {

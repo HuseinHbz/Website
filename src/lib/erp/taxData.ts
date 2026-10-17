@@ -49,3 +49,47 @@ export function computeProfile(profile: TaxProfile, base: number) {
   if (profile.withholdingRate > 0) rules.push({ code: 'WHT', nameEn: 'Withholding', nameFa: 'تکلیفی', kind: 'withholding', rate: profile.withholdingRate, enabled: true })
   return computeTaxes(base, rules, { exempt: profile.exempt })
 }
+
+// ── Statutory VAT rate (ERPFIX-7, BUG-ERP-20) ───────────────────────────────
+// A VAT rate is a statutory figure — never hardcoded, never guessed, never
+// seeded. `tax_rates` holds a (code, rate, effective_from) history; a row
+// only counts once an accountant/the maintainer CONFIRMS it. Every call site
+// that needs the active rate must go through `currentVatRate` and must
+// FAIL CLOSED (not silently default to some number) when nothing is
+// confirmed yet for the requested date.
+export class VatRateNotConfirmedError extends Error {
+  constructor() { super('ERP-TAX-VAT-RATE-NOT-CONFIRMED: no confirmed VAT rate is on file for this date') }
+}
+
+export interface TaxRateRow { id: number; code: string; rate: number; effectiveFrom: string; confirmed: boolean; confirmedBy: string | null; confirmedAt: string | null }
+
+export async function listTaxRates(code = 'VAT'): Promise<TaxRateRow[]> {
+  return (await pgQuery(
+    `SELECT id, code, rate::float AS rate, effective_from AS "effectiveFrom", confirmed, confirmed_by AS "confirmedBy", confirmed_at AS "confirmedAt"
+     FROM tax_rates WHERE code=$1 ORDER BY effective_from DESC`, [code])) as unknown as TaxRateRow[]
+}
+
+/** The confirmed rate in force on `asOf` (default: today). Throws
+ * `VatRateNotConfirmedError` — never returns a guessed default — if no
+ * confirmed row's effective_from is on or before that date. */
+export async function currentVatRate(asOf?: string): Promise<{ rate: number; effectiveFrom: string }> {
+  const date = asOf ?? new Date().toISOString().slice(0, 10)
+  const row = (await pgQuery<{ rate: number; effective_from: string }>(
+    `SELECT rate::float AS rate, effective_from FROM tax_rates
+     WHERE code='VAT' AND confirmed=true AND effective_from <= $1
+     ORDER BY effective_from DESC LIMIT 1`, [date]))[0]
+  if (!row) throw new VatRateNotConfirmedError()
+  return { rate: row.rate, effectiveFrom: row.effective_from }
+}
+
+/** Create a new VAT rate row and confirm it in one step — the ONLY path a
+ * rate reaches `confirmed=true`; a prior confirmed row is left untouched
+ * (history preserved, same append-only discipline as every other statutory
+ * table in this codebase). */
+export async function confirmVatRate(rate: number, effectiveFrom: string, userId?: string): Promise<number> {
+  const row = (await pgQuery<{ id: number }>(
+    `INSERT INTO tax_rates (code, rate, effective_from, confirmed, confirmed_by, confirmed_at, created_by)
+     VALUES ('VAT',$1,$2,true,$3,${NOW},$3) RETURNING id`,
+    [rate, effectiveFrom, userId ?? null]))[0]
+  return row.id
+}

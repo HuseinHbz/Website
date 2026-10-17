@@ -50,11 +50,11 @@ describe('purchasing GL posting', () => {
     const ap = lines.find(l => l.accountCode === '2000')!
     expect(ap.credit).toBe(1090)
     expect(lines.find(l => l.accountCode === '1200')!.debit).toBe(1000)
-    expect(lines.find(l => l.accountCode === '2100')!.debit).toBe(90)
+    expect(lines.find(l => l.accountCode === '2100-IN')!.debit).toBe(90)
   })
   it('omits the VAT line when tax is zero and still balances', () => {
     const lines = purchaseInvoicePostingLines(1000, 0, 1000)
-    expect(lines.some(l => l.accountCode === '2100')).toBe(false)
+    expect(lines.some(l => l.accountCode === '2100-IN')).toBe(false)
     expect(postingBalanced(lines)).toBe(true)
   })
   it('payment posts Dr AP / Cr Bank, balanced', () => {

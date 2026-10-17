@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { applyGlMap, reversalLines, type GlMap } from '../glPosting'
 import { salesInvoicePostingLines } from '../sales'
 
-const MAP: GlMap = { ar: '1105', revenue: '4010', vat: '2110', ap: '2005', inventory: '1205', bank: '1015' }
+const MAP: GlMap = {
+  ar: '1105', revenue: '4010', vat: '2110', ap: '2005', inventory: '1205', bank: '1015',
+  cash: '1000', serviceExpense: '6300', accDepreciation: '1590', depreciationExpense: '6900',
+  vatOutput: '2110', vatInput: '2111',
+}
 
 describe('applyGlMap (بند ۱.۱ configurable mapping)', () => {
   it('translates every default code through the erp_settings map', () => {
@@ -15,9 +19,18 @@ describe('applyGlMap (بند ۱.۱ configurable mapping)', () => {
     expect(out[0].accountCode).toBe('6100')
   })
   it('identity map is a no-op', () => {
-    const id: GlMap = { ar: '1100', revenue: '4000', vat: '2100', ap: '2000', inventory: '1200', bank: '1010' }
+    const id: GlMap = {
+      ar: '1100', revenue: '4000', vat: '2100', ap: '2000', inventory: '1200', bank: '1010',
+      cash: '1000', serviceExpense: '6300', accDepreciation: '1590', depreciationExpense: '6900',
+      vatOutput: '2100', vatInput: '2100',
+    }
     const src = salesInvoicePostingLines(100, 9, 109, 'invoice')
-    expect(applyGlMap(src, id)).toEqual(src)
+    const expected = src.map(l => l.accountCode === '2100-OUT' ? { ...l, accountCode: '2100' } : l)
+    expect(applyGlMap(src, id)).toEqual(expected)
+  })
+  it('separates output and input VAT when configured distinctly (ERPFIX-7)', () => {
+    const outLines = applyGlMap(salesInvoicePostingLines(1000, 90, 1090, 'invoice'), MAP)
+    expect(outLines.find(l => l.accountCode === '2110')).toBeTruthy()
   })
 })
 

@@ -164,7 +164,12 @@ export type SalesPostingKind = 'invoice' | 'credit_note'
 export function salesInvoicePostingLines(net: number, tax: number, total: number, kind: SalesPostingKind = 'invoice'): PostingLine[] {
   const ar = { accountCode: '1100', memo: 'Accounts receivable' }
   const rev = { accountCode: '4000', memo: 'Sales revenue' }
-  const vat = { accountCode: '2100', memo: 'VAT payable' }
+  // ERPFIX-7 (BUG-ERP-20): a sentinel, not the raw '2100' literal — glPosting's
+  // applyGlMap translates this to the configured OUTPUT-VAT account
+  // (gl_map_vat_output, falling back to gl_map_vat), kept distinct from the
+  // purchasing side's input-VAT sentinel so the two can be posted to
+  // different accounts and reconciled separately.
+  const vat = { accountCode: '2100-OUT', memo: 'VAT payable (output)' }
   const lines: PostingLine[] = kind === 'credit_note'
     ? [
         { ...rev, debit: round2(net), credit: 0 },

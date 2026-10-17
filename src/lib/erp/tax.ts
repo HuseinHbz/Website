@@ -3,9 +3,15 @@
  *
  * Computes VAT, withholding and custom taxes over a taxable base, supporting tax
  * groups (several taxes applied together), exemptions and inclusive/exclusive
- * pricing. Iran's standard VAT (9%) is the built-in default. Country-specific
- * regimes extend by adding `TaxRule`s — no code change needed. Distinct from the
- * simple per-line `taxPct` in `sales.ts`: this is the reusable rules engine.
+ * pricing. Country-specific regimes extend by adding `TaxRule`s — no code change
+ * needed. Distinct from the simple per-line `taxPct` in `sales.ts`: this is the
+ * reusable rules engine.
+ *
+ * ERPFIX-7 (BUG-ERP-20): NO statutory VAT rate is a literal anywhere in this
+ * engine — a rate is always supplied by the caller, sourced from the confirmed
+ * `tax_rates` table (`erp/taxData.ts#currentVatRate`), never guessed or seeded
+ * here. `vatRule(rate)` builds a one-off VAT `TaxRule` from that confirmed
+ * number; there is deliberately no built-in default rate to fall back to.
  */
 
 export type TaxKind = 'vat' | 'withholding' | 'custom'
@@ -21,10 +27,15 @@ export interface TaxRule {
   enabled?: boolean
 }
 
-/** Iran standard VAT. */
-export const IRAN_VAT: TaxRule = { code: 'VAT', nameEn: 'Value Added Tax', nameFa: 'مالیات بر ارزش افزوده', kind: 'vat', rate: 9, enabled: true }
+/** Builds a VAT rule from a rate the caller already confirmed (never a
+ * built-in default — see the module doc comment above). */
+export function vatRule(rate: number): TaxRule {
+  return { code: 'VAT', nameEn: 'Value Added Tax', nameFa: 'مالیات بر ارزش افزوده', kind: 'vat', rate, enabled: true }
+}
+/** Generic withholding-category labels (the category IS the rate it names —
+ * not a current statutory figure, so these are not the literal this
+ * phase's gate targets). */
 export const BUILTIN_TAXES: TaxRule[] = [
-  IRAN_VAT,
   { code: 'WHT5', nameEn: 'Withholding 5%', nameFa: 'مالیات تکلیفی ۵٪', kind: 'withholding', rate: 5, enabled: true },
   { code: 'WHT10', nameEn: 'Withholding 10%', nameFa: 'مالیات تکلیفی ۱۰٪', kind: 'withholding', rate: 10, enabled: true },
 ]
@@ -79,7 +90,8 @@ export function extractInclusive(gross: number, rate: number): { net: number; ta
   return { net, tax: round2(gross - net) }
 }
 
-/** Single-tax convenience (the common VAT case). */
-export function vatOf(base: number, rate = IRAN_VAT.rate): number {
+/** Single-tax convenience (the common VAT case). `rate` is REQUIRED — no
+ * built-in default, per the module doc comment above. */
+export function vatOf(base: number, rate: number): number {
   return round2(base * clampRate(rate) / 100)
 }

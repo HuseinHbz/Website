@@ -26,11 +26,24 @@ export interface GlMap {
   // account. All four are marked unverified in the seeded chart pending
   // accountant sign-off (see docs/governance/erpfix-5-report.md).
   cash: string; serviceExpense: string; accDepreciation: string; depreciationExpense: string
+  // ERPFIX-7 (BUG-ERP-20): output VAT (sales, a liability the company owes)
+  // and input VAT (purchases, a recoverable asset/contra-liability) used to
+  // both post to the ONE `vat` account, so reconciliation could never tell
+  // how much VAT was collected vs how much is recoverable. Both default to
+  // `vat` (the historical single account) when not explicitly configured —
+  // zero behavior change for an un-configured install.
+  vatOutput: string; vatInput: string
 }
 const DEFAULT_MAP: GlMap = {
   ar: '1100', revenue: '4000', vat: '2100', ap: '2000', inventory: '1200', bank: '1010',
   cash: '1000', serviceExpense: '6300', accDepreciation: '1590', depreciationExpense: '6900',
+  vatOutput: '2100', vatInput: '2100',
 }
+/** Sentinel placeholder codes `salesInvoicePostingLines`/`purchaseInvoice
+ * PostingLines*` emit for VAT lines — translated below to the configured
+ * output/input account, never written to the DB as a literal code. */
+export const VAT_OUTPUT_SENTINEL = '2100-OUT'
+export const VAT_INPUT_SENTINEL = '2100-IN'
 
 /** Load the configurable posting map (falls back to the seeded chart codes). */
 export async function loadGlMap(): Promise<GlMap> {
@@ -38,10 +51,11 @@ export async function loadGlMap(): Promise<GlMap> {
     const rows = await pgQuery<{ key: string; value: string }>(
       `SELECT key, value FROM erp_settings WHERE key LIKE 'gl_map_%'`)
     const byKey = new Map(rows.map(r => [r.key, r.value]))
+    const vat = byKey.get('gl_map_vat') || DEFAULT_MAP.vat
     return {
       ar: byKey.get('gl_map_ar') || DEFAULT_MAP.ar,
       revenue: byKey.get('gl_map_revenue') || DEFAULT_MAP.revenue,
-      vat: byKey.get('gl_map_vat') || DEFAULT_MAP.vat,
+      vat,
       ap: byKey.get('gl_map_ap') || DEFAULT_MAP.ap,
       inventory: byKey.get('gl_map_inventory') || DEFAULT_MAP.inventory,
       bank: byKey.get('gl_map_bank') || DEFAULT_MAP.bank,
@@ -49,6 +63,10 @@ export async function loadGlMap(): Promise<GlMap> {
       serviceExpense: byKey.get('gl_map_service_expense') || DEFAULT_MAP.serviceExpense,
       accDepreciation: byKey.get('gl_map_acc_depreciation') || DEFAULT_MAP.accDepreciation,
       depreciationExpense: byKey.get('gl_map_depreciation_expense') || DEFAULT_MAP.depreciationExpense,
+      // ERPFIX-7 (BUG-ERP-20): `gl_map_vat` stays the compatibility fallback
+      // for BOTH sides when output/input are not separately configured.
+      vatOutput: byKey.get('gl_map_vat_output') || vat,
+      vatInput: byKey.get('gl_map_vat_input') || vat,
     }
   } catch { return DEFAULT_MAP }
 }
@@ -60,6 +78,7 @@ export function applyGlMap(lines: PostingLine[], map: GlMap): PostingLine[] {
     [DEFAULT_MAP.ap]: map.ap, [DEFAULT_MAP.inventory]: map.inventory, [DEFAULT_MAP.bank]: map.bank,
     [DEFAULT_MAP.serviceExpense]: map.serviceExpense, [DEFAULT_MAP.accDepreciation]: map.accDepreciation,
     [DEFAULT_MAP.depreciationExpense]: map.depreciationExpense,
+    [VAT_OUTPUT_SENTINEL]: map.vatOutput, [VAT_INPUT_SENTINEL]: map.vatInput,
   }
   return lines.map(l => ({ ...l, accountCode: translate[l.accountCode] ?? l.accountCode }))
 }

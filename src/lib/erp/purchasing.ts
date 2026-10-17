@@ -117,7 +117,10 @@ export function purchaseInvoicePostingLines(net: number, tax: number, total: num
   const lines: PostingLine[] = [
     { accountCode: '1200', debit: round2(net), credit: 0, memo: 'Purchase (net)' },
   ]
-  if (tax > 0) lines.push({ accountCode: '2100', debit: round2(tax), credit: 0, memo: 'VAT input' })
+  // ERPFIX-7 (BUG-ERP-20): sentinel distinct from the sales side's output-VAT
+  // sentinel — glPosting's applyGlMap translates it to the configured
+  // INPUT-VAT account (gl_map_vat_input, falling back to gl_map_vat).
+  if (tax > 0) lines.push({ accountCode: '2100-IN', debit: round2(tax), credit: 0, memo: 'VAT input' })
   lines.push({ accountCode: '2000', debit: 0, credit: round2(total), memo: 'Accounts payable' })
   return lines
 }
@@ -152,7 +155,7 @@ export function purchaseInvoicePostingLinesByClass(classified: ClassifiedPurchas
     if (Math.abs(v.net) > 0.0001) lines.push({ accountCode: PURCHASE_LINE_CLASS_ACCOUNT[cls], debit: round2(v.net), credit: 0, memo: PURCHASE_LINE_CLASS_MEMO[cls] })
     totalTax += v.tax
   }
-  if (Math.abs(totalTax) > 0.0001) lines.push({ accountCode: '2100', debit: round2(totalTax), credit: 0, memo: 'VAT input' })
+  if (Math.abs(totalTax) > 0.0001) lines.push({ accountCode: '2100-IN', debit: round2(totalTax), credit: 0, memo: 'VAT input' })
   // AP is the sum of the lines actually posted above — guarantees Σdebit=Σcredit
   // exactly, independent of any per-class rounding residue.
   const apTotal = round2(lines.reduce((s, l) => s + l.debit, 0))

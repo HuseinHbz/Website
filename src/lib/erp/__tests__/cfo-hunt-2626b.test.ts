@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { chequeKpis, pettyCashSummary, canTransition } from '../banking'
-import { computeTaxes, vatOf, extractInclusive, IRAN_VAT } from '../tax'
+import { computeTaxes, vatOf, extractInclusive } from '../tax'
 
 /**
  * Phase 26.26b بند ۵ — CFO financial-integrity hunt (pure-engine slice).
@@ -48,10 +48,9 @@ describe('CFO hunt — petty-cash negative balance (scenario 6)', () => {
 })
 
 describe('CFO hunt — VAT rounding (scenario 5)', () => {
-  it('Iran VAT 9% rounds to 2 decimals deterministically', () => {
-    expect(IRAN_VAT.rate).toBe(9)
-    expect(vatOf(33_333)).toBe(2999.97)   // 33333 * 0.09 = 2999.97
-    expect(vatOf(100)).toBe(9)
+  it('a 9% rate rounds to 2 decimals deterministically (an arbitrary example rate — not a built-in default; ERPFIX-7)', () => {
+    expect(vatOf(33_333, 9)).toBe(2999.97)   // 33333 * 0.09 = 2999.97
+    expect(vatOf(100, 9)).toBe(9)
   })
   it('computeTaxes VAT-add keeps grandTotal = base + tax to the cent', () => {
     const r = computeTaxes(1_234_567, [{ kind: 'vat', rate: 9 }])

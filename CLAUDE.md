@@ -485,6 +485,38 @@
    decision_gate answered — `restockSalesReturn`, idempotent per credit
    note, skips a line with no traceable original issue rather than
    guessing a cost).
+62. **A statement period is asked for explicitly; a classification/rate is
+   DATA, never a code-literal (ERPFIX-7, BUG-ERP-19/20).** `loadTallies`
+   (`erp/ledgerData.ts`) now takes an optional `{from, to}` window — omit it
+   for the historical all-time cumulative tally, pass it for a real fiscal
+   period's own activity. Before this phase there was NO way to ask for a
+   period at all, so a year-end closing entry (which correctly zeroes that
+   year's revenue/expense in the ALL-TIME sum, by design) made that year's
+   P&L permanently unrecoverable from any report. `gl_accounts` gained
+   `classification`/`cash_flow_category` (code-range default via
+   `erp/classification.ts`, `classification_verified` defaults FALSE on every
+   row) feeding a real current/non-current `classifiedBalanceSheet` and a
+   pure indirect-method `cashFlowIndirect` (`erp/ledger.ts`) that NEVER
+   silently plugs a discrepancy — a mismatch between the build-up and the
+   actual cash-account movement is returned as `unexplained`, not hidden.
+   `loadTallies` also no longer filters `WHERE a.active = 1` — a deactivated
+   account that still carries a real posted balance stays in the trial
+   balance (dropped only when its balance is actually zero, same as every
+   other account). The VAT rate is NEVER hardcoded or seeded: `tax_rates`
+   holds a (code, rate, effective_from) history and `currentVatRate()`
+   (`erp/taxData.ts`) THROWS `VatRateNotConfirmedError` — never guesses —
+   until an accountant confirms one via `confirmRate` (its own sensitive op,
+   `erp.finance:confirm_tax_rate`, never implied by `write`). Output VAT
+   (sales) and input VAT (purchases) post through independently-configurable
+   accounts — `gl_map_vat_output`/`gl_map_vat_input`, both falling back to
+   the historical single `gl_map_vat` so an un-configured install is
+   unchanged — via translation sentinels (`'2100-OUT'`/`'2100-IN'`,
+   `glPosting.ts`) the two posting-line builders emit instead of a shared
+   literal. `runVatSettlement` (`erp/vatSettlement.ts`, its own sensitive op
+   `erp.finance:vat_settle`) nets output vs input for a period and books the
+   residual to the dedicated 2160 "VAT Settlement Payable" account
+   (idempotent per period via `vat_settlements`'s UNIQUE constraint — a
+   retried settlement returns the existing one, never posts twice).
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

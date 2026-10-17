@@ -312,12 +312,20 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
   const [priceLists, setPriceLists] = useState<{ id: number; code: string; nameEn: string; nameFa: string }[]>([])
   const [plId, setPlId] = useState('')
   const [plItems, setPlItems] = useState<{ productId: number; sku: string; nameEn: string; nameFa: string | null; unitPrice: number }[]>([])
+  // ERPFIX-7 (BUG-ERP-20): the VAT rate used to be hardcoded `9` here — a
+  // statutory figure this code has no authority to assume. It now comes from
+  // the confirmed `tax_rates` row; until an accountant confirms one, new
+  // lines default to 0% (never a guessed non-zero rate) and the UI below
+  // shows a visible "VAT rate not confirmed" hint.
+  const [vatRate, setVatRate] = useState(0)
+  const [vatConfirmed, setVatConfirmed] = useState(true)
+  useEffect(() => { fetch('/api/admin/erp/finance/tax?view=rate').then(r => r.json()).then(d => { setVatConfirmed(!!d.confirmed); setVatRate(d.confirmed ? Number(d.rate) || 0 : 0) }).catch(() => { setVatConfirmed(false); setVatRate(0) }) }, [])
   useEffect(() => { if (autoNew) { setModal(true); onAutoNew?.() } }, [autoNew, onAutoNew])
   useEffect(() => { fetch('/api/admin/erp/sales/pricelists').then(r => r.json()).then(d => setPriceLists(d.priceLists ?? [])).catch(() => {}) }, [])
   // 26.15: products are searched on demand (server-limited) — never preloaded.
-  function addProduct(p: InvProduct) { setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: 9, productId: p.id }]) }
+  function addProduct(p: InvProduct) { setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: vatRate, productId: p.id }]) }
   useEffect(() => { if (!plId) { setPlItems([]); return } fetch(`/api/admin/erp/sales/pricelists?items=${plId}`).then(r => r.json()).then(d => setPlItems(d.items ?? [])).catch(() => {}) }, [plId])
-  function addFromPriceList(productId: number) { const it = plItems.find(x => x.productId === productId); if (!it) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn, qty: 1, unitPrice: it.unitPrice, discountPct: 0, taxPct: 9, productId: it.productId }]) }
+  function addFromPriceList(productId: number) { const it = plItems.find(x => x.productId === productId); if (!it) return; setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice), { description: locale === 'fa' ? (it.nameFa || it.nameEn) : it.nameEn, qty: 1, unitPrice: it.unitPrice, discountPct: 0, taxPct: vatRate, productId: it.productId }]) }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -412,6 +420,11 @@ function Documents({ t, toast, docType, autoNew = false, onAutoNew }: { t: T; to
             <Select label={locale === 'fa' ? 'ارز' : 'Currency'} value={currency} onChange={setCurrency} options={['IRR', 'IRT', 'USD', 'EUR'].map(c => ({ value: c, label: c }))} />
             {priceLists.length > 0 && <Select label={locale === 'fa' ? 'فهرست قیمت' : 'Price list'} value={plId} onChange={setPlId} options={[{ value: '', label: '—' }, ...priceLists.map(p => ({ value: String(p.id), label: locale === 'fa' ? p.nameFa : p.nameEn }))]} />}
           </div>
+          {!vatConfirmed && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+              {locale === 'fa' ? 'نرخ مالیات بر ارزش افزوده هنوز توسط حسابدار تأیید نشده — مقدار پیش‌فرض خطوط ۰٪ است.' : 'The VAT rate has not been confirmed by an accountant yet — new lines default to 0%.'}
+            </div>
+          )}
           <div className="space-y-2">
             <div className="grid grid-cols-12 gap-2 text-xs text-text-tertiary px-1"><span className="col-span-5">{t('sales_lDesc')}</span><span className="col-span-1 text-right">{t('sales_lQty')}</span><span className="col-span-2 text-right">{t('sales_lPrice')}</span><span className="col-span-1 text-right">{t('sales_lDisc')}</span><span className="col-span-1 text-right">{t('sales_lTax')}</span><span className="col-span-2 text-right">{t('sales_lTotal')}</span></div>
             {lines.map((l, i) => {

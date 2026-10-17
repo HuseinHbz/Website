@@ -44,14 +44,17 @@ export async function POST(req: NextRequest) {
     // demo content now, driven by the SAME `template.rtl` flag the renderer
     // itself uses — one flag, everything downstream agrees.
     const rtl = template.rtl === true
+    // ERPFIX-7 (BUG-ERP-20): a statutory VAT % is never a literal, including
+    // in demo/preview data — these illustrative lines use 0% rather than a
+    // guessed rate.
     const payload = rtl
       ? buildSalesPayload([
-          { description: 'خدمات زیرساخت سازمانی', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 9 },
-          { description: 'امنیت مدیریت‌شده (ماهانه)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 9 },
+          { description: 'خدمات زیرساخت سازمانی', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 0 },
+          { description: 'امنیت مدیریت‌شده (ماهانه)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 0 },
         ], 'IRR', [{ label: 'شماره پیگیری', value: 'پیش‌نمایش-طراحی' }])
       : buildSalesPayload([
-          { description: 'Enterprise infrastructure service', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 9 },
-          { description: 'Managed security (monthly)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 9 },
+          { description: 'Enterprise infrastructure service', qty: 2, unitPrice: 1200, discountPct: 0, taxPct: 0 },
+          { description: 'Managed security (monthly)', qty: 1, unitPrice: 800, discountPct: 10, taxPct: 0 },
         ], 'IRR', [{ label: 'Reference', value: 'DESIGN-PREVIEW' }])
     const verifyUrl = `${SITE.url}/verify/PREVIEW`
     const qr = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 168 })

@@ -527,10 +527,14 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
   const [priority, setPriority] = useState('normal')
   const [department, setDepartment] = useState('')
   const [budget, setBudget] = useState('')
-  const [lines, setLines] = useState<NewLine[]>([{ description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9, productId: null }])
+  // ERPFIX-7 (BUG-ERP-20): no hardcoded VAT rate — new lines default to the
+  // confirmed `tax_rates` VAT rate (0 if none is confirmed yet).
+  const [vatRate, setVatRate] = useState(0)
+  const [lines, setLines] = useState<NewLine[]>([{ description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 0, productId: null }])
   useEffect(() => {
     fetch('/api/admin/erp/purchasing?view=vendors').then(r => r.json()).then(d => setVendors(d.vendors ?? [])).catch(() => {})
     fetch('/api/admin/erp/inventory/products').then(r => r.json()).then(d => setProducts(d.products ?? [])).catch(() => {})
+    fetch('/api/admin/erp/finance/tax?view=rate').then(r => r.json()).then(d => setVatRate(d.confirmed ? Number(d.rate) || 0 : 0)).catch(() => {})
   }, [])
   useEffect(() => {
     if (docType !== 'quotation') { setSourceId(''); return }
@@ -549,7 +553,7 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
   // which stays for small catalogs) that appends a ready-filled line.
   function addProductLine(p: InvProduct) {
     setLines(ls => [...ls.filter(l => l.description.trim() || l.unitPrice),
-      { description: rtl ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: 9, productId: p.id }])
+      { description: rtl ? (p.nameFa || p.nameEn) : p.nameEn, qty: 1, unitPrice: p.price, discountPct: 0, taxPct: vatRate, productId: p.id }])
   }
   async function save() {
     const clean = lines.filter(l => l.description.trim())
@@ -580,6 +584,11 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
         {docType === 'quotation' && (
           <Select label={lc(rtl, 'Linked RFQ (for comparison)', 'RFQ مرتبط (برای مقایسه)')} value={sourceId} onChange={setSourceId} options={[{ value: '', label: '—' }, ...rfqs.map(q => ({ value: String(q.id), label: q.docNo || String(q.id) }))]} />
         )}
+        {vatRate === 0 && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+            {lc(rtl, 'The VAT rate has not been confirmed by an accountant yet — new lines default to 0%.', 'نرخ مالیات بر ارزش افزوده هنوز توسط حسابدار تأیید نشده — مقدار پیش‌فرض خطوط ۰٪ است.')}
+          </div>
+        )}
         <div className="space-y-2">
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-end">
@@ -592,7 +601,7 @@ function NewDocModal({ rtl, onClose, onDone, toast }: { rtl: boolean; onClose: (
             </div>
           ))}
           <div className="flex items-center gap-3 flex-wrap">
-            <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: 9, productId: null }])}>+ {lc(rtl, 'Add line', 'افزودن ردیف')}</Btn>
+            <Btn size="sm" variant="secondary" onClick={() => setLines(ls => [...ls, { description: '', qty: 1, unitPrice: 0, discountPct: 0, taxPct: vatRate, productId: null }])}>+ {lc(rtl, 'Add line', 'افزودن ردیف')}</Btn>
             <ProductSearchPicker locale={rtl ? 'fa' : 'en'} onPick={addProductLine} />
           </div>
         </div>

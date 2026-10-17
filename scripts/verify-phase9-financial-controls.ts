@@ -9,7 +9,7 @@ import { seedDatabase } from '@/lib/db/seed'
 import { pgQuery, withTransaction } from '@/lib/db'
 import { createPayment } from '@/lib/treasury/paymentData'
 import { confirmMatch } from '@/lib/treasury/bankOpsData'
-import { IRAN_VAT } from '@/lib/erp/tax'
+const TEST_VAT_RATE = 9 // ERPFIX-7: arbitrary fixed rate for this script's own precision math, not a statutory default
 import { documentTotals } from '@/lib/erp/sales'
 import {
   createVendor, saveDocument as savePurchaseDoc, convertDocument as convertPurchaseDoc,
@@ -93,17 +93,17 @@ async function main() {
   {
     const cases = [0.01, 0.02, 0.05, 0.10, 0.99, 1.01, 999.99, 1_000_000.01]
     for (const amt of cases) {
-      const lines = [{ description: 'p9 precision', qty: 1, unitPrice: amt, discountPct: 0, taxPct: IRAN_VAT.rate }]
+      const lines = [{ description: 'p9 precision', qty: 1, unitPrice: amt, discountPct: 0, taxPct: TEST_VAT_RATE }]
       const totals = documentTotals(lines)
-      const expectedTax = round2(amt * IRAN_VAT.rate / 100)
-      ok(Math.abs(totals.taxTotal - expectedTax) < 0.011, `amount ${amt}: tax=${totals.taxTotal} matches ${IRAN_VAT.rate}% VAT computed independently (${expectedTax})`)
+      const expectedTax = round2(amt * TEST_VAT_RATE / 100)
+      ok(Math.abs(totals.taxTotal - expectedTax) < 0.011, `amount ${amt}: tax=${totals.taxTotal} matches ${TEST_VAT_RATE}% VAT computed independently (${expectedTax})`)
       ok(Math.abs(totals.total - round2(totals.subtotal + totals.taxTotal)) < 0.011, `amount ${amt}: subtotal(${totals.subtotal}) + tax(${totals.taxTotal}) == total(${totals.total})`)
     }
     // Multi-line rounding: sum(line totals) == document subtotal, sum(line tax) == document tax total.
     const multiLines = [
-      { description: 'l1', qty: 3, unitPrice: 333.33, discountPct: 0, taxPct: IRAN_VAT.rate },
-      { description: 'l2', qty: 7, unitPrice: 142.86, discountPct: 5, taxPct: IRAN_VAT.rate },
-      { description: 'l3', qty: 1, unitPrice: 0.01, discountPct: 0, taxPct: IRAN_VAT.rate },
+      { description: 'l1', qty: 3, unitPrice: 333.33, discountPct: 0, taxPct: TEST_VAT_RATE },
+      { description: 'l2', qty: 7, unitPrice: 142.86, discountPct: 5, taxPct: TEST_VAT_RATE },
+      { description: 'l3', qty: 1, unitPrice: 0.01, discountPct: 0, taxPct: TEST_VAT_RATE },
     ]
     const multiTotals = documentTotals(multiLines)
     ok(Math.abs(multiTotals.total - round2(multiTotals.subtotal + multiTotals.taxTotal - multiTotals.discountTotal + multiTotals.discountTotal)) < 0.02 || true, 'multi-line aggregation computed (structural sanity)')
@@ -154,7 +154,7 @@ async function main() {
   {
     const cust = (await pgQuery<{ id: number }>(`INSERT INTO sales_customers (code,name,active,created_at,updated_at) VALUES ('P9TAX','P9 Tax Cust',1,to_char(now(),'YYYY-MM-DD HH24:MI:SS'),to_char(now(),'YYYY-MM-DD HH24:MI:SS')) RETURNING id`))[0].id
     const subtotal = 2_345_678
-    const taxTotal = round2(subtotal * IRAN_VAT.rate / 100)
+    const taxTotal = round2(subtotal * TEST_VAT_RATE / 100)
     const total = round2(subtotal + taxTotal)
     const inv = (await pgQuery<{ id: number }>(
       `INSERT INTO sales_documents (doc_type,doc_no,customer_id,date,status,subtotal,discount_total,tax_total,total,created_by,currency,exchange_rate,base_total,created_at,updated_at)
@@ -164,7 +164,7 @@ async function main() {
     await postSalesInvoiceToGl(inv.id, ADMIN)
     const vatGl = await one<{ v: number }>(
       `SELECT COALESCE(SUM(l.credit-l.debit),0)::float AS v FROM gl_journal_lines l JOIN gl_journal_entries e ON e.id=l.entry_id JOIN gl_accounts a ON a.id=l.account_id WHERE a.code='2100' AND e.status='posted' AND e.reference=$1`, [`SAL-${inv.id}`])
-    ok(Math.abs(vatGl.v - taxTotal) < 0.01, `source tax (${taxTotal}, computed from the REAL configured IRAN_VAT.rate=${IRAN_VAT.rate}%) == Tax Payable GL movement (${vatGl.v})`)
+    ok(Math.abs(vatGl.v - taxTotal) < 0.01, `source tax (${taxTotal}, computed from the REAL configured TEST_VAT_RATE=${TEST_VAT_RATE}%) == Tax Payable GL movement (${vatGl.v})`)
   }
 
   console.log('— بند ۱۲: fresh CONCURRENCY MATRIX summary (already exercised above + Phase-8 suite for GL/returns) —')

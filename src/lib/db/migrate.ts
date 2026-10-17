@@ -1,6 +1,7 @@
 import path from 'path'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { getDb, pgQuery } from './index'
+import { defaultClassification, defaultCashFlowCategory } from '@/lib/erp/classification'
 
 /**
  * Idempotent schema initialization for PostgreSQL.
@@ -1199,12 +1200,16 @@ export async function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (${NOW}),
       updated_at TEXT NOT NULL DEFAULT (${NOW})
     );
+    -- ERPFIX-7 (BUG-ERP-20): a statutory VAT rate is never a literal here —
+    -- these two profile templates seed with rate 0 (unconfirmed) rather than
+    -- the previously-hardcoded 9; an operator fills in the real confirmed
+    -- rate from the UI once the accountant has it.
     INSERT INTO tax_profiles (code, name_en, name_fa, category, vat_rate, withholding_rate, exempt) VALUES
-      ('STD9','Standard VAT 9%','ارزش افزوده استاندارد ۹٪','standard',9,0,false),
+      ('STD9','Standard VAT (rate not yet confirmed)','ارزش افزوده استاندارد (نرخ تأییدنشده)','standard',0,0,false),
       ('EXEMPT','Tax exempt','معاف از مالیات','exempt',0,0,true),
       ('ZERO','Zero-rated','نرخ صفر','zero_rated',0,0,false),
       ('EXPORT','Export (0%)','صادرات','export',0,0,false),
-      ('SVC9W5','Service VAT 9% + WHT 5%','خدمات ۹٪ + تکلیفی ۵٪','service',9,5,false)
+      ('SVC9W5','Service VAT + WHT (rates not yet confirmed)','خدمات + تکلیفی (نرخ‌های تأییدنشده)','service',0,0,false)
     ON CONFLICT (code) DO NOTHING;
 
     -- Seed the built-in currencies idempotently.
@@ -5300,5 +5305,103 @@ export async function runMigrations() {
     INSERT INTO erp_settings (key, value, updated_at)
     SELECT 'invoice_stock_mode', 'warn', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
     WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='invoice_stock_mode');
+  `)
+
+  // ── ERPFIX-7 — standard financial statements + VAT structure ────────────
+  // BUG-ERP-19: account classification columns for current/non-current +
+  // cash-flow category. `classification_verified` defaults to FALSE on every
+  // row — the code-range default (`defaultClassification`/
+  // `defaultCashFlowCategory`, src/lib/erp/classification.ts) backfills the
+  // VALUE so statements never show a blank bucket, but the product/report
+  // marks every backfilled row "unverified" until an accountant confirms it
+  // (decision_gate answered by the maintainer — same pattern as 28.3-ب's
+  // export-layout `verified` flag).
+  await pgQuery(`
+    ALTER TABLE gl_accounts ADD COLUMN IF NOT EXISTS classification TEXT;
+    ALTER TABLE gl_accounts ADD COLUMN IF NOT EXISTS cash_flow_category TEXT;
+    ALTER TABLE gl_accounts ADD COLUMN IF NOT EXISTS classification_verified BOOLEAN NOT NULL DEFAULT false;
+  `)
+  {
+    const toClassify = await pgQuery<{ id: number; code: string; type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'memo' }>(
+      `SELECT id, code, type FROM gl_accounts WHERE classification IS NULL`)
+    for (const a of toClassify) {
+      await pgQuery(
+        `UPDATE gl_accounts SET classification=$2, cash_flow_category=$3 WHERE id=$1`,
+        [a.id, defaultClassification(a.code, a.type), defaultCashFlowCategory(a.code, a.type)])
+    }
+  }
+
+  // BUG-ERP-20: VAT rate is DATA, never a literal, and NEVER guessed/seeded —
+  // decision_gate answered by the maintainer: no row is seeded here; the
+  // table exists so a rate can be entered and confirmed from the UI, and
+  // every VAT-computing call site fails closed (`ERP-TAX-VAT-RATE-NOT-
+  // CONFIRMED`) until a confirmed row exists. `effective_from` lets a rate
+  // change mid-year (e.g. a new fiscal year's budget) without losing the
+  // history of what rate applied when.
+  // Net VAT payable/receivable after a settlement is NOT a trade payable
+  // (AP) — it is owed to/recoverable from the tax authority specifically.
+  // A dedicated leaf avoids silently mixing the two, same unverified-pending-
+  // accountant-sign-off convention as every other new account this codebase
+  // has added (6300/1590 in ERPFIX-5).
+  await pgQuery(`
+    INSERT INTO gl_accounts (code, name_en, name_fa, type, active)
+      SELECT '2160', 'VAT Settlement Payable (unverified — accountant sign-off pending)', 'بدهی تسویهٔ مالیات بر ارزش افزوده (نیازمند تأیید حسابدار)', 'liability', 1
+      WHERE NOT EXISTS (SELECT 1 FROM gl_accounts WHERE code='2160');
+  `)
+
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS tax_rates (
+      id SERIAL PRIMARY KEY,
+      code TEXT NOT NULL,
+      rate NUMERIC NOT NULL,
+      effective_from TEXT NOT NULL,
+      confirmed BOOLEAN NOT NULL DEFAULT false,
+      confirmed_by TEXT,
+      confirmed_at TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT to_char(now(),'YYYY-MM-DD HH24:MI:SS'),
+      updated_at TEXT NOT NULL DEFAULT to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE INDEX IF NOT EXISTS idx_tax_rates_code_date ON tax_rates(code, effective_from);
+  `)
+
+  // Separate output/input VAT accounts (BUG-ERP-20): `gl_map_vat` (the single
+  // historical key, still read as the fallback by loadGlMap) stays untouched;
+  // `gl_map_vat_output`/`gl_map_vat_input` are new, independently settable
+  // keys — NOT seeded here, so an un-configured install keeps posting both
+  // to the one historical account exactly as before (zero behavior change
+  // until an operator explicitly splits them in Finance → Settings).
+
+  // Idempotency trail for the periodic VAT settlement operation (never two
+  // settlement entries for the same period — mirrors every other posting
+  // trail table in this codebase: asset_depreciation_postings, gl_entry_id…).
+  // BUG-ERP-20 (gate: no literal statutory rate anywhere in src): the
+  // original Phase-26.9 seed above hardcoded `vat_rate=9` into two
+  // `tax_profiles` rows at install time. This corrects any row still
+  // carrying that un-confirmed literal (idempotent: a no-op once already
+  // corrected, and never touches a rate an operator has since edited away
+  // from exactly 9/5, which this phase has no way to tell apart from a
+  // deliberate choice).
+  await pgQuery(`
+    UPDATE tax_profiles SET vat_rate = 0, name_en = 'Standard VAT (rate not yet confirmed)', name_fa = 'ارزش افزوده استاندارد (نرخ تأییدنشده)'
+      WHERE code = 'STD9' AND vat_rate = 9;
+    UPDATE tax_profiles SET vat_rate = 0, name_en = 'Service VAT + WHT (rates not yet confirmed)', name_fa = 'خدمات + تکلیفی (نرخ‌های تأییدنشده)'
+      WHERE code = 'SVC9W5' AND vat_rate = 9;
+  `)
+
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS vat_settlements (
+      id SERIAL PRIMARY KEY,
+      period_from TEXT NOT NULL,
+      period_to TEXT NOT NULL,
+      company_id INTEGER,
+      output_vat NUMERIC NOT NULL,
+      input_vat NUMERIC NOT NULL,
+      net_payable NUMERIC NOT NULL,
+      entry_id INTEGER REFERENCES gl_journal_entries(id),
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT to_char(now(),'YYYY-MM-DD HH24:MI:SS'),
+      UNIQUE(period_from, period_to, company_id)
+    );
   `)
 }

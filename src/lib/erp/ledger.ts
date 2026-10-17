@@ -122,6 +122,105 @@ function toLine(t: AccountTally): StatementLine {
 function sumLines(lines: StatementLine[]): number { return round2(lines.reduce((s, l) => s + l.amount, 0)) }
 function round2(n: number): number { return Math.round(n * 100) / 100 }
 
+// ── Classified statements (ERPFIX-7, BUG-ERP-19) ────────────────────────────
+import type { BsClassification, CashFlowCategory } from './classification'
+
+export interface ClassifiedTally extends AccountTally { classification: BsClassification; cashFlowCategory: CashFlowCategory }
+
+export interface ClassifiedBalanceSheet {
+  currentAssets: StatementLine[]; nonCurrentAssets: StatementLine[]
+  currentLiabilities: StatementLine[]; nonCurrentLiabilities: StatementLine[]
+  equity: StatementLine[]
+  totalCurrentAssets: number; totalNonCurrentAssets: number; totalAssets: number
+  totalCurrentLiabilities: number; totalNonCurrentLiabilities: number; totalLiabilities: number
+  totalEquity: number; netIncome: number
+  balanced: boolean
+  /** Accounts whose classification is a code-range default, never confirmed. */
+  unverifiedCount: number
+}
+
+/** Balance sheet split into current/non-current per the account's resolved
+ * classification (default or accountant-confirmed) — never a flat dump. */
+export function classifiedBalanceSheet(tallies: ClassifiedTally[], unverifiedCount = 0): ClassifiedBalanceSheet {
+  const currentAssets = tallies.filter(t => t.classification === 'current_asset').map(toLine)
+  const nonCurrentAssets = tallies.filter(t => t.classification === 'non_current_asset').map(toLine)
+  const currentLiabilities = tallies.filter(t => t.classification === 'current_liability').map(toLine)
+  const nonCurrentLiabilities = tallies.filter(t => t.classification === 'non_current_liability').map(toLine)
+  const equity = tallies.filter(t => t.type === 'equity').map(toLine)
+  const netIncome = incomeStatement(tallies).netIncome
+  const totalCurrentAssets = sumLines(currentAssets)
+  const totalNonCurrentAssets = sumLines(nonCurrentAssets)
+  const totalAssets = round2(totalCurrentAssets + totalNonCurrentAssets)
+  const totalCurrentLiabilities = sumLines(currentLiabilities)
+  const totalNonCurrentLiabilities = sumLines(nonCurrentLiabilities)
+  const totalLiabilities = round2(totalCurrentLiabilities + totalNonCurrentLiabilities)
+  const totalEquity = round2(sumLines(equity) + netIncome)
+  return {
+    currentAssets, nonCurrentAssets, currentLiabilities, nonCurrentLiabilities, equity,
+    totalCurrentAssets, totalNonCurrentAssets, totalAssets,
+    totalCurrentLiabilities, totalNonCurrentLiabilities, totalLiabilities,
+    totalEquity, netIncome,
+    balanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) <= EPS,
+    unverifiedCount,
+  }
+}
+
+export interface CashFlowStatement {
+  operating: StatementLine[]; investing: StatementLine[]; financing: StatementLine[]
+  netIncome: number
+  netOperating: number; netInvesting: number; netFinancing: number
+  netChangeInCash: number
+  cashBegin: number; cashEnd: number
+  /** The ACTUAL change in cash-category accounts over the period, independent
+   * of the indirect-method build-up above. */
+  actualCashChange: number
+  /** actualCashChange − netChangeInCash. MUST be (near) zero when the books
+   * tie out. Never silently absorbed into any line — a non-zero value is
+   * surfaced as-is so a real discrepancy is visible, not plugged. */
+  unexplained: number
+  reconciled: boolean
+}
+
+/**
+ * Indirect-method cash flow statement for ONE period.
+ * `periodTallies` must be PERIOD-ONLY activity (debit/credit summed only over
+ * entries dated within the period — see `loadTallies(companyId, {from,to})`),
+ * not cumulative balances. `cashBegin` is the cash-category balance as of the
+ * day before the period starts.
+ */
+export function cashFlowIndirect(periodTallies: ClassifiedTally[], cashBegin: number): CashFlowStatement {
+  const netIncome = incomeStatement(periodTallies).netIncome
+  const nonCash = periodTallies.filter(t => t.cashFlowCategory !== 'cash' && t.type !== 'revenue' && t.type !== 'expense')
+  const cashAccounts = periodTallies.filter(t => t.cashFlowCategory === 'cash')
+
+  const cashEffect = (t: ClassifiedTally): number => {
+    const change = accountBalance(t) // signed change in the account's own normal-side direction, this period
+    // An increase in a non-cash ASSET consumes cash; an increase in a
+    // liability/equity account provides cash.
+    return t.type === 'asset' ? -change : change
+  }
+
+  const operatingLines = nonCash.filter(t => t.cashFlowCategory === 'operating').map(t => ({ id: t.id, code: t.code, nameEn: t.nameEn, nameFa: t.nameFa, amount: cashEffect(t) }))
+  const investingLines = nonCash.filter(t => t.cashFlowCategory === 'investing').map(t => ({ id: t.id, code: t.code, nameEn: t.nameEn, nameFa: t.nameFa, amount: cashEffect(t) }))
+  const financingLines = nonCash.filter(t => t.cashFlowCategory === 'financing').map(t => ({ id: t.id, code: t.code, nameEn: t.nameEn, nameFa: t.nameFa, amount: cashEffect(t) }))
+
+  const netOperating = round2(netIncome + sumLines(operatingLines))
+  const netInvesting = sumLines(investingLines)
+  const netFinancing = sumLines(financingLines)
+  const netChangeInCash = round2(netOperating + netInvesting + netFinancing)
+
+  const actualCashChange = round2(cashAccounts.reduce((s, t) => s + accountBalance(t), 0))
+  const cashEnd = round2(cashBegin + actualCashChange)
+  const unexplained = round2(actualCashChange - netChangeInCash)
+
+  return {
+    operating: operatingLines, investing: investingLines, financing: financingLines,
+    netIncome, netOperating, netInvesting, netFinancing, netChangeInCash,
+    cashBegin: round2(cashBegin), cashEnd, actualCashChange, unexplained,
+    reconciled: Math.abs(unexplained) <= EPS,
+  }
+}
+
 /**
  * Consolidate per-company account tallies into group totals (Phase 26
  * multi-company). Accounts are merged by id, debits/credits summed — feeding

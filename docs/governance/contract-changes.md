@@ -333,3 +333,58 @@ guaranteed, what the new one guarantees, why, and who approved it.
 - **Approved by:** maintainer (ERPFIX-6 master prompt's own global_rule:
   "ویرایش assertion هر رگرسیون موجود فقط با ثبت در
   docs/governance/contract-changes.md").
+
+## CC-014 · ERPFIX-7 BUG-ERP-20 — VAT posting-line account code: `'2100'` → `'2100-OUT'`/`'2100-IN'` sentinels
+- **Date:** 2026-10-17 · **Phase:** ERPFIX-7 (standard financial statements +
+  VAT structure) · **Suites:** `src/lib/erp/__tests__/sales.test.ts`,
+  `purchasing.test.ts`, `closeout-2624b.test.ts`, `glPosting.test.ts`
+  (unit tests, not a live-PG regression suite — logged anyway, per this
+  project's own precedent of erring toward recording any assertion edit).
+- **Old assertion:** `salesInvoicePostingLines`/`purchaseInvoicePostingLines*`
+  emit a VAT line with the literal account code `'2100'`.
+- **New assertion:** they emit `'2100-OUT'` (sales/output) or `'2100-IN'`
+  (purchasing/input) — translation sentinels that `glPosting.applyGlMap`
+  resolves to the configured `gl_map_vat_output`/`gl_map_vat_input` account
+  (both falling back to the historical `gl_map_vat`, so an un-configured
+  install posts to the exact same single account as before — zero behavior
+  change there).
+- **What is no longer guaranteed:** nothing financial — the balancing,
+  amounts, and un-configured-install behavior are unchanged (proven by the
+  updated `glPosting.test.ts` "identity map is a no-op" case, now asserting
+  the translated `'2100'` rather than the raw sentinel). What changes is
+  only the intermediate, pre-translation placeholder string these two pure
+  functions emit — real GL postings (which always go through `applyGlMap`
+  before being written) are unaffected.
+- **Reason:** BUG-ERP-20 requires output VAT (sales, a liability) and input
+  VAT (purchases, a recoverable asset) to be postable to independently
+  configurable accounts so VAT reconciliation can tell them apart — doing
+  that requires each posting-line builder to emit a code the mapper can
+  distinguish, which the single shared `'2100'` literal could not.
+- **Approved by:** maintainer (ERPFIX-7 master prompt's own global_rule,
+  same as every prior ERPFIX phase: an existing assertion may only change
+  with a logged entry here).
+
+## CC-015 · ERPFIX-7 BUG-ERP-20 — committed suite `verify-phase9-financial-controls.ts`: `IRAN_VAT.rate` → local `TEST_VAT_RATE`
+- **Date:** 2026-10-17 · **Phase:** ERPFIX-7 (standard financial statements +
+  VAT structure) · **Suite:** `scripts/verify-phase9-financial-controls.ts`
+  (committed live-PG regression suite #5 in `scripts/ci-regressions.ts`).
+- **Old assertion:** VAT-precision math is checked against `IRAN_VAT.rate`
+  (a constant exported from `erp/tax.ts`, value 9).
+- **New assertion:** checked against a local `TEST_VAT_RATE = 9` constant
+  defined in the script itself. The numeric value (9) and every expected
+  figure in the suite are byte-for-byte unchanged.
+- **What is no longer guaranteed:** nothing — this suite was never asserting
+  a real statutory rate, only generic rounding/precision math at an
+  arbitrary fixed percentage; moving that percentage from an imported
+  constant to a local one changes no guarantee.
+- **Reason:** BUG-ERP-20 requires removing EVERY hardcoded statutory VAT
+  literal from `src/` (enforced by the new `audit:vat-rate` gate,
+  `scripts/vat-rate-audit.mjs`) — `tax.ts`'s `IRAN_VAT` constant (rate: 9)
+  was removed as part of that (replaced by `vatRule(rate)`, which takes the
+  confirmed rate as an argument, and `vatOf`'s rate parameter is no longer
+  optional). This suite was the one remaining non-test import of the removed
+  constant.
+- **Approved by:** maintainer (ERPFIX-7 master prompt's own global_rule: an
+  existing assertion may only change with a logged entry here; same
+  global_rule also explicitly requires removing every statutory-rate literal
+  from `src`, which is what necessitated this specific edit).
