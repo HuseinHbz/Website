@@ -90,3 +90,22 @@
 - op حساس داخل همان شاخه: `requireOp(user, '<module>:<op>', legacyAction?)`.
 - ماژول/تب جدید در `workspaces.ts` خودکار گرهٔ درخت می‌گیرد؛ op جدید را در `SENSITIVE_OPS`
   (registry.ts) ثبت کنید.
+
+### ERPFIX-4 — opهای جدید خرید (erp.purchasing)
+جدا از `confirm`/`void`/`post`/`request_payment` موجود، شش op جدید اضافه شد تا تفکیک
+وظایف واقعی خرید رعایت شود (یک grant عمومی write دیگر هیچ‌کدام را implicit نمی‌دهد):
+- `receive` — ثبت رسید انبار (GRN). انباردار این را دارد ولی write عمومی ندارد.
+- `convert` — تبدیل سند به مرحلهٔ بعد (PR→PO، PO→GRN، GRN→فاکتور). تدارکات دارد.
+- `approve` — تأیید سطح ۱ (مقدار پایین).
+- `approve_high` — تأیید سطح ≥۲ (مقدار بالا) — جایگزین چک قدیمی نام نقش.
+- `pay` — ثبت پرداخت مستقیم خرید (`doc.payment`) — کنار `erp_settings.
+  direct_payment_mode` (پیش‌فرض `warn`، واحد ریال) که پرداخت بالای سطح اول ماتریس
+  تأیید را alert می‌زند (یا در حالت `block` رد می‌کند).
+- `vendor_bank_change` — تغییر IBAN/نام بانک تأمین‌کننده؛ هر تغییر با مقدار قدیم و
+  جدید audit و یک business_alert `vendor_bank_changed` می‌سازد.
+
+قالب‌های سیستمی (migrate.ts) به‌صورت idempotent و غیرمخرب به‌روزرسانی شدند: Warehouse
+Keeper ← `receive`؛ Procurement ← `convert`+`receive`؛ CFO/Finance Specialist/
+Finance & HR Manager/Senior Admin ← `approve`+`approve_high`+`pay`+
+`vendor_bank_change`؛ Admin ← فقط `approve` (سطح پایین‌تر، مطابق الگوی موجودش روی
+confirm/void/post).

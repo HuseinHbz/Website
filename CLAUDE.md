@@ -385,6 +385,29 @@
    simulation among them) because this codebase's real lifecycle has no
    such status; only `request→order/rfq/quotation` genuinely requires
    `approved`, confirmed by every real procurement cycle in this repo.)
+59. هر شاخهٔ حساس خرید requireOp مجزا دارد؛ سند خرید بعد از تأیید
+   غیرقابل‌ویرایش است؛ ورودی مالی فقط با financeSchemas.
+   (ERPFIX-4, BUG-ERP-15/16/17/18 — `erp.purchasing`'s module gate is
+   `read`, not `write`: receiving goods, converting a document downstream,
+   approving (two tiers — `approve`/`approve_high`), paying a vendor
+   directly, and changing a vendor's bank/IBAN are each their OWN registered
+   op (`SENSITIVE_OPS['erp.purchasing']`) — a plain purchasing-write grant
+   implies NONE of them. `saveDocument` locks a purchase document the
+   moment it leaves `draft`/`rejected` (409 `ERP-PURCHASING-DOC-LOCKED`) —
+   a submitted/approved/received/invoiced document's price or lines can
+   never be rewritten through the API again. `doc.payment` passes through
+   `directPaymentGate`/`erp_settings.direct_payment_mode` (default `warn`,
+   Rial units) before bypassing the Treasury payment-order flow.
+   `requiredApprovalLevels`'s real call site (`submitDocument`) reads the
+   SAME `approval_matrix` the Approval Center uses (falling back to the
+   hardcoded default only when no matrix row exists for that doc_type) —
+   never a second, silently-diverging threshold. Department budget
+   committed-spend counts only the HEAD of a source_id conversion chain
+   (PR→PO→invoice is one purchase, not three) and validates `department`
+   against `erp_cost_centers`, never free text. Every new financial zod
+   field (`qty`/`money`/`pct`/`isoDate`/`idParam`) goes through
+   `src/lib/api/financeSchemas.ts` — a bogus `?id=abc` is a 400 naming the
+   field, never a `NaN` reaching PostgreSQL as a raw 500.)
 47. **«پایهٔ سنوات» and «سنوات پایان خدمت» are TWO DIFFERENT THINGS (28.3-ب
    بند۲).** The first is a monthly recurring earning (`payroll_earning_types`,
    28.3-الف); the second is a termination benefit — one month's pay per year of

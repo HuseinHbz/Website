@@ -58,7 +58,12 @@ export const SENSITIVE_OPS: Record<string, string[]> = {
   // purchase path) is materially more dangerous than ordinary purchasing
   // write (it moves money, not just paperwork), so it needs its own gate
   // rather than riding on the generic erp.approvals:write create action.
-  'erp.purchasing': ['confirm', 'void', 'post', 'request_payment'],
+  // ERPFIX-4 (BUG-ERP-16): receiving goods, converting a document downstream,
+  // approving (two separate tiers — a low-value PO and a high-value one are
+  // different authorities), paying a vendor directly, and changing a
+  // vendor's bank/IBAN details are each their own gate — a plain `write`
+  // grant on the module must not imply any of them (separation of duties).
+  'erp.purchasing': ['confirm', 'void', 'post', 'request_payment', 'receive', 'convert', 'approve', 'approve_high', 'pay', 'vendor_bank_change'],
   'erp.treasury': ['reconcile', 'cheque_state'],
   // Phase 28 — HR. Payroll ops are separated because calculating a run,
   // approving it and paying it must be able to sit with different people

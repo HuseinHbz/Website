@@ -2730,6 +2730,30 @@ export async function runMigrations() {
      WHERE name = 'Procurement' AND is_system = true
        AND NOT (ops::jsonb ? 'erp.purchasing:request_payment');
 
+    -- ERPFIX-4 (BUG-ERP-16): separation-of-duties ops for receive/convert/
+    -- approve/approve_high/pay/vendor_bank_change — same idempotent,
+    -- is_system-guarded UPDATE pattern as above (never touches a row an
+    -- operator has since customized, and only ADDS keys, never removes one).
+    UPDATE rbac_role_templates
+       SET ops = (ops::jsonb || '{"erp.purchasing:receive":true}'::jsonb)::text
+     WHERE name = 'Warehouse Keeper' AND is_system = true
+       AND NOT (ops::jsonb ? 'erp.purchasing:receive');
+    UPDATE rbac_role_templates
+       SET ops = (ops::jsonb || '{"erp.purchasing:convert":true,"erp.purchasing:receive":true}'::jsonb)::text
+     WHERE name = 'Procurement' AND is_system = true
+       AND NOT (ops::jsonb ? 'erp.purchasing:convert');
+    UPDATE rbac_role_templates
+       SET ops = (ops::jsonb || '{"erp.purchasing:approve":true,"erp.purchasing:approve_high":true,"erp.purchasing:pay":true,"erp.purchasing:vendor_bank_change":true}'::jsonb)::text
+     WHERE name IN ('CFO', 'Finance Specialist', 'Finance & HR Manager', 'Senior Admin') AND is_system = true
+       AND NOT (ops::jsonb ? 'erp.purchasing:approve_high');
+    -- 'Admin' already explicitly denies confirm/void/post (a lighter role
+    -- than Senior Admin) — mirror that by granting only the lower-tier
+    -- approve, not approve_high/pay/vendor_bank_change.
+    UPDATE rbac_role_templates
+       SET ops = (ops::jsonb || '{"erp.purchasing:approve":true,"erp.purchasing:approve_high":false,"erp.purchasing:pay":false,"erp.purchasing:vendor_bank_change":false}'::jsonb)::text
+     WHERE name = 'Admin' AND is_system = true
+       AND NOT (ops::jsonb ? 'erp.purchasing:approve_high');
+
     -- 26.28: NULL company_id defeats the plain UNIQUE constraint (SQL NULLs are
     -- distinct) → duplicates were possible. Dedupe (keep the newest row) and add
     -- NULL-safe unique indexes so the invariant holds at the DB level too.
@@ -5174,5 +5198,15 @@ export async function runMigrations() {
     INSERT INTO erp_settings (key, value, updated_at)
     SELECT 'fx_precision', '2', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
     WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='fx_precision');
+  `)
+
+  // ERPFIX-4 (BUG-ERP-16) — direct purchasing payment guard, same off/warn/
+  // block precedent as 26.25's credit_guard_mode. Decision_gate answered by
+  // the maintainer: default 'warn', threshold unit Rial (matches the
+  // system's real base currency).
+  await pgQuery(`
+    INSERT INTO erp_settings (key, value, updated_at)
+    SELECT 'direct_payment_mode', 'warn', to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE NOT EXISTS (SELECT 1 FROM erp_settings WHERE key='direct_payment_mode');
   `)
 }

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { apiError, readJson, badRequest, requirePermission, requireOp } from '@/lib/api/respond'
 import { pgQuery, withTransaction } from '@/lib/db'
 import { logAction } from '@/lib/admin/audit'
+import { isoDate, parseIdParam } from '@/lib/api/financeSchemas'
 import { DOC_TYPES, documentTotals, lineTotals, salesDocTransition } from '@/lib/erp/sales'
 import { postSalesInvoiceToGl, createSalesReturn, settleReturnIfPaid } from '@/lib/erp/salesData'
 import { reverseEntry } from '@/lib/erp/glPosting'
@@ -40,8 +41,14 @@ export async function GET(req: NextRequest) {
     // owner, falling back to the creator (a sales rep sees their own customers).
     const { rowScopeSql, rowInScope } = await import('@/lib/rbac/data')
     const OWNER = 'COALESCE(c.owner_id, d.created_by)'
-    const id = Number(req.nextUrl.searchParams.get('id'))
-    if (id) {
+    // ERPFIX-4 (BUG-ERP-18): a bogus ?id= (e.g. "abc") used to become NaN
+    // and reach PostgreSQL as a raw query — a 400 naming the field now,
+    // never an unexplained 500.
+    const rawId = req.nextUrl.searchParams.get('id')
+    if (rawId) {
+      const parsedId = parseIdParam(rawId)
+      if (!parsedId.success) return badRequest('id: must be a positive integer')
+      const id = parsedId.data
       const doc = (await pgQuery(
         `SELECT d.id, d.doc_type AS "docType", d.doc_no AS "docNo", d.customer_id AS "customerId", d.date, d.due_date AS "dueDate",
                 d.status, d.subtotal::float AS subtotal, d.discount_total::float AS "discountTotal", d.tax_total::float AS "taxTotal",
@@ -76,8 +83,8 @@ const createSchema = z.object({
   id: z.number().int().positive().optional(),
   docType: z.enum(DOC_TYPES),
   customerId: z.number().int().positive(),
-  date: z.string().min(1).max(30),
-  dueDate: z.string().max(30).optional().nullable(),
+  date: isoDate,
+  dueDate: isoDate.optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
   sourceId: z.number().int().positive().optional(),
   currency: z.enum(['IRR', 'IRT', 'USD', 'EUR']).optional(),

@@ -10,7 +10,7 @@ import { loadGlMap, applyGlMap, postPurchasePaymentToGl, reverseEntry } from './
 import { toBase } from './money'
 import {
   documentTotals, requiredApprovalLevels, isFullyApproved, vendorScore, vendorPayable,
-  purchaseInvoiceStatus, purchaseKpis, validateBudget, type LineInput, type PurchaseDocType, type PurchaseStatus,
+  purchaseInvoiceStatus, purchaseKpis, validateBudget, DEFAULT_APPROVAL_MATRIX, type LineInput, type PurchaseDocType, type PurchaseStatus, type ApprovalTier,
 } from './purchasing'
 import { validatePayment } from './sales'
 import { matchLine, overallMatchStatus, type MatchStatus } from './threeWayMatch'
@@ -144,6 +144,19 @@ export async function saveDocument(input: {
   const baseTotal = Math.round(totals.total * rate * 100) / 100
   const run = async (query: TxQuery) => {
     if (input.id) {
+      // ERPFIX-4 (BUG-ERP-15): a submitted/approved/received/invoiced
+      // document is LOCKED — saveDocument previously had no status guard
+      // at all, so editing an approved PO's price, or a GRN-linked order's
+      // lines, silently rewrote it and orphaned every po_line_id/
+      // receipt_line_id downstream pointer (the old lines were deleted and
+      // reinserted with new ids). Only 'draft' and 'rejected' (sent back
+      // for changes) may still be edited — both are guaranteed to have no
+      // downstream document referencing their lines yet.
+      const cur = (await query<{ status: string }>(`SELECT status FROM purchase_documents WHERE id=$1 FOR UPDATE`, [input.id]))[0]
+      if (!cur) throw new Error('Document not found')
+      if (!['draft', 'rejected'].includes(cur.status)) {
+        throw new PurchaseDocLockedError(`a purchase document in status "${cur.status}" cannot be edited — only draft/rejected`)
+      }
       await query(
         `UPDATE purchase_documents SET vendor_id=$2, date=$3, currency=COALESCE($4,currency), department=$5, budget=$6,
           note=$7, subtotal=$8, discount_total=$9, tax_total=$10, total=$11, priority=COALESCE($12,priority), exchange_rate=$13, base_total=$14,
@@ -183,6 +196,32 @@ async function insertLines(query: TxQuery, docId: number, lines: LineRow[]) {
 }
 
 /**
+ * ERPFIX-4 (BUG-ERP-17, decision_gate answered — ب): the single source of
+ * truth for how many approval levels a purchase document needs. Reads the
+ * SAME `approval_matrix` table the Approval Center uses (doc_type
+ * 'purchase_order', the one seeded matrix for purchasing) and picks the
+ * active row whose [min_amount, max_amount] band contains the amount,
+ * highest-priority first; the level count is the length of that row's
+ * `levels` JSON plan. Only when no matching row exists at all (a doc_type
+ * the matrix doesn't cover, or an empty/mid-migration matrix) does this
+ * fall back to the hardcoded `DEFAULT_APPROVAL_MATRIX` — never silently
+ * diverging from a matrix an operator has actually configured.
+ */
+export async function purchaseApprovalLevels(baseAmount: number, docType: string): Promise<number> {
+  const matrixDocType = docType === 'order' ? 'purchase_order' : docType === 'request' ? 'purchase_request' : null
+  if (matrixDocType) {
+    const row = (await pgQuery<{ levels: string }>(
+      `SELECT levels FROM approval_matrix
+       WHERE doc_type=$1 AND active=1 AND min_amount<=$2 AND (max_amount IS NULL OR max_amount>=$2)
+       ORDER BY priority DESC, min_amount DESC LIMIT 1`, [matrixDocType, baseAmount]))[0]
+    if (row) {
+      try { const plan = JSON.parse(row.levels); if (Array.isArray(plan) && plan.length > 0) return plan.length } catch { /* fall through to default */ }
+    }
+  }
+  return requiredApprovalLevels(baseAmount)
+}
+
+/**
  * Submit a document for approval. Runs the BUDGET CHECK first: when the doc
  * carries a budget envelope, the department's committed spend this year plus
  * this request must fit inside it — over-budget submits are blocked with the
@@ -192,23 +231,48 @@ export async function submitDocument(id: number): Promise<{ ok: boolean; error?:
   // ERPFIX-2 (BUG-ERP-03): budget/approval thresholds compare base_total
   // (Rial base) — a raw `total` read lets a 1,000 USD request slip under a
   // Rial-denominated threshold meant for 1,000 Rial.
-  const d = (await pgQuery<{ total: number; base_total: number; budget: number; department: string | null; date: string }>(
-    `SELECT total, base_total, budget, department, date FROM purchase_documents WHERE id=$1`, [id]))[0]
+  const d = (await pgQuery<{ total: number; base_total: number; budget: number; department: string | null; date: string; doc_type: string }>(
+    `SELECT total, base_total, budget, department, date, doc_type FROM purchase_documents WHERE id=$1`, [id]))[0]
   if (!d) return { ok: false, error: 'Document not found' }
   const baseTotal = num(d.base_total) || num(d.total)
   if (num(d.budget) > 0) {
-    const year = String(d.date ?? '').slice(0, 4) || String(new Date().getFullYear())
-    const committed = d.department
+    // ERPFIX-4 (BUG-ERP-17): department is now validated against the real
+    // registry (erp_cost_centers kind='department') instead of free text —
+    // a typo'd department silently created its own, never-aggregated bucket.
+    if (d.department) {
+      const known = (await pgQuery<{ id: number }>(
+        `SELECT id FROM erp_cost_centers WHERE kind='department' AND active=1 AND (code=$1 OR name_en=$1 OR name_fa=$1)`, [d.department]))[0]
+      if (!known) return { ok: false, error: `Unknown department: ${d.department}` }
+    }
+    // ERPFIX-4 (BUG-ERP-17): the fiscal year is the real gl_fiscal_periods
+    // row (kind='year') covering this document's date — a LIKE 'YYYY%' on
+    // the Gregorian string broke for any fiscal year that doesn't align to
+    // the calendar year and is a string hack where a real table exists.
+    const period = (await pgQuery<{ id: number; start_date: string; end_date: string }>(
+      `SELECT id, start_date, end_date FROM gl_fiscal_periods WHERE kind='year' AND $1 BETWEEN start_date AND end_date LIMIT 1`, [d.date]))[0]
+    // ERPFIX-4 (BUG-ERP-17): committed spend now counts only the HEAD of
+    // each document chain (the one with no non-void child via source_id) —
+    // a PR→PO→invoice chain for the SAME purchase previously counted its
+    // total THREE times (once per stage), inflating "committed" 3x and
+    // blocking submits that were actually well within budget.
+    const committed = d.department && period
       ? num((await pgQuery<{ t: number }>(
-          `SELECT COALESCE(SUM(COALESCE(base_total, total)),0) AS t FROM purchase_documents
-           WHERE id<>$1 AND department=$2 AND date LIKE $3 AND status NOT IN ('draft','void','rejected')`,
-          [id, d.department, `${year}%`]))[0]?.t)
+          `SELECT COALESCE(SUM(COALESCE(p.base_total, p.total)),0) AS t FROM purchase_documents p
+           WHERE p.id<>$1 AND p.department=$2 AND p.date BETWEEN $3 AND $4
+             AND p.status NOT IN ('draft','void','rejected')
+             AND NOT EXISTS (SELECT 1 FROM purchase_documents c WHERE c.source_id=p.id AND c.status<>'void')`,
+          [id, d.department, period.start_date, period.end_date]))[0]?.t)
       : 0
     const budget = validateBudget({ budget: num(d.budget), committed, requested: baseTotal })
     if (!budget.withinBudget)
       return { ok: false, budget, error: `Over budget: available ${budget.available.toLocaleString()}, requested ${baseTotal.toLocaleString()}` }
   }
-  const levels = requiredApprovalLevels(baseTotal)
+  // ERPFIX-4 (BUG-ERP-17, decision_gate answered — ب): requiredApprovalLevels
+  // now consults the SAME configurable approval_matrix the Approval Center
+  // uses, falling back to the hardcoded DEFAULT_APPROVAL_MATRIX only when no
+  // matrix row exists for this doc_type — one source of truth for the
+  // threshold, no second hardcoded matrix silently diverging from it.
+  const levels = await purchaseApprovalLevels(baseTotal, d.doc_type)
   await pgQuery(`UPDATE purchase_documents SET status='submitted', approval_levels=$2, updated_at=${NOW} WHERE id=$1`, [id, levels])
   return { ok: true }
 }
@@ -359,6 +423,26 @@ export async function decideApproval(id: number, level: number, decision: 'appro
  * (no second money-validation implementation) inside one transaction,
  * serialized per document via pg_advisory_xact_lock.
  */
+/**
+ * ERPFIX-4 (BUG-ERP-16, decision_gate answered): doc.payment ("record a
+ * direct purchase payment") bypasses the Treasury payment-order approval
+ * flow entirely. `erp_settings.direct_payment_mode` ('off'|'warn'|'block',
+ * default 'warn') decides whether an amount above the FIRST tier of the
+ * (purchasing) approval matrix is silently allowed, allowed-with-alert, or
+ * rejected outright. The threshold and the amount are BOTH Rial — this
+ * system's base currency throughout (a stray "Toman tiers" comment
+ * elsewhere in migrate.ts is just a wrong label, not a real unit change).
+ */
+export async function directPaymentGate(amountRial: number): Promise<{ blocked: boolean; warn: boolean }> {
+  const modeRow = (await pgQuery<{ value: string }>(`SELECT value FROM erp_settings WHERE key='direct_payment_mode'`))[0]
+  const mode = modeRow?.value === 'off' || modeRow?.value === 'block' ? modeRow.value : 'warn'
+  if (mode === 'off') return { blocked: false, warn: false }
+  const ceiling = DEFAULT_APPROVAL_MATRIX[0]?.upTo ?? Infinity
+  const over = amountRial > ceiling
+  if (!over) return { blocked: false, warn: false }
+  return { blocked: mode === 'block', warn: mode === 'warn' }
+}
+
 export async function recordPayment(documentId: number, vendorId: number, amount: number, method: string, date: string, reference?: string, userId?: string, currency = 'IRR'): Promise<{ ok: boolean; error?: string; paymentId?: number }> {
   const rate = (await rialRateFor(currency)) ?? 1
   let mismatchReasons: string[] | null = null
@@ -603,6 +687,11 @@ const PURCHASE_CONVERT_RELATION: Record<string, 'po_line_id' | 'receipt_line_id'
  * existing THREE_WAY_MATCH_FAILED convention on the payment path. */
 export class PurchaseConvertError extends Error {
   constructor(message: string) { super(`PURCHASE_CONVERT_BLOCKED: ${message}`) }
+}
+/** ERPFIX-4 (BUG-ERP-15): same stable-prefix convention, for saveDocument's
+ * post-lock edit guard. */
+export class PurchaseDocLockedError extends Error {
+  constructor(message: string) { super(`PURCHASE_DOC_LOCKED: ${message}`) }
 }
 
 export async function convertDocument(sourceId: number, toType: PurchaseDocType, userId?: string): Promise<number> {

@@ -48,6 +48,7 @@ const SUITES = [
   { name: 'ERPFIX-1 GL-core single entry point + DB invariants + 6100 collision', script: 'verify-erpfix-1.ts', db: 'rg_erpfix1' },
   { name: 'ERPFIX-2 currency in the GL: base-amount lines + realized FX gain/loss', script: 'verify-erpfix-2.ts', db: 'rg_erpfix2' },
   { name: 'ERPFIX-3 document lifecycle: sales state machine + safe delete + full-fidelity convert', script: 'verify-erpfix-3.ts', db: 'rg_erpfix3' },
+  { name: 'ERPFIX-4 purchasing controls: edit lock + separation of duties + validation + approval unification', script: 'verify-erpfix-4.ts', db: 'rg_erpfix4' },
 ]
 
 const BASE = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres'
