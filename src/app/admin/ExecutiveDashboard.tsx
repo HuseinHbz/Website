@@ -54,7 +54,7 @@ export function ExecutiveDashboard() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-lg font-bold text-text-primary">{t('dash_execTitle')}</h2>
-          <p className="text-xs text-text-tertiary">{ov ? `${t('dash_updated')} ${new Date(ov.generatedAt).toLocaleTimeString()}` : ''}</p>
+          <p className="text-xs text-text-tertiary">{ov ? `${t('dash_updated')} ${formatDateTime(ov.generatedAt, locale)}` : ''}</p>
         </div>
         <Btn size="sm" variant="secondary" onClick={load} disabled={loading}>{t('dash_refresh')}</Btn>
       </div>

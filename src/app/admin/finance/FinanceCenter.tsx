@@ -6,6 +6,7 @@ import { fmtMoney, setDefaultCurrency } from '@/lib/format'
 import { useDisplayCurrency, CurrencyPicker } from '@/lib/admin/currencyDisplay'
 import { Card, Btn, Input, Select, PageHeader, Badge, Modal, useToast } from '@/components/admin/ui'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDate } from '@/lib/admin/datetime'
 import { DataTable, type RowAction } from '@/components/admin/DataTable'
 import type { Column } from '@/lib/admin/dataTable'
 
@@ -497,7 +498,7 @@ function ReportsView({ t, fa }: { t: T; fa: boolean }) {
       {/* Print-only statement header (26.24b بند ۵.۱). */}
       <div className="print-only print-company-header">
         <div className="name">{t(`fin_rep_${view}` as 'fin_rep_trial')}</div>
-        <div className="meta">{new Date().toLocaleDateString(fa ? 'fa-IR' : 'en-US')}{company !== 'all' ? ` · ${company}` : ''}</div>
+        <div className="meta">{formatDate(undefined, fa ? 'fa' : 'en')}{company !== 'all' ? ` · ${company}` : ''}</div>
       </div>
       <div className="flex flex-wrap items-end gap-3 no-print">
         <div className="flex gap-2">

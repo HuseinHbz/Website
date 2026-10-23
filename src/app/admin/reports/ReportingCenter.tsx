@@ -5,6 +5,7 @@ import { Card, Btn, Select, PageHeader, Badge, StatCard, useToast } from '@/comp
 import { DataTable } from '@/components/admin/DataTable'
 import type { Column as DTColumn, Row as DTRow } from '@/lib/admin/dataTable'
 import { useT, useAdminLocale } from '@/lib/admin/locale'
+import { formatDate } from '@/lib/admin/datetime'
 import { summarize, type Row, type Column } from '@/lib/reports/pivot'
 
 interface ReportDef {
@@ -143,7 +144,7 @@ export function ReportingCenter() {
             {company.name && <div className="name">{company.name}</div>}
             {company.meta && <div className="meta">{company.meta}</div>}
             <div className="meta" style={{ marginTop: '2mm' }}>
-              {name(result.def)} — {new Date().toLocaleDateString(locale === 'fa' ? 'fa-IR' : 'en-US')}
+              {name(result.def)} — {formatDate(undefined, locale)}
             </div>
           </div>
           <div className="flex items-center gap-2">

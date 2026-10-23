@@ -38,3 +38,21 @@ export function formatDateTime(value: string | null | undefined, locale: 'fa' | 
   if (locale === 'fa') return faDigits(`${toJalaliStr(parts.date)} ${parts.time}`)
   return `${parts.date} ${parts.time}`
 }
+
+/**
+ * DATE-ONLY variant (no time component, no "never" placeholder) — for print
+ * headers, report dates and other date-only displays. Defaults to "now" when
+ * no value is given. Uses the project's own zero-dependency Jalali
+ * conversion (`erp/jalali.ts`), never `Intl`/`toLocaleDateString('fa-IR')` —
+ * that depends on the runtime's ICU data including the Persian calendar,
+ * which a minimal Node "small-icu" build silently lacks (no error, just the
+ * wrong calendar/digits), the exact class of bug this helper exists to
+ * avoid (see DOC-BRAND phase).
+ */
+export function formatDate(value: string | null | undefined, locale: 'fa' | 'en' = 'fa'): string {
+  const iso = value ?? new Date().toISOString()
+  const parts = splitStamp(iso)
+  const date = parts?.date ?? iso.slice(0, 10)
+  if (locale === 'fa') return faDigits(toJalaliStr(date))
+  return date
+}
