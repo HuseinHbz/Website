@@ -15,6 +15,8 @@ type TwoFAPanel = { userId: string; email: string; secret: string; qrCode: strin
 
 export function UsersManager({ currentUserId }: { currentUserId: string }) {
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [users, setUsers] = useState<User[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<typeof EMPTY & { id?: string }>(EMPTY)
@@ -134,7 +136,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
   return (
     <>
       <ToastContainer />
-      <PageHeader title="Users & Role Management" subtitle="Manage admin panel access and permissions" action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>+ Invite User</Btn>} />
+      <PageHeader title={lc('Users & Role Management', 'مدیریت کاربران و نقش‌ها')} subtitle={lc('Manage admin panel access and permissions', 'مدیریت دسترسی و مجوزهای پنل ادمین')} action={<Btn onClick={() => { setEditing(EMPTY); setModal(true) }}>{lc('+ Invite User', '+ دعوت کاربر')}</Btn>} />
 
       <Card>
         <DataTable
@@ -152,11 +154,11 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
       {/* Role Guide */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
         {[
-          { role: 'super_admin', label: 'Super Admin', desc: 'Full system access, user management, settings', color: 'yellow' },
-          { role: 'administrator', label: 'Administrator', desc: 'All content + settings, no user deletion', color: 'blue' },
-          { role: 'editor', label: 'Editor', desc: 'Create and publish content only', color: 'green' },
-          { role: 'auditor', label: 'Auditor', desc: 'Read-only everything + audit trail & logs; cannot change any record', color: 'purple' },
-          { role: 'viewer', label: 'Viewer / Shareholder', desc: 'Executive dashboards, analytics and reports only', color: 'slate' },
+          { role: 'super_admin', label: lc('Super Admin', 'مدیر ارشد'), desc: lc('Full system access, user management, settings', 'دسترسی کامل به سیستم، مدیریت کاربران، تنظیمات'), color: 'yellow' },
+          { role: 'administrator', label: lc('Administrator', 'مدیر'), desc: lc('All content + settings, no user deletion', 'تمام محتوا + تنظیمات، بدون حذف کاربر'), color: 'blue' },
+          { role: 'editor', label: lc('Editor', 'ویرایشگر'), desc: lc('Create and publish content only', 'فقط ایجاد و انتشار محتوا'), color: 'green' },
+          { role: 'auditor', label: lc('Auditor', 'حسابرس'), desc: lc('Read-only everything + audit trail & logs; cannot change any record', 'فقط خواندنی همه‌چیز + ردیابی و لاگ‌ها؛ نمی‌تواند هیچ رکوردی را تغییر دهد'), color: 'purple' },
+          { role: 'viewer', label: lc('Viewer / Shareholder', 'بیننده / سهامدار'), desc: lc('Executive dashboards, analytics and reports only', 'فقط داشبوردهای اجرایی، تحلیل‌ها و گزارش‌ها'), color: 'slate' },
         ].map((r) => (
           <div key={r.role} className="bg-surface border border-border rounded-xl p-4">
             <Badge color={r.color}>{r.label}</Badge>
@@ -166,20 +168,20 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
       </div>
 
       {/* User create/edit modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? 'Edit User' : 'Invite New User'} size="md">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing.id ? lc('Edit User', 'ویرایش کاربر') : lc('Invite New User', 'دعوت کاربر جدید')} size="md">
         <div className="space-y-4">
-          <Input label="Full Name *" value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
-          <Input label="Email *" type="email" value={editing.email} onChange={(v) => setEditing({ ...editing, email: v })} />
-          <Input label={editing.id ? 'New Password (leave blank to keep current)' : 'Password *'} type="password" value={editing.password} onChange={(v) => setEditing({ ...editing, password: v })} />
+          <Input label={lc('Full Name *', 'نام کامل *')} value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
+          <Input label={lc('Email *', 'ایمیل *')} type="email" value={editing.email} onChange={(v) => setEditing({ ...editing, email: v })} />
+          <Input label={editing.id ? lc('New Password (leave blank to keep current)', 'رمز عبور جدید (برای حفظ رمز فعلی خالی بگذارید)') : lc('Password *', 'رمز عبور *')} type="password" value={editing.password} onChange={(v) => setEditing({ ...editing, password: v })} />
           <Select
-            label="Role"
+            label={lc('Role', 'نقش')}
             value={editing.role}
             onChange={(v) => setEditing({ ...editing, role: v })}
-            options={[{ value: 'editor', label: 'Editor' }, { value: 'administrator', label: 'Administrator' }, { value: 'super_admin', label: 'Super Admin' }, { value: 'auditor', label: 'Auditor (read-only)' }, { value: 'viewer', label: 'Viewer / Shareholder' }]}
+            options={[{ value: 'editor', label: lc('Editor', 'ویرایشگر') }, { value: 'administrator', label: lc('Administrator', 'مدیر') }, { value: 'super_admin', label: lc('Super Admin', 'مدیر ارشد') }, { value: 'auditor', label: lc('Auditor (read-only)', 'حسابرس (فقط خواندنی)') }, { value: 'viewer', label: lc('Viewer / Shareholder', 'بیننده / سهامدار') }]}
           />
-          <Input label="Department / Team" value={editing.department ?? ''} onChange={(v) => setEditing({ ...editing, department: v })} />
+          <Input label={lc('Department / Team', 'واحد / تیم')} value={editing.department ?? ''} onChange={(v) => setEditing({ ...editing, department: v })} />
           <div className="flex gap-3">
-            <Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : editing.id ? 'Update User' : 'Create User'}</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? t('saving') : editing.id ? lc('Update User', 'به‌روزرسانی کاربر') : lc('Create User', 'ایجاد کاربر')}</Btn>
             <Btn variant="secondary" onClick={() => setModal(false)}>{t('cancel')}</Btn>
           </div>
         </div>
@@ -187,51 +189,51 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
 
       {/* 2FA management modal */}
       {twoFA && (
-        <Modal open={!!twoFA} onClose={() => setTwoFA(null)} title={`Two-Factor Auth — ${twoFA.email}`} size="md">
+        <Modal open={!!twoFA} onClose={() => setTwoFA(null)} title={lc(`Two-Factor Auth — ${twoFA.email}`, `احراز دو مرحله‌ای — ${twoFA.email}`)} size="md">
           <div className="space-y-4">
             {twoFA.phase === 'view' && (
               <>
                 <div className="flex items-center justify-between p-3 bg-background rounded-xl border border-border">
                   <div>
-                    <p className="text-sm font-medium text-text-primary">Two-Factor Authentication</p>
-                    <p className="text-xs text-text-tertiary mt-0.5">TOTP via Google Authenticator or Authy</p>
+                    <p className="text-sm font-medium text-text-primary">{lc('Two-Factor Authentication', 'احراز دو مرحله‌ای')}</p>
+                    <p className="text-xs text-text-tertiary mt-0.5">{lc('TOTP via Google Authenticator or Authy', 'TOTP از طریق Google Authenticator یا Authy')}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${twoFA.enabled ? 'bg-green-500/15 text-green-400' : 'bg-surface-2 text-text-secondary'}`}>
-                    {twoFA.enabled ? '● Enabled' : '○ Disabled'}
+                    {twoFA.enabled ? lc('● Enabled', '● فعال') : lc('○ Disabled', '○ غیرفعال')}
                   </span>
                 </div>
                 {twoFA.enabled && (
                   <div className="flex items-center justify-between p-3 bg-background rounded-xl border border-border">
                     <div>
-                      <p className="text-sm font-medium text-text-primary">Recovery codes</p>
-                      <p className="text-xs text-text-tertiary mt-0.5">{twoFA.recoveryLeft ?? 0} unused single-use codes remaining</p>
+                      <p className="text-sm font-medium text-text-primary">{lc('Recovery codes', 'کدهای بازیابی')}</p>
+                      <p className="text-xs text-text-tertiary mt-0.5">{lc(`${twoFA.recoveryLeft ?? 0} unused single-use codes remaining`, `${twoFA.recoveryLeft ?? 0} کد یک‌بارمصرف استفاده‌نشده باقی‌مانده`)}</p>
                     </div>
-                    <Btn variant="secondary" onClick={regenRecovery} disabled={totpSaving}>Regenerate</Btn>
+                    <Btn variant="secondary" onClick={regenRecovery} disabled={totpSaving}>{lc('Regenerate', 'تولید مجدد')}</Btn>
                   </div>
                 )}
                 <div className="flex gap-2">
                   {!twoFA.enabled
-                    ? <Btn onClick={startSetup}>Setup 2FA for this user</Btn>
-                    : <Btn variant="danger" onClick={disable2FA} disabled={totpSaving}>Disable 2FA</Btn>
+                    ? <Btn onClick={startSetup}>{lc('Setup 2FA for this user', 'راه‌اندازی 2FA برای این کاربر')}</Btn>
+                    : <Btn variant="danger" onClick={disable2FA} disabled={totpSaving}>{lc('Disable 2FA', 'غیرفعال‌سازی 2FA')}</Btn>
                   }
-                  <Btn variant="secondary" onClick={() => setTwoFA(null)}>Close</Btn>
+                  <Btn variant="secondary" onClick={() => setTwoFA(null)}>{t('close')}</Btn>
                 </div>
               </>
             )}
 
             {twoFA.phase === 'setup' && (
               <>
-                <p className="text-xs text-text-secondary">Step 1 — Have the user scan this QR code in Google Authenticator:</p>
+                <p className="text-xs text-text-secondary">{lc('Step 1 — Have the user scan this QR code in Google Authenticator:', 'مرحله ۱ — از کاربر بخواهید این کد QR را در Google Authenticator اسکن کند:')}</p>
                 <div className="flex justify-center p-4 bg-surface rounded-xl w-fit mx-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={twoFA.qrCode} alt="2FA QR Code" className="w-44 h-44" />
                 </div>
                 <div>
-                  <p className="text-xs text-text-secondary mb-1">Or enter this secret manually:</p>
+                  <p className="text-xs text-text-secondary mb-1">{lc('Or enter this secret manually:', 'یا این کلید مخفی را به‌صورت دستی وارد کنید:')}</p>
                   <code className="block bg-background border border-border rounded-lg px-3 py-2 text-xs text-brand tracking-widest break-all select-all">{twoFA.secret}</code>
                 </div>
                 <div>
-                  <p className="text-xs text-text-secondary mb-2">Step 2 — Enter the 6-digit code from the app to confirm:</p>
+                  <p className="text-xs text-text-secondary mb-2">{lc('Step 2 — Enter the 6-digit code from the app to confirm:', 'مرحله ۲ — کد ۶ رقمی اپ را برای تأیید وارد کنید:')}</p>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -245,7 +247,7 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
                 </div>
                 <div className="flex gap-3">
                   <Btn onClick={confirmEnable} disabled={totpSaving || totpCode.length < 6}>
-                    {totpSaving ? 'Verifying...' : 'Activate 2FA'}
+                    {totpSaving ? lc('Verifying...', 'در حال تأیید...') : lc('Activate 2FA', 'فعال‌سازی 2FA')}
                   </Btn>
                   <Btn variant="secondary" onClick={() => setTwoFA({ ...twoFA, phase: 'view' })}>{t('cancel')}</Btn>
                 </div>
@@ -254,14 +256,14 @@ export function UsersManager({ currentUserId }: { currentUserId: string }) {
 
             {twoFA.phase === 'codes' && (
               <>
-                <p className="text-sm font-medium text-text-primary">Recovery codes — shown only once</p>
-                <p className="text-xs text-text-secondary">Save these single-use codes somewhere safe. Each can be used once instead of an authenticator code if the device is lost.</p>
+                <p className="text-sm font-medium text-text-primary">{lc('Recovery codes — shown only once', 'کدهای بازیابی — فقط یک‌بار نمایش داده می‌شود')}</p>
+                <p className="text-xs text-text-secondary">{lc('Save these single-use codes somewhere safe. Each can be used once instead of an authenticator code if the device is lost.', 'این کدهای یک‌بارمصرف را در جای امنی ذخیره کنید. هر کد در صورت گم‌شدن دستگاه، یک‌بار به‌جای کد احرازهویت قابل استفاده است.')}</p>
                 <div className="grid grid-cols-2 gap-2 p-3 bg-background border border-border rounded-xl">
                   {(twoFA.codes || []).map(c => <code key={c} className="text-xs font-mono text-brand tracking-wider select-all">{c}</code>)}
                 </div>
                 <div className="flex gap-2">
-                  <Btn variant="secondary" onClick={() => { navigator.clipboard?.writeText((twoFA.codes || []).join('\n')); toast('Copied') }}>Copy all</Btn>
-                  <Btn onClick={() => setTwoFA(null)}>Done</Btn>
+                  <Btn variant="secondary" onClick={() => { navigator.clipboard?.writeText((twoFA.codes || []).join('\n')); toast(lc('Copied', 'کپی شد')) }}>{lc('Copy all', 'کپی همه')}</Btn>
+                  <Btn onClick={() => setTwoFA(null)}>{lc('Done', 'تمام شد')}</Btn>
                 </div>
               </>
             )}

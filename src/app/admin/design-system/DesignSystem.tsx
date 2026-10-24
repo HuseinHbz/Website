@@ -93,12 +93,12 @@ export function DesignSystem() {
 
         <Section title={L('Buttons', 'دکمه‌ها')}>
           <div className="flex flex-wrap gap-2">
-            <Btn variant="primary">Primary</Btn>
-            <Btn variant="secondary">Secondary</Btn>
-            <Btn variant="danger">Danger</Btn>
-            <Btn variant="ghost">Ghost</Btn>
-            <Btn size="sm">Small</Btn>
-            <Btn disabled>Disabled</Btn>
+            <Btn variant="primary">{L('Primary', 'اصلی')}</Btn>
+            <Btn variant="secondary">{L('Secondary', 'ثانویه')}</Btn>
+            <Btn variant="danger">{L('Danger', 'خطر')}</Btn>
+            <Btn variant="ghost">{L('Ghost', 'شبح')}</Btn>
+            <Btn size="sm">{L('Small', 'کوچک')}</Btn>
+            <Btn disabled>{L('Disabled', 'غیرفعال')}</Btn>
           </div>
         </Section>
 

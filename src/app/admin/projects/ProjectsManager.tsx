@@ -93,6 +93,8 @@ type TabId = typeof TABS[number]['id']
 export function ProjectsManager() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const isFa = locale === 'fa'
   const { data: projects, reload: load } = useResource<Project>('/api/admin/projects')
   const [modal, setModal] = useState(false)
@@ -176,34 +178,34 @@ export function ProjectsManager() {
             <>
               <div className="grid grid-cols-3 gap-4">
                 <Input label={t('slug') + ' *'} value={editing.slug} onChange={(v) => set('slug', v)} placeholder="enterprise-network-upgrade" />
-                <Input label="Year" value={editing.year} onChange={(v) => set('year', v)} placeholder="2024" />
-                <Input label="Brand Color" type="color" value={editing.color} onChange={(v) => set('color', v)} />
+                <Input label={lc('Year', 'سال')} value={editing.year} onChange={(v) => set('year', v)} placeholder="2024" />
+                <Input label={lc('Brand Color', 'رنگ برند')} type="color" value={editing.color} onChange={(v) => set('color', v)} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Name (EN)" value={editing.nameEn} onChange={(v) => set('nameEn', v)} />
-                <Input label="Name (FA)" value={editing.nameFa} onChange={(v) => set('nameFa', v)} />
-                <Input label="Industry (EN)" value={editing.industryEn} onChange={(v) => set('industryEn', v)} />
-                <Input label="Industry (FA)" value={editing.industryFa} onChange={(v) => set('industryFa', v)} />
-                <Input label="Client (EN)" value={editing.clientEn} onChange={(v) => set('clientEn', v)} />
-                <Input label="Client (FA)" value={editing.clientFa} onChange={(v) => set('clientFa', v)} />
-                <Input label="Business Scope (EN)" value={editing.businessScopeEn} onChange={(v) => set('businessScopeEn', v)} placeholder="Enterprise-grade, 500+ employees" />
-                <Input label="Business Scope (FA)" value={editing.businessScopeFa} onChange={(v) => set('businessScopeFa', v)} />
+                <Input label={lc('Name (EN)', 'نام (انگلیسی)')} value={editing.nameEn} onChange={(v) => set('nameEn', v)} />
+                <Input label={lc('Name (FA)', 'نام (فارسی)')} value={editing.nameFa} onChange={(v) => set('nameFa', v)} />
+                <Input label={lc('Industry (EN)', 'صنعت (انگلیسی)')} value={editing.industryEn} onChange={(v) => set('industryEn', v)} />
+                <Input label={lc('Industry (FA)', 'صنعت (فارسی)')} value={editing.industryFa} onChange={(v) => set('industryFa', v)} />
+                <Input label={lc('Client (EN)', 'مشتری (انگلیسی)')} value={editing.clientEn} onChange={(v) => set('clientEn', v)} />
+                <Input label={lc('Client (FA)', 'مشتری (فارسی)')} value={editing.clientFa} onChange={(v) => set('clientFa', v)} />
+                <Input label={lc('Business Scope (EN)', 'حوزه فعالیت (انگلیسی)')} value={editing.businessScopeEn} onChange={(v) => set('businessScopeEn', v)} placeholder="Enterprise-grade, 500+ employees" />
+                <Input label={lc('Business Scope (FA)', 'حوزه فعالیت (فارسی)')} value={editing.businessScopeFa} onChange={(v) => set('businessScopeFa', v)} />
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <Select label="Collaboration Type" value={editing.collaborationType} onChange={(v) => set('collaborationType', v)} options={[
-                  { value: 'implementation', label: 'Implementation' },
-                  { value: 'consulting', label: 'Consulting' },
-                  { value: 'design', label: 'Design' },
-                  { value: 'managed_service', label: 'Managed Service' },
+                <Select label={lc('Collaboration Type', 'نوع همکاری')} value={editing.collaborationType} onChange={(v) => set('collaborationType', v)} options={[
+                  { value: 'implementation', label: lc('Implementation', 'پیاده‌سازی') },
+                  { value: 'consulting', label: lc('Consulting', 'مشاوره') },
+                  { value: 'design', label: lc('Design', 'طراحی') },
+                  { value: 'managed_service', label: lc('Managed Service', 'خدمات مدیریت‌شده') },
                 ]} />
-                <Select label="Project Status" value={editing.projectStatus} onChange={(v) => set('projectStatus', v)} options={[
-                  { value: 'completed', label: 'Completed' },
-                  { value: 'ongoing', label: 'Ongoing' },
-                  { value: 'archived', label: 'Archived' },
+                <Select label={lc('Project Status', 'وضعیت پروژه')} value={editing.projectStatus} onChange={(v) => set('projectStatus', v)} options={[
+                  { value: 'completed', label: lc('Completed', 'تکمیل‌شده') },
+                  { value: 'ongoing', label: lc('Ongoing', 'در حال اجرا') },
+                  { value: 'archived', label: lc('Archived', 'بایگانی‌شده') },
                 ]} />
-                <Select label="Confidential" value={editing.isConfidential ? 'true' : 'false'} onChange={(v) => set('isConfidential', v === 'true')} options={[
-                  { value: 'false', label: 'Public' },
-                  { value: 'true', label: 'Confidential (hide client)' },
+                <Select label={lc('Confidential', 'محرمانه')} value={editing.isConfidential ? 'true' : 'false'} onChange={(v) => set('isConfidential', v === 'true')} options={[
+                  { value: 'false', label: lc('Public', 'عمومی') },
+                  { value: 'true', label: lc('Confidential (hide client)', 'محرمانه (مشتری مخفی)') },
                 ]} />
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -211,12 +213,12 @@ export function ProjectsManager() {
                 <Select label={t('status')} value={editing.active ? 'true' : 'false'} onChange={(v) => set('active', v === 'true')} options={[{ value: 'true', label: t('active') }, { value: 'false', label: t('hidden') }]} />
                 <Input label={t('sortOrder')} type="number" value={String(editing.sortOrder)} onChange={(v) => set('sortOrder', Number(v))} />
               </div>
-              <Input label="Technology Filters (JSON array of categories)" value={editing.technologyFilters} onChange={(v) => set('technologyFilters', v)} placeholder='["Networking","Security","Virtualization"]' />
+              <Input label={lc('Technology Filters (JSON array of categories)', 'فیلترهای فناوری (آرایه JSON از دسته‌ها)')} value={editing.technologyFilters} onChange={(v) => set('technologyFilters', v)} placeholder='["Networking","Security","Virtualization"]' />
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Tags (EN, JSON array)" value={editing.tagsEn} onChange={(v) => set('tagsEn', v)} placeholder='["Cisco","VMware"]' />
-                <Input label="Tags (FA, JSON array)" value={editing.tagsFa} onChange={(v) => set('tagsFa', v)} />
+                <Input label={lc('Tags (EN, JSON array)', 'تگ‌ها (انگلیسی، آرایه JSON)')} value={editing.tagsEn} onChange={(v) => set('tagsEn', v)} placeholder='["Cisco","VMware"]' />
+                <Input label={lc('Tags (FA, JSON array)', 'تگ‌ها (فارسی، آرایه JSON)')} value={editing.tagsFa} onChange={(v) => set('tagsFa', v)} />
               </div>
-              <Input label="Related Case Study Slugs (JSON array)" value={editing.relatedCaseStudySlugs} onChange={(v) => set('relatedCaseStudySlugs', v)} placeholder='["slug-one","slug-two"]' />
+              <Input label={lc('Related Case Study Slugs (JSON array)', 'اسلاگ نمونه‌کارهای مرتبط (آرایه JSON)')} value={editing.relatedCaseStudySlugs} onChange={(v) => set('relatedCaseStudySlugs', v)} placeholder='["slug-one","slug-two"]' />
             </>
           )}
 
@@ -224,16 +226,16 @@ export function ProjectsManager() {
           {activeTab === 'casestudy' && (
             <>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Executive Summary (EN)" value={editing.executiveSummaryEn} onChange={(v) => set('executiveSummaryEn', v)} multiline rows={4} placeholder="High-level summary for decision makers..." />
-                <Input label="Executive Summary (FA)" value={editing.executiveSummaryFa} onChange={(v) => set('executiveSummaryFa', v)} multiline rows={4} />
-                <Input label="Business Challenge (EN)" value={editing.challengeEn} onChange={(v) => set('challengeEn', v)} multiline rows={3} />
-                <Input label="Business Challenge (FA)" value={editing.challengeFa} onChange={(v) => set('challengeFa', v)} multiline rows={3} />
-                <Input label="Existing Infrastructure (EN)" value={editing.existingInfraEn} onChange={(v) => set('existingInfraEn', v)} multiline rows={3} />
-                <Input label="Existing Infrastructure (FA)" value={editing.existingInfraFa} onChange={(v) => set('existingInfraFa', v)} multiline rows={3} />
-                <Input label="Proposed Architecture (EN)" value={editing.proposedArchEn} onChange={(v) => set('proposedArchEn', v)} multiline rows={3} />
-                <Input label="Proposed Architecture (FA)" value={editing.proposedArchFa} onChange={(v) => set('proposedArchFa', v)} multiline rows={3} />
-                <Input label="Solution Overview (EN)" value={editing.solutionEn} onChange={(v) => set('solutionEn', v)} multiline rows={3} />
-                <Input label="Solution Overview (FA)" value={editing.solutionFa} onChange={(v) => set('solutionFa', v)} multiline rows={3} />
+                <Input label={lc('Executive Summary (EN)', 'خلاصه اجرایی (انگلیسی)')} value={editing.executiveSummaryEn} onChange={(v) => set('executiveSummaryEn', v)} multiline rows={4} placeholder="High-level summary for decision makers..." />
+                <Input label={lc('Executive Summary (FA)', 'خلاصه اجرایی (فارسی)')} value={editing.executiveSummaryFa} onChange={(v) => set('executiveSummaryFa', v)} multiline rows={4} />
+                <Input label={lc('Business Challenge (EN)', 'چالش کسب‌وکار (انگلیسی)')} value={editing.challengeEn} onChange={(v) => set('challengeEn', v)} multiline rows={3} />
+                <Input label={lc('Business Challenge (FA)', 'چالش کسب‌وکار (فارسی)')} value={editing.challengeFa} onChange={(v) => set('challengeFa', v)} multiline rows={3} />
+                <Input label={lc('Existing Infrastructure (EN)', 'زیرساخت فعلی (انگلیسی)')} value={editing.existingInfraEn} onChange={(v) => set('existingInfraEn', v)} multiline rows={3} />
+                <Input label={lc('Existing Infrastructure (FA)', 'زیرساخت فعلی (فارسی)')} value={editing.existingInfraFa} onChange={(v) => set('existingInfraFa', v)} multiline rows={3} />
+                <Input label={lc('Proposed Architecture (EN)', 'معماری پیشنهادی (انگلیسی)')} value={editing.proposedArchEn} onChange={(v) => set('proposedArchEn', v)} multiline rows={3} />
+                <Input label={lc('Proposed Architecture (FA)', 'معماری پیشنهادی (فارسی)')} value={editing.proposedArchFa} onChange={(v) => set('proposedArchFa', v)} multiline rows={3} />
+                <Input label={lc('Solution Overview (EN)', 'نمای کلی راهکار (انگلیسی)')} value={editing.solutionEn} onChange={(v) => set('solutionEn', v)} multiline rows={3} />
+                <Input label={lc('Solution Overview (FA)', 'نمای کلی راهکار (فارسی)')} value={editing.solutionFa} onChange={(v) => set('solutionFa', v)} multiline rows={3} />
               </div>
             </>
           )}
@@ -242,15 +244,15 @@ export function ProjectsManager() {
           {activeTab === 'technical' && (
             <>
               <div>
-                <p className="text-xs text-text-secondary mb-1">Tech Stack (JSON array of objects with name, category, icon?, url?)</p>
+                <p className="text-xs text-text-secondary mb-1">{lc('Tech Stack (JSON array of objects with name, category, icon?, url?)', 'پشته فناوری (آرایه JSON از اشیاء با name، category، icon؟، url؟)')}</p>
                 <Input label="" value={editing.techStackJson} onChange={(v) => set('techStackJson', v)} multiline rows={6} placeholder='[{"name":"Cisco","category":"Networking"},{"name":"VMware","category":"Virtualization"}]' />
               </div>
               <div>
-                <p className="text-xs text-text-secondary mb-1">Implementation Timeline (JSON array of phases)</p>
+                <p className="text-xs text-text-secondary mb-1">{lc('Implementation Timeline (JSON array of phases)', 'جدول زمانی پیاده‌سازی (آرایه JSON از فازها)')}</p>
                 <Input label="" value={editing.implementationTimelineJson} onChange={(v) => set('implementationTimelineJson', v)} multiline rows={6} placeholder='[{"phase":"Phase 1","titleEn":"Assessment","titleFa":"ارزیابی","durationEn":"2 weeks","durationFa":"۲ هفته","descriptionEn":"...","descriptionFa":"...","icon":"🔍"}]' />
               </div>
               <div>
-                <p className="text-xs text-text-secondary mb-1">Before/After Comparison (JSON array of comparison rows)</p>
+                <p className="text-xs text-text-secondary mb-1">{lc('Before/After Comparison (JSON array of comparison rows)', 'مقایسه قبل/بعد (آرایه JSON از ردیف‌های مقایسه)')}</p>
                 <Input label="" value={editing.beforeAfterJson} onChange={(v) => set('beforeAfterJson', v)} multiline rows={5} placeholder='[{"aspectEn":"Network Speed","aspectFa":"سرعت شبکه","beforeEn":"100Mbps","beforeFa":"۱۰۰ مگابیت","afterEn":"10Gbps","afterFa":"۱۰ گیگابیت"}]' />
               </div>
             </>
@@ -260,18 +262,18 @@ export function ProjectsManager() {
           {activeTab === 'strategy' && (
             <>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Security Considerations (EN)" value={editing.securityConsiderationsEn} onChange={(v) => set('securityConsiderationsEn', v)} multiline rows={3} />
-                <Input label="Security Considerations (FA)" value={editing.securityConsiderationsFa} onChange={(v) => set('securityConsiderationsFa', v)} multiline rows={3} />
-                <Input label="HA & Availability Strategy (EN)" value={editing.haAvailabilityEn} onChange={(v) => set('haAvailabilityEn', v)} multiline rows={3} />
-                <Input label="HA & Availability Strategy (FA)" value={editing.haAvailabilityFa} onChange={(v) => set('haAvailabilityFa', v)} multiline rows={3} />
-                <Input label="Backup Strategy (EN)" value={editing.backupStrategyEn} onChange={(v) => set('backupStrategyEn', v)} multiline rows={3} />
-                <Input label="Backup Strategy (FA)" value={editing.backupStrategyFa} onChange={(v) => set('backupStrategyFa', v)} multiline rows={3} />
-                <Input label="Disaster Recovery (EN)" value={editing.disasterRecoveryEn} onChange={(v) => set('disasterRecoveryEn', v)} multiline rows={3} />
-                <Input label="Disaster Recovery (FA)" value={editing.disasterRecoveryFa} onChange={(v) => set('disasterRecoveryFa', v)} multiline rows={3} />
-                <Input label="Monitoring Strategy (EN)" value={editing.monitoringStrategyEn} onChange={(v) => set('monitoringStrategyEn', v)} multiline rows={3} />
-                <Input label="Monitoring Strategy (FA)" value={editing.monitoringStrategyFa} onChange={(v) => set('monitoringStrategyFa', v)} multiline rows={3} />
-                <Input label="Deployment Process (EN)" value={editing.deploymentProcessEn} onChange={(v) => set('deploymentProcessEn', v)} multiline rows={3} />
-                <Input label="Deployment Process (FA)" value={editing.deploymentProcessFa} onChange={(v) => set('deploymentProcessFa', v)} multiline rows={3} />
+                <Input label={lc('Security Considerations (EN)', 'ملاحظات امنیتی (انگلیسی)')} value={editing.securityConsiderationsEn} onChange={(v) => set('securityConsiderationsEn', v)} multiline rows={3} />
+                <Input label={lc('Security Considerations (FA)', 'ملاحظات امنیتی (فارسی)')} value={editing.securityConsiderationsFa} onChange={(v) => set('securityConsiderationsFa', v)} multiline rows={3} />
+                <Input label={lc('HA & Availability Strategy (EN)', 'راهکار دسترس‌پذیری بالا (انگلیسی)')} value={editing.haAvailabilityEn} onChange={(v) => set('haAvailabilityEn', v)} multiline rows={3} />
+                <Input label={lc('HA & Availability Strategy (FA)', 'راهکار دسترس‌پذیری بالا (فارسی)')} value={editing.haAvailabilityFa} onChange={(v) => set('haAvailabilityFa', v)} multiline rows={3} />
+                <Input label={lc('Backup Strategy (EN)', 'راهکار پشتیبان‌گیری (انگلیسی)')} value={editing.backupStrategyEn} onChange={(v) => set('backupStrategyEn', v)} multiline rows={3} />
+                <Input label={lc('Backup Strategy (FA)', 'راهکار پشتیبان‌گیری (فارسی)')} value={editing.backupStrategyFa} onChange={(v) => set('backupStrategyFa', v)} multiline rows={3} />
+                <Input label={lc('Disaster Recovery (EN)', 'بازیابی فاجعه (انگلیسی)')} value={editing.disasterRecoveryEn} onChange={(v) => set('disasterRecoveryEn', v)} multiline rows={3} />
+                <Input label={lc('Disaster Recovery (FA)', 'بازیابی فاجعه (فارسی)')} value={editing.disasterRecoveryFa} onChange={(v) => set('disasterRecoveryFa', v)} multiline rows={3} />
+                <Input label={lc('Monitoring Strategy (EN)', 'راهکار پایش (انگلیسی)')} value={editing.monitoringStrategyEn} onChange={(v) => set('monitoringStrategyEn', v)} multiline rows={3} />
+                <Input label={lc('Monitoring Strategy (FA)', 'راهکار پایش (فارسی)')} value={editing.monitoringStrategyFa} onChange={(v) => set('monitoringStrategyFa', v)} multiline rows={3} />
+                <Input label={lc('Deployment Process (EN)', 'فرایند استقرار (انگلیسی)')} value={editing.deploymentProcessEn} onChange={(v) => set('deploymentProcessEn', v)} multiline rows={3} />
+                <Input label={lc('Deployment Process (FA)', 'فرایند استقرار (فارسی)')} value={editing.deploymentProcessFa} onChange={(v) => set('deploymentProcessFa', v)} multiline rows={3} />
               </div>
             </>
           )}
@@ -280,16 +282,16 @@ export function ProjectsManager() {
           {activeTab === 'results' && (
             <>
               <div>
-                <p className="text-xs text-text-secondary mb-1">Business Impact (JSON array of metrics with before/after)</p>
+                <p className="text-xs text-text-secondary mb-1">{lc('Business Impact (JSON array of metrics with before/after)', 'تأثیر کسب‌وکار (آرایه JSON از معیارها با before/after)')}</p>
                 <Input label="" value={editing.businessImpactJson} onChange={(v) => set('businessImpactJson', v)} multiline rows={6} placeholder='[{"metricEn":"Network Uptime","metricFa":"آپ‌تایم شبکه","before":"85%","after":"99.9%","unit":"","improvement":"+14.9%","icon":"📈"}]' />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Key Results (EN, JSON array)" value={editing.resultsEn} onChange={(v) => set('resultsEn', v)} multiline rows={4} placeholder='["Reduced downtime by 90%","Improved throughput 10x"]' />
-                <Input label="Key Results (FA, JSON array)" value={editing.resultsFa} onChange={(v) => set('resultsFa', v)} multiline rows={4} />
-                <Input label="Lessons Learned (EN)" value={editing.lessonsLearnedEn} onChange={(v) => set('lessonsLearnedEn', v)} multiline rows={3} />
-                <Input label="Lessons Learned (FA)" value={editing.lessonsLearnedFa} onChange={(v) => set('lessonsLearnedFa', v)} multiline rows={3} />
-                <Input label="Future Improvements (EN)" value={editing.futureImprovementsEn} onChange={(v) => set('futureImprovementsEn', v)} multiline rows={3} />
-                <Input label="Future Improvements (FA)" value={editing.futureImprovementsFa} onChange={(v) => set('futureImprovementsFa', v)} multiline rows={3} />
+                <Input label={lc('Key Results (EN, JSON array)', 'نتایج کلیدی (انگلیسی، آرایه JSON)')} value={editing.resultsEn} onChange={(v) => set('resultsEn', v)} multiline rows={4} placeholder='["Reduced downtime by 90%","Improved throughput 10x"]' />
+                <Input label={lc('Key Results (FA, JSON array)', 'نتایج کلیدی (فارسی، آرایه JSON)')} value={editing.resultsFa} onChange={(v) => set('resultsFa', v)} multiline rows={4} />
+                <Input label={lc('Lessons Learned (EN)', 'درس‌های آموخته‌شده (انگلیسی)')} value={editing.lessonsLearnedEn} onChange={(v) => set('lessonsLearnedEn', v)} multiline rows={3} />
+                <Input label={lc('Lessons Learned (FA)', 'درس‌های آموخته‌شده (فارسی)')} value={editing.lessonsLearnedFa} onChange={(v) => set('lessonsLearnedFa', v)} multiline rows={3} />
+                <Input label={lc('Future Improvements (EN)', 'بهبودهای آینده (انگلیسی)')} value={editing.futureImprovementsEn} onChange={(v) => set('futureImprovementsEn', v)} multiline rows={3} />
+                <Input label={lc('Future Improvements (FA)', 'بهبودهای آینده (فارسی)')} value={editing.futureImprovementsFa} onChange={(v) => set('futureImprovementsFa', v)} multiline rows={3} />
               </div>
             </>
           )}
@@ -297,15 +299,15 @@ export function ProjectsManager() {
           {/* MEDIA & DOWNLOADS */}
           {activeTab === 'media' && (
             <>
-              <MediaPicker label="Cover Image" value={editing.coverImage} onChange={(v) => set('coverImage', v)} folder="projects" placeholder="Select cover image from media library" />
-              <MediaPicker label="Client Logo" value={editing.clientLogoUrl} onChange={(v) => set('clientLogoUrl', v)} folder="clients" placeholder="Select client logo" />
-              <MediaPicker label="Network Diagram" value={editing.networkDiagramUrl} onChange={(v) => set('networkDiagramUrl', v)} folder="diagrams" placeholder="Select network diagram" />
-              <MediaPicker label="Infrastructure Diagram" value={editing.infraDiagramUrl} onChange={(v) => set('infraDiagramUrl', v)} folder="diagrams" placeholder="Select infra diagram" />
-              <GalleryPicker label={`Project Gallery (${galleryUrls.length} images)`} value={galleryUrls} onChange={setGallery} folder="projects" />
+              <MediaPicker label={lc('Cover Image', 'تصویر کاور')} value={editing.coverImage} onChange={(v) => set('coverImage', v)} folder="projects" placeholder={lc('Select cover image from media library', 'انتخاب تصویر کاور از کتابخانه رسانه')} />
+              <MediaPicker label={lc('Client Logo', 'لوگوی مشتری')} value={editing.clientLogoUrl} onChange={(v) => set('clientLogoUrl', v)} folder="clients" placeholder={lc('Select client logo', 'انتخاب لوگوی مشتری')} />
+              <MediaPicker label={lc('Network Diagram', 'نمودار شبکه')} value={editing.networkDiagramUrl} onChange={(v) => set('networkDiagramUrl', v)} folder="diagrams" placeholder={lc('Select network diagram', 'انتخاب نمودار شبکه')} />
+              <MediaPicker label={lc('Infrastructure Diagram', 'نمودار زیرساخت')} value={editing.infraDiagramUrl} onChange={(v) => set('infraDiagramUrl', v)} folder="diagrams" placeholder={lc('Select infra diagram', 'انتخاب نمودار زیرساخت')} />
+              <GalleryPicker label={lc(`Project Gallery (${galleryUrls.length} images)`, `گالری پروژه (${galleryUrls.length} تصویر)`)} value={galleryUrls} onChange={setGallery} folder="projects" />
               <div className="grid grid-cols-3 gap-4 pt-2">
-                <Input label="Download PDF URL" value={editing.downloadPdfUrl} onChange={(v) => set('downloadPdfUrl', v)} placeholder="/downloads/case-study.pdf" />
-                <Input label="Download Architecture URL" value={editing.downloadArchUrl} onChange={(v) => set('downloadArchUrl', v)} />
-                <Input label="Download Tech Summary URL" value={editing.downloadTechSummaryUrl} onChange={(v) => set('downloadTechSummaryUrl', v)} />
+                <Input label={lc('Download PDF URL', 'لینک دانلود PDF')} value={editing.downloadPdfUrl} onChange={(v) => set('downloadPdfUrl', v)} placeholder="/downloads/case-study.pdf" />
+                <Input label={lc('Download Architecture URL', 'لینک دانلود معماری')} value={editing.downloadArchUrl} onChange={(v) => set('downloadArchUrl', v)} />
+                <Input label={lc('Download Tech Summary URL', 'لینک دانلود خلاصه فنی')} value={editing.downloadTechSummaryUrl} onChange={(v) => set('downloadTechSummaryUrl', v)} />
               </div>
             </>
           )}
@@ -315,8 +317,8 @@ export function ProjectsManager() {
             <>
               <Input label={t('seoTitle')} value={editing.seoTitle} onChange={(v) => set('seoTitle', v)} placeholder="Enterprise Network Upgrade Case Study | HBZ Technology" />
               <Input label={t('seoDescription')} value={editing.seoDescription} onChange={(v) => set('seoDescription', v)} multiline rows={3} placeholder="How HBZ Technology transformed..." />
-              <Input label="SEO Keywords" value={editing.seoKeywords} onChange={(v) => set('seoKeywords', v)} placeholder="enterprise networking, cisco, vmware, case study" />
-              <MediaPicker label="OG Image" value={editing.ogImage} onChange={(v) => set('ogImage', v)} folder="seo" placeholder="Select Open Graph image (1200x630)" />
+              <Input label={lc('SEO Keywords', 'کلیدواژه‌های سئو')} value={editing.seoKeywords} onChange={(v) => set('seoKeywords', v)} placeholder="enterprise networking, cisco, vmware, case study" />
+              <MediaPicker label={lc('OG Image', 'تصویر OG')} value={editing.ogImage} onChange={(v) => set('ogImage', v)} folder="seo" placeholder={lc('Select Open Graph image (1200x630)', 'انتخاب تصویر Open Graph (۱۲۰۰×۶۳۰)')} />
             </>
           )}
 

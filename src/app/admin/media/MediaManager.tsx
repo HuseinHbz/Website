@@ -46,6 +46,8 @@ export function MediaManager() {
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const { toast, ToastContainer } = useToast()
 
   async function load() {
@@ -86,13 +88,13 @@ export function MediaManager() {
   return (
     <>
       <ToastContainer />
-      <PageHeader title="Media Manager" subtitle="Upload and manage images, documents, and files" />
+      <PageHeader title={lc('Media Manager', 'مدیریت رسانه')} subtitle={lc('Upload and manage images, documents, and files', 'بارگذاری و مدیریت تصاویر، اسناد و فایل‌ها')} />
 
       <div className="flex gap-4 mb-6">
         {/* Folder sidebar */}
         <div className="w-44 flex-shrink-0">
           <Card className="p-3">
-            <p className="text-3xs font-bold uppercase tracking-widest text-text-disabled mb-2">Folders</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-text-disabled mb-2">{lc('Folders', 'پوشه‌ها')}</p>
             {FOLDERS.map((f) => (
               <button
                 key={f}
@@ -115,10 +117,10 @@ export function MediaManager() {
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragging ? 'border-brand bg-brand/10' : 'border-border hover:border-brand/50'}`}
           >
             <div className="text-3xl mb-2">▤</div>
-            <p className="text-text-secondary text-sm mb-3">Drag & drop files here, or</p>
+            <p className="text-text-secondary text-sm mb-3">{lc('Drag & drop files here, or', 'فایل‌ها را بکشید و رها کنید، یا')}</p>
             <label className="cursor-pointer">
               <span className="bg-brand hover:bg-brand text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                {uploading ? 'Uploading...' : 'Browse Files'}
+                {uploading ? lc('Uploading...', 'در حال بارگذاری...') : lc('Browse Files', 'انتخاب فایل')}
               </span>
               <input
                 type="file"
@@ -128,16 +130,16 @@ export function MediaManager() {
                 onChange={(e) => e.target.files && upload(e.target.files)}
               />
             </label>
-            <p className="text-text-disabled text-xs mt-2">Images (PNG/JPG/WebP/SVG) · Video · Audio · PDF · Word · Excel · PowerPoint · ZIP</p>
+            <p className="text-text-disabled text-xs mt-2">{lc('Images (PNG/JPG/WebP/SVG) · Video · Audio · PDF · Word · Excel · PowerPoint · ZIP', 'تصویر (PNG/JPG/WebP/SVG) · ویدیو · صدا · PDF · Word · Excel · PowerPoint · ZIP')}</p>
           </div>
 
           {/* File grid */}
           <Card>
             <div className="p-4 border-b border-border flex items-center justify-between">
-              <span className="text-sm text-text-secondary">{files.length} files in /{folder}</span>
+              <span className="text-sm text-text-secondary">{lc(`${files.length} files in /${folder}`, `${files.length} فایل در /${folder}`)}</span>
             </div>
             {files.length === 0 ? (
-              <div className="text-center py-12 text-text-disabled">No files in this folder yet</div>
+              <div className="text-center py-12 text-text-disabled">{lc('No files in this folder yet', 'هنوز فایلی در این پوشه نیست')}</div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-4">
                 {files.map((f) => (
@@ -198,7 +200,7 @@ export function MediaManager() {
                   </span>
                   <a href={selected.url} target="_blank" rel="noreferrer"
                     className="text-xs text-brand hover:text-brand underline mt-1">
-                    Open file ↗
+                    {lc('Open file', 'بازکردن فایل')} ↗
                   </a>
                 </div>
               )}
@@ -213,8 +215,8 @@ export function MediaManager() {
                 <div className="bg-background rounded p-2 text-xs text-brand break-all select-all">{selected.url}</div>
               </div>
               <div className="flex gap-2">
-                <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(selected.url).then(() => toast('Copied!'))}>Copy URL</Btn>
-                <Btn size="sm" variant="danger" onClick={() => del(selected.id)}>Delete</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(selected.url).then(() => toast(lc('Copied!', 'کپی شد!')))}>{lc('Copy URL', 'کپی آدرس')}</Btn>
+                <Btn size="sm" variant="danger" onClick={() => del(selected.id)}>{t('delete')}</Btn>
               </div>
             </Card>
           </div>

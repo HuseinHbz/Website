@@ -162,10 +162,10 @@ export function AboutEditor() {
             folder="profile"
             aspect={9 / 16}
             shape="rect"
-            label="Profile Photo (9:16 portrait)"
+            label={t('profilePhotoLabel')}
             previewClass="w-32 h-[142px] rounded-xl"
           />
-          <Input label="Resume PDF URL" value={current.resumeUrl || ''} onChange={(v) => set('resumeUrl', v)} placeholder="/resume.pdf" />
+          <Input label={t('resumeUrl')} value={current.resumeUrl || ''} onChange={(v) => set('resumeUrl', v)} placeholder="/resume.pdf" />
         </Card>
 
         <Card className="p-6 space-y-4">
@@ -191,7 +191,7 @@ export function AboutEditor() {
               />
             ))}
           </div>
-          <p className="text-xs text-text-tertiary pt-1">این اطلاعات با دکمه‌ی «ذخیره» بالای صفحه ذخیره می‌شود و مستقیماً در صفحه‌ی «درباره» نمایش داده می‌شود.</p>
+          <p className="text-xs text-text-tertiary pt-1">{t('aboutSaveHint')}</p>
         </Card>
       </div>
     </>

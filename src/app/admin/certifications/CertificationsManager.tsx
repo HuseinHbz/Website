@@ -117,7 +117,7 @@ export function CertificationsManager() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label={isFA ? 'نام انگلیسی *' : 'Name (EN) *'} value={editing.nameEn} onChange={(v) => set('nameEn', v)} placeholder="Cisco CCNA" />
-            <Input label={isFA ? 'نام فارسی *' : 'Name (FA) *'} value={editing.nameFa} onChange={(v) => set('nameFa', v)} placeholder="سیسکو CCNA" />
+            <Input label={isFA ? 'نام فارسی *' : 'Name (FA) *'} value={editing.nameFa} onChange={(v) => set('nameFa', v)} placeholder={isFA ? 'سیسکو CCNA' : 'Cisco CCNA'} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input label={isFA ? 'صادرکننده' : 'Issuer'} value={editing.issuer} onChange={(v) => set('issuer', v)} placeholder="Cisco" />

@@ -49,6 +49,8 @@ function fmtBytes(n: number): string {
 
 export function LogsMonitoring() {
   const logsLocale = useAdminLocale()
+  const rtl = logsLocale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const { toast, ToastContainer } = useToast()
   const [mode, setMode] = useState<'live' | 'history'>('live')
   const [entries, setEntries] = useState<LogEntry[]>([])
@@ -190,14 +192,14 @@ export function LogsMonitoring() {
     <>
       <ToastContainer />
       <PageHeader
-        title="Logs & Monitoring"
+        title={lc('Logs & Monitoring', 'لاگ‌ها و پایش زنده')}
         action={
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 text-xs ${connected ? 'text-success' : 'text-text-tertiary'}`}>
               <span className={`w-2 h-2 rounded-full ${connected ? 'bg-success animate-pulse' : 'bg-text-disabled'}`} />
-              {connected ? 'Live' : 'Disconnected'}
+              {connected ? lc('Live', 'زنده') : lc('Disconnected', 'قطع‌شده')}
             </span>
-            <Btn size="sm" variant="secondary" onClick={runBackup}>Run backup now</Btn>
+            <Btn size="sm" variant="secondary" onClick={runBackup}>{lc('Run backup now', 'اجرای بکاپ فوری')}</Btn>
           </div>
         }
       />
@@ -205,16 +207,16 @@ export function LogsMonitoring() {
       {/* ── Backup engine + alerts strip ─────────────────────────────────── */}
       {engine && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-          <StatTile label="Engine" value={engine.running ? 'Running' : 'Idle'} tone={engine.running ? 'ok' : undefined} />
-          <StatTile label="3-2-1" value={engine.strategy.rule321Met ? 'Met' : 'Partial'} sub={engine.strategy.adapters.join(' · ')} tone={engine.strategy.rule321Met ? 'ok' : 'warn'} />
-          <StatTile label="Backups" value={String(engine.totals.total)} sub={`${engine.totals.verified} verified · ${fmtBytes(engine.totals.size)}`} />
-          <StatTile label="Failures" value={String(engine.totals.failed)} tone={engine.totals.failed > 0 ? 'bad' : 'ok'} />
-          <StatTile label="Alerts" value={String(engine.alerts.length)} sub={criticalCount ? `${criticalCount} critical` : 'nominal'} tone={criticalCount ? 'bad' : engine.alerts.length ? 'warn' : 'ok'} />
+          <StatTile label={lc('Engine', 'موتور')} value={engine.running ? lc('Running', 'در حال اجرا') : lc('Idle', 'بیکار')} tone={engine.running ? 'ok' : undefined} />
+          <StatTile label="3-2-1" value={engine.strategy.rule321Met ? lc('Met', 'برقرار') : lc('Partial', 'ناقص')} sub={engine.strategy.adapters.join(' · ')} tone={engine.strategy.rule321Met ? 'ok' : 'warn'} />
+          <StatTile label={lc('Backups', 'بکاپ‌ها')} value={String(engine.totals.total)} sub={lc(`${engine.totals.verified} verified · ${fmtBytes(engine.totals.size)}`, `${engine.totals.verified} تأییدشده · ${fmtBytes(engine.totals.size)}`)} />
+          <StatTile label={lc('Failures', 'ناموفق‌ها')} value={String(engine.totals.failed)} tone={engine.totals.failed > 0 ? 'bad' : 'ok'} />
+          <StatTile label={lc('Alerts', 'هشدارها')} value={String(engine.alerts.length)} sub={criticalCount ? lc(`${criticalCount} critical`, `${criticalCount} بحرانی`) : lc('nominal', 'عادی')} tone={criticalCount ? 'bad' : engine.alerts.length ? 'warn' : 'ok'} />
         </div>
       )}
       {engine && engine.alerts.length > 0 && (
         <Card className="p-4 mb-4 border-danger/40">
-          <h3 className="text-sm font-semibold text-danger mb-2">⚠ Active Alerts</h3>
+          <h3 className="text-sm font-semibold text-danger mb-2">⚠ {lc('Active Alerts', 'هشدارهای فعال')}</h3>
           <ul className="space-y-1">
             {engine.alerts.slice(0, 8).map((a, i) => (
               <li key={i} className="text-xs text-text-secondary flex items-center gap-2">
@@ -231,37 +233,37 @@ export function LogsMonitoring() {
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg bg-background border border-border overflow-hidden">
-            <button onClick={() => setMode('live')} className={`px-3 py-1.5 text-xs font-medium ${mode === 'live' ? 'bg-brand text-white' : 'text-text-secondary'}`}>Live</button>
-            <button onClick={() => setMode('history')} className={`px-3 py-1.5 text-xs font-medium ${mode === 'history' ? 'bg-brand text-white' : 'text-text-secondary'}`}>History</button>
+            <button onClick={() => setMode('live')} className={`px-3 py-1.5 text-xs font-medium ${mode === 'live' ? 'bg-brand text-white' : 'text-text-secondary'}`}>{lc('Live', 'زنده')}</button>
+            <button onClick={() => setMode('history')} className={`px-3 py-1.5 text-xs font-medium ${mode === 'history' ? 'bg-brand text-white' : 'text-text-secondary'}`}>{lc('History', 'تاریخچه')}</button>
           </div>
 
           <select value={level} onChange={(e) => setLevel(e.target.value as Level | 'all')} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary">
-            {LEVELS.map((l) => <option key={l} value={l}>{l === 'all' ? 'All levels' : l.toUpperCase()}</option>)}
+            {LEVELS.map((l) => <option key={l} value={l}>{l === 'all' ? lc('All levels', 'همه سطوح') : l.toUpperCase()}</option>)}
           </select>
           <select value={source} onChange={(e) => setSource(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary">
-            <option value="all">All sources</option>
+            <option value="all">{lc('All sources', 'همه منابع')}</option>
             {facets.sources.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <select value={service} onChange={(e) => setService(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary">
-            <option value="all">All services</option>
+            <option value="all">{lc('All services', 'همه سرویس‌ها')}</option>
             {facets.services.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="flex-1 min-w-[160px] bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-text-primary placeholder-text-disabled" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={lc('Search…', 'جستجو…')} className="flex-1 min-w-[160px] bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-text-primary placeholder-text-disabled" />
 
           {mode === 'history' && (
             <>
               <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary" />
               <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary" />
-              <Btn size="sm" variant="secondary" onClick={runQuery}>Search</Btn>
-              <label className="flex items-center gap-1.5 text-xs text-text-secondary"><input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} /> Group errors</label>
+              <Btn size="sm" variant="secondary" onClick={runQuery}>{lc('Search', 'جستجو')}</Btn>
+              <label className="flex items-center gap-1.5 text-xs text-text-secondary"><input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} /> {lc('Group errors', 'گروه‌بندی خطاها')}</label>
             </>
           )}
 
           {mode === 'live' && (
             paused
-              ? <Btn size="sm" onClick={resume}>▶ Resume{pending > 0 ? ` (${pending})` : ''}</Btn>
-              : <Btn size="sm" variant="secondary" onClick={() => setPaused(true)}>⏸ Pause</Btn>
+              ? <Btn size="sm" onClick={resume}>{lc(`▶ Resume${pending > 0 ? ` (${pending})` : ''}`, `▶ ادامه${pending > 0 ? ` (${pending})` : ''}`)}</Btn>
+              : <Btn size="sm" variant="secondary" onClick={() => setPaused(true)}>⏸ {lc('Pause', 'توقف')}</Btn>
           )}
 
           <a href={exportUrl('json')} download><Btn size="sm" variant="secondary">↓ JSON</Btn></a>

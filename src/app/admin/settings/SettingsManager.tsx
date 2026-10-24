@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Btn, Input, SectionDivider, PageHeader, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useAdminLocale } from '@/lib/admin/locale'
 
 type Settings = Record<string, string>
 
@@ -25,14 +25,17 @@ const AI_PROVIDER_DEFAULTS: Record<string, { url: string; model: string }> = {
 }
 
 const NOTIFICATION_KEYS = [
-  { key: 'notify_email_consultations', label: 'Send consultation requests to email' },
-  { key: 'notify_email_contacts', label: 'Send contact form submissions to email' },
-  { key: 'notify_email_reports', label: 'Send weekly reports to email' },
-  { key: 'notify_sms_consultations', label: 'Send consultation alerts via SMS' },
-  { key: 'notify_sms_contacts', label: 'Send contact alerts via SMS' },
+  { key: 'notify_email_consultations', labelEn: 'Send consultation requests to email', labelFa: 'ارسال درخواست‌های مشاوره به ایمیل' },
+  { key: 'notify_email_contacts', labelEn: 'Send contact form submissions to email', labelFa: 'ارسال فرم‌های تماس به ایمیل' },
+  { key: 'notify_email_reports', labelEn: 'Send weekly reports to email', labelFa: 'ارسال گزارش‌های هفتگی به ایمیل' },
+  { key: 'notify_sms_consultations', labelEn: 'Send consultation alerts via SMS', labelFa: 'ارسال هشدار مشاوره از طریق پیامک' },
+  { key: 'notify_sms_contacts', labelEn: 'Send contact alerts via SMS', labelFa: 'ارسال هشدار تماس از طریق پیامک' },
 ]
 
 export function SettingsManager() {
+  const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [settings, setSettings] = useState<Settings>({})
   const [saving, setSaving] = useState(false)
   const { toast, ToastContainer } = useToast()
@@ -71,20 +74,20 @@ export function SettingsManager() {
     <>
       <ToastContainer />
       <PageHeader
-        title="System Settings"
-        subtitle="Configure branding, contact info, social links, AI, and notifications"
-        action={<Btn onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save All Settings'}</Btn>}
+        title={lc('System Settings', 'تنظیمات سیستم')}
+        subtitle={lc('Configure branding, contact info, social links, AI, and notifications', 'پیکربندی برندینگ، اطلاعات تماس، لینک‌های اجتماعی، هوش مصنوعی و اعلان‌ها')}
+        action={<Btn onClick={save} disabled={saving}>{saving ? lc('Saving...', 'در حال ذخیره...') : lc('Save All Settings', 'ذخیره همه تنظیمات')}</Btn>}
       />
 
       <div className="space-y-6">
         {/* General */}
         <Card className="p-6">
-          <SectionDivider label="General" />
+          <SectionDivider label={lc('General', 'عمومی')} />
           <div className="grid grid-cols-2 gap-4">
             {[
-              { key: 'site_name', label: 'Site Name' },
-              { key: 'site_tagline', label: 'Site Tagline' },
-              { key: 'site_url', label: 'Site URL' },
+              { key: 'site_name', label: lc('Site Name', 'نام سایت') },
+              { key: 'site_tagline', label: lc('Site Tagline', 'شعار سایت') },
+              { key: 'site_url', label: lc('Site URL', 'آدرس سایت') },
             ].map((k) => (
               <Input key={k.key} label={k.label} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}
@@ -93,13 +96,13 @@ export function SettingsManager() {
 
         {/* Branding */}
         <Card className="p-6">
-          <SectionDivider label="Branding" />
+          <SectionDivider label={lc('Branding', 'برندینگ')} />
           <div className="grid grid-cols-2 gap-4">
             {[
-              { key: 'logo_text', label: 'Logo Text (initials)' },
-              { key: 'logo_url', label: 'Logo Image URL' },
-              { key: 'primary_color', label: 'Primary Color', type: 'color' },
-              { key: 'accent_color', label: 'Accent Color', type: 'color' },
+              { key: 'logo_text', label: lc('Logo Text (initials)', 'متن لوگو (حروف اول)') },
+              { key: 'logo_url', label: lc('Logo Image URL', 'آدرس تصویر لوگو') },
+              { key: 'primary_color', label: lc('Primary Color', 'رنگ اصلی'), type: 'color' },
+              { key: 'accent_color', label: lc('Accent Color', 'رنگ تأکیدی'), type: 'color' },
             ].map((k) => (
               <Input key={k.key} label={k.label} type={k.type || 'text'} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}
@@ -112,21 +115,21 @@ export function SettingsManager() {
 
         {/* Email Settings */}
         <Card className="p-6">
-          <SectionDivider label="Email Settings (SMTP)" />
+          <SectionDivider label={lc('Email Settings (SMTP)', 'تنظیمات ایمیل (SMTP)')} />
           <div className="grid grid-cols-2 gap-4 mb-6">
             {[
-              { key: 'smtp_host', label: 'SMTP Host' },
-              { key: 'smtp_port', label: 'SMTP Port' },
-              { key: 'smtp_user', label: 'SMTP Username' },
-              { key: 'smtp_pass', label: 'SMTP Password', type: 'password' },
-              { key: 'smtp_from', label: 'From Email Address' },
-              { key: 'notify_email_to', label: 'Notification Recipient Email' },
+              { key: 'smtp_host', label: lc('SMTP Host', 'میزبان SMTP') },
+              { key: 'smtp_port', label: lc('SMTP Port', 'پورت SMTP') },
+              { key: 'smtp_user', label: lc('SMTP Username', 'نام کاربری SMTP') },
+              { key: 'smtp_pass', label: lc('SMTP Password', 'رمز عبور SMTP'), type: 'password' },
+              { key: 'smtp_from', label: lc('From Email Address', 'آدرس ایمیل فرستنده') },
+              { key: 'notify_email_to', label: lc('Notification Recipient Email', 'ایمیل دریافت‌کننده اعلان') },
             ].map((k) => (
               <Input key={k.key} label={k.label} type={k.type || 'text'} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}
           </div>
           <div className="border-t border-border pt-4">
-            <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold mb-3">Email Notifications</p>
+            <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold mb-3">{lc('Email Notifications', 'اعلان‌های ایمیلی')}</p>
             <div className="space-y-3">
               {NOTIFICATION_KEYS.filter(k => k.key.startsWith('notify_email')).map((item) => (
                 <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
@@ -137,7 +140,7 @@ export function SettingsManager() {
                   >
                     <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <span className="text-sm text-text-primary group-hover:text-text-primary transition-colors">{item.label}</span>
+                  <span className="text-sm text-text-primary group-hover:text-text-primary transition-colors">{lc(item.labelEn, item.labelFa)}</span>
                 </label>
               ))}
             </div>
@@ -146,19 +149,19 @@ export function SettingsManager() {
 
         {/* SMS Settings */}
         <Card className="p-6">
-          <SectionDivider label="SMS Notifications (sms.ir)" />
+          <SectionDivider label={lc('SMS Notifications (sms.ir)', 'اعلان‌های پیامکی (sms.ir)')} />
           <div className="grid grid-cols-2 gap-4 mb-6">
             {[
-              { key: 'sms_ir_api_key', label: 'sms.ir API Key', type: 'password' },
-              { key: 'sms_ir_line', label: 'SMS Line Number' },
-              { key: 'sms_notify_to', label: 'Notification Phone Number' },
-              { key: 'sms_template_consult', label: 'Consultation Template ID' },
+              { key: 'sms_ir_api_key', label: lc('sms.ir API Key', 'کلید API sms.ir'), type: 'password' },
+              { key: 'sms_ir_line', label: lc('SMS Line Number', 'شماره خط پیامک') },
+              { key: 'sms_notify_to', label: lc('Notification Phone Number', 'شماره تلفن اعلان') },
+              { key: 'sms_template_consult', label: lc('Consultation Template ID', 'شناسه قالب مشاوره') },
             ].map((k) => (
               <Input key={k.key} label={k.label} type={k.type || 'text'} value={settings[k.key] || ''} onChange={(v) => set(k.key, v)} />
             ))}
           </div>
           <div className="border-t border-border pt-4">
-            <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold mb-3">SMS Notifications</p>
+            <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold mb-3">{lc('SMS Notifications', 'اعلان‌های پیامکی')}</p>
             <div className="space-y-3">
               {NOTIFICATION_KEYS.filter(k => k.key.startsWith('notify_sms')).map((item) => (
                 <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
@@ -169,7 +172,7 @@ export function SettingsManager() {
                   >
                     <span className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow transition-transform ${settings[item.key] === '1' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <span className="text-sm text-text-primary group-hover:text-text-primary transition-colors">{item.label}</span>
+                  <span className="text-sm text-text-primary group-hover:text-text-primary transition-colors">{lc(item.labelEn, item.labelFa)}</span>
                 </label>
               ))}
             </div>
@@ -178,9 +181,9 @@ export function SettingsManager() {
 
         {/* AI Chatbot */}
         <Card className="p-6">
-          <SectionDivider label="AI Chatbot / Assistant" />
+          <SectionDivider label={lc('AI Chatbot / Assistant', 'چت‌بات / دستیار هوش مصنوعی')} />
           <div className="mb-4">
-            <p className="text-xs text-text-tertiary font-medium mb-2">AI Provider</p>
+            <p className="text-xs text-text-tertiary font-medium mb-2">{lc('AI Provider', 'ارائه‌دهنده هوش مصنوعی')}</p>
             <div className="flex flex-wrap gap-2">
               {AI_PROVIDERS.map((p) => (
                 <button
@@ -200,28 +203,28 @@ export function SettingsManager() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="API Key"
+              label={lc('API Key', 'کلید API')}
               type="password"
               value={settings['ai_api_key'] || ''}
               onChange={(v) => set('ai_api_key', v)}
             />
             <Input
-              label="Model Name"
+              label={lc('Model Name', 'نام مدل')}
               value={settings['ai_model'] || AI_PROVIDER_DEFAULTS[currentProvider]?.model || ''}
               onChange={(v) => set('ai_model', v)}
             />
             <Input
-              label="API Base URL (auto-filled)"
+              label={lc('API Base URL (auto-filled)', 'آدرس پایه API (پر شده خودکار)')}
               value={settings['ai_api_url'] || AI_PROVIDER_DEFAULTS[currentProvider]?.url || ''}
               onChange={(v) => set('ai_api_url', v)}
             />
             <Input
-              label="Max Conversation Turns"
+              label={lc('Max Conversation Turns', 'حداکثر نوبت‌های گفتگو')}
               value={settings['ai_max_turns'] || '10'}
               onChange={(v) => set('ai_max_turns', v)}
             />
             <Input
-              label="System Prompt (optional)"
+              label={lc('System Prompt (optional)', 'پرامپت سیستم (اختیاری)')}
               value={settings['ai_system_prompt'] || ''}
               onChange={(v) => set('ai_system_prompt', v)}
             />

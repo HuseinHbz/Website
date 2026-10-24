@@ -16,6 +16,8 @@ type TwoFAState = {
 export function SecurityManager() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [state, setState] = useState<TwoFAState | null>(null)
   const [loading, setLoading] = useState(true)
   const [code, setCode] = useState('')
@@ -98,8 +100,8 @@ export function SecurityManager() {
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-text-primary">Two-Factor Authentication (TOTP)</p>
-                <p className="text-xs text-text-tertiary mt-0.5">Requires Google Authenticator or compatible app</p>
+                <p className="text-sm font-semibold text-text-primary">{lc('Two-Factor Authentication (TOTP)', 'احراز دو مرحله‌ای (TOTP)')}</p>
+                <p className="text-xs text-text-tertiary mt-0.5">{lc('Requires Google Authenticator or compatible app', 'نیازمند Google Authenticator یا اپ مشابه')}</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${state?.enabled ? 'bg-green-500/15 text-green-400' : 'bg-surface-2 text-text-secondary'}`}>
                 {state?.enabled ? `● ${t('twoFaEnabled')}` : `○ ${t('twoFaDisabled')}`}
@@ -131,10 +133,10 @@ export function SecurityManager() {
           {/* Setup flow */}
           {phase === 'setup' && state && (
             <Card className="p-6 space-y-5">
-              <h3 className="text-sm font-semibold text-text-primary">Setup Two-Factor Authentication</h3>
+              <h3 className="text-sm font-semibold text-text-primary">{lc('Setup Two-Factor Authentication', 'راه‌اندازی احراز دو مرحله‌ای')}</h3>
 
               <div className="space-y-1">
-                <p className="text-xs text-text-secondary">Step 1 — Scan this QR code in Google Authenticator or Authy:</p>
+                <p className="text-xs text-text-secondary">{lc('Step 1 — Scan this QR code in Google Authenticator or Authy:', 'مرحله ۱ — این کد QR را در Google Authenticator یا Authy اسکن کنید:')}</p>
                 <div className="flex justify-center p-4 bg-surface rounded-xl w-fit mx-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={state.qrCode} alt="2FA QR Code" className="w-48 h-48" />
@@ -142,14 +144,14 @@ export function SecurityManager() {
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-text-secondary">Or enter this secret manually:</p>
+                <p className="text-xs text-text-secondary">{lc('Or enter this secret manually:', 'یا این کلید مخفی را به‌صورت دستی وارد کنید:')}</p>
                 <code className="block bg-background border border-border rounded-lg px-3 py-2 text-xs text-brand tracking-widest break-all select-all">
                   {state.secret}
                 </code>
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs text-text-secondary">Step 2 — Enter the 6-digit code from your app to confirm:</p>
+                <p className="text-xs text-text-secondary">{lc('Step 2 — Enter the 6-digit code from your app to confirm:', 'مرحله ۲ — کد ۶ رقمی اپ را برای تأیید وارد کنید:')}</p>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -174,8 +176,8 @@ export function SecurityManager() {
           {/* Disable flow */}
           {phase === 'disable' && (
             <Card className="p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-text-primary">Disable Two-Factor Authentication</h3>
-              <p className="text-xs text-text-secondary">Enter the current code from your authenticator app to confirm:</p>
+              <h3 className="text-sm font-semibold text-text-primary">{lc('Disable Two-Factor Authentication', 'غیرفعال‌سازی احراز دو مرحله‌ای')}</h3>
+              <p className="text-xs text-text-secondary">{lc('Enter the current code from your authenticator app to confirm:', 'کد فعلی اپ احرازهویت را برای تأیید وارد کنید:')}</p>
               <input
                 type="text"
                 inputMode="numeric"
@@ -198,12 +200,12 @@ export function SecurityManager() {
           {/* How to use */}
           {phase === 'view' && (
             <Card className="p-5">
-              <p className="text-xs font-semibold text-text-secondary mb-2">How it works</p>
+              <p className="text-xs font-semibold text-text-secondary mb-2">{lc('How it works', 'نحوه کار')}</p>
               <ul className="text-xs text-text-tertiary space-y-1.5 list-disc list-inside">
-                <li>After enabling, login will require a 6-digit code</li>
-                <li>Install Google Authenticator, Authy, or any TOTP app</li>
-                <li>Scan the QR code during setup to link your account</li>
-                <li>Each code is valid for 30 seconds</li>
+                <li>{lc('After enabling, login will require a 6-digit code', 'پس از فعال‌سازی، ورود نیازمند کد ۶ رقمی خواهد بود')}</li>
+                <li>{lc('Install Google Authenticator, Authy, or any TOTP app', 'Google Authenticator، Authy یا هر اپ TOTP را نصب کنید')}</li>
+                <li>{lc('Scan the QR code during setup to link your account', 'در حین راه‌اندازی، کد QR را برای اتصال حساب اسکن کنید')}</li>
+                <li>{lc('Each code is valid for 30 seconds', 'هر کد به مدت ۳۰ ثانیه معتبر است')}</li>
               </ul>
             </Card>
           )}

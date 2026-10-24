@@ -24,6 +24,8 @@ const TYPE_ICONS: Record<string, string> = {
 export function OrganizationHub() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [orgs, setOrgs] = useState<Org[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Org & { nameFa: string; descriptionEn: string; contactEmail: string; phone: string }> | null>(null)
@@ -84,7 +86,7 @@ export function OrganizationHub() {
               <div className="col-span-2"><Input label={t('nameEn')} value={editing.nameEn || ''} onChange={v => setEditing(e => ({ ...e, nameEn: v }))} /></div>
               <div className="col-span-2"><Input label={t('nameFa')} value={editing.nameFa || ''} onChange={v => setEditing(e => ({ ...e, nameFa: v }))} /></div>
               <Select label={t('type')} value={editing.type || 'client'} onChange={v => setEditing(e => ({ ...e, type: v }))} options={TYPES.map(tp => ({ value: tp, label: `${TYPE_ICONS[tp]} ${tp}` }))} />
-              <Select label="Tier (partners)" value={editing.tier || ''} onChange={v => setEditing(e => ({ ...e, tier: v || null }))} options={[{ value: '', label: '— None —' }, ...TIERS.map(tr => ({ value: tr, label: tr }))]} />
+              <Select label={lc('Tier (partners)', 'سطح (شرکا)')} value={editing.tier || ''} onChange={v => setEditing(e => ({ ...e, tier: v || null }))} options={[{ value: '', label: lc('— None —', '— هیچ‌کدام —') }, ...TIERS.map(tr => ({ value: tr, label: tr }))]} />
               <Input label={t('website')} value={editing.website || ''} onChange={v => setEditing(e => ({ ...e, website: v }))} />
               <Input label={t('country')} value={editing.country || ''} onChange={v => setEditing(e => ({ ...e, country: v }))} />
               <Input label={t('contactEmail')} value={editing.contactEmail || ''} onChange={v => setEditing(e => ({ ...e, contactEmail: v }))} />

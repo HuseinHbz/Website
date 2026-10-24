@@ -19,6 +19,8 @@ const EMPTY_REDIRECT: Redirect = { fromPath: '', toPath: '', statusCode: 301, ac
 export function SeoManager() {
   const t = useT()
   const seoLocale = useAdminLocale()
+  const rtl = seoLocale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [tab, setTab] = useState<Tab>('meta')
   const [page, setPage] = useState('home')
   const [locale, setLocale] = useState<'en' | 'fa'>('en')
@@ -112,30 +114,30 @@ export function SeoManager() {
             <Btn onClick={saveSeo} disabled={savingSeo}>{savingSeo ? t('saving') : t('save')}</Btn>
           </div>
           <Card className="p-6 space-y-4">
-            <SectionDivider label="Meta Tags" />
-            <Input label="Meta Title" value={current.metaTitle} onChange={v => setSeoField('metaTitle', v)} placeholder="Page Title | HBZ Technology" />
-            <div className="text-xs text-text-disabled -mt-2">{current.metaTitle.length}/60 {current.metaTitle.length > 60 ? '⚠ Too long' : '✓'}</div>
-            <Input label="Meta Description" value={current.metaDescription} onChange={v => setSeoField('metaDescription', v)} multiline rows={3} placeholder="Description for search engines..." />
-            <div className="text-xs text-text-disabled -mt-2">{current.metaDescription.length}/160 {current.metaDescription.length > 160 ? '⚠ Too long' : '✓'}</div>
-            <Input label="Keywords" value={current.keywords} onChange={v => setSeoField('keywords', v)} placeholder="MikroTik, Cisco, Network Security" />
-            <Input label="Canonical URL" value={current.canonicalUrl} onChange={v => setSeoField('canonicalUrl', v)} placeholder="https://habibazar.com/..." />
+            <SectionDivider label={lc('Meta Tags', 'متادیتا')} />
+            <Input label={lc('Meta Title', 'عنوان متا')} value={current.metaTitle} onChange={v => setSeoField('metaTitle', v)} placeholder="Page Title | HBZ Technology" />
+            <div className="text-xs text-text-disabled -mt-2">{current.metaTitle.length}/60 {current.metaTitle.length > 60 ? lc('⚠ Too long', '⚠ طولانی') : '✓'}</div>
+            <Input label={lc('Meta Description', 'توضیحات متا')} value={current.metaDescription} onChange={v => setSeoField('metaDescription', v)} multiline rows={3} placeholder="Description for search engines..." />
+            <div className="text-xs text-text-disabled -mt-2">{current.metaDescription.length}/160 {current.metaDescription.length > 160 ? lc('⚠ Too long', '⚠ طولانی') : '✓'}</div>
+            <Input label={lc('Keywords', 'کلیدواژه‌ها')} value={current.keywords} onChange={v => setSeoField('keywords', v)} placeholder="MikroTik, Cisco, Network Security" />
+            <Input label={lc('Canonical URL', 'آدرس کانونیکال')} value={current.canonicalUrl} onChange={v => setSeoField('canonicalUrl', v)} placeholder="https://habibazar.com/..." />
           </Card>
           <Card className="p-6 space-y-4">
-            <SectionDivider label="Open Graph (Social Media)" />
-            <Input label="OG Title" value={current.ogTitle} onChange={v => setSeoField('ogTitle', v)} />
-            <Input label="OG Description" value={current.ogDescription} onChange={v => setSeoField('ogDescription', v)} multiline rows={2} />
-            <Input label="OG Image URL (1200×630)" value={current.ogImage} onChange={v => setSeoField('ogImage', v)} placeholder="/uploads/og/page-og.png" />
+            <SectionDivider label={lc('Open Graph (Social Media)', 'Open Graph (شبکه‌های اجتماعی)')} />
+            <Input label={lc('OG Title', 'عنوان OG')} value={current.ogTitle} onChange={v => setSeoField('ogTitle', v)} />
+            <Input label={lc('OG Description', 'توضیحات OG')} value={current.ogDescription} onChange={v => setSeoField('ogDescription', v)} multiline rows={2} />
+            <Input label={lc('OG Image URL (1200×630)', 'آدرس تصویر OG (۱۲۰۰×۶۳۰)')} value={current.ogImage} onChange={v => setSeoField('ogImage', v)} placeholder="/uploads/og/page-og.png" />
           </Card>
           <Card className="p-6 space-y-4">
-            <SectionDivider label="Schema Markup (JSON-LD)" />
-            <Input label="Custom JSON-LD" value={current.schemaMarkup} onChange={v => setSeoField('schemaMarkup', v)} multiline rows={8} placeholder={'{\n  "@context": "https://schema.org",\n  "@type": "Person"\n}'} />
+            <SectionDivider label={lc('Schema Markup (JSON-LD)', 'نشانه‌گذاری Schema (JSON-LD)')} />
+            <Input label={lc('Custom JSON-LD', 'JSON-LD سفارشی')} value={current.schemaMarkup} onChange={v => setSeoField('schemaMarkup', v)} multiline rows={8} placeholder={'{\n  "@context": "https://schema.org",\n  "@type": "Person"\n}'} />
           </Card>
           <Card className="p-6">
-            <SectionDivider label="Search Preview" />
+            <SectionDivider label={lc('Search Preview', 'پیش‌نمایش جستجو')} />
             <div className="mt-2 p-4 bg-background rounded-lg">
-              <p className="text-blue-400 text-base">{current.metaTitle || '(Page Title)'}</p>
+              <p className="text-blue-400 text-base">{current.metaTitle || lc('(Page Title)', '(عنوان صفحه)')}</p>
               <p className="text-green-600 text-xs">{current.canonicalUrl || `https://habibazar.com/${page === 'home' ? '' : page}`}</p>
-              <p className="text-text-secondary text-sm mt-1">{current.metaDescription || '(No description set)'}</p>
+              <p className="text-text-secondary text-sm mt-1">{current.metaDescription || lc('(No description set)', '(توضیحی تنظیم نشده)')}</p>
             </div>
           </Card>
         </div>
@@ -164,7 +166,7 @@ export function SeoManager() {
                 { id: 'del', labelEn: 'Delete', labelFa: t('del'), icon: '🗑', danger: true, onClick: r => deleteRedirect(r.id!) },
               ] as RowAction<Redirect>[]}
               exportName="seo-redirects"
-              emptyLabel="No redirects configured yet"
+              emptyLabel={lc('No redirects configured yet', 'هنوز ریدایرکتی تنظیم نشده')}
             />
           </Card>
           <Modal open={redirectModal} onClose={() => setRedirectModal(false)} title={editingRedirect.id ? t('editRedirect') : t('addRedirect')} size="md">
@@ -176,7 +178,7 @@ export function SeoManager() {
                   { value: '301', label: '301 — Permanent' }, { value: '302', label: '302 — Temporary' },
                   { value: '307', label: '307 — Temp (method-safe)' }, { value: '308', label: '308 — Perm (method-safe)' },
                 ]} />
-                <Select label="Status" value={editingRedirect.active ? 'true' : 'false'} onChange={v => setEditingRedirect(e => ({ ...e, active: v === 'true' }))} options={[{ value: 'true', label: t('active') }, { value: 'false', label: t('disabled') }]} />
+                <Select label={t('status')} value={editingRedirect.active ? 'true' : 'false'} onChange={v => setEditingRedirect(e => ({ ...e, active: v === 'true' }))} options={[{ value: 'true', label: t('active') }, { value: 'false', label: t('disabled') }]} />
               </div>
               <div className="flex gap-3">
                 <Btn onClick={saveRedirect} disabled={savingRedirect}>{savingRedirect ? t('saving') : t('save')}</Btn>
@@ -190,27 +192,27 @@ export function SeoManager() {
       {tab === 'robots' && (
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <SectionDivider label="robots.txt Configuration" />
+            <SectionDivider label={lc('robots.txt Configuration', 'پیکربندی robots.txt')} />
             <Btn onClick={saveRobots} disabled={savingRobots}>{savingRobots ? t('saving') : t('saveRobots')}</Btn>
           </div>
-          <p className="text-xs text-text-tertiary">Served at <code className="text-brand">/robots.txt</code></p>
+          <p className="text-xs text-text-tertiary">{lc('Served at', 'در دسترس در')} <code className="text-brand">/robots.txt</code></p>
           <textarea value={robotsTxt} onChange={e => setRobotsTxt(e.target.value)} rows={16}
             className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm text-text-primary font-mono focus:outline-none focus:border-brand transition-colors" />
           <div className="flex gap-3">
-            <button onClick={() => setRobotsTxt('User-agent: *\nAllow: /\n\nSitemap: https://habibazar.com/sitemap.xml')} className="text-xs text-brand hover:text-brand">Reset to default</button>
-            <button onClick={() => setRobotsTxt('User-agent: *\nDisallow: /')} className="text-xs text-red-400 hover:text-red-300">Block all crawlers</button>
+            <button onClick={() => setRobotsTxt('User-agent: *\nAllow: /\n\nSitemap: https://habibazar.com/sitemap.xml')} className="text-xs text-brand hover:text-brand">{lc('Reset to default', 'بازنشانی به پیش‌فرض')}</button>
+            <button onClick={() => setRobotsTxt('User-agent: *\nDisallow: /')} className="text-xs text-red-400 hover:text-red-300">{lc('Block all crawlers', 'مسدودسازی همه خزنده‌ها')}</button>
           </div>
         </Card>
       )}
 
       {tab === 'sitemap' && (
         <Card className="p-6 space-y-4">
-          <SectionDivider label="Sitemap Status" />
+          <SectionDivider label={lc('Sitemap Status', 'وضعیت نقشه سایت')} />
           <div className="p-3 rounded-lg flex items-center gap-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
             <span className="text-emerald-400">✓</span>
             <div>
-              <p className="text-sm text-text-primary">Dynamic sitemap is active at <code className="text-brand">/sitemap.xml</code></p>
-              <p className="text-xs text-text-tertiary">Includes all pages, case studies, and blog posts automatically</p>
+              <p className="text-sm text-text-primary">{lc('Dynamic sitemap is active at', 'نقشه سایت دینامیک فعال است در')} <code className="text-brand">/sitemap.xml</code></p>
+              <p className="text-xs text-text-tertiary">{lc('Includes all pages, case studies, and blog posts automatically', 'شامل تمام صفحات، نمونه‌کارها و پست‌های وبلاگ به‌صورت خودکار')}</p>
             </div>
           </div>
           {[

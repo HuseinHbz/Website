@@ -787,7 +787,7 @@ function ReconSection({ fa, toast }: { fa: boolean; toast: (m: string, k?: 'succ
       )}
       <Card className="p-4 space-y-2">
         <h4 className="text-xs font-semibold text-text-primary">{L(fa, 'Import statement (CSV: date,amount,description)', 'ورود صورتحساب (CSV: تاریخ،مبلغ،شرح)')}</h4>
-        <Input label="" value={csv} onChange={setCsv} multiline rows={3} placeholder="2026-07-01, 1500000, Customer transfer" />
+        <Input label="" value={csv} onChange={setCsv} multiline rows={3} placeholder={L(fa, '2026-07-01, 1500000, Customer transfer', '۱۴۰۵-۰۴-۱۰، ۱۵۰۰۰۰۰، انتقال مشتری')} />
         <Btn size="sm" variant="secondary" onClick={importCsv} disabled={!accountId}>{L(fa, 'Import', 'ورود')}</Btn>
       </Card>
       <Card className="p-4">

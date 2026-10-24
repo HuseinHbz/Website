@@ -59,6 +59,8 @@ const EMPTY_PAGE = {
 export function PagesManager() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [pages, setPages] = useState<PageRow[]>([])
   const [modal, setModal] = useState(false)
   const [builderModal, setBuilderModal] = useState(false)
@@ -262,14 +264,14 @@ export function PagesManager() {
           <Input label={t('slug') + ' *'} value={editing.slug || ''} onChange={(v) => setEditing({ ...editing, slug: v.toLowerCase().replace(/\s+/g, '-') })} placeholder="about-us" />
           <div className="grid grid-cols-2 gap-3">
             <Select
-              label="Layout"
+              label={lc('Layout', 'چیدمان')}
               value={editing.layout || 'default'}
               onChange={(v) => setEditing({ ...editing, layout: v })}
               options={[
-                { value: 'default', label: 'Default' },
-                { value: 'full_width', label: 'Full Width' },
-                { value: 'sidebar', label: 'With Sidebar' },
-                { value: 'landing', label: 'Landing Page' },
+                { value: 'default', label: lc('Default', 'پیش‌فرض') },
+                { value: 'full_width', label: lc('Full Width', 'تمام‌عرض') },
+                { value: 'sidebar', label: lc('With Sidebar', 'با نوار کناری') },
+                { value: 'landing', label: lc('Landing Page', 'صفحه فرود') },
               ]}
             />
             <Select
@@ -277,21 +279,21 @@ export function PagesManager() {
               value={editing.status || 'draft'}
               onChange={(v) => setEditing({ ...editing, status: v as 'draft' | 'published' | 'archived' })}
               options={[
-                { value: 'draft', label: 'Draft' },
-                { value: 'published', label: 'Published' },
-                { value: 'archived', label: 'Archived' },
+                { value: 'draft', label: lc('Draft', 'پیش‌نویس') },
+                { value: 'published', label: lc('Published', 'منتشرشده') },
+                { value: 'archived', label: lc('Archived', 'بایگانی‌شده') },
               ]}
             />
           </div>
-          <Input label="Description (EN)" value={editing.descriptionEn || ''} onChange={(v) => setEditing({ ...editing, descriptionEn: v })} />
+          <Input label={lc('Description (EN)', 'توضیحات (انگلیسی)')} value={editing.descriptionEn || ''} onChange={(v) => setEditing({ ...editing, descriptionEn: v })} />
           <div className="border-t border-border pt-4">
-            <p className="text-xs text-text-tertiary mb-3 uppercase tracking-wider font-medium">SEO</p>
+            <p className="text-xs text-text-tertiary mb-3 uppercase tracking-wider font-medium">{lc('SEO', 'سئو')}</p>
             <Input label={t('seoTitle')} value={editing.seoTitle || ''} onChange={(v) => setEditing({ ...editing, seoTitle: v })} />
             <div className="mt-3">
               <Input label={t('seoDescription')} value={editing.seoDescription || ''} onChange={(v) => setEditing({ ...editing, seoDescription: v })} />
             </div>
             <div className="mt-3">
-              <Input label="OG Image URL" value={editing.ogImage || ''} onChange={(v) => setEditing({ ...editing, ogImage: v })} />
+              <Input label={lc('OG Image URL', 'آدرس تصویر OG')} value={editing.ogImage || ''} onChange={(v) => setEditing({ ...editing, ogImage: v })} />
             </div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -303,14 +305,14 @@ export function PagesManager() {
 
       {/* Page Builder Modal */}
       {builderPage && (
-        <Modal open={builderModal} onClose={() => setBuilderModal(false)} title={`Page Builder — ${builderPage.titleEn}`} size="lg">
+        <Modal open={builderModal} onClose={() => setBuilderModal(false)} title={`${lc('Page Builder', 'سازنده صفحه')} — ${builderPage.titleEn}`} size="lg">
           <div className="grid grid-cols-5 gap-4 max-h-[70vh]">
             {/* Canvas */}
             <div className="col-span-3 overflow-y-auto">
-              <p className="text-xs text-text-tertiary mb-3 font-medium uppercase tracking-wider">Page Sections (drag to reorder)</p>
+              <p className="text-xs text-text-tertiary mb-3 font-medium uppercase tracking-wider">{lc('Page Sections (drag to reorder)', 'بخش‌های صفحه (برای ترتیب بکشید)')}</p>
               {builderPage.sections.length === 0 ? (
                 <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-text-tertiary text-sm">
-                  No sections yet. Add sections from the panel →
+                  {lc('No sections yet. Add sections from the panel →', 'هنوز بخشی اضافه نشده. از پنل سمت بخش‌ها را اضافه کنید ←')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -326,10 +328,10 @@ export function PagesManager() {
                         <span className="text-text-disabled text-sm font-mono w-5 text-center">{idx + 1}</span>
                         <span className="text-base">{typeInfo?.icon || '📦'}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-text-primary truncate">{s.titleEn || 'Untitled'}</div>
+                          <div className="text-sm text-text-primary truncate">{s.titleEn || lc('Untitled', 'بدون عنوان')}</div>
                           <div className="text-xs text-text-tertiary">{typeInfo?.labelEn || s.sectionType} · {s.variant}</div>
                         </div>
-                        <Badge color={s.status === 'published' ? 'green' : 'slate'}>{s.status || 'draft'}</Badge>
+                        <Badge color={s.status === 'published' ? 'green' : 'slate'}>{s.status || lc('draft', 'پیش‌نویس')}</Badge>
                         <div className="flex gap-1">
                           <button onClick={() => moveSection(idx, -1)} disabled={idx === 0} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-20">↑</button>
                           <button onClick={() => moveSection(idx, 1)} disabled={idx === builderPage.sections.length - 1} className="px-1.5 py-0.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-20">↓</button>
@@ -345,7 +347,7 @@ export function PagesManager() {
 
             {/* Section Picker */}
             <div className="col-span-2 overflow-y-auto border-l border-border pl-4">
-              <p className="text-xs text-text-tertiary mb-3 font-medium uppercase tracking-wider">Available Sections</p>
+              <p className="text-xs text-text-tertiary mb-3 font-medium uppercase tracking-wider">{lc('Available Sections', 'بخش‌های موجود')}</p>
               <div className="space-y-1.5">
                 {availableSections.map((s) => {
                   const typeInfo = SECTION_TYPE_MAP[s.sectionType as SectionTypeId]
@@ -364,7 +366,7 @@ export function PagesManager() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm">{typeInfo?.icon || '📦'}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-text-primary truncate">{s.titleEn || 'Untitled'}</div>
+                          <div className="text-xs font-medium text-text-primary truncate">{s.titleEn || lc('Untitled', 'بدون عنوان')}</div>
                           <div className="text-xs text-text-tertiary">{typeInfo?.labelEn || s.sectionType}</div>
                         </div>
                         {already && <span className="text-xs text-green-400">✓</span>}
@@ -373,7 +375,7 @@ export function PagesManager() {
                   )
                 })}
                 {availableSections.length === 0 && (
-                  <p className="text-xs text-text-disabled text-center py-4">No sections available. Create sections first.</p>
+                  <p className="text-xs text-text-disabled text-center py-4">{lc('No sections available. Create sections first.', 'هیچ بخشی موجود نیست. ابتدا بخش‌ها را ایجاد کنید.')}</p>
                 )}
               </div>
             </div>
@@ -382,7 +384,7 @@ export function PagesManager() {
           <div className="flex gap-3 mt-4 pt-4 border-t border-border">
             <Btn onClick={saveBuilder} disabled={saving}>{saving ? t('saving') : t('saveLayout')}</Btn>
             <Btn variant="secondary" onClick={() => setBuilderModal(false)}>{t('cancel')}</Btn>
-            <span className="text-xs text-text-tertiary self-center ml-auto">{builderPage.sections.length} section{builderPage.sections.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-text-tertiary self-center ml-auto">{lc(`${builderPage.sections.length} section${builderPage.sections.length !== 1 ? 's' : ''}`, `${builderPage.sections.length} بخش`)}</span>
           </div>
         </Modal>
       )}

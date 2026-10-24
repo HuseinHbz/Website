@@ -91,8 +91,10 @@ for (const f of files) {
     // Skip lines that already carry a bilingual construct or an English pair.
     if (/\bt\(\s*['"]/.test(line)) continue                 // t('key')
     if (/lc\(\s*fa\b/.test(line)) continue                   // lc(fa, en, fa)
+    if (/\bL\(\s*(fa|rtl)\b/.test(line)) continue             // L(rtl, en, fa) / L(fa, en, fa)
     if (/\bfa:\s*['"`].*\ben:\s*['"`]/.test(line)) continue  // { fa:'…', en:'…' }
     if (/\ben:\s*['"`].*\bfa:\s*['"`]/.test(line)) continue
+    if (/\blc\(\s*['"`][^'"`]*['"`]\s*,\s*['"`][^'"`]*[؀-ۿ][^'"`]*['"`]\s*\)/.test(line)) continue // lc('English', 'فارسی')
     if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue            // comment
     // A JSX text node or string attribute holding bare Persian → likely a leak.
     if (/>[^<>{]*[؀-ۿ]|(?:title|label|placeholder|aria-label)=\{?['"][^'"]*[؀-ۿ]/.test(line)) {
@@ -118,6 +120,7 @@ const ALLOWED_LATIN = new Set([
   'CRM', 'GL', 'AR', 'AP', 'VAT', 'KPI', 'OKR', 'SLA', 'SOC', 'RBAC', 'ABAC',
   '2FA', 'TOTP', 'OTP', 'DR', 'HA', 'EOQ', 'FIFO', 'LIFO', 'IRR', 'IRT', 'USD',
   'EUR', 'AED', 'SMS', 'SMTP', 'QR', 'CEO', 'CFO', 'COO', 'IT', 'OK',
+  'IBAN', 'SWIFT',
 ])
 const LATIN_WORD = /\b[A-Za-z][A-Za-z'’-]{2,}\b/g
 const bareEnglish = []
@@ -136,6 +139,13 @@ for (const f of files) {
     const m = line.match(/>([^<>{}]{3,})</) ||
       line.match(/(?:title|label|placeholder|aria-label|labelEn)=\{?['"]([^'"]{3,})['"]/)
     if (!m) continue
+    // Code false-positive guard: a real JSX text node never contains a function
+    // call `ident(`, an arrow `=>`, or a `: Type` generic annotation — those only
+    // appear when `>`/`<` were an arrow function or a TS generic (e.g.
+    // `Record<string, string>`), not a tag. Ordinary prose in parens (e.g.
+    // "Photo (9:16 portrait)") has no identifier directly before `(`, so it
+    // still gets caught.
+    if (/[A-Za-z_$][A-Za-z0-9_$]*\(|=>|:\s*[A-Z]\w*[<(]/.test(m[1])) continue
     const words = (m[1].match(LATIN_WORD) || []).filter(w => !ALLOWED_LATIN.has(w) && !ALLOWED_LATIN.has(w.toUpperCase()))
     if (words.length > 0) bareEnglish.push({ file: f.slice(SRC.length - 3), line: i + 1, text: m[1].trim().slice(0, 60) })
   }

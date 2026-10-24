@@ -265,8 +265,8 @@ export function HeroBuilder({ id, onBack, toast }: { id: number; onBack: () => v
                 ))}
               </div>
               <div className="flex gap-1 ms-auto">
-                <button onClick={() => setTheme('dark')} className={`px-2.5 py-1 rounded text-xs ${theme === 'dark' ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary'}`}>Dark</button>
-                <button onClick={() => setTheme('light')} className={`px-2.5 py-1 rounded text-xs ${theme === 'light' ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary'}`}>Light</button>
+                <button onClick={() => setTheme('dark')} className={`px-2.5 py-1 rounded text-xs ${theme === 'dark' ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary'}`}>{lc(rtl, 'Dark', 'تیره')}</button>
+                <button onClick={() => setTheme('light')} className={`px-2.5 py-1 rounded text-xs ${theme === 'light' ? 'bg-brand text-white' : 'bg-white/5 text-text-secondary'}`}>{lc(rtl, 'Light', 'روشن')}</button>
               </div>
             </div>
             <div className="overflow-auto bg-black/20 rounded-lg p-3 flex justify-center">

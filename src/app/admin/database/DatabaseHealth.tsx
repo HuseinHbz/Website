@@ -107,8 +107,8 @@ export function DatabaseHealth() {
                 ))}
               </div>
               <p className="text-2xs text-text-tertiary mt-3">
-                integrity: <span className="font-mono">{data.integrity?.integrity ?? '—'}</span> · quick: <span className="font-mono">{data.integrity?.quick ?? '—'}</span> ·
-                FK: {data.integrity?.fkEnabled ? 'on' : 'off'} ({nfmt(data.integrity?.fkViolations)} {L(fa, 'violations', 'نقض')}) · WAL: {data.storage?.walLevel ?? data.storage?.journalMode ?? '—'}
+                {L(fa, 'integrity', 'یکپارچگی')}: <span className="font-mono">{data.integrity?.integrity ?? '—'}</span> · {L(fa, 'quick', 'سریع')}: <span className="font-mono">{data.integrity?.quick ?? '—'}</span> ·
+                FK: {data.integrity?.fkEnabled ? L(fa, 'on', 'روشن') : L(fa, 'off', 'خاموش')} ({nfmt(data.integrity?.fkViolations)} {L(fa, 'violations', 'نقض')}) · WAL: {data.storage?.walLevel ?? data.storage?.journalMode ?? '—'}
               </p>
             </Card>
             <Card className="p-5">

@@ -51,6 +51,8 @@ type ErrRow = { ts: string; source: string; service: string; message: string }
 export function OperationsCenter() {
   const t = useT()
   const opsLocale = useAdminLocale()
+  const rtl = opsLocale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   // 26.26c بند ۴ (BUG-021): start null and set only after mount — a `new Date()`
@@ -90,31 +92,31 @@ export function OperationsCenter() {
       {loading && !data ? (
         <p className="text-sm text-text-tertiary">{t('loading')}</p>
       ) : !data || !m ? (
-        <p className="text-sm text-text-tertiary">اطلاعات عملیاتی در دسترس نیست.</p>
+        <p className="text-sm text-text-tertiary">{t('operationsUnavailable')}</p>
       ) : tab === 'overview' ? (
         <div className="space-y-6">
           {/* SRE headline */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Metric label="Availability (core SLI)" value={`${data.sre.availabilityPct}%`} sub={`SLO ${data.sre.sloTarget}%`} tone={data.sre.availabilityPct >= 99 ? 'ok' : data.sre.availabilityPct >= 90 ? 'warn' : 'bad'} />
-            <Metric label="Error budget" value={`${data.sre.errorBudgetPct}%`} sub={`${m.errorRatePct}% error rate`} tone={data.sre.errorBudgetPct >= 50 ? 'ok' : data.sre.errorBudgetPct >= 20 ? 'warn' : 'bad'} />
-            <Metric label="Requests / min" value={String(m.requestsPerMin)} sub={`${m.logs24h} logs/24h`} />
-            <Metric label="DB latency" value={m.dbLatencyMs == null ? '—' : `${m.dbLatencyMs}ms`} sub={m.dbSizeMb == null ? '' : `${m.dbSizeMb} MB`} tone={tone(m.dbLatencyMs, 100, 200)} />
+            <Metric label={lc('Availability (core SLI)', 'دسترس‌پذیری (SLI اصلی)')} value={`${data.sre.availabilityPct}%`} sub={`SLO ${data.sre.sloTarget}%`} tone={data.sre.availabilityPct >= 99 ? 'ok' : data.sre.availabilityPct >= 90 ? 'warn' : 'bad'} />
+            <Metric label={lc('Error budget', 'بودجه خطا')} value={`${data.sre.errorBudgetPct}%`} sub={lc(`${m.errorRatePct}% error rate`, `${m.errorRatePct}% نرخ خطا`)} tone={data.sre.errorBudgetPct >= 50 ? 'ok' : data.sre.errorBudgetPct >= 20 ? 'warn' : 'bad'} />
+            <Metric label={lc('Requests / min', 'درخواست در دقیقه')} value={String(m.requestsPerMin)} sub={lc(`${m.logs24h} logs/24h`, `${m.logs24h} لاگ/۲۴ساعت`)} />
+            <Metric label={lc('DB latency', 'تأخیر پایگاه‌داده')} value={m.dbLatencyMs == null ? '—' : `${m.dbLatencyMs}ms`} sub={m.dbSizeMb == null ? '' : `${m.dbSizeMb} MB`} tone={tone(m.dbLatencyMs, 100, 200)} />
           </div>
 
           {/* Live resource metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="rounded-xl p-4 bg-surface-2 border border-subtle">
-              <div className="flex justify-between"><span className="text-xs text-text-tertiary">CPU load</span><span className="text-sm font-bold text-text-primary">{m.cpuLoadPct}%</span></div>
+              <div className="flex justify-between"><span className="text-xs text-text-tertiary">{lc('CPU load', 'بار CPU')}</span><span className="text-sm font-bold text-text-primary">{m.cpuLoadPct}%</span></div>
               <Bar pct={m.cpuLoadPct} tone={tone(m.cpuLoadPct, 70, 90)} />
               <p className="text-3xs text-text-tertiary mt-1">load1 {m.cpuLoad1} · {data.infra.cpuCount} vCPU</p>
             </div>
             <div className="rounded-xl p-4 bg-surface-2 border border-subtle">
-              <div className="flex justify-between"><span className="text-xs text-text-tertiary">Memory</span><span className="text-sm font-bold text-text-primary">{m.memPct}%</span></div>
+              <div className="flex justify-between"><span className="text-xs text-text-tertiary">{lc('Memory', 'حافظه')}</span><span className="text-sm font-bold text-text-primary">{m.memPct}%</span></div>
               <Bar pct={m.memPct} tone={tone(m.memPct, 80, 90)} />
               <p className="text-3xs text-text-tertiary mt-1">{m.memUsedMb}/{m.memTotalMb} MB · rss {m.rssMb} MB</p>
             </div>
             <div className="rounded-xl p-4 bg-surface-2 border border-subtle">
-              <div className="flex justify-between"><span className="text-xs text-text-tertiary">Disk</span><span className="text-sm font-bold text-text-primary">{m.diskUsedPct == null ? 'n/a' : `${m.diskUsedPct}%`}</span></div>
+              <div className="flex justify-between"><span className="text-xs text-text-tertiary">{lc('Disk', 'دیسک')}</span><span className="text-sm font-bold text-text-primary">{m.diskUsedPct == null ? lc('n/a', 'نامشخص') : `${m.diskUsedPct}%`}</span></div>
               <Bar pct={m.diskUsedPct ?? 0} tone={tone(m.diskUsedPct, 80, 90)} />
               <p className="text-3xs text-text-tertiary mt-1">{m.diskFreeGb == null ? '—' : `${m.diskFreeGb} GB free / ${m.diskTotalGb} GB`}</p>
             </div>
@@ -122,7 +124,7 @@ export function OperationsCenter() {
 
           {/* Subsystem health matrix */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-text-disabled mb-3">Subsystem Health</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-text-disabled mb-3">{lc('Subsystem Health', 'سلامت زیرسیستم‌ها')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {data.subsystems.map((s) => (
                 <div key={s.name} className="rounded-xl p-4 flex items-center gap-3 bg-surface-2 border border-subtle">
@@ -140,25 +142,25 @@ export function OperationsCenter() {
       ) : tab === 'infrastructure' ? (
         <div className="grid md:grid-cols-2 gap-4">
           <div className="rounded-xl p-5 bg-surface-2 border border-subtle">
-            <h3 className="text-sm font-semibold text-text-primary mb-3">Runtime & OS</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-3">{lc('Runtime & OS', 'محیط اجرا و سیستم‌عامل')}</h3>
             <dl className="text-xs space-y-1.5">
               {[
-                ['Hostname', data.infra.hostname], ['Platform', `${data.infra.platform} (${data.infra.arch})`],
-                ['Kernel', data.infra.release], ['Node', data.infra.node], ['PostgreSQL', data.infra.dbVersion ?? '—'],
-                ['Environment', data.infra.env], ['OS uptime', fmtUptime(data.infra.uptimeSec)], ['Process uptime', fmtUptime(data.infra.processUptimeSec)],
+                [lc('Hostname', 'نام میزبان'), data.infra.hostname], [lc('Platform', 'پلتفرم'), `${data.infra.platform} (${data.infra.arch})`],
+                [lc('Kernel', 'کرنل'), data.infra.release], ['Node', data.infra.node], ['PostgreSQL', data.infra.dbVersion ?? '—'],
+                [lc('Environment', 'محیط'), data.infra.env], [lc('OS uptime', 'زمان روشنایی سیستم‌عامل'), fmtUptime(data.infra.uptimeSec)], [lc('Process uptime', 'زمان روشنایی فرایند'), fmtUptime(data.infra.processUptimeSec)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4"><dt className="text-text-tertiary">{k}</dt><dd className="text-text-secondary font-mono truncate">{v}</dd></div>
               ))}
             </dl>
           </div>
           <div className="rounded-xl p-5 bg-surface-2 border border-subtle">
-            <h3 className="text-sm font-semibold text-text-primary mb-3">Compute & Storage</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-3">{lc('Compute & Storage', 'محاسبات و ذخیره‌سازی')}</h3>
             <dl className="text-xs space-y-1.5">
               {[
-                ['CPU', `${data.infra.cpuModel}`], ['vCPUs', String(data.infra.cpuCount)], ['CPU load (1m)', `${m.cpuLoad1} (${m.cpuLoadPct}%)`],
-                ['Memory', `${m.memUsedMb}/${m.memTotalMb} MB (${m.memPct}%)`], ['Heap used', `${m.heapUsedMb} MB`],
-                ['Disk', m.diskTotalGb == null ? 'n/a' : `${m.diskFreeGb}/${m.diskTotalGb} GB free (${m.diskUsedPct}% used)`],
-                ['DB size', m.dbSizeMb == null ? '—' : `${m.dbSizeMb} MB`], ['DB latency', m.dbLatencyMs == null ? '—' : `${m.dbLatencyMs} ms`],
+                ['CPU', `${data.infra.cpuModel}`], [lc('vCPUs', 'هسته مجازی'), String(data.infra.cpuCount)], [lc('CPU load (1m)', 'بار CPU (۱دقیقه)'), `${m.cpuLoad1} (${m.cpuLoadPct}%)`],
+                [lc('Memory', 'حافظه'), `${m.memUsedMb}/${m.memTotalMb} MB (${m.memPct}%)`], [lc('Heap used', 'هیپ استفاده‌شده'), `${m.heapUsedMb} MB`],
+                [lc('Disk', 'دیسک'), m.diskTotalGb == null ? lc('n/a', 'نامشخص') : `${m.diskFreeGb}/${m.diskTotalGb} GB ${lc('free', 'آزاد')} (${m.diskUsedPct}% ${lc('used', 'استفاده‌شده')})`],
+                [lc('DB size', 'حجم پایگاه‌داده'), m.dbSizeMb == null ? '—' : `${m.dbSizeMb} MB`], [lc('DB latency', 'تأخیر پایگاه‌داده'), m.dbLatencyMs == null ? '—' : `${m.dbLatencyMs} ms`],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4"><dt className="text-text-tertiary">{k}</dt><dd className="text-text-secondary font-mono truncate">{v}</dd></div>
               ))}

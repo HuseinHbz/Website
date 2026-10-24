@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { crud } from '@/lib/admin/crud'
 import { Card, Btn, Input, Select, PageHeader, SectionDivider, Badge, Modal, useToast } from '@/components/admin/ui'
-import { useT } from '@/lib/admin/locale'
+import { useT, useAdminLocale } from '@/lib/admin/locale'
 
 type Tab = 'modules' | 'knowledge' | 'analytics' | 'settings'
 
@@ -62,6 +62,9 @@ const COLOR_DOT: Record<string, string> = {
 
 export function AiControlCenter() {
   const t = useT()
+  const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [tab, setTab] = useState<Tab>('modules')
   const [modules, setModules] = useState<AiModule[]>([])
   const [editingModule, setEditingModule] = useState<AiModule | null>(null)
@@ -356,7 +359,7 @@ export function AiControlCenter() {
             <SectionDivider label={t('defaultSysPrompt')} />
             <p className="text-xs text-text-tertiary">{t('sysPromptNote')}</p>
             <Input label={t('globalSysPrompt')} value={settings.ai_system_prompt || ''} onChange={v => setSettings(s => ({ ...s, ai_system_prompt: v }))} multiline rows={6}
-              placeholder="You are HBZ AI Platform, an enterprise technology advisor..." />
+              placeholder={lc('You are HBZ AI Platform, an enterprise technology advisor...', 'شما پلتفرم هوش مصنوعی HBZ هستید، یک مشاور فنی سازمانی...')} />
           </Card>
 
           <Card className="p-6 space-y-4">
@@ -416,14 +419,14 @@ export function AiControlCenter() {
           <Input label={t('kbTitleStar')} value={editingKb.title} onChange={v => setEditingKb(e => ({ ...e, title: v }))} placeholder="HBZ Professional Profile" />
           <div className="grid grid-cols-3 gap-4">
             <Select label={t('kbTypeLabel')} value={editingKb.type} onChange={v => setEditingKb(e => ({ ...e, type: v as KbItem['type'] }))}
-              options={[{ value: 'snippet', label: 'Snippet' }, { value: 'document', label: 'Document' }, { value: 'faq', label: 'FAQ' }, { value: 'url', label: 'URL' }]} />
+              options={[{ value: 'snippet', label: lc('Snippet', 'قطعه') }, { value: 'document', label: lc('Document', 'سند') }, { value: 'faq', label: lc('FAQ', 'سوالات متداول') }, { value: 'url', label: 'URL' }]} />
             <Select label={t('kbLocaleLabel')} value={editingKb.locale} onChange={v => setEditingKb(e => ({ ...e, locale: v }))}
               options={[{ value: 'both', label: t('both') }, { value: 'en', label: t('english') }, { value: 'fa', label: t('persian') }]} />
             <Input label={t('kbPriority')} type="number" value={String(editingKb.priority)} onChange={v => setEditingKb(e => ({ ...e, priority: Number(v) }))} />
           </div>
           {(editingKb.type === 'snippet' || editingKb.type === 'faq' || editingKb.type === 'document') && (
             <Input label={t('kbContentLabel')} value={editingKb.content} onChange={v => setEditingKb(e => ({ ...e, content: v }))} multiline rows={10}
-              placeholder="Knowledge content injected as RAG context for AI responses..." />
+              placeholder={lc('Knowledge content injected as RAG context for AI responses...', 'محتوای دانش که به‌عنوان زمینه RAG برای پاسخ‌های هوش مصنوعی تزریق می‌شود...')} />
           )}
           {editingKb.type === 'url' && (
             <Input label={t('kbSourceUrl')} value={editingKb.sourceUrl} onChange={v => setEditingKb(e => ({ ...e, sourceUrl: v }))} placeholder="https://..." />

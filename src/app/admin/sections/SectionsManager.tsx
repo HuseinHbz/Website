@@ -55,6 +55,8 @@ const EMPTY: Partial<Section> = {
 export function SectionsManager() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [sections, setSections] = useState<Section[]>([])
   const [filtered, setFiltered] = useState<Section[]>([])
   const [search, setSearch] = useState('')
@@ -340,7 +342,7 @@ export function SectionsManager() {
               placeholder='{"items": [], "settings": {}}'
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-brand font-mono focus:outline-none focus:border-brand transition-colors resize-y"
             />
-            <p className="text-xs text-text-disabled mt-1">Section-specific structured data in JSON format</p>
+            <p className="text-xs text-text-disabled mt-1">{lc('Section-specific structured data in JSON format', 'داده‌های ساختاریافته مخصوص بخش به فرمت JSON')}</p>
           </div>
 
           {/* Scheduling */}
@@ -365,7 +367,7 @@ export function SectionsManager() {
         <Modal open={!!historyModal} onClose={() => setHistoryModal(null)} title={t('versionHistory')} size="md">
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {historyModal.versions.length === 0 ? (
-              <p className="text-text-tertiary text-sm text-center py-8">No version history yet. Versions are saved when you edit a section.</p>
+              <p className="text-text-tertiary text-sm text-center py-8">{lc('No version history yet. Versions are saved when you edit a section.', 'هنوز تاریخچه‌ای ثبت نشده. نسخه‌ها هنگام ویرایش بخش ذخیره می‌شوند.')}</p>
             ) : (
               historyModal.versions.map((v) => {
                 const snap = JSON.parse(v.snapshot || '{}')

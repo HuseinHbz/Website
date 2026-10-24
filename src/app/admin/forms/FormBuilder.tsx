@@ -63,6 +63,8 @@ function parseFields(json: string): FormField[] {
 export function FormBuilder() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [formsList, setFormsList] = useState<FormEntry[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<FormEntry>(EMPTY)
@@ -201,7 +203,7 @@ export function FormBuilder() {
                 { value: 'custom', label: 'Custom' },
               ]} />
             </div>
-            <Input label="Description" value={editing.description} onChange={v => set('description', v)} placeholder="Optional description" />
+            <Input label={lc('Description', 'توضیحات')} value={editing.description} onChange={v => set('description', v)} placeholder="Optional description" />
 
             {/* Field list */}
             <div>
@@ -211,7 +213,7 @@ export function FormBuilder() {
               </div>
               {fields.length === 0 && (
                 <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-text-disabled text-sm">
-                  No fields yet — click &quot;Add Field&quot; to start building your form
+                  {lc('No fields yet — click "Add Field" to start building your form', 'هنوز فیلدی اضافه نشده — برای شروع «افزودن فیلد» را بزنید')}
                 </div>
               )}
               <div className="space-y-2">
@@ -224,14 +226,14 @@ export function FormBuilder() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono text-text-tertiary">{FIELD_TYPE_LABELS[field.type]}</span>
-                        {field.required && <span className="text-4xs text-red-400 font-bold">REQUIRED</span>}
+                        {field.required && <span className="text-4xs text-red-400 font-bold">{lc('REQUIRED', 'الزامی')}</span>}
                         <span className="text-xs font-bold text-brand">{field.width === 'half' ? '½' : '□'}</span>
                       </div>
-                      <p className="text-sm text-text-primary">{field.labelEn || '(no label)'}</p>
+                      <p className="text-sm text-text-primary">{field.labelEn || lc('(no label)', '(بدون برچسب)')}</p>
                       {field.labelFa && <p className="text-xs text-text-tertiary">{field.labelFa}</p>}
                     </div>
                     <div className="flex gap-2">
-                      <Btn size="sm" variant="secondary" onClick={() => editField(idx)}>Edit</Btn>
+                      <Btn size="sm" variant="secondary" onClick={() => editField(idx)}>{t('edit')}</Btn>
                       <Btn size="sm" variant="danger" onClick={() => removeField(idx)}>✕</Btn>
                     </div>
                   </div>
@@ -249,7 +251,7 @@ export function FormBuilder() {
               <Input label={t('successMsgFa')} value={editing.successMessageFa} onChange={v => set('successMessageFa', v)} multiline rows={3} />
             </div>
             <Select label={t('status')} value={editing.active ? 'true' : 'false'} onChange={v => set('active', v === 'true')} options={[
-              { value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' },
+              { value: 'true', label: lc('Active', 'فعال') }, { value: 'false', label: lc('Inactive', 'غیرفعال') },
             ]} />
           </div>
         )}
@@ -260,7 +262,7 @@ export function FormBuilder() {
             <Input label={t('emailToLabel')} value={editing.emailTo} onChange={v => set('emailTo', v)} placeholder="admin@habibazar.com" type="email" />
             <Input label={t('emailSubjectLabel')} value={editing.emailSubject} onChange={v => set('emailSubject', v)} placeholder="New form submission: {form_name}" />
             <div className="p-4 rounded-lg text-sm text-text-secondary" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-              <p className="text-xs font-semibold text-brand mb-2">Available placeholders</p>
+              <p className="text-xs font-semibold text-brand mb-2">{lc('Available placeholders', 'جایگزین‌های موجود')}</p>
               <p><code className="text-xs">{'{form_name}'}</code> · <code className="text-xs">{'{field_name}'}</code> · <code className="text-xs">{'{submitted_at}'}</code></p>
             </div>
           </div>

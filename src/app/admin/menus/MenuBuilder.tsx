@@ -30,6 +30,8 @@ const COMMON_LINKS = PUBLIC_ROUTES.map(r => ({ label: r.labelEn, labelFa: r.labe
 export function MenuBuilder() {
   const t = useT()
   const locale = useAdminLocale()
+  const rtl = locale === 'fa'
+  const lc = (en: string, fa: string) => (rtl ? fa : en)
   const [items, setItems] = useState<MenuItem[]>([])
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Omit<MenuItem, 'id'> & { id?: number }>(EMPTY)
@@ -118,11 +120,11 @@ export function MenuBuilder() {
         {/* Tree view */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-text-primary capitalize">{location} Menu</h3>
-            <Btn size="sm" onClick={() => openNew(location)}>+ Add Item</Btn>
+            <h3 className="text-sm font-semibold text-text-primary capitalize">{lc(`${location} Menu`, `منوی ${location}`)}</h3>
+            <Btn size="sm" onClick={() => openNew(location)}>+ {lc('Add Item', 'افزودن مورد')}</Btn>
           </div>
           {filteredItems.length === 0 && (
-            <div className="text-center py-8 text-text-disabled text-sm">No items in {location} menu yet</div>
+            <div className="text-center py-8 text-text-disabled text-sm">{lc(`No items in ${location} menu yet`, `هنوز موردی در منوی ${location} نیست`)}</div>
           )}
           <div className="space-y-1">
             {topLevel.map((item, idx) => (
@@ -138,11 +140,11 @@ export function MenuBuilder() {
                     <p className="text-sm text-text-primary font-medium">{item.labelEn}</p>
                     <p className="text-xs text-text-tertiary">{item.labelFa} · <span className="font-mono">{item.href}</span></p>
                   </div>
-                  <Badge color={item.active ? 'green' : 'slate'}>{item.active ? 'On' : 'Off'}</Badge>
+                  <Badge color={item.active ? 'green' : 'slate'}>{item.active ? lc('On', 'روشن') : lc('Off', 'خاموش')}</Badge>
                   <div className="flex gap-1">
                     <Btn size="sm" variant="ghost" onClick={() => { setEditing({ ...item }); setModal(true) }}>✏</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => toggle(item)}>{item.active ? '⏸' : '▶'}</Btn>
-                    {location === 'header' && <Btn size="sm" variant="ghost" onClick={() => openNew(location, item.id)}>+sub</Btn>}
+                    {location === 'header' && <Btn size="sm" variant="ghost" onClick={() => openNew(location, item.id)}>+{lc('sub', 'زیرمنو')}</Btn>}
                     <Btn size="sm" variant="danger" onClick={() => del(item.id)}>✕</Btn>
                   </div>
                 </div>
@@ -212,7 +214,7 @@ export function MenuBuilder() {
             <div className="rounded-xl overflow-hidden p-6 bg-surface-2 border border-subtle">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-xs font-bold text-text-primary mb-2">Navigation</p>
+                  <p className="text-xs font-bold text-text-primary mb-2">{lc('Navigation', 'ناوبری')}</p>
                   {filteredItems.filter(i => i.active && !i.parentId).map(i => (
                     <p key={i.id} className="text-xs text-text-tertiary mb-1 hover:text-text-primary cursor-pointer">{i.labelEn}</p>
                   ))}
@@ -223,7 +225,7 @@ export function MenuBuilder() {
 
           {/* Quick add common links */}
           <div className="mt-4">
-            <p className="text-xs text-text-tertiary font-medium mb-2">Quick add common links</p>
+            <p className="text-xs text-text-tertiary font-medium mb-2">{lc('Quick add common links', 'افزودن سریع لینک‌های پرکاربرد')}</p>
             <div className="flex flex-wrap gap-2">
               {COMMON_LINKS.map(link => (
                 <button key={link.href} onClick={() => {
@@ -232,7 +234,7 @@ export function MenuBuilder() {
                 }}
                   className="text-xs px-2 py-1 rounded text-text-secondary hover:text-text-primary transition-colors"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  + {link.label}
+                  + {lc(link.label, link.labelFa)}
                 </button>
               ))}
             </div>

@@ -388,10 +388,10 @@ export function BlogManager() {
             <Input label={t('sortOrder')} type="number" value={String(editCat.sortOrder || 0)} onChange={(v) => setEditCat({ ...editCat, sortOrder: Number(v) })} />
           </div>
           <Select
-            label="وضعیت"
+            label={t('status')}
             value={editCat.active === false ? 'false' : 'true'}
             onChange={(v) => setEditCat({ ...editCat, active: v === 'true' })}
-            options={[{ value: 'true', label: 'فعال' }, { value: 'false', label: 'غیرفعال' }]}
+            options={[{ value: 'true', label: t('active') }, { value: 'false', label: t('inactive') }]}
           />
           <div className="flex gap-3">
             <Btn onClick={saveCat} disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
